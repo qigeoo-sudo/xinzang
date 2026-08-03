@@ -8,6 +8,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { AuthModal } from "@/components/auth/auth-modal";
 import { PaymentModal } from "@/components/auth/payment-modal";
+import { HeroDecorZh, HeroDecorEn } from "@/components/decor/hero-decor";
 
 export default function HomePage() {
   const { tr, lang, toggleLang } = useI18n();
@@ -50,6 +51,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-mesh-gradient" />
+        {lang === "zh" ? <HeroDecorZh /> : <HeroDecorEn />}
         <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-20">
           <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
             {/* Headline */}
@@ -227,24 +229,24 @@ export default function HomePage() {
           {/* Auth buttons — top row */}
           {isAuthenticated ? (
             <div className="flex items-center gap-2 flex-wrap justify-center">
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-slate-300">
                 {tr({ zh: `已登录: ${user?.account}`, en: `Logged in: ${user?.account}` })}
               </span>
               <button
                 onClick={logout}
-                className="text-xs font-medium text-slate-400 transition-colors hover:text-brand-600"
+                className="text-xs font-medium text-slate-400 transition-colors hover:text-sage-300"
               >
                 {tr({ zh: "退出", en: "Logout" })}
               </button>
               {isPremium ? (
-                <span className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-gradient-to-r from-sand-50 to-amber-50 px-4 py-1.5 text-xs font-medium text-sand-700 shadow-sm">
+                <span className="flex items-center gap-1.5 rounded-xl border border-sand-400/60 bg-sand-500/20 px-4 py-1.5 text-xs font-medium text-sand-200 shadow-sm">
                   <Crown className="h-4 w-4" />
                   {tr({ zh: "已入会", en: "Premium Member" })}
                 </span>
               ) : (
                 <button
                   onClick={openPremium}
-                  className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-1.5 text-xs font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100"
+                  className="flex items-center gap-1.5 rounded-xl border border-sand-400/50 bg-sand-500/15 px-4 py-1.5 text-xs font-medium text-sand-200 shadow-sm transition-all hover:bg-sand-500/25"
                 >
                   <Crown className="h-4 w-4" />
                   {tr({ zh: "入会", en: "Premium" })}
@@ -255,21 +257,21 @@ export default function HomePage() {
             <div className="flex items-center gap-1.5 justify-center w-full">
               <button
                 onClick={openRegister}
-                className="flex items-center gap-1 rounded-xl bg-brand-500 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 whitespace-nowrap"
+                className="flex items-center gap-1 rounded-xl bg-sand-400 px-2.5 py-1.5 text-[11px] font-normal text-sand-900 shadow-sm transition-all hover:bg-sand-300 active:scale-95 whitespace-nowrap"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 {tr({ zh: "注册", en: "Sign Up" })}
               </button>
               <button
                 onClick={openLogin}
-                className="flex items-center gap-1 rounded-xl border border-sage-300 bg-sage-50 px-2.5 py-1.5 text-[11px] font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100 whitespace-nowrap"
+                className="flex items-center gap-1 rounded-xl border border-sage-400/50 bg-sage-500/20 px-2.5 py-1.5 text-[11px] font-medium text-sage-200 shadow-sm transition-all hover:bg-sage-500/30 whitespace-nowrap"
               >
                 <LogIn className="h-3.5 w-3.5" />
                 {tr({ zh: "登录", en: "Login" })}
               </button>
               <button
                 onClick={openPremium}
-                className="flex items-center gap-1 rounded-xl border border-sand-300 bg-sand-50 px-2.5 py-1.5 text-[11px] font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100 whitespace-nowrap"
+                className="flex items-center gap-1 rounded-xl border border-sand-400/50 bg-sand-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sand-200 shadow-sm transition-all hover:bg-sand-500/25 whitespace-nowrap"
               >
                 <Crown className="h-3.5 w-3.5" />
                 {tr({ zh: "入会", en: "Premium" })}
@@ -279,7 +281,7 @@ export default function HomePage() {
 
           {/* Full logo — bottom */}
           <Image
-            src="/images/logo-full.png"
+            src={lang === "en" ? "/images/logo-full-en.png" : "/images/logo-full.png"}
             alt="Career Companion"
             width={380}
             height={143}
