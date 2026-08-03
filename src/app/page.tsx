@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Compass, Users, Sprout, ArrowRight, MessageCircle } from "lucide-react";
+import { Compass, Users, Sprout, ArrowRight, MessageCircle, LogIn, UserPlus, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { AuthModal } from "@/components/auth/auth-modal";
 
 export default function HomePage() {
   const { tr, lang, toggleLang } = useI18n();
+  const { isAuthenticated, user, logout } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
 
   return (
     <div className="pb-8 md:pb-0">
@@ -160,6 +165,80 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Brand & Auth Card */}
+      <section className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+        <div className="card-warm flex flex-col items-center gap-4 md:flex-row md:justify-between">
+          {/* Logo + brand */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                className="h-6 w-6"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <polygon points="12,7 14,12 12,17 10,12" fill="white" stroke="none" />
+              </svg>
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="font-serif text-sm font-bold text-brand-800">
+                Career Companion
+              </span>
+              <span className="text-[10px] font-medium text-sage-600 mt-0.5">
+                {tr({ zh: "你的 AI 职业伙伴", en: "Your AI Career Companion" })}
+              </span>
+            </div>
+          </div>
+
+          {/* Auth buttons */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-500">
+                {tr({ zh: `已登录: ${user?.account}`, en: `Logged in: ${user?.account}` })}
+              </span>
+              <button
+                onClick={logout}
+                className="text-xs font-medium text-slate-400 transition-colors hover:text-brand-600"
+              >
+                {tr({ zh: "退出", en: "Logout" })}
+              </button>
+              <button className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-2 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100">
+                <Crown className="h-4 w-4" />
+                {tr({ zh: "升级会员", en: "Premium" })}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-brand-600"
+              >
+                <LogIn className="h-4 w-4" />
+                {tr({ zh: "登录", en: "Login" })}
+              </button>
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95"
+              >
+                <UserPlus className="h-4 w-4" />
+                {tr({ zh: "注册", en: "Sign Up" })}
+              </button>
+              <button className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-2 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100">
+                <Crown className="h-4 w-4" />
+                {tr({ zh: "升级会员", en: "Premium" })}
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Auth Modal */}
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

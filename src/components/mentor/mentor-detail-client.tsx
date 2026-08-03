@@ -8,6 +8,9 @@ import { MentorAvatar } from "@/components/shared/mentor-avatar";
 import { Sparkles, Clock, Building2, Briefcase, CheckCircle2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { useAuth } from "@/lib/auth";
+import { AuthModal } from "@/components/auth/auth-modal";
+import { PaymentModal } from "@/components/auth/payment-modal";
 
 interface MentorDetailClientProps {
   id: string;
@@ -16,15 +19,33 @@ interface MentorDetailClientProps {
 
 export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
   const { tr, trFmt } = useI18n();
+  const { isAuthenticated } = useAuth();
   const mentor = getMentorById(id);
   if (!mentor) notFound();
 
   const [knowledgeExpanded, setKnowledgeExpanded] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const PREVIEW_COUNT = 3;
   const hasMore = mentor.knowledge.length > PREVIEW_COUNT;
   const visibleKnowledge = knowledgeExpanded
     ? mentor.knowledge
     : mentor.knowledge.slice(0, PREVIEW_COUNT);
+
+  // Click price → check auth → show payment
+  const handlePriceClick = () => {
+    if (mentor.price === 0) return; // Free, no payment needed
+    if (isAuthenticated) {
+      setPaymentOpen(true);
+    } else {
+      setAuthOpen(true);
+    }
+  };
+
+  // After successful auth, if there's a pending payment, open payment modal
+  const handleAuthSuccess = () => {
+    setPaymentOpen(true);
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 pb-8 md:py-12 md:pb-12">
@@ -79,12 +100,28 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
 
           {/* Price */}
           <div className="text-right">
-            <p className="text-2xl font-bold text-brand-500">
-              {mentor.price === 0 ? tr({ zh: "免费", en: "Free" }) : `¥${mentor.price}`}
-            </p>
-            <p className="text-xs text-slate-400">
-              {mentor.price === 0 ? tr({ zh: "体验中", en: "In Trial" }) : tr({ zh: "每次对话", en: "per chat" })}
-            </p>
+            {mentor.price === 0 ? (
+              <>
+                <p className="text-2xl font-bold text-brand-500">
+                  {tr({ zh: "免费", en: "Free" })}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {tr({ zh: "体验中", en: "In Trial" })}
+                </p>
+              </>
+            ) : (
+              <button
+                onClick={handlePriceClick}
+                className="group text-right transition-all hover:opacity-80 active:scale-95"
+              >
+                <p className="text-2xl font-bold text-brand-500 group-hover:text-brand-600">
+                  ¥{mentor.price}
+                </p>
+                <p className="text-xs text-slate-400 group-hover:text-brand-400">
+                  {tr({ zh: "点击付费解锁 →", en: "Click to unlock →" })}
+                </p>
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -177,6 +214,19 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
           </button>
         </div>
       </div>
+
+      {/* Auth & Payment Modals */}
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+      <PaymentModal
+        open={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        mentorName={mentor.name}
+        price={mentor.price}
+      />
     </div>
   );
 }
