@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Smartphone, Mail, ChevronRight, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Smartphone, Mail, ChevronRight, CheckCircle2, Loader2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -10,12 +10,13 @@ interface AuthModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialMode?: "login" | "register";
 }
 
-export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
+export function AuthModal({ open, onClose, onSuccess, initialMode = "login" }: AuthModalProps) {
   const { tr } = useI18n();
   const { login, register } = useAuth();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [method, setMethod] = useState<"phone" | "email">("phone");
   const [account, setAccount] = useState("");
   const [code, setCode] = useState("");
@@ -24,11 +25,12 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
 
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      setMode("login");
+      setMode(initialMode);
       setMethod("phone");
       setAccount("");
       setCode("");
@@ -37,8 +39,9 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
       setLoading(false);
       setEmailSent(false);
       setError("");
+      setCodeSent(false);
     }
-  }, [open]);
+  }, [open, initialMode]);
 
   // Countdown timer for SMS code
   useEffect(() => {
@@ -61,6 +64,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
     }
     setError("");
     setCountdown(60);
+    setCodeSent(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -203,26 +207,34 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
 
           {/* Phone: verification code */}
           {method === "phone" && (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder={tr({ zh: "短信验证码", en: "SMS code" })}
-                className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-brand-400 focus:bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleSendCode}
-                disabled={countdown > 0}
-                className="shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-600 transition-all hover:bg-brand-100 disabled:opacity-40"
-              >
-                {countdown > 0
-                  ? `${countdown}s`
-                  : tr({ zh: "获取验证码", en: "Send code" })
-                }
-              </button>
-            </div>
+            <>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder={tr({ zh: "短信验证码", en: "SMS code" })}
+                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-brand-400 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={countdown > 0}
+                  className="shrink-0 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-xs font-medium text-brand-600 transition-all hover:bg-brand-100 disabled:opacity-40"
+                >
+                  {countdown > 0
+                    ? `${countdown}s`
+                    : tr({ zh: "获取验证码", en: "Send code" })
+                  }
+                </button>
+              </div>
+              {codeSent && (
+                <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-600">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  {tr({ zh: "演示模式：输入任意4位以上数字即可通过验证", en: "Demo mode: enter any 4+ digits to pass" })}
+                </div>
+              )}
+            </>
           )}
 
           {/* Email: password */}
@@ -232,7 +244,7 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={tr({ zh: "密码（6位即可）", en: "Password (6 digits min)" })}
+                placeholder={tr({ zh: "密码（任意6位字符）", en: "Password (any 6 characters)" })}
                 className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-slate-400 focus:border-brand-400 focus:bg-white"
               />
             </div>
@@ -242,9 +254,15 @@ export function AuthModal({ open, onClose, onSuccess }: AuthModalProps) {
           {method === "email" && mode === "register" && (
             <div>
               {emailSent ? (
-                <div className="flex items-center gap-2 rounded-xl bg-sage-50 px-4 py-2.5 text-xs text-sage-600">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  {tr({ zh: "确认邮件已发送，请查收邮箱后点击注册", en: "Confirmation email sent. Please check your inbox then click Sign Up." })}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 rounded-xl bg-sage-50 px-4 py-2.5 text-xs text-sage-600">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    {tr({ zh: "确认邮件已发送，请查收邮箱后点击注册", en: "Confirmation email sent. Please check your inbox then click Sign Up." })}
+                  </div>
+                  <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-1.5 text-xs text-amber-600">
+                    <Info className="h-3.5 w-3.5 shrink-0" />
+                    {tr({ zh: "演示模式：无需真实邮件确认，可直接点击注册", en: "Demo mode: no real email needed, just click Sign Up" })}
+                  </div>
                 </div>
               ) : (
                 <button

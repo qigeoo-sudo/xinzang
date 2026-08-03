@@ -2,18 +2,41 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Compass, Users, Sprout, ArrowRight, MessageCircle, LogIn, UserPlus, Crown } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { AuthModal } from "@/components/auth/auth-modal";
+import { PaymentModal } from "@/components/auth/payment-modal";
 
 export default function HomePage() {
   const { tr, lang, toggleLang } = useI18n();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, isPremium, upgradeToPremium } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [premiumOpen, setPremiumOpen] = useState(false);
+
+  const openLogin = () => {
+    setAuthMode("login");
+    setAuthOpen(true);
+  };
+
+  const openRegister = () => {
+    setAuthMode("register");
+    setAuthOpen(true);
+  };
+
+  const openPremium = () => {
+    if (!isAuthenticated) {
+      setAuthMode("login");
+      setAuthOpen(true);
+    } else {
+      setPremiumOpen(true);
+    }
+  };
 
   return (
-    <div className="pb-8 md:pb-0">
+    <div className="bg-gradient-to-b from-brand-50 via-white to-sand-100 pb-8 md:pb-0">
       {/* Language Toggle — fixed top-right */}
       <button
         type="button"
@@ -25,8 +48,9 @@ export default function HomePage() {
       </button>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-mesh-gradient">
-        <div className="mx-auto max-w-6xl px-4 py-12 md:py-20">
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-mesh-gradient" />
+        <div className="relative mx-auto max-w-6xl px-4 py-12 md:py-20">
           <div className="text-center max-w-3xl mx-auto animate-fade-in-up">
             {/* Headline */}
             <h1 className="font-serif font-bold text-brand-900 mb-6">
@@ -64,7 +88,7 @@ export default function HomePage() {
       </section>
 
       {/* How It Works */}
-      <section className="bg-white py-8 md:py-12 border-y border-slate-100">
+      <section className="bg-transparent py-8 md:py-12 border-y border-slate-100/50">
         <div className="mx-auto max-w-6xl px-4">
           <p className="text-sm text-slate-400 text-center mb-6">
             {tr({ zh: "三步开始你的职业探索之旅", en: "Three steps to start your career exploration" })}
@@ -168,36 +192,10 @@ export default function HomePage() {
 
       {/* Brand & Auth Card */}
       <section className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-        <div className="card-warm flex flex-col items-center gap-4 md:flex-row md:justify-between">
-          {/* Logo + brand */}
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 shadow-sm">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                className="h-6 w-6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <polygon points="12,7 14,12 12,17 10,12" fill="white" stroke="none" />
-              </svg>
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="font-serif text-sm font-bold text-brand-800">
-                Career Companion
-              </span>
-              <span className="text-[10px] font-medium text-sage-600 mt-0.5">
-                {tr({ zh: "你的 AI 职业伙伴", en: "Your AI Career Companion" })}
-              </span>
-            </div>
-          </div>
-
-          {/* Auth buttons */}
+        <div className="card-warm flex flex-col items-center gap-5">
+          {/* Auth buttons — top row */}
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap justify-center">
               <span className="text-xs text-slate-500">
                 {tr({ zh: `已登录: ${user?.account}`, en: `Logged in: ${user?.account}` })}
               </span>
@@ -207,38 +205,82 @@ export default function HomePage() {
               >
                 {tr({ zh: "退出", en: "Logout" })}
               </button>
-              <button className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-2 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100">
-                <Crown className="h-4 w-4" />
-                {tr({ zh: "升级会员", en: "Premium" })}
-              </button>
+              {isPremium ? (
+                <span className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-gradient-to-r from-sand-50 to-amber-50 px-4 py-1.5 text-xs font-medium text-sand-700 shadow-sm">
+                  <Crown className="h-4 w-4" />
+                  {tr({ zh: "已入会", en: "Premium Member" })}
+                </span>
+              ) : (
+                <button
+                  onClick={openPremium}
+                  className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-1.5 text-xs font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100"
+                >
+                  <Crown className="h-4 w-4" />
+                  {tr({ zh: "入会", en: "Premium" })}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 justify-center w-full">
               <button
-                onClick={() => setAuthOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-brand-600"
+                onClick={openRegister}
+                className="flex items-center gap-1 rounded-xl bg-brand-500 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 whitespace-nowrap"
               >
-                <LogIn className="h-4 w-4" />
+                <UserPlus className="h-3.5 w-3.5" />
+                {tr({ zh: "注册", en: "Sign Up" })}
+              </button>
+              <button
+                onClick={openLogin}
+                className="flex items-center gap-1 rounded-xl border border-sage-300 bg-sage-50 px-2.5 py-1.5 text-[11px] font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100 whitespace-nowrap"
+              >
+                <LogIn className="h-3.5 w-3.5" />
                 {tr({ zh: "登录", en: "Login" })}
               </button>
               <button
-                onClick={() => setAuthOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95"
+                onClick={openPremium}
+                className="flex items-center gap-1 rounded-xl border border-sand-300 bg-sand-50 px-2.5 py-1.5 text-[11px] font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100 whitespace-nowrap"
               >
-                <UserPlus className="h-4 w-4" />
-                {tr({ zh: "注册", en: "Sign Up" })}
-              </button>
-              <button className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-4 py-2 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100">
-                <Crown className="h-4 w-4" />
-                {tr({ zh: "升级会员", en: "Premium" })}
+                <Crown className="h-3.5 w-3.5" />
+                {tr({ zh: "入会", en: "Premium" })}
               </button>
             </div>
           )}
+
+          {/* Full logo — bottom */}
+          <Image
+            src="/images/logo-full.png"
+            alt="Career Companion"
+            width={380}
+            height={143}
+            className="w-full max-w-[19rem] md:max-w-[28.5rem] h-auto object-contain"
+            priority
+          />
         </div>
       </section>
 
       {/* Auth Modal */}
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        initialMode={authMode}
+        onSuccess={() => {
+          // If user was trying to upgrade premium, open premium modal after auth
+          if (premiumOpen) {
+            setPremiumOpen(true);
+          }
+        }}
+      />
+
+      {/* Premium Payment Modal */}
+      <PaymentModal
+        open={premiumOpen}
+        onClose={() => setPremiumOpen(false)}
+        isMembership={true}
+        onSuccess={() => {
+          upgradeToPremium();
+          setPremiumOpen(false);
+        }}
+      />
     </div>
   );
 }

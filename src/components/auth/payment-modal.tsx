@@ -8,8 +8,10 @@ import { useI18n } from "@/lib/i18n";
 interface PaymentModalProps {
   open: boolean;
   onClose: () => void;
-  mentorName: string;
-  price: number;
+  mentorName?: string;
+  price?: number;
+  isMembership?: boolean;
+  onSuccess?: () => void;
 }
 
 interface PaymentMethod {
@@ -27,7 +29,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   { id: "paypal", zh: "PayPal", en: "PayPal", icon: "🅿️" },
 ];
 
-export function PaymentModal({ open, onClose, mentorName, price }: PaymentModalProps) {
+export function PaymentModal({ open, onClose, mentorName, price = 0, isMembership = false, onSuccess }: PaymentModalProps) {
   const { tr } = useI18n();
   const [selected, setSelected] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,11 +47,20 @@ export function PaymentModal({ open, onClose, mentorName, price }: PaymentModalP
   };
 
   const handleClose = () => {
+    if (success) {
+      onSuccess?.();
+    }
     setSuccess(false);
     setSelected("");
     setLoading(false);
     onClose();
   };
+
+  // Determine display values
+  const displayName = isMembership
+    ? tr({ zh: "年度会员", en: "Annual Membership" })
+    : mentorName || "";
+  const displayPrice = isMembership ? 299 : price;
 
   return (
     <div className="fixed inset-0 z-[80] flex items-end md:items-center justify-center">
@@ -64,11 +75,18 @@ export function PaymentModal({ open, onClose, mentorName, price }: PaymentModalP
               {tr({ zh: "支付成功！", en: "Payment Successful!" })}
             </h2>
             <p className="text-sm text-slate-500 mb-6 text-center">
-              {tr({ zh: "你已解锁与" + mentorName + "的对话", en: "You have unlocked chat with " + mentorName })}
+              {isMembership
+                ? tr({ zh: "你已升级为年度会员，享受全部权益", en: "You are now a Premium member with full access" })
+                : tr({ zh: `你已解锁与${mentorName}的对话`, en: `You have unlocked chat with ${mentorName}` })}
             </p>
             <button onClick={handleClose} className="btn-primary w-full">
-              {tr({ zh: "开始对话", en: "Start Chatting" })}
+              {isMembership
+                ? tr({ zh: "完成", en: "Done" })
+                : tr({ zh: "开始对话", en: "Start Chatting" })}
             </button>
+            <p className="mt-3 text-center text-[10px] text-slate-400">
+              Demo only – not a real transaction.
+            </p>
           </div>
         ) : (
           <>
@@ -86,12 +104,14 @@ export function PaymentModal({ open, onClose, mentorName, price }: PaymentModalP
 
             <div className="mx-6 mb-4 rounded-xl bg-slate-50 p-4">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm text-slate-500">{tr({ zh: "导师", en: "Mentor" })}</span>
-                <span className="text-sm font-medium text-brand-900">{mentorName}</span>
+                <span className="text-sm text-slate-500">
+                  {isMembership ? tr({ zh: "商品", en: "Item" }) : tr({ zh: "导师", en: "Mentor" })}
+                </span>
+                <span className="text-sm font-medium text-brand-900">{displayName}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-500">{tr({ zh: "金额", en: "Amount" })}</span>
-                <span className="text-xl font-bold text-brand-500">¥{price}</span>
+                <span className="text-xl font-bold text-brand-500">¥{displayPrice}</span>
               </div>
             </div>
 
@@ -138,11 +158,16 @@ export function PaymentModal({ open, onClose, mentorName, price }: PaymentModalP
                     {tr({ zh: "支付中...", en: "Processing..." })}
                   </>
                 ) : (
-                  tr({ zh: "确认支付 ¥" + price, en: "Pay ¥" + price })
+                  tr({ zh: `确认支付 ¥${displayPrice}`, en: `Pay ¥${displayPrice}` })
                 )}
               </button>
               <p className="mt-2 text-center text-xs text-slate-400">
-                {tr({ zh: "支付后即可与导师开始对话", en: "Chat with mentor will unlock after payment" })}
+                {isMembership
+                  ? tr({ zh: "升级后可解锁全部导师对话", en: "Unlock all mentor chats after upgrade" })
+                  : tr({ zh: "支付后即可与导师开始对话", en: "Chat with mentor will unlock after payment" })}
+              </p>
+              <p className="mt-1 text-center text-[10px] text-slate-400">
+                Demo only – not a real transaction.
               </p>
             </div>
           </>

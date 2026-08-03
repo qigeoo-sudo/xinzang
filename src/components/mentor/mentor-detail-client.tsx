@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getMentorById } from "@/data/mentors";
 import { MentorChat } from "@/components/mentor/mentor-chat";
 import { MentorAvatar } from "@/components/shared/mentor-avatar";
-import { Sparkles, Clock, Building2, Briefcase, CheckCircle2, ChevronDown } from "lucide-react";
+import { Sparkles, Clock, Building2, Briefcase, CheckCircle2, ChevronDown, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
@@ -19,7 +19,7 @@ interface MentorDetailClientProps {
 
 export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
   const { tr, trFmt } = useI18n();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isMentorUnlocked, unlockMentor } = useAuth();
   const mentor = getMentorById(id);
   if (!mentor) notFound();
 
@@ -32,9 +32,12 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
     ? mentor.knowledge
     : mentor.knowledge.slice(0, PREVIEW_COUNT);
 
+  // Check if this mentor is unlocked
+  const isUnlocked = mentor.price === 0 || isMentorUnlocked(mentor.id);
+
   // Click price → check auth → show payment
   const handlePriceClick = () => {
-    if (mentor.price === 0) return; // Free, no payment needed
+    if (mentor.price === 0 || isUnlocked) return;
     if (isAuthenticated) {
       setPaymentOpen(true);
     } else {
@@ -42,9 +45,14 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
     }
   };
 
-  // After successful auth, if there's a pending payment, open payment modal
+  // After successful auth, open payment modal
   const handleAuthSuccess = () => {
     setPaymentOpen(true);
+  };
+
+  // After successful payment, unlock the mentor
+  const handlePaymentSuccess = () => {
+    unlockMentor(mentor.id);
   };
 
   return (
@@ -67,6 +75,11 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
               {mentor.available && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-sage-50 px-2 py-0.5 text-xs font-medium text-sage-600">
                   <CheckCircle2 className="h-3 w-3" /> {tr({ zh: "可对话", en: "Available" })}
+                </span>
+              )}
+              {isUnlocked && mentor.price > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600">
+                  <CheckCircle2 className="h-3 w-3" /> {tr({ zh: "已解锁", en: "Unlocked" })}
                 </span>
               )}
             </div>
@@ -107,6 +120,15 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
                 </p>
                 <p className="text-xs text-slate-400">
                   {tr({ zh: "体验中", en: "In Trial" })}
+                </p>
+              </>
+            ) : isUnlocked ? (
+              <>
+                <p className="text-2xl font-bold text-sage-500">
+                  {tr({ zh: "已解锁", en: "Unlocked" })}
+                </p>
+                <p className="text-xs text-sage-400">
+                  {tr({ zh: "可自由对话", en: "Chat freely" })}
                 </p>
               </>
             ) : (
@@ -157,24 +179,47 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
         </div>
       </div>
 
-      {/* Chat Interface */}
+      {/* Chat Interface — show if mentor is available AND unlocked (or free) */}
       {mentor.available ? (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-serif text-base font-bold text-brand-900">
-              {trFmt({ zh: "和 {name} 对话", en: "Chat with {name}" }, { name: mentor.name })}
-            </h2>
+        isUnlocked ? (
+          <div>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-serif text-base font-bold text-brand-900">
+                {trFmt({ zh: "和 {name} 对话", en: "Chat with {name}" }, { name: mentor.name })}
+              </h2>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <MentorChat
+                mentorId={mentor.id}
+                mentorName={mentor.name}
+                mentorPersonality={mentor.personality_prompt}
+                mentorAvatar={mentor.avatar}
+                sessionId={session}
+              />
+            </div>
           </div>
-          <div className="overflow-hidden rounded-xl border border-slate-200">
-            <MentorChat
-              mentorId={mentor.id}
-              mentorName={mentor.name}
-              mentorPersonality={mentor.personality_prompt}
-              mentorAvatar={mentor.avatar}
-              sessionId={session}
-            />
+        ) : (
+          <div className="card text-center py-12 relative overflow-hidden">
+            {/* Blurred preview hint */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+              <Lock className="h-32 w-32 text-brand-300" />
+            </div>
+            <div className="relative">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-brand-50">
+                <Lock className="h-6 w-6 text-brand-400" />
+              </div>
+              <h3 className="font-bold text-brand-900 mb-1">
+                {trFmt({ zh: "解锁与 {name} 的对话", en: "Unlock chat with {name}" }, { name: mentor.name })}
+              </h3>
+              <p className="text-sm text-slate-500 mb-4">
+                {tr({ zh: `支付 ¥${mentor.price} 即可开始与这位导师的深度对话`, en: `Pay ¥${mentor.price} to start a deep conversation with this mentor` })}
+              </p>
+              <button onClick={handlePriceClick} className="btn-primary">
+                {tr({ zh: `立即解锁 ¥${mentor.price}`, en: `Unlock now ¥${mentor.price}` })}
+              </button>
+            </div>
           </div>
-        </div>
+        )
       ) : (
         <div className="card text-center py-12">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
@@ -226,6 +271,7 @@ export function MentorDetailClient({ id, session }: MentorDetailClientProps) {
         onClose={() => setPaymentOpen(false)}
         mentorName={mentor.name}
         price={mentor.price}
+        onSuccess={handlePaymentSuccess}
       />
     </div>
   );

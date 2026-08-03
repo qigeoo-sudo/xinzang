@@ -10,7 +10,7 @@ export const translations = {
     history: { zh: "对话记录", en: "History" },
     login: { zh: "登录", en: "Login" },
     register: { zh: "注册", en: "Sign Up" },
-    premium: { zh: "升级会员", en: "Go Premium" },
+    premium: { zh: "入会", en: "Premium" },
     tagline: { zh: "你的 AI 职业伙伴", en: "Your AI Career Companion" },
   },
 
