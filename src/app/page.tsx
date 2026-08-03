@@ -56,18 +56,49 @@ export default function HomePage() {
             <h1 className="font-serif font-bold text-brand-900 mb-6">
               {lang === "zh" ? (
                 <span className="flex flex-col items-center justify-center text-[40px] md:text-[40px] leading-none">
-                  <span>每个</span>
-                  <span>年轻人</span>
-                  <span>的</span>
-                  <span className="bg-gradient-to-r from-brand-500 to-sage-500 bg-clip-text text-transparent">AI</span>
-                  <span className="bg-gradient-to-r from-brand-500 to-sage-500 bg-clip-text text-transparent">职业伙伴</span>
+                  {[
+                    { w: "每个", g: false, offset: 0 },
+                    { w: "年轻人", g: false, offset: 2 },
+                    { w: "的", g: false, offset: 5 },
+                    { w: "AI", g: true, offset: 6 },
+                    { w: "职业伙伴", g: true, offset: 8 },
+                  ].map((word, i) => (
+                    <span key={i} className="flex items-center justify-center">
+                      {word.w.split("").map((ch, ci) => {
+                        const globalIdx = word.offset + ci;
+                        return (
+                          <span
+                            key={ci}
+                            className={`animate-breathe ${word.g ? "bg-gradient-to-r from-brand-500 to-sage-500 bg-clip-text text-transparent" : ""}`}
+                            style={{ animationDelay: `${globalIdx * 0.5}s, ${globalIdx * 1.0 + 12}s` }}
+                          >
+                            {ch}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  ))}
                 </span>
               ) : (
                 <span className="block text-4xl md:text-5xl leading-tight">
-                  Every Young Person's<br />
-                  <span className="bg-gradient-to-r from-brand-500 to-sage-500 bg-clip-text text-transparent">
-                    AI Career Companion
-                  </span>
+                  {[
+                    { w: "Every", g: false, br: false },
+                    { w: "Young", g: false, br: false },
+                    { w: "Person's", g: false, br: true },
+                    { w: "AI", g: true, br: false },
+                    { w: "Career", g: true, br: false },
+                    { w: "Companion", g: true, br: false },
+                  ].map((item, i) => (
+                    <span key={i}>
+                      <span
+                        className={`animate-breathe ${item.g ? "bg-gradient-to-r from-brand-500 to-sage-500 bg-clip-text text-transparent" : ""}`}
+                        style={{ animationDelay: `${i * 0.5}s, ${5.5 + i * 1.0}s` }}
+                      >
+                        {item.w}
+                      </span>
+                      {item.br ? <br /> : " "}
+                    </span>
+                  ))}
                 </span>
               )}
             </h1>

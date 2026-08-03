@@ -121,7 +121,7 @@ export default function HistoryPage() {
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold text-sm text-brand-900 truncate">{session.mentorName}</h3>
                   {session.mentorId === "general" && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-medium text-brand-600">
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-brand-50 px-2.5 py-0.5 text-[10px] font-medium text-brand-600 whitespace-nowrap shrink-0">
                       {tr({ zh: "AI职导", en: "AI Guider" })}
                     </span>
                   )}
