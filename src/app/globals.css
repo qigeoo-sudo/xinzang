@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-primary: #3482a2;
+    --brand-deep: #22566b;
+    --brand-light: #d9eef3;
+    --sage-primary: #7ead78;
+    --sage-light: #e3f0e3;
+    --sand-primary: #cdb293;
+    --sand-light: #f3ede4;
+    --text-primary: #1a2e35;
+    --text-muted: #5a7180;
+    --bg-soft: #f7fafa;
+    --bg-warm: #faf7f4;
+    --border-light: #e2e8ed;
+  }
+
+  body {
+    @apply bg-[#f7fafa] text-[#1a2e35] antialiased;
+    font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-600 hover:shadow-md active:scale-95 disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-white px-6 py-3 text-sm font-semibold text-brand-600 transition-all hover:border-brand-300 hover:bg-brand-50 active:scale-95;
+  }
+
+  .card {
+    @apply rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-brand-200;
+  }
+
+  .card-warm {
+    @apply rounded-2xl border border-sand-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-sand-300;
+  }
+
+  .tag {
+    @apply inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-600;
+  }
+
+  .tag-sage {
+    @apply inline-flex items-center rounded-full bg-sage-50 px-3 py-1 text-xs font-medium text-sage-600;
+  }
+
+  .tag-sand {
+    @apply inline-flex items-center rounded-full bg-sand-50 px-3 py-1 text-xs font-medium text-sand-700;
+  }
+
+  .section-title {
+    @apply font-serif text-lg font-bold text-brand-800;
+  }
+
+  .glass-nav {
+    @apply border-b border-slate-200/60 bg-white/75 backdrop-blur-xl;
+  }
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* 聊天区域隐藏滚动条（仿微信） */
+.chat-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.chat-scroll::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Markdown 渲染样式 */
+.prose-chat p {
+  margin-bottom: 0.5rem;
+  line-height: 1.7;
+}
+.prose-chat ul {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+.prose-chat li {
+  margin-bottom: 0.25rem;
+}
+.prose-chat strong {
+  font-weight: 600;
+  color: #3482a2;
+}
+
+/* 渐入动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
