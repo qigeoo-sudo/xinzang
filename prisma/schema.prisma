@@ -1,0 +1,250 @@
+// ============================================================
+// AI Career Companion - Prisma Schema
+// M1 里程碑：数据库 Schema 定义
+// ============================================================
+// 技术栈：Prisma + SQLite (开发环境) / PostgreSQL (生产环境可切换)
+// 认证：Auth.js v5 (NextAuth v5) + @auth/prisma-adapter
+// 注意：SQLite 不支持 enum，所有枚举类型使用 String + 默认值实现
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+  // 输出到 src/generated/prisma 以避免与其它类型冲突
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 认证模型 (Auth.js v5 标准模型)
+// ============================================================
+
+/// 用户模型 — 系统核心模型，存储认证信息和基础状态
+model User {
+  id            String    @id @default(cuid())
+  // Auth.js 标准字段
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  // 自定义认证字段
+  phone         String?   @unique
+  passwordHash  String?
+  // 用户角色: USER | PREMIUM | ADMIN
+  role          String    @default("USER")
+  // 会员与试用状态 (服务端管理 — 修复安全审计 A01-1.2)
+  isPremium     Boolean   @default(false)
+  freeTrialUsed Int       @default(0)
+  // 审计字段
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 关联关系
+  accounts          Account[]
+  sessions          Session[]
+  profile           UserProfile?
+  payments          PaymentOrder[]
+  subscriptions     Subscription[]
+  chatSessions      ChatSession[]
+  verificationCodes VerificationCode[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+/// OAuth 账户模型 — Auth.js 标准模型，用于第三方登录
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// 会话模型 — Auth.js 标准模型，管理用户登录会话
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// 验证令牌模型 — Auth.js 标准模型，用于邮箱验证等
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+/// 验证码模型 — 短信/邮箱验证码 (修复安全审计 A07-7.1)
+/// 验证码由服务端生成，有时效性（5分钟过期）和尝试次数限制
+/// type: SMS | EMAIL | PHONE_REGISTER | EMAIL_REGISTER | PHONE_LOGIN | EMAIL_LOGIN
+model VerificationCode {
+  id           String   @id @default(cuid())
+  userId       String?
+  identifier   String   // 手机号或邮箱
+  code         String   // 验证码
+  type         String   @default("SMS") // SMS | EMAIL | PHONE_REGISTER | EMAIL_REGISTER | PHONE_LOGIN | EMAIL_LOGIN
+  attempts     Int      @default(0)
+  maxAttempts  Int      @default(5)
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([identifier, type])
+  @@index([userId])
+}
+
+// ============================================================
+// 业务模型
+// ============================================================
+
+/// 用户档案模型 — 存储用户教育背景、专业、兴趣、目标 (PRD 6.4)
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  // 教育背景
+  education String?  // 高中 | 本科 | 硕士 | 博士 | 其他
+  school    String?  // 学校名称
+  major     String?  // 专业
+  grade     String?  // 年级
+  // 职业信息
+  interests String?  // 兴趣方向 (JSON 数组字符串)
+  goals     String?  // 职业目标
+  // 偏好设置
+  preferredMentors String? // 偏好导师 ID 列表 (JSON 数组字符串)
+  // 审计字段
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// 支付订单模型 — 记录所有支付交易 (PRD 6.5)
+/// 修复安全审计 A04-4.2: 支付状态由服务端管理
+/// status: PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED
+/// paymentType: SUBSCRIPTION | MENTOR_UNLOCK | B2B_SCHOOL
+model PaymentOrder {
+  id            String   @id @default(cuid())
+  userId        String
+  orderNo       String   @unique // 业务订单号 (如 ACC_20260901_xxxx)
+  // 金额
+  amount        Float
+  currency      String   @default("CNY")
+  // 支付信息
+  status        String   @default("PENDING") // PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED
+  paymentMethod String?  // wechat | alipay
+  paymentType   String   // SUBSCRIPTION | MENTOR_UNLOCK | B2B_SCHOOL
+  // 关联订阅
+  subscriptionId String?
+  // 第三方支付流水号
+  transactionId String?  // 微信/支付宝交易号
+  // 元数据 (JSON 字符串，存储额外信息)
+  metadata      String?
+  // 时间戳
+  paidAt        DateTime?
+  expiredAt     DateTime? // 订单过期时间
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription Subscription?
+
+  @@index([userId, status])
+  @@index([orderNo])
+  @@index([transactionId])
+}
+
+/// 订阅模型 — 管理用户会员订阅 (PRD 6.5)
+/// 修复安全审计 A01-1.2: 会员状态由服务端数据库管理
+/// plan: MONTHLY | QUARTERLY | YEARLY
+/// status: ACTIVE | EXPIRED | CANCELLED | PENDING
+model Subscription {
+  id             String   @id @default(cuid())
+  userId         String
+  // 订阅计划
+  plan           String   @default("MONTHLY") // MONTHLY | QUARTERLY | YEARLY
+  status         String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED | PENDING
+  // 时间范围
+  startDate      DateTime @default(now())
+  endDate        DateTime
+  autoRenew      Boolean  @default(false)
+  // 关联支付订单
+  paymentOrderId String?  @unique
+  // 取消信息
+  cancelledAt    DateTime?
+  cancelReason   String?
+  // 审计字段
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentOrder PaymentOrder? @relation(fields: [paymentOrderId], references: [id])
+
+  @@index([userId, status])
+  @@index([endDate])
+}
+
+/// 聊天会话模型 — 存储用户与 AI 导师的对话会话 (PRD 6.2)
+model ChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  mentorId  String   // 导师 ID (对应 mentors.ts 中的 ID)
+  title     String?  // 会话标题 (可由用户自定义或自动生成)
+  // 统计信息
+  messageCount Int   @default(0)
+  // 审计字段
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([userId, mentorId])
+  @@index([updatedAt])
+}
+
+/// 聊天消息模型 — 存储对话中的每条消息
+/// role: user | assistant | system
+model ChatMessage {
+  id            String   @id @default(cuid())
+  chatSessionId String
+  role          String   // user | assistant | system
+  content       String   // 消息内容
+  // AI 回复元数据
+  tokensUsed    Int?     // 消耗的 token 数
+  modelUsed     String?  // 使用的模型名称
+  // 审计字段
+  createdAt     DateTime @default(now())
+
+  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  @@index([chatSessionId, createdAt])
+}

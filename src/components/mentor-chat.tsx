@@ -1,0 +1,708 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter, usePathname } from 'next/navigation';
+import type { Mentor } from '@/lib/mentors';
+import { MessageWithChoices } from '@/components/chat-options';
+
+interface ChatMessage {
+  id?: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt?: string;
+}
+
+interface MentorChatProps {
+  mentor: Mentor;
+}
+
+// localStorage 键名 — 按用户+导师区分，确保对话记录隔离
+const getStorageKey = (userId: string, mentorId: string, type: string) => `chat-${type}-${userId}-${mentorId}`;
+
+// AI 职导专用键生成器（按用户隔离）
+const getAiGuideKeys = (userId: string) => ({
+  messages: `ai-guide-messages-${userId}`,
+  limitTs: `ai-guide-limit-timestamp-${userId}`,
+  sessionId: `ai-guide-session-id-${userId}`,
+  completed: `ai-guide-completed-${userId}`,
+});
+
+// 24小时毫秒数
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+export function MentorChat({ mentor }: MentorChatProps) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
+  const [needSubscription, setNeedSubscription] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const [usageUsed, setUsageUsed] = useState<number>(0);
+  const [usageLimit, setUsageLimit] = useState<number | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // 滚动到底部
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // 初始化：检查 localStorage 状态，支持所有导师的断点续传
+  useEffect(() => {
+    if (initialized) return;
+    if (status === 'loading') return;
+
+    // 未登录时不加载 localStorage — 确保对话记录隔离
+    if (status === 'unauthenticated' || !session?.user?.id) {
+      setInitialized(true);
+      return;
+    }
+
+    // 获取当前用量数据
+    fetch('/api/chat/usage')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data) {
+          if (mentor.id === 'ai-guide') {
+            setUsageUsed(data.aiGuide?.used ?? 0);
+            setUsageLimit(data.aiGuide?.limit ?? 50);
+          } else {
+            setUsageUsed(data.mentor?.used ?? 0);
+            setUsageLimit(data.mentor?.limit ?? null);
+          }
+        }
+      })
+      .catch(() => {});
+
+    const userId = session.user.id;
+    const isAiGuide = mentor.id === 'ai-guide';
+    // 获取存储键（AI 职导用专用键，其他导师用通用键 — 均按用户隔离）
+    const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
+    const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
+    const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
+    const limitKey = isAiGuide ? aiKeys!.limitTs : null;
+    const completedKey = isAiGuide ? aiKeys!.completed : null;
+
+    try {
+      const savedMessages = localStorage.getItem(msgKey);
+      const savedSessionId = localStorage.getItem(sidKey);
+
+      // AI 职导专属：检查每日限额
+      if (isAiGuide && limitKey) {
+        const limitTimestamp = localStorage.getItem(limitKey);
+        const completed = completedKey ? localStorage.getItem(completedKey) === 'true' : false;
+
+        if (limitTimestamp) {
+          const limitTime = parseInt(limitTimestamp, 10);
+          const elapsed = Date.now() - limitTime;
+
+          if (elapsed >= ONE_DAY_MS) {
+            // 24小时已过 — 清零并重启问卷
+            localStorage.removeItem(msgKey);
+            localStorage.removeItem(sidKey);
+            localStorage.removeItem(limitKey);
+            if (completedKey) localStorage.removeItem(completedKey);
+            setMessages([]);
+            setSessionId(null);
+            setDailyLimitReached(false);
+            setQuestionnaireCompleted(false);
+            setInitialized(true);
+            return;
+          } else {
+            // 24小时未过 — 仍处于限额状态
+            setDailyLimitReached(true);
+            setError('在我这里，一天最多发送50条消息，明天再来吧。');
+            if (savedMessages) {
+              const parsed = JSON.parse(savedMessages) as ChatMessage[];
+              setMessages(parsed);
+            }
+            if (savedSessionId) {
+              setSessionId(savedSessionId);
+            }
+            setQuestionnaireCompleted(completed);
+            setInitialized(true);
+            return;
+          }
+        }
+      }
+
+      // 有保存的消息 — 从 localStorage 恢复
+      if (savedMessages) {
+        const parsed = JSON.parse(savedMessages) as ChatMessage[];
+        if (parsed.length > 0) {
+          setMessages(parsed);
+          if (savedSessionId) {
+            setSessionId(savedSessionId);
+          }
+          if (isAiGuide && completedKey) {
+            setQuestionnaireCompleted(localStorage.getItem(completedKey) === 'true');
+          }
+          setInitialized(true);
+          return;
+        }
+      }
+
+      // localStorage 没有数据 — 尝试从数据库加载最近的会话
+      loadFromDatabase();
+    } catch {
+      setInitialized(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mentor.id, status, initialized, session?.user?.id]);
+
+  // 从数据库加载最近的导师会话（断点续传的数据库回退）
+  const loadFromDatabase = async () => {
+    try {
+      const res = await fetch(`/api/chat/sessions/latest?mentorId=${mentor.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.session && data.messages && data.messages.length > 0) {
+          const dbMessages: ChatMessage[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string }) => ({
+            id: m.id,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            createdAt: m.createdAt,
+          }));
+          setMessages(dbMessages);
+          setSessionId(data.session.id);
+
+          // 同步到 localStorage（按用户隔离）
+          if (session?.user?.id) {
+            const userId = session.user.id;
+            const isAiGuide = mentor.id === 'ai-guide';
+            const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
+            const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
+            const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
+            localStorage.setItem(msgKey, JSON.stringify(dbMessages));
+            localStorage.setItem(sidKey, data.session.id);
+          }
+
+          setInitialized(true);
+          return;
+        }
+      }
+    } catch {
+      // 数据库加载失败，静默处理
+    }
+    // 没有数据库记录 — 显示初始问候
+    setInitialized(true);
+  };
+
+  // 初始欢迎消息 — 初始化完成且无保存数据时显示
+  useEffect(() => {
+    if (!initialized) return;
+    // 已有消息（从 localStorage 或数据库恢复）— 不显示欢迎语
+    if (messages.length > 0) return;
+    // 限额状态下不显示欢迎语
+    if (dailyLimitReached) return;
+
+    if (mentor.id === 'ai-guide') {
+      setMessages([
+        {
+          role: 'assistant',
+          content: `你好！我是AI职导，是AI导师分身的助理。\n\n在开始之前，我想先说明一下：我的任务是与你交流，收集你的个人档案，为AI导师分身提供基础数据，用来更有效率的为你解答问题。交流结束后，你可以随时去我的档案，修改或删除某些记录，后台数据库也会将这些数据脱敏后，及时更新。越是更贴近反映你当下状况的记录，越是能提高AI导师分身对你的服务质量。\n\n我的每天与你的有效对话来回次数是50次，如果由于各种原因，超过这个次数，那只能等24小时冷却时间后，再次尝试。\n你的时间非常宝贵，所以，让我们高效率得开始交流吧。\n\n那么，我们先从第一个问题开始：你目前的状态是？\n\n[CHOICE:type=single]\n在校\n在职\n待业\n[/CHOICE]`,
+        },
+      ]);
+    } else {
+      setMessages([
+        {
+          role: 'assistant',
+          content: `你好！我是${mentor.name}。你可以问我关于行业、求职、职业发展的任何问题，我会用我真实的经验来回答你。`,
+        },
+      ]);
+    }
+  }, [mentor.id, mentor.name, initialized, dailyLimitReached]);
+
+  // 保存消息到 localStorage — 按用户+导师隔离
+  const saveMessages = (msgs: ChatMessage[], sid: string | null) => {
+    if (!session?.user?.id) return;
+    try {
+      const userId = session.user.id;
+      const isAiGuide = mentor.id === 'ai-guide';
+      const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
+      const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
+      const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
+      localStorage.setItem(msgKey, JSON.stringify(msgs));
+      if (sid) {
+        localStorage.setItem(sidKey, sid);
+      }
+    } catch {
+      // localStorage 不可用时静默失败
+    }
+  };
+
+  // 检测问卷完成标记
+  const checkCompletion = (content: string): { content: string; completed: boolean } => {
+    if (mentor.id !== 'ai-guide') {
+      return { content, completed: false };
+    }
+    const marker = '[QUESTIONNAIRE_COMPLETED]';
+    if (content.includes(marker)) {
+      const cleanContent = content.replace(marker, '').trim();
+      return { content: cleanContent, completed: true };
+    }
+    return { content, completed: false };
+  };
+
+  const handleSend = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText || loading || dailyLimitReached) return;
+
+    // 未登录提示
+    if (status === 'unauthenticated') {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    if (status === 'loading') return;
+
+    setError('');
+    setInput('');
+    setNeedSubscription(false);
+
+    // 添加用户消息到 UI
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: messageText,
+    };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setLoading(true);
+
+    try {
+      // 构建发送给 API 的消息历史
+      const apiMessages = [
+        ...messages
+          .filter((m) => m.content)
+          .map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: messageText },
+      ];
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mentorId: mentor.id,
+          messages: apiMessages,
+          ...(sessionId ? { sessionId } : {}),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 401 未登录 — 显示登录/注册引导
+        if (res.status === 401) {
+          setShowAuthPrompt(true);
+          setMessages(messages);
+          setInput(messageText);
+          return;
+        }
+        // 每日限额达到
+        if (data.dailyLimitReached) {
+          setError(data.error || '在我这里，一天最多发送50条消息，明天再来吧。');
+          setDailyLimitReached(true);
+          setMessages(messages);
+          setInput(messageText);
+          // 保存限额时间戳（按用户隔离）
+          if (mentor.id === 'ai-guide' && session?.user?.id) {
+            try {
+              const aiKeys = getAiGuideKeys(session.user.id);
+              localStorage.setItem(aiKeys.limitTs, String(Date.now()));
+              saveMessages(messages, sessionId);
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
+        // 消息条数超限
+        if (data.error && data.error.includes('一天最多发送50条消息')) {
+          setError(data.error);
+          setDailyLimitReached(true);
+          setMessages(messages);
+          setInput(messageText);
+          if (mentor.id === 'ai-guide' && session?.user?.id) {
+            try {
+              const aiKeys = getAiGuideKeys(session.user.id);
+              localStorage.setItem(aiKeys.limitTs, String(Date.now()));
+              saveMessages(messages, sessionId);
+            } catch {
+              // ignore
+            }
+          }
+          return;
+        }
+        if (data.needUpgrade) {
+          setError('免费试用次数已用完，请升级会员继续使用');
+        } else if (data.needSubscription) {
+          setError(`${mentor.name} 需要会员才能对话`);
+          setNeedSubscription(true);
+        } else if (data.quotaExceeded) {
+          setError(data.error || '导师分身对话次数已用完');
+          setNeedSubscription(true);
+        } else {
+          setError(data.error || '发送失败');
+        }
+        // 移除已添加的用户消息
+        setMessages(messages);
+        setInput(messageText);
+        return;
+      }
+
+      // 检测问卷完成标记
+      const { content: cleanReply, completed } = checkCompletion(data.reply);
+
+      // 添加 AI 回复
+      const finalMessages = [...newMessages, { role: 'assistant' as const, content: cleanReply }];
+      setMessages(finalMessages);
+
+      // 保存到 localStorage — 所有导师都保存
+      saveMessages(finalMessages, data.sessionId || sessionId);
+
+      // 如果问卷完成，触发事件
+      if (completed && !questionnaireCompleted) {
+        setQuestionnaireCompleted(true);
+        if (mentor.id === 'ai-guide' && session?.user?.id) {
+          try {
+            const aiKeys = getAiGuideKeys(session.user.id);
+            localStorage.setItem(aiKeys.completed, 'true');
+          } catch {
+            // ignore
+          }
+        }
+        // 延迟触发事件，让 UI 先更新
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('questionnaireCompleted'));
+        }, 500);
+      }
+
+      // 更新 sessionId — 所有导师都保存
+      if (data.sessionId && !sessionId) {
+        setSessionId(data.sessionId);
+        saveMessages(finalMessages, data.sessionId);
+      }
+
+      // 更新用量计数
+      if (mentor.id === 'ai-guide' && data.dailyMessageCount !== undefined) {
+        setUsageUsed(data.dailyMessageCount);
+        setUsageLimit(data.dailyMessageLimit ?? 50);
+      } else if (mentor.id !== 'ai-guide' && data.mentorUsed !== undefined) {
+        setUsageUsed(data.mentorUsed);
+        setUsageLimit(data.mentorLimit ?? null);
+      }
+    } catch {
+      setError('网络错误，请稍后再试');
+      setMessages(messages);
+      setInput(messageText);
+    } finally {
+      setLoading(false);
+      inputRef.current?.focus();
+    }
+  };
+
+  // 键盘事件处理
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  // 登录引导
+  if (showAuthPrompt || status === 'unauthenticated') {
+    // AI 职导的未登录提示 — 包含登录和注册链接
+    if (mentor.id === 'ai-guide') {
+      return (
+        <div className="card text-center py-8">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-50 flex items-center justify-center">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3482a2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+            </svg>
+          </div>
+          <p className="text-sm text-brand-900 mb-1">你好！我是AI职导</p>
+          <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+            为了给你提供个性化的职业引导，请先登录。如果还没有账号，可以注册一个。
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => router.push(`/login?callbackUrl=${pathname}`)}
+              className="btn-primary"
+            >
+              登录
+            </button>
+            <button
+              onClick={() => router.push(`/register?callbackUrl=${pathname}`)}
+              className="btn-secondary"
+            >
+              注册
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // 其他导师的未登录提示
+    return (
+      <div className="card text-center py-8">
+        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2 M12 11a4 4 0 100-8 4 4 0 000 8z"
+              stroke="#5B7C5A"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <p className="text-sm text-ink mb-1">登录后开始对话</p>
+        <p className="text-xs text-muted mb-4">
+          成为会员即可与全部导师分身对话
+        </p>
+        <button
+          onClick={() =>
+            router.push(`/login?callbackUrl=${pathname}`)
+          }
+          className="btn-primary"
+        >
+          去登录
+        </button>
+      </div>
+    );
+  }
+
+  // 等待初始化 — 所有导师在加载时显示
+  if (!initialized) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="flex gap-1">
+          <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '0ms' }} />
+          <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '150ms' }} />
+          <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-[400px]">
+      {/* 消息列表 */}
+      <div className="flex-1 space-y-4 pb-4">
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            {/* AI 头像 */}
+            {msg.role === 'assistant' && (
+              <div className="flex-shrink-0 mr-2">
+                {mentor.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={mentor.avatar}
+                    alt={mentor.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-accent-light flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">
+                      {mentor.name.charAt(0)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 消息气泡 */}
+            <div
+              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                msg.role === 'user'
+                  ? 'bg-brand-500 text-white rounded-br-md'
+                  : 'bg-white border border-slate-100 text-brand-900 rounded-bl-md'
+              }`}
+            >
+              {msg.role === 'assistant' ? (
+                <MessageWithChoices
+                  content={msg.content}
+                  onSelect={(value) => handleSend(value)}
+                  disabled={loading || dailyLimitReached}
+                  enableMentorLinks={mentor.id === 'ai-guide'}
+                />
+              ) : (
+                msg.content
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* 加载指示器 */}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="flex-shrink-0 mr-2">
+              {mentor.avatar ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={mentor.avatar}
+                  alt={mentor.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-accent-light flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {mentor.name.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="bg-white border border-rule rounded-2xl rounded-bl-md px-4 py-3">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-muted/40 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 错误提示 */}
+        {error && (
+          <div className="bg-danger/10 text-danger text-xs px-4 py-2 rounded-lg text-center">
+            {error}
+          </div>
+        )}
+
+        {/* 非会员与收费导师对话 — 显示加入会员按钮 */}
+        {needSubscription && (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <p className="text-sm text-slate-600 text-center">
+              成为会员后，即可与 {mentor.name} 及所有行业导师深度对话
+            </p>
+            <Link
+              href="/dashboard/subscription"
+              className="btn-primary"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+                <path d="M5 21h14" />
+              </svg>
+              加入会员
+            </Link>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 推荐问题 */}
+      {messages.length <= 1 && !loading && mentor.suggestedQuestions.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {mentor.suggestedQuestions.map((q, i) => (
+            <button
+              key={i}
+              onClick={() => handleSend(q)}
+              className="text-xs px-3 py-1.5 rounded-full bg-beige text-accent border border-accent/20 hover:bg-sand transition-colors"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 用量计数显示 */}
+      {initialized && session?.user && (
+        <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted">
+          {mentor.id === 'ai-guide' ? (
+            <span>
+              今日已用 <span className="font-medium text-brand-600">{usageUsed}</span>
+              {' / '}
+              <span className="font-medium">{usageLimit}</span> 次
+            </span>
+          ) : usageLimit !== null ? (
+            <span>
+              导师分身对话已用 <span className="font-medium text-accent">{usageUsed}</span>
+              {' / '}
+              <span className="font-medium text-accent">{usageLimit}</span> 次
+            </span>
+          ) : (
+            <span className="text-success font-medium">
+              无限次对话
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 输入区域 */}
+      <div className="border-t border-rule pt-3 safe-bottom">
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={dailyLimitReached ? '今日消息已达上限...' : `问问 ${mentor.name}...`}
+            rows={1}
+            maxLength={2000}
+            disabled={loading || dailyLimitReached}
+            className="input-field flex-1 resize-none max-h-32"
+            style={{ minHeight: '44px' }}
+          />
+          <button
+            onClick={() => handleSend()}
+            disabled={!input.trim() || loading || dailyLimitReached}
+            className="btn-primary !py-2.5 !px-4 flex-shrink-0"
+          >
+            {loading ? (
+              <svg
+                className="animate-spin"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  opacity="0.25"
+                />
+                <path
+                  d="M12 2a10 10 0 0110 10"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M22 2L11 13 M22 2l-7 20-4-9-9-4 20-7z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

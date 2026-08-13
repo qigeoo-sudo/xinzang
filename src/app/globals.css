@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-bg text-ink antialiased;
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  /* 主按钮 — 兼容原始 MVP 样式 */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-brand-500 text-white px-6 py-3 rounded-xl
+           text-sm font-semibold transition-all duration-200 active:scale-95
+           hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,.05);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white text-brand-600 border border-brand-200
+           px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95
+           hover:bg-brand-50 hover:border-brand-300;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white px-6 py-3 rounded-lg font-medium
+           transition-all duration-200 active:scale-95;
+  }
+
+  /* 输入框 */
+  .input-field {
+    @apply w-full bg-white border border-rule rounded-lg px-4 py-3
+           text-ink placeholder:text-muted
+           focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20
+           transition-all duration-200;
+  }
+
+  /* 卡片 — 兼容原始 MVP 样式 */
+  .card {
+    @apply bg-white/80 border border-slate-100/70 rounded-2xl p-5 shadow-sm;
+    backdrop-filter: blur(4px);
+    transition: all 0.15s cubic-bezier(.4,0,.2,1);
+  }
+
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-md hover:border-accent/30;
+  }
+
+  /* 温暖卡片 — 原始 MVP 最后一张卡片 */
+  .card-warm {
+    @apply rounded-2xl border border-brand-700/40 bg-brand-900 p-5;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -2px rgba(0,0,0,.1);
+    transition: all 0.15s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* 玻璃导航栏 — 原始 MVP */
+  .glass-nav {
+    @apply border-b border-slate-100/60;
+    background-color: hsla(0,0%,100%,.75);
+    backdrop-filter: blur(24px);
+  }
+
+  /* 网格渐变背景 — 原始 MVP */
+  .bg-mesh-gradient {
+    background-image:
+      radial-gradient(at 20% 30%, rgba(52,130,162,.06) 0, transparent 50%),
+      radial-gradient(at 80% 70%, rgba(126,173,120,.06) 0, transparent 50%);
+  }
+
+  /* Hero 装饰动画 — 原始 MVP */
+  .hero-decor {
+    opacity: 0;
+    animation: heroDecorFadeIn 5s ease-in 3s forwards;
+  }
+
+  /* 标签 */
+  .tag {
+    @apply inline-block px-3 py-1 rounded-full text-xs font-medium;
+  }
+  .tag-accent {
+    @apply bg-accent/10 text-accent;
+  }
+  .tag-warm {
+    @apply bg-warm/10 text-warm;
+  }
+
+  /* 页面容器 */
+  .page-container {
+    @apply max-w-3xl mx-auto px-4 py-6;
+  }
+
+  /* 移动端底部安全区 */
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* 原始 MVP 动画 */
+@keyframes breatheFirst {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+
+@keyframes breatheLoop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.004); }
+}
+
+@keyframes heroDecorFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* PWA 滚动优化 */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS PWA 全屏适配 */
+@media (display-mode: standalone) {
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
