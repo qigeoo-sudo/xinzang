@@ -2,11 +2,22 @@
 
 > 本文件供 AI 助手快速理解项目状态，新会话开始时请先阅读此文件。
 
+## 重要文档
+
+| 文档 | 路径 | 说明 |
+|------|------|------|
+| **PRD（产品需求文档）** | `docs/PRD.md` | 产品规划、导师规划、时间线、数据库迁移方案、上线阻断项 |
+| **数据库迁移交接文档** | `docs/AICCloudBase_PG_v1.1.md` | SQLite→CloudBase PostgreSQL 详细迁移方案（ChatGPT 编写） |
+| **项目上下文** | `CLAUDE.md`（本文件） | 技术栈、目录结构、业务流程、关键注意事项 |
+
+**新会话请按顺序阅读：CLAUDE.md → docs/PRD.md → docs/AICCloudBase_PG_v1.1.md**
+
 ## 项目概述
 
 AI 职业伴侣平台 — 通过 AI 职导访谈 + 行业导师 AI 分身，为高校学生提供求职指导。
 
 **当前版本：在校生专用版（v2-student-only）**
+**工作截止日期：2026-12-01**
 
 ## 技术栈
 
@@ -118,6 +129,28 @@ src/
 
 ## 待办 / 已知问题
 
+### 近期（2026年9月前）
 - AI 职导问卷流程当前为在校生专用版，如需恢复在校/在职/待业分支，需修改 `src/lib/mentors.ts` 中的 `personalityPrompt` 和 `src/components/mentor-chat.tsx` 中的 `AI_GUIDE_VERSION`
 - 支付宝支付为沙箱环境，上线前需切换正式配置
 - 暂无自动化测试
+
+### 导师内容（9月-10月）
+- 准备 10 个导师分身的 Prompt（Claude fable 撰写 + 人工调教）
+- 每个导师约 3 万字访谈文字记录作为知识库
+- 10 月起每周案例更新（1-3 篇/导师/周，300-1000 字/篇）
+- 10 个锁定导师（`is_active = false`），后续版本推出
+
+### 数据库迁移（11月-12月）
+- SQLite → 腾讯云 CloudBase PostgreSQL
+- 导师数据从 `src/lib/mentors.ts` 迁入数据库
+- 详见 `docs/PRD.md` 第六章和 `docs/AICCloudBase_PG_v1.1.md`
+
+### P0 阻断项（上线前必须修复）
+- P0-3: 客户端只提交本轮消息，服务端加载历史
+- P0-4: 验证码不返回明文
+- P0-5: 支付正式验签
+- P0-6: Service Worker 不缓存私人页面
+- P0-7: localStorage 不保存完整聊天历史
+- P0-8: 隐私说明与功能一致
+- P0-9: 档案更新事务化 + 追加式历史
+- 详见 `docs/PRD.md` 第七章
