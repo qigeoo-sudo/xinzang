@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 import { mentors, getAllIndustries } from '@/lib/mentors';
 
 export default function MentorsPage() {
@@ -11,7 +10,6 @@ export default function MentorsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="page-container">
         {/* 页面标题 */}

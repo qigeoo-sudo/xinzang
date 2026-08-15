@@ -2,15 +2,13 @@
 
 import { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 
 type LoginMethod = 'phone' | 'email';
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 
@@ -35,8 +33,8 @@ function LoginForm() {
       if (result?.error) {
         setError('手机号/邮箱或密码不正确');
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // 使用完整页面跳转确保 session cookie 生效后再渲染受保护页面
+        window.location.href = callbackUrl;
       }
     } catch {
       setError('登录失败，请稍后再试');
@@ -48,7 +46,6 @@ function LoginForm() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
@@ -148,7 +145,7 @@ function LoginForm() {
           <p className="text-center text-sm text-muted mt-6">
             还没有账号？{' '}
             <Link
-              href="/register"
+              href={callbackUrl && callbackUrl !== '/' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'}
               className="text-accent font-medium hover:underline"
             >
               免费注册

@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 import { mentors } from '@/lib/mentors';
 import Link from 'next/link';
 
@@ -103,7 +102,6 @@ export default async function DashboardPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="page-container">
         {/* 页面标题 */}
@@ -143,7 +141,7 @@ export default async function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-lg font-bold text-slate-400">免费用户</p>
+                  <p className="text-lg font-bold text-slate-400">非会员</p>
                   <p className="text-xs text-slate-400 mt-1">
                     剩余试用 {freeTrialRemaining} / {freeTrialLimit} 次
                   </p>

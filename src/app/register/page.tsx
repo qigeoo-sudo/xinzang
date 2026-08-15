@@ -1,17 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 
 type RegMethod = 'phone' | 'email';
 type Step = 'form' | 'verify' | 'success';
 
 export default function RegisterPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-muted">加载中...</p></div>}>
+      <RegisterContent />
+    </Suspense>
+  );
+}
+
+function RegisterContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 
@@ -128,8 +134,8 @@ export default function RegisterPage() {
       });
 
       if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // 使用完整页面跳转确保 session cookie 生效后再渲染受保护页面
+        window.location.href = callbackUrl;
       } else {
         setStep('success');
       }
@@ -143,16 +149,12 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
           {/* 标题 */}
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-ink mb-2">创建账号</h1>
-            <p className="text-sm text-muted">
-              免费体验 3 次 AI 导师对话
-            </p>
           </div>
 
           {/* 表单卡片 */}
@@ -315,7 +317,7 @@ export default function RegisterPage() {
               </div>
               <h3 className="text-lg font-bold text-ink mb-2">注册成功！</h3>
               <p className="text-sm text-muted mb-4">请登录以继续</p>
-              <Link href="/login" className="btn-primary inline-block">
+              <Link href={callbackUrl && callbackUrl !== '/' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="btn-primary inline-block">
                 去登录
               </Link>
             </div>
@@ -325,7 +327,7 @@ export default function RegisterPage() {
           {step !== 'success' && (
             <p className="text-center text-sm text-muted mt-6">
               已有账号？{' '}
-              <Link href="/login" className="text-accent font-medium hover:underline">
+              <Link href={callbackUrl && callbackUrl !== '/' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'} className="text-accent font-medium hover:underline">
                 直接登录
               </Link>
             </p>
@@ -333,7 +335,7 @@ export default function RegisterPage() {
 
           {/* 隐私提示 */}
           <p className="text-center text-xs text-muted mt-4 leading-relaxed">
-            我们仅收集必要的职业信息，你的数据可随时修改删除。
+            我们仅收集必要的职业信息，你可以随时更新个人信息。
           </p>
         </div>
       </div>

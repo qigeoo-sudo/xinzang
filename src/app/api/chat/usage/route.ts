@@ -26,17 +26,19 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // 获取用户会员状态和当前订阅
+    // 获取用户会员状态、免费试用次数和当前订阅
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isPremium: true },
+      select: { isPremium: true, freeTrialUsed: true },
     });
+
+    const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
 
     let mentorUsed = 0;
     let mentorLimit: number | null = null;
 
     if (user?.isPremium) {
-      // 获取当前有效订阅
+      // 会员 — 获取当前订阅
       const subscription = await prisma.subscription.findFirst({
         where: {
           userId,
@@ -64,6 +66,11 @@ export async function GET() {
           });
         }
       }
+      // mentorLimit 为 null 表示无限次（高级套餐）
+    } else {
+      // 非会员 — 返回免费试用次数
+      mentorUsed = user?.freeTrialUsed ?? 0;
+      mentorLimit = freeTrialLimit;
     }
 
     // AI 职导：统计24小时内的用户消息数

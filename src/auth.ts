@@ -183,9 +183,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return Response.redirect(new URL('/', request.nextUrl));
       }
 
-      // 未登录用户访问受保护路由 → 重定向到登录页
+      // 未登录用户访问受保护路由 → 显式重定向到登录页，保留 callbackUrl
       if (!isLoggedIn && !isPublicPath) {
-        return false;
+        const loginUrl = new URL('/login', request.nextUrl.origin);
+        loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
+        return Response.redirect(loginUrl);
       }
 
       return true;

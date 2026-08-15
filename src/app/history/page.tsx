@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 import { mentors } from '@/lib/mentors';
 import Link from 'next/link';
 
@@ -32,7 +31,6 @@ export default async function HistoryPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="page-container">
         {/* 页面标题 */}

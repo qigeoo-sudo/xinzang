@@ -65,7 +65,7 @@ export default async function SubscriptionPage() {
           <p className="text-sm text-muted">
             {user?.isPremium
               ? '你正在享受会员全部权益'
-              : '解锁无限次 AI 导师对话，获得完整职业指导体验'}
+              : '解锁无限次 AI 导师分身对话，获得完整职业指导体验。'}
           </p>
         </div>
 
@@ -91,9 +91,9 @@ export default async function SubscriptionPage() {
             </div>
           ) : (
             <div className="text-center">
-              <p className="text-sm text-muted">当前为免费用户</p>
+              <p className="text-sm text-muted">当前为非会员用户</p>
               <p className="text-lg font-bold text-warm mt-1">
-                剩余免费试用: {freeTrialRemaining} / {freeTrialLimit} 次
+                剩余免费试用导师分身次数: {freeTrialRemaining} / {freeTrialLimit} 次
               </p>
             </div>
           )}

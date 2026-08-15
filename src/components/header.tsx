@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useLanguage } from '@/components/language-context';
 
@@ -45,10 +45,11 @@ const navLabels = {
  * - 问卷进行中：导航栏随页面滚动（不锁定）
  * - 问卷完成后：导航栏锁定在顶部（sticky），方便用户切换页面
  */
-export function Header() {
+function HeaderInner() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang, mounted } = useLanguage();
   const [locked, setLocked] = useState(false);
 
@@ -74,25 +75,24 @@ export function Header() {
 
   // 监听问卷完成事件 & 检查 localStorage 中的完成状态
   useEffect(() => {
-    // 非对话页面不锁定
+    // 非对话页面 — 导航栏始终 sticky
     if (pathname !== '/chat') {
-      setLocked(false);
+      setLocked(true);
       return;
     }
 
-    // 未登录时不锁定
+    // 对话页面：未登录时不锁定
     if (status !== 'authenticated' || !session?.user?.id) {
       setLocked(false);
       return;
     }
 
-    // 检查 localStorage 中是否已完成问卷（按用户隔离）
+    // 对话页面：检查问卷是否完成 — 完成后才锁定
     try {
       const uid = session.user.id;
       const completed = localStorage.getItem(`ai-guide-completed-${uid}`) === 'true';
       const limitTimestamp = localStorage.getItem(`ai-guide-limit-timestamp-${uid}`);
       
-      // 如果有限额时间戳且24小时未过，检查完成状态
       if (limitTimestamp) {
         const elapsed = Date.now() - parseInt(limitTimestamp, 10);
         if (elapsed < 24 * 60 * 60 * 1000 && completed) {
@@ -109,7 +109,6 @@ export function Header() {
       setLocked(false);
     }
 
-    // 监听问卷完成事件
     const handleCompleted = () => setLocked(true);
     window.addEventListener('questionnaireCompleted', handleCompleted);
     return () => window.removeEventListener('questionnaireCompleted', handleCompleted);
@@ -174,8 +173,17 @@ export function Header() {
     },
   ];
 
+  // useSearchParams 是响应式的 — 当 URL 参数变化时自动重新渲染
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
+
+    // 在登录/注册页面时，根据 callbackUrl 高亮对应图标
+    if (pathname === '/login' || pathname === '/register') {
+      const cbUrl = searchParams.get('callbackUrl') || '/';
+      if (href === '/') return cbUrl === '/';
+      return cbUrl.startsWith(href);
+    }
+
     return pathname.startsWith(href);
   };
 
@@ -297,5 +305,20 @@ export function Header() {
         </div>
       </nav>
     </>
+  );
+}
+
+/**
+ * Header 导出组件 — 内部用 Suspense 包装以支持 useSearchParams
+ */
+export function Header() {
+  return (
+    <Suspense
+      fallback={
+        <nav className="glass-nav z-50 h-14" />
+      }
+    >
+      <HeaderInner />
+    </Suspense>
   );
 }

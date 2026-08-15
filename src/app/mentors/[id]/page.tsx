@@ -1,15 +1,17 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { Header } from '@/components/header';
 import { getMentorById, mentors } from '@/lib/mentors';
 import { MentorChat } from '@/components/mentor-chat';
 import { KnowledgePanel } from '@/components/knowledge-panel';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
 
 // 预生成导师页面路径
 export function generateStaticParams() {
   return mentors.map((m) => ({ id: m.id }));
 }
 
-export default function MentorDetailPage({
+export default async function MentorDetailPage({
   params,
 }: {
   params: { id: string };
@@ -17,6 +19,36 @@ export default function MentorDetailPage({
   const mentor = getMentorById(params.id);
   if (!mentor) {
     notFound();
+  }
+
+  // 非会员访问付费导师 — 检查是否已完成 AI 职导访谈
+  if (!mentor.isFree) {
+    const session = await auth();
+    if (session?.user?.id) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isPremium: true },
+      });
+
+      if (!user?.isPremium) {
+        // 非会员 — 检查是否已完成 AI 职导访谈
+        // profileSource = "ai_extracted" 表示通过访谈自动提取了档案
+        // nickname 不为空表示有有效的档案数据（手动填写或访谈提取）
+        const profile = await prisma.userProfile.findUnique({
+          where: { userId: session.user.id },
+          select: { nickname: true, profileSource: true },
+        });
+
+        const interviewCompleted =
+          profile?.profileSource === 'ai_extracted' ||
+          (profile?.nickname != null && profile.nickname.length > 0);
+
+        if (!interviewCompleted) {
+          // 未完成访谈 — 跳转到 AI 职导页面
+          redirect('/chat?need=questionnaire');
+        }
+      }
+    }
   }
 
   return (

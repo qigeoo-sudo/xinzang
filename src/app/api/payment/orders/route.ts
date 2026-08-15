@@ -14,12 +14,16 @@ import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { getPlanById } from '@/lib/plans';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
+import { createAlipayOrder } from '@/lib/alipay';
+
+/** 支付方式 */
+type PaymentMethod = 'wechat' | 'alipay';
 
 /**
  * POST /api/payment/orders
- * 创建支付订单 + 调用微信支付下单
+ * 创建支付订单 + 调用支付下单 (微信支付 / 支付宝)
  *
- * Body: { planId: "MONTHLY" | "QUARTERLY" | "YEARLY" }
+ * Body: { planId: "MONTHLY" | "QUARTERLY" | "YEARLY", paymentMethod?: "wechat" | "alipay" }
  */
 export async function POST(request: NextRequest) {
   // 1. 身份验证
@@ -38,9 +42,21 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { planId } = await request.json();
+    const { planId, paymentMethod = 'wechat', isRenewal = false }: {
+      planId: string;
+      paymentMethod?: PaymentMethod;
+      isRenewal?: boolean;
+    } = await request.json();
 
-    // 3. 验证计划 ID
+    // 3. 验证支付方式 (运行时校验: body 来自不可信输入)
+    if (paymentMethod !== 'wechat' && paymentMethod !== 'alipay') {
+      return NextResponse.json(
+        { error: '无效的支付方式' },
+        { status: 400 }
+      );
+    }
+
+    // 4. 验证计划 ID
     const plan = getPlanById(planId);
     if (!plan) {
       return NextResponse.json(
@@ -49,7 +65,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. 检查是否已有有效订阅 — 允许升级但不允许降级
+    // 5. 检查是否已有有效订阅
     const existingSub = await prisma.subscription.findFirst({
       where: {
         userId: session.user.id,
@@ -58,75 +74,92 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (existingSub) {
-      // 套餐等级判断
-      const planRank: Record<string, number> = {
-        MONTHLY: 1,
-        QUARTERLY: 2,
-        YEARLY: 3,
-      };
-      const currentRank = planRank[existingSub.plan] || 0;
-      const newRank = planRank[plan.id] || 0;
+    // 续费折扣：年度会员续费年度享8折
+    const isYearlyRenewal = isRenewal && plan.id === 'YEARLY' && existingSub?.plan === 'YEARLY';
+    const discountRate = isYearlyRenewal ? 0.8 : 1;
+    const actualPriceFen = Math.round(plan.priceFen * discountRate);
+    const actualPrice = Math.round(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
 
-      // 不允许降级或同级重复订阅
-      if (newRank <= currentRank) {
-        return NextResponse.json(
-          { error: '你已有同级或更高级会员，无需重复订阅' },
-          { status: 400 }
-        );
+    if (existingSub) {
+      if (isYearlyRenewal) {
+        // 年度续费：允许
+      } else {
+        // 套餐等级判断
+        const planRank: Record<string, number> = {
+          MONTHLY: 1,
+          QUARTERLY: 2,
+          YEARLY: 3,
+        };
+        const currentRank = planRank[existingSub.plan] || 0;
+        const newRank = planRank[plan.id] || 0;
+
+        // 不允许降级或同级重复订阅（非续费）
+        if (newRank <= currentRank) {
+          return NextResponse.json(
+            { error: '你已有同级或更高级会员，无需重复订阅' },
+            { status: 400 }
+          );
+        }
       }
-      // 允许升级：将旧订阅标记为已升级 (不取消，保留到期)
-      // 新订阅会在支付成功后创建
     }
 
-    // 5. 创建业务订单号
+    // 6. 创建业务订单号
     const orderNo = generateOrderNo();
     const clientIP = getClientIP(request);
 
-    // 6. 调用微信支付下单
-    const wxPayResult = await createWxPayOrder({
+    // 7. 调用支付下单 — 根据 paymentMethod 调用对应支付渠道
+    const orderParams = {
       orderNo,
-      amount: plan.priceFen,
-      description: `AI职业导师-${plan.name}`,
+      amount: actualPriceFen,
+      description: isYearlyRenewal ? `AI职业导师-${plan.name}续费(8折)` : `AI职业导师-${plan.name}`,
       clientIP,
       userId: session.user.id,
-    });
+    };
 
-    if (!wxPayResult.success) {
+    const payResult =
+      paymentMethod === 'alipay'
+        ? await createAlipayOrder(orderParams)
+        : await createWxPayOrder(orderParams);
+
+    if (!payResult.success) {
       return NextResponse.json(
-        { error: wxPayResult.error || '支付下单失败' },
+        { error: payResult.error || '支付下单失败' },
         { status: 500 }
       );
     }
 
-    // 7. 创建数据库订单记录
+    // 8. 创建数据库订单记录 (写入实际 paymentMethod)
     const order = await prisma.paymentOrder.create({
       data: {
         userId: session.user.id,
         orderNo,
-        amount: plan.price,
+        amount: actualPrice,
         currency: 'CNY',
         status: 'PENDING',
-        paymentMethod: 'wechat',
+        paymentMethod,
         paymentType: 'SUBSCRIPTION',
         expiredAt: new Date(Date.now() + 30 * 60 * 1000), // 30分钟过期
         metadata: JSON.stringify({
           planId: plan.id,
           planName: plan.name,
           durationDays: plan.durationDays,
-          mockPayment: wxPayResult.mock || false,
+          mockPayment: payResult.mock || false,
+          isRenewal: isYearlyRenewal,
+          originalPrice: plan.price,
+          discountRate,
         }),
       },
     });
 
-    // 8. 返回支付信息
+    // 9. 返回支付信息 (包含 paymentMethod)
     return NextResponse.json({
       orderId: order.id,
       orderNo: order.orderNo,
-      amount: plan.price,
+      amount: actualPrice,
       planName: plan.name,
-      payUrl: wxPayResult.payUrl,
-      mock: wxPayResult.mock || false,
+      paymentMethod,
+      payUrl: payResult.payUrl,
+      mock: payResult.mock || false,
       expiredAt: order.expiredAt,
     }, { status: 201 });
   } catch (error) {

@@ -4,7 +4,6 @@ import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { LanguageToggle } from '@/components/language-toggle';
 
 type ResetMethod = 'phone' | 'email';
 type Step = 'request' | 'verify' | 'reset' | 'done';
@@ -123,7 +122,6 @@ function ForgotPasswordForm() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <LanguageToggle />
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">

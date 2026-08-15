@@ -16,6 +16,7 @@ import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { getMentorQuota } from '@/lib/plans';
+import { proxyFetch } from '@/lib/proxy-fetch';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -92,8 +93,18 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id },
       select: { isPremium: true, freeTrialUsed: true },
     });
-    const isPremium = dbUser?.isPremium ?? false;
-    const freeTrialUsed = dbUser?.freeTrialUsed ?? 0;
+
+    // 用户不存在（JWT 过期/数据库重置后旧 session 仍有效）— 必须拦截，否则后续创建 ChatSession 会触发外键约束错误
+    if (!dbUser) {
+      console.error('Chat API: User not found in database, session.user.id =', session.user.id);
+      return NextResponse.json(
+        { error: '登录状态已失效，请重新登录', needRelogin: true },
+        { status: 401 }
+      );
+    }
+
+    const isPremium = dbUser.isPremium;
+    const freeTrialUsed = dbUser.freeTrialUsed;
     const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
 
     // 5. 每日消息限额检查 (AI 职导) — 24小时滚动窗口
@@ -123,27 +134,44 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. 会员/试用检查 — 免费导师跳过
-    if (!mentor.isFree && !isPremium && freeTrialUsed >= freeTrialLimit) {
-      return NextResponse.json(
-        {
-          error: '免费试用次数已用完，请升级会员继续使用',
-          needUpgrade: true,
-          freeTrialUsed,
-          freeTrialLimit,
-        },
-        { status: 403 }
-      );
-    }
-
-    // 付费导师权限检查
     if (!mentor.isFree && !isPremium) {
-      return NextResponse.json(
-        {
-          error: '该导师需要会员才能对话',
-          needSubscription: true,
-        },
-        { status: 403 }
-      );
+      // 非会员使用付费导师 — 先检查是否已完成 AI 职导访谈
+      const userProfile = await prisma.userProfile.findUnique({
+        where: { userId: session.user.id },
+        select: { nickname: true, profileSource: true },
+      });
+
+      // profileSource = "ai_extracted" 表示通过访谈自动提取了档案
+      // nickname 不为空表示有有效的档案数据（手动填写或访谈提取）
+      const interviewCompleted =
+        userProfile?.profileSource === 'ai_extracted' ||
+        (userProfile?.nickname != null && userProfile.nickname.length > 0);
+
+      if (!interviewCompleted) {
+        // 未完成访谈 — 引导用户去 AI 职导完成访谈
+        return NextResponse.json(
+          {
+            error: '请先完成AI职导的访谈对话，才能与行业导师交流',
+            needQuestionnaire: true,
+          },
+          { status: 403 }
+        );
+      }
+
+      // 访谈已完成 — 检查免费试用次数
+      if (freeTrialUsed >= freeTrialLimit) {
+        // 免费试用次数已用完
+        return NextResponse.json(
+          {
+            error: `${mentor.name} 需要会员才能对话`,
+            needSubscription: true,
+            freeTrialUsed,
+            freeTrialLimit,
+          },
+          { status: 403 }
+        );
+      }
+      // 免费试用次数未用完 — 允许对话，稍后递增试用计数
     }
 
     // 6.5 导师分身对话次数配额检查（非 AI 职导）
@@ -195,10 +223,52 @@ export async function POST(request: NextRequest) {
     const lastUserMessage = messages[messages.length - 1];
     let systemPrompt = buildSystemPrompt(mentor, lastUserMessage?.content || '');
 
-    // AI 职导：注入实时消息计数，确保回答剩余次数时准确
+    // AI 职导：检查问卷是否已完成（通过 UserProfile 数据判断，非仅存在性）
     if (mentorId === 'ai-guide') {
-      const remainingCount = DAILY_MESSAGE_LIMIT - dailyMessageCount;
-      systemPrompt += `\n\n# 当前对话状态（系统实时数据，请严格使用以下数字）\n- 今日已发送消息数：${dailyMessageCount}\n- 每日消息上限：${DAILY_MESSAGE_LIMIT}\n- 剩余可用消息数：${remainingCount}\n\n当用户询问剩余对话次数、已用次数或消息额度时，必须直接使用上述数字回答，不要估算、猜测或编造。格式参考："你今天已经用了${dailyMessageCount}次，还剩${remainingCount}次。"`;
+      const userProfile = await prisma.userProfile.findUnique({
+        where: { userId: session.user.id },
+        select: { nickname: true, age: true, school: true, major: true, city: true, interests: true, goals: true, recommendedMentors: true, profileSource: true },
+      });
+
+      // 判断访谈是否已完成：profileSource 为 ai_extracted 或 nickname 有值
+      const interviewCompleted =
+        userProfile?.profileSource === 'ai_extracted' ||
+        (userProfile?.nickname != null && userProfile.nickname.length > 0);
+
+      if (interviewCompleted && userProfile) {
+        // 轻量模式：问卷已完成，使用简洁的问答 prompt
+        systemPrompt = `# 角色定位
+你是AI职导，AI Career Companion 平台的 AI 职业导师。你的职责是为用户推荐合适的导师分身。
+
+# 核心规则
+1. 不编造事实、不虚构案例和数据、不假装专家。
+2. 当对方要求介绍工作，或者询问打听某个具体职位的薪资待遇或者人事情况时，要很有礼貌地告诉对方：这里主要是帮助大家解决一些求职中遇到的困扰与疑问，但并不会介绍或引荐工作岗位，也无法告知用户某家企业某个职位的任何信息。
+3. 不灌鸡汤，不说空话套话。第一人称说话，用"我"。
+4. 回复简洁，每次回复控制在100字以内。
+5. 主要功能：了解用户目前最大的困惑是什么，然后推荐合适的导师分身。
+6. 如果用户的问题超出你的能力范围，礼貌地推荐用户去和对应的行业导师分身对话。
+7. 不要再进行问卷访谈，不要主动提问收集信息。
+8. 目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善。
+
+# 用户档案数据（来自数据库）
+- 称呼：${userProfile.nickname || '未知'}
+- 年龄：${userProfile.age || '未知'}
+- 学校：${userProfile.school || '未知'}
+- 专业：${userProfile.major || '未知'}
+- 城市：${userProfile.city || '未知'}
+- 兴趣方向：${userProfile.interests || '未知'}
+- 职业目标：${userProfile.goals || '未知'}
+${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.recommendedMentors}` : ''}
+
+请根据以上档案数据与用户对话，称呼用户时使用其昵称。`;
+
+        const remainingCount = DAILY_MESSAGE_LIMIT - dailyMessageCount;
+        systemPrompt += `\n\n# 当前对话状态（系统实时数据，请严格使用以下数字）\n- 今日已发送消息数：${dailyMessageCount}\n- 每日消息上限：${DAILY_MESSAGE_LIMIT}\n- 剩余可用消息数：${remainingCount}\n\n当用户询问剩余对话次数、已用次数或消息额度时，必须直接使用上述数字回答，不要估算、猜测或编造。`;
+      } else {
+        // 问卷模式：注入实时消息计数
+        const remainingCount = DAILY_MESSAGE_LIMIT - dailyMessageCount;
+        systemPrompt += `\n\n# 当前对话状态（系统实时数据，请严格使用以下数字）\n- 今日已发送消息数：${dailyMessageCount}\n- 每日消息上限：${DAILY_MESSAGE_LIMIT}\n- 剩余可用消息数：${remainingCount}\n\n当用户询问剩余对话次数、已用次数或消息额度时，必须直接使用上述数字回答，不要估算、猜测或编造。格式参考："你今天已经用了${dailyMessageCount}次，还剩${remainingCount}次。"`;
+      }
     }
 
     // 7. API URL 白名单校验 — 修复安全审计 A10
@@ -215,8 +285,8 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.DEEPSEEK_API_KEY;
     const model = process.env.AI_MODEL || 'deepseek-chat';
 
-    // 8. 调用 AI API
-    const aiResponse = await fetch(`${apiUrl}/chat/completions`, {
+    // 8. 调用 AI API — 使用 proxyFetch 穿透沙箱代理
+    const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -252,6 +322,17 @@ export async function POST(request: NextRequest) {
 
     // 9. 保存对话到数据库
     let chatSessionId = sessionId;
+    // 验证 sessionId 是否有效（存在且属于当前用户）— 防止 localStorage 中的过期 sessionId 导致外键约束错误
+    if (chatSessionId) {
+      const existingSession = await prisma.chatSession.findFirst({
+        where: { id: chatSessionId, userId: session.user.id },
+        select: { id: true },
+      });
+      if (!existingSession) {
+        // sessionId 无效或已过期 — 创建新会话
+        chatSessionId = undefined;
+      }
+    }
     if (!chatSessionId) {
       // 创建新的聊天会话
       const chatSession = await prisma.chatSession.create({
@@ -300,6 +381,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 11. 返回回复
+    // 非会员使用付费导师：返回免费试用次数信息
+    // 会员使用付费导师：返回配额信息
+    let respMentorUsed: number | undefined;
+    let respMentorLimit: number | null | undefined;
+    if (mentorId !== 'ai-guide') {
+      if (!isPremium && !mentor.isFree) {
+        // 非会员 — 返回免费试用次数
+        respMentorUsed = freeTrialUsed + 1;
+        respMentorLimit = freeTrialLimit;
+      } else if (isPremium) {
+        // 会员 — 返回配额信息
+        respMentorUsed = mentorUsedCount + 1;
+        respMentorLimit = mentorQuotaLimit; // null = 无限
+      }
+    }
+
     return NextResponse.json({
       reply,
       sessionId: chatSessionId,
@@ -307,11 +404,12 @@ export async function POST(request: NextRequest) {
       freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed - 1,
       dailyMessageCount: mentorId === 'ai-guide' ? dailyMessageCount + 1 : undefined,
       dailyMessageLimit: mentorId === 'ai-guide' ? DAILY_MESSAGE_LIMIT : undefined,
-      mentorUsed: mentorId !== 'ai-guide' ? mentorUsedCount + 1 : undefined,
-      mentorLimit: mentorId !== 'ai-guide' ? mentorQuotaLimit : undefined,
+      mentorUsed: respMentorUsed,
+      mentorLimit: respMentorLimit,
     });
   } catch (error) {
-    console.error('Chat API error (sanitized):', error instanceof Error ? error.name : 'Unknown');
+    console.error('Chat API error:', error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error');
+    console.error('Chat API error stack:', error instanceof Error ? error.stack : 'No stack');
     return NextResponse.json(
       { error: '服务器错误，请稍后再试' },
       { status: 500 }

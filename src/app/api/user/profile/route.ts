@@ -3,12 +3,41 @@
  * GET /api/user/profile - 获取当前用户档案
  * PUT /api/user/profile - 更新用户档案
  *
- * 修复安全审计 A01-1.3: 所有用户数据操作需要身份验证
+ * 字段来源：AI 职导访谈自动提取 + 用户手动编辑
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { updateProfileSchema } from '@/lib/validation';
+import { z } from 'zod';
+
+// 更新档案的校验 schema — 覆盖所有字段
+const updateProfileSchema = z.object({
+  nickname: z.string().max(30).optional(),
+  age: z.number().int().min(0).max(150).optional(),
+  status: z.string().max(20).optional(),
+  city: z.string().max(100).optional(),
+  education: z.string().max(20).optional(),
+  school: z.string().max(100).optional(),
+  major: z.string().max(100).optional(),
+  grade: z.string().max(50).optional(),
+  industry: z.string().max(50).optional(),
+  companyType: z.string().max(50).optional(),
+  jobSatisfaction: z.number().int().min(1).max(5).optional(),
+  gradYears: z.number().int().min(0).max(60).optional(),
+  interests: z.array(z.string()).max(10).optional(),
+  goals: z.string().max(500).optional(),
+  infoChannels: z.array(z.string()).optional(),
+  careerSpending: z.string().max(500).optional(),
+  careerAnxiety: z.string().max(1000).optional(),
+  jobChangeStatus: z.string().max(500).optional(),
+  helpPriority: z.array(z.string()).optional(),
+  mentorPreference: z.array(z.string()).optional(),
+  mentorHelpAreas: z.array(z.string()).optional(),
+  productInterest: z.string().max(100).optional(),
+  productTrigger: z.array(z.string()).optional(),
+  productConcern: z.array(z.string()).optional(),
+  willingToPay: z.string().max(100).optional(),
+});
 
 export async function GET() {
   const session = await auth();
@@ -40,27 +69,36 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { education, school, major, grade, interests, goals } = parsed.data;
+    const d = parsed.data;
 
-    // upsert: 如果档案不存在则创建，存在则更新
+    // 数组字段转 JSON 字符串
+    const arrayFields = ['interests', 'infoChannels', 'helpPriority', 'mentorPreference', 'mentorHelpAreas', 'productTrigger', 'productConcern'];
+    const data: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(d)) {
+      if (arrayFields.includes(key) && Array.isArray(value)) {
+        data[key] = value.length > 0 ? JSON.stringify(value) : null;
+      } else {
+        data[key] = value ?? undefined;
+      }
+    }
+    // 记录变更历史（upsert 之前查询现有档案快照）
+    const existingProfile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+    await prisma.profileHistory.create({
+      data: {
+        userId: session.user.id,
+        action: 'update',
+        snapshot: JSON.stringify(existingProfile),
+      },
+    });
+
     const profile = await prisma.userProfile.upsert({
       where: { userId: session.user.id },
-      update: {
-        education: education ?? undefined,
-        school: school ?? undefined,
-        major: major ?? undefined,
-        grade: grade ?? undefined,
-        interests: interests ? JSON.stringify(interests) : undefined,
-        goals: goals ?? undefined,
-      },
+      update: data,
       create: {
         userId: session.user.id,
-        education: education ?? undefined,
-        school: school ?? undefined,
-        major: major ?? undefined,
-        grade: grade ?? undefined,
-        interests: interests ? JSON.stringify(interests) : undefined,
-        goals: goals ?? undefined,
+        ...data,
       },
     });
 

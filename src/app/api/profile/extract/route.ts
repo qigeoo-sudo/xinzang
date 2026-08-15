@@ -1,0 +1,244 @@
+/**
+ * 档案提取 API — 三步走第三步核心
+ * POST /api/profile/extract
+ *
+ * 读取用户与 AI 职导的完整对话记录，
+ * 用 LLM 从对话中提取结构化个人档案信息，
+ * 写入 UserProfile 表。
+ *
+ * 触发时机：
+ * 1. AI 职导问卷完成后自动触发（前端检测到 [QUESTIONNAIRE_COMPLETED]）
+ * 2. 用户在个人档案页手动点击"从对话提取"按钮
+ */
+import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { proxyFetch } from '@/lib/proxy-fetch';
+
+const AI_API_URL = process.env.AI_API_URL || 'https://api.deepseek.com/v1';
+const AI_API_KEY = process.env.DEEPSEEK_API_KEY;
+const AI_MODEL = process.env.AI_MODEL || 'deepseek-chat';
+
+const EXTRACT_PROMPT = `你是一个信息提取助手。以下是一段用户与AI职导的访谈对话记录。
+请从对话中提取用户的个人档案信息，严格按照以下JSON格式输出。
+如果某个字段在对话中未提及，设为null。
+不要输出任何其他内容，只输出JSON。
+
+JSON格式：
+{
+  "nickname": "用户称呼（字符串或null）",
+  "age": "年龄（整数或null。如果对话中未提及年龄，必须返回null，不要返回0）",
+  "status": "在校|在职|待业（字符串或null）",
+  "city": "所在城市（字符串或null）",
+  "education": "高中|本科|硕士|博士|其他（字符串或null）",
+  "school": "学校名称（字符串或null）",
+  "major": "专业（字符串或null）",
+  "grade": "年级（字符串或null，仅在校生）",
+  "industry": "行业（字符串或null）",
+  "companyType": "国企|民企|外企|创业公司|互联网|其他（字符串或null）",
+  "jobSatisfaction": "工作满意度1-5（整数或null）",
+  "gradYears": "毕业几年（整数或null）",
+  "interests": ["兴趣方向数组"],
+  "goals": "职业目标（字符串或null）",
+  "infoChannels": ["信息渠道数组"],
+  "careerSpending": "职业发展支出（字符串或null）",
+  "careerAnxiety": "职业焦虑（字符串或null）",
+  "jobChangeStatus": "换工作/求职情况（字符串或null）",
+  "helpPriority": ["最需要帮助的排序列表"],
+  "mentorPreference": ["最想深聊的人群排序列表"],
+  "mentorHelpAreas": ["希望导师帮助的方面数组"],
+  "productInterest": "对产品的第一反应（字符串或null）",
+  "productTrigger": ["什么情况下打开产品的数组"],
+  "productConcern": ["最担心什么的数组"],
+  "willingToPay": "愿意每月付多少（字符串或null）",
+  "recommendedMentors": ["推荐的导师名字数组"]
+}
+
+注意：
+- interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
+- 如果用户说了多个兴趣，全部放入数组
+- 排序题按用户给出的排序顺序填入数组
+- 如果对话中没有足够信息，对应字段设为null或空数组`;
+
+export async function POST() {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: '请先登录' },
+        { status: 401 }
+      );
+    }
+
+    // 1. 获取用户与 AI 职导的所有对话记录
+    const chatSessions = await prisma.chatSession.findMany({
+      where: {
+        userId: session.user.id,
+        mentorId: 'ai-guide',
+      },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          select: { role: true, content: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 1, // 取最近一次对话
+    });
+
+    if (!chatSessions.length || !chatSessions[0].messages.length) {
+      return NextResponse.json(
+        { error: '暂无AI职导对话记录，无法提取档案' },
+        { status: 400 }
+      );
+    }
+
+    // 2. 拼接对话文本
+    const conversation = chatSessions[0].messages
+      .map((m) => `${m.role === 'user' ? '用户' : 'AI职导'}: ${m.content}`)
+      .join('\n\n');
+
+    // 3. 调用 LLM 提取结构化信息
+    if (!AI_API_KEY) {
+      return NextResponse.json(
+        { error: 'AI 服务未配置' },
+        { status: 500 }
+      );
+    }
+
+    const aiResponse = await proxyFetch(`${AI_API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${AI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        messages: [
+          { role: 'system', content: EXTRACT_PROMPT },
+          { role: 'user', content: `以下是对话记录：\n\n${conversation}` },
+        ],
+        temperature: 0.1,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      console.error('AI extract error:', aiResponse.status);
+      return NextResponse.json(
+        { error: 'AI 提取失败，请稍后再试' },
+        { status: 500 }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    let extractedText = aiData.choices?.[0]?.message?.content || '';
+
+    // 清理可能的 markdown 代码块包裹
+    extractedText = extractedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    let extracted;
+    try {
+      extracted = JSON.parse(extractedText);
+    } catch {
+      console.error('Failed to parse extracted JSON');
+      return NextResponse.json(
+        { error: '档案解析失败，请稍后再试' },
+        { status: 500 }
+      );
+    }
+
+    // 4. 写入 UserProfile（upsert）
+    const arrayToJson = (arr: unknown) =>
+      Array.isArray(arr) && arr.length > 0 ? JSON.stringify(arr) : null;
+
+    // 记录变更历史（upsert 之前查询现有档案快照）
+    const existingProfile = await prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+    });
+    await prisma.profileHistory.create({
+      data: {
+        userId: session.user.id,
+        action: 'extract',
+        snapshot: JSON.stringify(existingProfile),
+      },
+    });
+
+    const profile = await prisma.userProfile.upsert({
+      where: { userId: session.user.id },
+      update: {
+        nickname: extracted.nickname || undefined,
+        age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
+        status: extracted.status || undefined,
+        city: extracted.city || undefined,
+        education: extracted.education || undefined,
+        school: extracted.school || undefined,
+        major: extracted.major || undefined,
+        grade: extracted.grade || undefined,
+        industry: extracted.industry || undefined,
+        companyType: extracted.companyType || undefined,
+        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
+        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+        interests: arrayToJson(extracted.interests) || undefined,
+        goals: extracted.goals || undefined,
+        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
+        careerSpending: extracted.careerSpending || undefined,
+        careerAnxiety: extracted.careerAnxiety || undefined,
+        jobChangeStatus: extracted.jobChangeStatus || undefined,
+        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
+        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
+        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
+        productInterest: extracted.productInterest || undefined,
+        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
+        productConcern: arrayToJson(extracted.productConcern) || undefined,
+        willingToPay: extracted.willingToPay || undefined,
+        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
+        profileSource: 'ai_extracted',
+        lastAiExtractAt: new Date(),
+      },
+      create: {
+        userId: session.user.id,
+        nickname: extracted.nickname || undefined,
+        age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
+        status: extracted.status || undefined,
+        city: extracted.city || undefined,
+        education: extracted.education || undefined,
+        school: extracted.school || undefined,
+        major: extracted.major || undefined,
+        grade: extracted.grade || undefined,
+        industry: extracted.industry || undefined,
+        companyType: extracted.companyType || undefined,
+        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
+        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+        interests: arrayToJson(extracted.interests) || undefined,
+        goals: extracted.goals || undefined,
+        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
+        careerSpending: extracted.careerSpending || undefined,
+        careerAnxiety: extracted.careerAnxiety || undefined,
+        jobChangeStatus: extracted.jobChangeStatus || undefined,
+        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
+        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
+        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
+        productInterest: extracted.productInterest || undefined,
+        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
+        productConcern: arrayToJson(extracted.productConcern) || undefined,
+        willingToPay: extracted.willingToPay || undefined,
+        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
+        profileSource: 'ai_extracted',
+        lastAiExtractAt: new Date(),
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      profile,
+      extractedFields: Object.keys(extracted).filter((k) => extracted[k] !== null && !(Array.isArray(extracted[k]) && extracted[k].length === 0)),
+    });
+  } catch (error) {
+    console.error('Profile extract error:', error instanceof Error ? `${error.name}: ${error.message}` : 'Unknown error');
+    return NextResponse.json(
+      { error: '服务器错误，请稍后再试' },
+      { status: 500 }
+    );
+  }
+}

@@ -27,7 +27,11 @@ const getAiGuideKeys = (userId: string) => ({
   limitTs: `ai-guide-limit-timestamp-${userId}`,
   sessionId: `ai-guide-session-id-${userId}`,
   completed: `ai-guide-completed-${userId}`,
+  version: `ai-guide-version-${userId}`,
 });
+
+// AI 职导 localStorage 数据版本 — 版本不匹配时清空旧数据重新开始
+const AI_GUIDE_VERSION = 'v2-student-only';
 
 // 24小时毫秒数
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -102,6 +106,22 @@ export function MentorChat({ mentor }: MentorChatProps) {
       const savedMessages = localStorage.getItem(msgKey);
       const savedSessionId = localStorage.getItem(sidKey);
 
+      // AI 职导专属：版本检查 — 旧版数据（含在校/在职/待业选择题）需清空重来
+      if (isAiGuide && aiKeys) {
+        const savedVersion = localStorage.getItem(aiKeys.version);
+        if (savedVersion !== AI_GUIDE_VERSION) {
+          // 版本不匹配 — 清空所有旧数据，从头开始
+          localStorage.removeItem(msgKey);
+          localStorage.removeItem(sidKey);
+          if (limitKey) localStorage.removeItem(limitKey);
+          if (completedKey) localStorage.removeItem(completedKey);
+          localStorage.setItem(aiKeys.version, AI_GUIDE_VERSION);
+          // 不恢复旧对话，直接走 loadFromDatabase → 欢迎消息流程
+          loadFromDatabase();
+          return;
+        }
+      }
+
       // AI 职导专属：检查每日限额
       if (isAiGuide && limitKey) {
         const limitTimestamp = localStorage.getItem(limitKey);
@@ -166,7 +186,48 @@ export function MentorChat({ mentor }: MentorChatProps) {
   }, [mentor.id, status, initialized, session?.user?.id]);
 
   // 从数据库加载最近的导师会话（断点续传的数据库回退）
+  // 同时检查用户档案 — 数据库为权威源
   const loadFromDatabase = async () => {
+    // AI 职导：先检查数据库档案，确定问卷完成状态（数据库为权威源）
+    if (mentor.id === 'ai-guide' && session?.user?.id) {
+      try {
+        const profileRes = await fetch('/api/user/profile');
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          // 判断访谈是否已完成：profileSource 为 ai_extracted 或 nickname 有值
+          // 不能仅检查 profile 是否存在，因为注册时会创建空档案
+          const profile = profileData?.profile;
+          const interviewCompleted =
+            profile?.profileSource === 'ai_extracted' ||
+            (profile?.nickname != null && profile.nickname.length > 0);
+
+          if (interviewCompleted) {
+            // 访谈已完成 — 进入轻量模式
+            setQuestionnaireCompleted(true);
+            // 同步 localStorage
+            try {
+              localStorage.setItem(`ai-guide-completed-${session.user.id}`, 'true');
+            } catch { /* ignore */ }
+            // 通知导航栏锁定
+            window.dispatchEvent(new CustomEvent('questionnaireCompleted'));
+
+            // 档案已存在，不需要加载旧问卷对话，直接进入轻量模式
+            setInitialized(true);
+            return;
+          }
+        }
+      } catch {
+        // 数据库检查失败 — 回退到 localStorage
+        const isCompleted = localStorage.getItem(`ai-guide-completed-${session.user.id}`) === 'true';
+        if (isCompleted) {
+          setQuestionnaireCompleted(true);
+          setInitialized(true);
+          return;
+        }
+      }
+    }
+
+    // 没有档案或非 AI 职导 — 尝试加载历史对话
     try {
       const res = await fetch(`/api/chat/sessions/latest?mentorId=${mentor.id}`);
       if (res.ok) {
@@ -204,6 +265,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   };
 
   // 初始欢迎消息 — 初始化完成且无保存数据时显示
+  // questionnaireCompleted 状态已在初始化阶段从数据库确定，此处同步使用
   useEffect(() => {
     if (!initialized) return;
     // 已有消息（从 localStorage 或数据库恢复）— 不显示欢迎语
@@ -212,12 +274,31 @@ export function MentorChat({ mentor }: MentorChatProps) {
     if (dailyLimitReached) return;
 
     if (mentor.id === 'ai-guide') {
-      setMessages([
-        {
-          role: 'assistant',
-          content: `你好！我是AI职导，是AI导师分身的助理。\n\n在开始之前，我想先说明一下：我的任务是与你交流，收集你的个人档案，为AI导师分身提供基础数据，用来更有效率的为你解答问题。交流结束后，你可以随时去我的档案，修改或删除某些记录，后台数据库也会将这些数据脱敏后，及时更新。越是更贴近反映你当下状况的记录，越是能提高AI导师分身对你的服务质量。\n\n我的每天与你的有效对话来回次数是50次，如果由于各种原因，超过这个次数，那只能等24小时冷却时间后，再次尝试。\n你的时间非常宝贵，所以，让我们高效率得开始交流吧。\n\n那么，我们先从第一个问题开始：你目前的状态是？\n\n[CHOICE:type=single]\n在校\n在职\n待业\n[/CHOICE]`,
-        },
-      ]);
+      if (questionnaireCompleted) {
+        // 轻量模式：档案已建立
+        setMessages([
+          {
+            role: 'assistant',
+            content: `你好！我是AI职导。我的职责是会你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。`,
+          },
+        ]);
+      } else {
+        // 问卷模式：首次访谈 — AI 主动问 A1
+        setMessages([
+          {
+            role: 'assistant',
+            content: `你好！我是AI职导。我会帮你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n首先，在交流中，让我逐渐建立你的个人档案，可以推荐合适的AI导师分身，并让它的服务更有效率。`,
+          },
+          {
+            role: 'assistant',
+            content: `在开始之前，我想先说明一下：我们的所有对话内容，在访谈交流结束后，都会脱敏后记录在后台数据库，数据绝对不会外泄。你可以随时去我的档案更新个人信息。 那么，我们开始吧。`,
+          },
+          {
+            role: 'assistant',
+            content: `第一个问题：如何称呼你？多大了？现在是大三还是大四了？（大三升大四算大四，大四最后一学期未结束就算大四。）或者你在其他年级？`,
+          },
+        ]);
+      }
     } else {
       setMessages([
         {
@@ -226,7 +307,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         },
       ]);
     }
-  }, [mentor.id, mentor.name, initialized, dailyLimitReached]);
+  }, [mentor.id, mentor.name, initialized, dailyLimitReached, questionnaireCompleted]);
 
   // 保存消息到 localStorage — 按用户+导师隔离
   const saveMessages = (msgs: ChatMessage[], sid: string | null) => {
@@ -240,6 +321,10 @@ export function MentorChat({ mentor }: MentorChatProps) {
       localStorage.setItem(msgKey, JSON.stringify(msgs));
       if (sid) {
         localStorage.setItem(sidKey, sid);
+      }
+      // AI 职导：同时保存版本标签
+      if (isAiGuide && aiKeys) {
+        localStorage.setItem(aiKeys.version, AI_GUIDE_VERSION);
       }
     } catch {
       // localStorage 不可用时静默失败
@@ -306,8 +391,24 @@ export function MentorChat({ mentor }: MentorChatProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        // 401 未登录 — 显示登录/注册引导
+        // 401 未登录或登录状态失效 — 显示登录/注册引导
         if (res.status === 401) {
+          // needRelogin: JWT 中的用户在数据库中不存在（数据库重置等），需要重新登录
+          if (data.needRelogin) {
+            // 清除本地存储的旧 session 数据
+            try {
+              if (session?.user?.id) {
+                const aiKeys = getAiGuideKeys(session.user.id);
+                localStorage.removeItem(aiKeys.messages);
+                localStorage.removeItem(aiKeys.sessionId);
+                localStorage.removeItem(aiKeys.completed);
+                localStorage.removeItem(aiKeys.version);
+              }
+            } catch { /* ignore */ }
+            // 跳转到登录页
+            router.push(`/login?callbackUrl=${pathname}`);
+            return;
+          }
           setShowAuthPrompt(true);
           setMessages(messages);
           setInput(messageText);
@@ -353,6 +454,12 @@ export function MentorChat({ mentor }: MentorChatProps) {
         } else if (data.needSubscription) {
           setError(`${mentor.name} 需要会员才能对话`);
           setNeedSubscription(true);
+        } else if (data.needQuestionnaire) {
+          // 未完成 AI 职导访谈 — 跳转到 AI 职导页面
+          setError(data.error || '请先完成AI职导的访谈对话');
+          setTimeout(() => {
+            router.push('/chat?need=questionnaire');
+          }, 1500);
         } else if (data.quotaExceeded) {
           setError(data.error || '导师分身对话次数已用完');
           setNeedSubscription(true);
@@ -385,6 +492,35 @@ export function MentorChat({ mentor }: MentorChatProps) {
           } catch {
             // ignore
           }
+          // 自动触发档案提取 — 三步走第三步
+          fetch('/api/profile/extract', { method: 'POST' })
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => {
+              if (data?.success) {
+                console.log('档案已从AI职导对话中自动提取');
+              }
+            })
+            .catch(() => {});
+
+          // 清空旧问卷对话，切换到轻量模式
+          setTimeout(() => {
+            try {
+              const aiKeys = getAiGuideKeys(session.user.id);
+              const lightweightMessages: ChatMessage[] = [
+                {
+                  role: 'assistant',
+                  content: `你好！我是AI职导。我的职责是会你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。`,
+                },
+              ];
+              setMessages(lightweightMessages);
+              saveMessages(lightweightMessages, null);
+              // 清除旧的 sessionId，开始新的轻量模式会话
+              setSessionId(null);
+              localStorage.removeItem(aiKeys.sessionId);
+            } catch {
+              // ignore
+            }
+          }, 1500);
         }
         // 延迟触发事件，让 UI 先更新
         setTimeout(() => {
@@ -392,8 +528,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
         }, 500);
       }
 
-      // 更新 sessionId — 所有导师都保存
-      if (data.sessionId && !sessionId) {
+      // 更新 sessionId — 如果 API 返回了新的 sessionId（可能因为旧 sessionId 过期），则更新
+      if (data.sessionId && data.sessionId !== sessionId) {
         setSessionId(data.sessionId);
         saveMessages(finalMessages, data.sessionId);
       }
@@ -470,7 +606,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
             />
           </svg>
         </div>
-        <p className="text-sm text-ink mb-1">登录后开始对话</p>
+        <p className="text-sm text-ink mb-1">登录后可以交谈。</p>
         <p className="text-xs text-muted mb-4">
           成为会员即可与全部导师分身对话
         </p>
@@ -500,9 +636,9 @@ export function MentorChat({ mentor }: MentorChatProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-[400px]">
+    <div className="flex flex-col min-h-[400px] w-full">
       {/* 消息列表 */}
-      <div className="flex-1 space-y-4 pb-4">
+      <div className="flex-1 space-y-4 pb-4 w-full">
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -530,7 +666,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
             {/* 消息气泡 */}
             <div
-              className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+              className={`max-w-[90%] sm:max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                 msg.role === 'user'
                   ? 'bg-brand-500 text-white rounded-br-md'
                   : 'bg-white border border-slate-100 text-brand-900 rounded-bl-md'
@@ -654,11 +790,17 @@ export function MentorChat({ mentor }: MentorChatProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={dailyLimitReached ? '今日消息已达上限...' : `问问 ${mentor.name}...`}
+            placeholder={
+              dailyLimitReached
+                ? '今日消息已达上限...'
+                : (usageLimit !== null && usageUsed >= usageLimit)
+                  ? '免费次数用完，成为会员可继续交谈。'
+                  : `问问 ${mentor.name}...`
+            }
             rows={1}
             maxLength={2000}
             disabled={loading || dailyLimitReached}
-            className="input-field flex-1 resize-none max-h-32"
+            className="input-field flex-1 resize-none max-h-32 w-full"
             style={{ minHeight: '44px' }}
           />
           <button

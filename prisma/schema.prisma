@@ -48,6 +48,7 @@ model User {
   accounts          Account[]
   sessions          Session[]
   profile           UserProfile?
+  profileHistory    ProfileHistory[]
   payments          PaymentOrder[]
   subscriptions     Subscription[]
   chatSessions      ChatSession[]
@@ -125,19 +126,54 @@ model VerificationCode {
 // ============================================================
 
 /// 用户档案模型 — 存储用户教育背景、专业、兴趣、目标 (PRD 6.4)
+/// 字段来源：AI 职导访谈问卷自动提取 + 用户手动编辑
 model UserProfile {
   id        String   @id @default(cuid())
   userId    String   @unique
-  // 教育背景
-  education String?  // 高中 | 本科 | 硕士 | 博士 | 其他
-  school    String?  // 学校名称
-  major     String?  // 专业
-  grade     String?  // 年级
-  // 职业信息
-  interests String?  // 兴趣方向 (JSON 数组字符串)
-  goals     String?  // 职业目标
-  // 偏好设置
-  preferredMentors String? // 偏好导师 ID 列表 (JSON 数组字符串)
+
+  // === 基本信息（AI 职导问卷收集） ===
+  nickname       String?  // 如何称呼
+  age            Int?     // 年龄
+  status         String?  // 在校 | 在职 | 待业
+  city           String?  // 所在城市
+
+  // === 教育背景 ===
+  education      String?  // 高中 | 本科 | 硕士 | 博士 | 其他
+  school         String?  // 学校名称
+  major          String?  // 专业
+  grade          String?  // 年级（在校生）
+
+  // === 职业信息 ===
+  industry       String?  // 行业
+  companyType    String?  // 国企 | 民企 | 外企 | 创业公司 | 互联网 | 其他
+  jobSatisfaction Int?    // 工作满意度 1-5
+  gradYears      Int?     // 毕业几年（在职/待业）
+
+  // === 职业发展 ===
+  interests      String?  // 兴趣方向 (JSON 数组字符串)
+  goals          String?  // 职业目标
+  infoChannels   String?  // 信息渠道 (JSON 数组字符串)
+  careerSpending String?  // 过去一年职业发展支出
+  careerAnxiety  String?  // 职业焦虑
+  jobChangeStatus String? // 换工作/求职情况
+
+  // === 问卷排序/选择结果 ===
+  helpPriority   String?  // 最需要帮助的排序结果 (JSON 数组字符串)
+  mentorPreference String? // 最想深聊的人群排序 (JSON 数组字符串)
+  mentorHelpAreas String?  // 希望导师帮助的方面 (JSON 数组字符串)
+  productInterest String?  // 对产品的第一反应
+  productTrigger  String?  // 什么情况下最会打开产品 (JSON 数组字符串)
+  productConcern  String?  // 最担心什么 (JSON 数组字符串)
+  willingToPay    String?  // 愿意每月付多少
+
+  // === 推荐导师 ===
+  recommendedMentors String? // AI 职导推荐的导师 ID 列表 (JSON 数组字符串)
+  preferredMentors   String? // 偏好导师 ID 列表 (JSON 数组字符串)
+
+  // === 元数据 ===
+  profileSource   String   @default("manual") // manual | ai_extracted | mixed
+  lastAiExtractAt DateTime? // 最后一次 AI 提取时间
+
   // 审计字段
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -145,6 +181,21 @@ model UserProfile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// 档案变更历史模型 — 记录用户档案的每次更新/提取/清空操作
+/// action: update | extract | clear
+/// snapshot: 操作前的档案快照 (JSON 字符串)
+model ProfileHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String   // update | extract | clear
+  snapshot  String?  // 操作前的档案数据快照 (JSON 字符串)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 /// 支付订单模型 — 记录所有支付交易 (PRD 6.5)
