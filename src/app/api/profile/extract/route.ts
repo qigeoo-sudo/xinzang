@@ -15,9 +15,12 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { proxyFetch } from '@/lib/proxy-fetch';
 
-const AI_API_URL = process.env.AI_API_URL || 'https://api.deepseek.com/v1';
-const AI_API_KEY = process.env.DEEPSEEK_API_KEY;
-const AI_MODEL = process.env.AI_MODEL || 'deepseek-chat';
+// API URL 白名单 — 与 chat route 保持一致
+const ALLOWED_API_URLS = [
+  'https://api.deepseek.com',
+  'https://api.openai.com',
+  'https://api.moonshot.cn',
+];
 
 const EXTRACT_PROMPT = `你是一个信息提取助手。以下是一段用户与AI职导的访谈对话记录。
 请从对话中提取用户的个人档案信息，严格按照以下JSON格式输出。
@@ -99,21 +102,37 @@ export async function POST() {
       .join('\n\n');
 
     // 3. 调用 LLM 提取结构化信息
-    if (!AI_API_KEY) {
+    // 兼容两种环境变量名: DEEPSEEK_API_KEY 或 OPENAI_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+    const apiUrl = process.env.AI_API_URL || 'https://api.deepseek.com/v1';
+    const model = process.env.AI_MODEL || 'deepseek-chat';
+
+    if (!apiKey) {
+      console.error('Profile extract: Neither DEEPSEEK_API_KEY nor OPENAI_API_KEY is configured');
       return NextResponse.json(
         { error: 'AI 服务未配置' },
         { status: 500 }
       );
     }
 
-    const aiResponse = await proxyFetch(`${AI_API_URL}/chat/completions`, {
+    // API URL 白名单校验
+    const baseUrl = apiUrl.replace(/\/v\d+\/?$/, '');
+    if (!ALLOWED_API_URLS.includes(baseUrl)) {
+      console.error('Profile extract: API URL not in allowlist:', baseUrl);
+      return NextResponse.json(
+        { error: '服务配置错误' },
+        { status: 500 }
+      );
+    }
+
+    const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${AI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: AI_MODEL,
+        model,
         messages: [
           { role: 'system', content: EXTRACT_PROMPT },
           { role: 'user', content: `以下是对话记录：\n\n${conversation}` },

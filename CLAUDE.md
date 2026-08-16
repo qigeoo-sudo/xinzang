@@ -221,7 +221,9 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 | `AUTH_TRUST_HOST` | `true` | 信任 CloudBase 代理转发的 Host 头。缺失时 Auth.js 会把回调地址推断为 `localhost:3000`，手机端报 `ERR_CONNECTION_REFUSED` |
 | `AUTH_URL` | `https://xinzang-291393-10-1463037420.sh.run.tcloudbase.com` | 显式指定外部访问地址，优先级高于 Host 头推断。缺失/推断失败时回调地址会变成 `0.0.0.0:3000` |
 | `AUTH_SECRET` | 内置兜底密钥 | **务必在 CloudBase 控制台覆盖**，生成命令：`openssl rand -base64 32`。缺失时报 `error=Configuration` |
-| `DEEPSEEK_API_KEY` | 无 | **必须在 CloudBase 控制台配置**，否则聊天功能降级 |
+| `OPENAI_API_KEY` | 无 | **必须在 CloudBase 控制台配置**，否则聊天功能降级。代码兼容 `DEEPSEEK_API_KEY` 和 `OPENAI_API_KEY` 两种变量名（优先读 `DEEPSEEK_API_KEY`） |
+| `AI_API_URL` | `https://api.deepseek.com/v1` | AI API 地址，CloudBase 控制台已配置为 `https://api.deepseek.com/v1` |
+| `AI_MODEL` | `deepseek-chat` | AI 模型名称，CloudBase 控制台已配置为 `deepseek-chat` |
 
 ### CloudBase 部署排错记录
 

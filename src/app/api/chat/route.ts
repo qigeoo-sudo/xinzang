@@ -326,7 +326,8 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       );
     }
 
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    // 兼容两种环境变量名: DEEPSEEK_API_KEY 或 OPENAI_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
     const model = process.env.AI_MODEL || 'deepseek-chat';
 
     // 9. P0-3: 获取或创建聊天会话 — 在调用 AI 前完成
@@ -365,9 +366,9 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
 
     // 检查 API Key 是否配置
     if (!apiKey) {
-      console.error('Chat API: DEEPSEEK_API_KEY not configured');
+      console.error('Chat API: Neither DEEPSEEK_API_KEY nor OPENAI_API_KEY is configured');
       return NextResponse.json({
-        reply: 'AI 服务尚未配置，请联系管理员在 CloudBase 控制台设置 DEEPSEEK_API_KEY 环境变量。',
+        reply: 'AI 服务尚未配置，请联系管理员设置 API Key 环境变量。',
         degraded: true,
         sessionId: chatSessionId,
       });
