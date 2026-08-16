@@ -8,9 +8,11 @@
 // ============================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   // 输出到 src/generated/prisma 以避免与其它类型冲突
-  output   = "../src/generated/prisma"
+  output        = "../src/generated/prisma"
+  // Docker 使用 node:20-alpine (musl libc)，需要对应引擎
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
