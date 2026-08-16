@@ -36,18 +36,10 @@ export const updateProfileSchema = z.object({
   goals: z.string().max(500).optional(),
 });
 
-// 聊天消息 Schema — 修复安全审计 A03-3.1
+// 聊天消息 Schema — P0-3 安全修订: 只接收单条消息，不接收 messages 数组
 export const chatMessageSchema = z.object({
   mentorId: z.string().min(1).max(50),
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string().min(1).max(2000, '单条消息不能超过2000字'),
-      })
-    )
-    .min(1, '消息不能为空')
-    .max(50, '在我这里，一天最多发送50条消息，明天再来吧。'), // 限制历史消息条数
+  message: z.string().min(1, '消息不能为空').max(4000, '单条消息不能超过4000字'),
   sessionId: z.string().optional(),
 });
 

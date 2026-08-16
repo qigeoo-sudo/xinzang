@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { mentors, type Mentor } from '@/lib/mentors';
 import { MessageWithChoices } from '@/components/chat-options';
+import { CollapsibleText } from '@/components/collapsible-text';
 
 interface ChatMessage {
   id?: string;
@@ -490,20 +491,14 @@ export function MentorChat({ mentor }: MentorChatProps) {
     setLoading(true);
 
     try {
-      // 构建发送给 API 的消息历史
-      const apiMessages = [
-        ...messages
-          .filter((m) => m.content)
-          .map((m) => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: messageText },
-      ];
-
+      // P0-3: 客户端只发送当前消息，不再发送 messages 数组
+      // 服务端从数据库构建对话历史，防止伪造
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mentorId: mentor.id,
-          messages: apiMessages,
+          message: messageText,
           ...(sessionId ? { sessionId } : {}),
         }),
       });
@@ -797,14 +792,22 @@ export function MentorChat({ mentor }: MentorChatProps) {
               }`}
             >
               {msg.role === 'assistant' ? (
-                <MessageWithChoices
-                  content={msg.content}
-                  onSelect={(value) => handleSend(value)}
-                  disabled={loading || dailyLimitReached}
-                  enableMentorLinks={mentor.id === 'ai-guide'}
-                />
+                msg.content.includes('[CHOICE') ? (
+                  <MessageWithChoices
+                    content={msg.content}
+                    onSelect={(value) => handleSend(value)}
+                    disabled={loading || dailyLimitReached}
+                    enableMentorLinks={mentor.id === 'ai-guide'}
+                  />
+                ) : (
+                  <CollapsibleText
+                    content={msg.content}
+                    isUser={false}
+                    enableMentorLinks={mentor.id === 'ai-guide'}
+                  />
+                )
               ) : (
-                msg.content
+                <CollapsibleText content={msg.content} isUser={true} />
               )}
             </div>
           </div>
@@ -922,7 +925,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
                   : `问问 ${mentor.name}...`
             }
             rows={1}
-            maxLength={2000}
+            maxLength={4000}
             disabled={loading || dailyLimitReached}
             className="input-field flex-1 resize-none max-h-32 w-full"
             style={{ minHeight: '44px' }}
