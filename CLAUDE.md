@@ -188,10 +188,25 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 ## Docker 部署（CloudBase）
 
 - **Dockerfile**: 基于 `node:20-alpine`，多阶段构建
-  - 构建阶段：安装依赖 → `prisma generate` → 创建临时 SQLite 数据库（解决 `File is not defined` 错误）→ `next build`
-  - 运行阶段：复制构建产物 + `node_modules` + `prisma` 目录，启动 `next start`
-- **.dockerignore**: 排除 `node_modules`、`.next`、`.git`、`prisma/dev.db` 等
+  - 构建阶段：安装依赖 → `prisma generate` → 创建临时 SQLite 数据库（解决 `File is not defined` 错误）→ `next build` → 生成生产数据库 `/app/data/prod.db`
+  - 运行阶段：复制构建产物 + `node_modules` + `prisma` 目录 + 生产数据库，启动 `next start`
+- **.dockerignore**: 排除 `node_modules`、`.next`、`.git`、`prisma/dev.db`、`.env.local` 等
 - **注意**: Docker 构建时需要临时 SQLite 数据库，因为 Next.js 构建过程中会初始化 Prisma Client
+
+### 运行时环境变量（Dockerfile 已内置兜底值，CloudBase 控制台可覆盖）
+
+| 变量 | Dockerfile 兜底值 | 说明 |
+|------|------------------|------|
+| `DATABASE_URL` | `file:/app/data/prod.db` | 生产 SQLite 路径，构建时已初始化 schema |
+| `AUTH_TRUST_HOST` | `true` | 信任 CloudBase 代理转发的 Host 头。缺失时 Auth.js 会把回调地址推断为 `localhost:3000`，手机端报 `ERR_CONNECTION_REFUSED` |
+| `AUTH_SECRET` | 内置兜底密钥 | **务必在 CloudBase 控制台覆盖**，生成命令：`openssl rand -base64 32` |
+| `DEEPSEEK_API_KEY` | 无 | **必须在 CloudBase 控制台配置**，否则聊天功能降级 |
+
+### CloudBase 部署排错记录
+
+- **2026-08-16 登录失败 `ERR_CONNECTION_REFUSED`**: 根因是 Docker 运行阶段缺少 `DATABASE_URL`/`AUTH_SECRET`/`AUTH_TRUST_HOST`（每个 `FROM` 阶段环境变量重置，`.dockerignore` 又排除了 `.env.local`）。登录 POST 触发 Prisma/Auth.js 崩溃，服务端把重定向地址推断为容器内部的 `localhost:3000`，手机浏览器跳转 localhost 被拒绝。修复：Dockerfile 运行阶段内置上述环境变量 + 构建时生成生产数据库。
+- **会话 Cookie 注意**: 生产环境 cookie 为 `secure: true`（仅 HTTPS 传输）。CloudBase 必须通过 HTTPS 默认域名访问，纯 HTTP 访问会导致登录后 session 丢失。
+- **SQLite 持久化限制**: CloudBase 容器无持久卷时，重新部署会重置数据库（用户数据丢失）。MVP 阶段可接受；正式方案见 PRD 数据库迁移章节（11-12月迁移到 CloudBase PostgreSQL）。
 
 ## 变更日志
 
@@ -225,3 +240,9 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 - 新增 P0-3 修订记录到关键注意事项
 - P0-3 阻断项标记为已完成
 - 新增 `collapsible-text.tsx` 到目录结构
+
+#### 4. CloudBase 登录失败修复（2026-08-16 晚）
+- **现象**: 本地预览正常，腾讯云部署站点点击登录后手机报 `net::ERR_CONNECTION_REFUSED`
+- **根因**: Docker 多阶段构建中，`FROM` 阶段会重置环境变量；`.dockerignore` 排除了 `.env.local`。运行阶段容器内缺失 `DATABASE_URL`（Prisma 崩溃）、`AUTH_SECRET`（JWT 无法签名）、`AUTH_TRUST_HOST`（Auth.js 把回调地址推断为容器内部 `localhost:3000`，手机浏览器跳转 localhost 被拒绝）
+- **修复**: Dockerfile 运行阶段（runner）内置三个环境变量兜底值；构建阶段额外生成含 schema 的生产数据库 `/app/data/prod.db` 并复制到运行镜像
+- **待用户操作**: 在 CloudBase 控制台配置 `AUTH_SECRET`（随机值）和 `DEEPSEEK_API_KEY`，然后重新构建部署
