@@ -199,7 +199,8 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 |------|------------------|------|
 | `DATABASE_URL` | `file:/app/data/prod.db` | 生产 SQLite 路径，构建时已初始化 schema |
 | `AUTH_TRUST_HOST` | `true` | 信任 CloudBase 代理转发的 Host 头。缺失时 Auth.js 会把回调地址推断为 `localhost:3000`，手机端报 `ERR_CONNECTION_REFUSED` |
-| `AUTH_SECRET` | 内置兜底密钥 | **务必在 CloudBase 控制台覆盖**，生成命令：`openssl rand -base64 32` |
+| `AUTH_URL` | `https://xinzang-291393-10-1463037420.sh.run.tcloudbase.com` | 显式指定外部访问地址，优先级高于 Host 头推断。缺失/推断失败时回调地址会变成 `0.0.0.0:3000` |
+| `AUTH_SECRET` | 内置兜底密钥 | **务必在 CloudBase 控制台覆盖**，生成命令：`openssl rand -base64 32`。缺失时报 `error=Configuration` |
 | `DEEPSEEK_API_KEY` | 无 | **必须在 CloudBase 控制台配置**，否则聊天功能降级 |
 
 ### CloudBase 部署排错记录
@@ -242,7 +243,8 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 - 新增 `collapsible-text.tsx` 到目录结构
 
 #### 4. CloudBase 登录失败修复（2026-08-16 晚）
-- **现象**: 本地预览正常，腾讯云部署站点点击登录后手机报 `net::ERR_CONNECTION_REFUSED`
-- **根因**: Docker 多阶段构建中，`FROM` 阶段会重置环境变量；`.dockerignore` 排除了 `.env.local`。运行阶段容器内缺失 `DATABASE_URL`（Prisma 崩溃）、`AUTH_SECRET`（JWT 无法签名）、`AUTH_TRUST_HOST`（Auth.js 把回调地址推断为容器内部 `localhost:3000`，手机浏览器跳转 localhost 被拒绝）
-- **修复**: Dockerfile 运行阶段（runner）内置三个环境变量兜底值；构建阶段额外生成含 schema 的生产数据库 `/app/data/prod.db` 并复制到运行镜像
-- **待用户操作**: 在 CloudBase 控制台配置 `AUTH_SECRET`（随机值）和 `DEEPSEEK_API_KEY`，然后重新构建部署
+- **现象**: 本地预览正常，腾讯云部署站点点击登录后手机报 `net::ERR_CONNECTION_REFUSED`；第二次实测失败页面为 `https://0.0.0.0:3000/login?error=Configuration`
+- **根因**: Docker 多阶段构建中，`FROM` 阶段会重置环境变量；`.dockerignore` 排除了 `.env.local`。运行阶段容器内缺失 `DATABASE_URL`（Prisma 崩溃）、`AUTH_SECRET`（JWT 无法签名 → `error=Configuration`）、`AUTH_TRUST_HOST`（Auth.js 把回调地址推断为容器绑定地址 `0.0.0.0:3000`，手机浏览器跳转被拒绝）
+- **修复**: Dockerfile 运行阶段（runner）内置环境变量兜底值：`DATABASE_URL`、`AUTH_TRUST_HOST`、`AUTH_SECRET`、`AUTH_URL`（显式指定 CloudBase 域名）；构建阶段额外生成含 schema 的生产数据库 `/app/data/prod.db` 并复制到运行镜像
+- **注意**: 修改 Dockerfile 后必须在 CloudBase 重新构建部署才生效，线上跑的仍是旧镜像则问题依旧
+- **待用户操作**: 在 CloudBase 重新构建部署；控制台配置 `AUTH_SECRET`（随机值）和 `DEEPSEEK_API_KEY`

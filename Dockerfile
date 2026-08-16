@@ -40,6 +40,8 @@ ENV DATABASE_URL="file:/app/data/prod.db"
 # 信任 CloudBase 代理转发的 Host 头，让 Auth.js 构建正确的外部访问地址
 # （缺失时 Auth.js 会把回调地址推断为 localhost:3000 → 手机端 ERR_CONNECTION_REFUSED）
 ENV AUTH_TRUST_HOST=true
+# 显式指定外部访问地址 — 优先级高于 Host 头推断，彻底避免回调地址被推断为 0.0.0.0:3000
+ENV AUTH_URL="https://xinzang-291393-10-1463037420.sh.run.tcloudbase.com"
 # 兜底密钥 — 强烈建议在 CloudBase 控制台环境变量中覆盖为自己的随机值
 # 生成命令: openssl rand -base64 32
 ENV AUTH_SECRET="fallback-secret-please-override-in-cloudbase-console-Kx9mQ2vT7wZ4nB8c"
