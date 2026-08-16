@@ -3,99 +3,150 @@
  *
  * 用途: 在生产数据库中预置测试账号，用于登录和功能验证
  * 运行: npx tsx prisma/seed-test-users.ts
- *   或: npx prisma db execute --file prisma/seed-test-users.ts
  *
- * 测试账号:
- * - 手机: 13800000001 / 密码: test1234
- * - 邮箱: test@aiccompanion.com / 密码: test1234
+ * 测试账号（统一密码 12345678）:
  *
- * 注意: 密码哈希使用 bcrypt，与注册流程一致
+ * 手机(免费)
+ * 13800000001
+ * 密码 12345678
+ *
+ * 邮箱(免费)
+ * t@t.com
+ * 密码 12345678
+ *
+ * 手机(会员)
+ * 13800000002
+ * 密码 12345678
+ *
+ * 自动恢复: 测试账号被修改后（如免费→会员、月度→年度），
+ * 5分钟后自动恢复初始状态，方便不同人体验。
  */
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+// 统一密码
+const TEST_PASSWORD = '12345678';
+
+// 测试账号配置 — 同时被 src/lib/test-accounts.ts 引用
+export const TEST_ACCOUNTS = [
+  {
+    phone: '13800000001',
+    email: 't1@aiccompanion.com',
+    name: '测试手机(免费)',
+    isPremium: false,
+    freeTrialUsed: 0,
+    subscriptionPlan: null as string | null,
+  },
+  {
+    phone: null,
+    email: 't@t.com',
+    name: '测试邮箱(免费)',
+    isPremium: false,
+    freeTrialUsed: 0,
+    subscriptionPlan: null as string | null,
+  },
+  {
+    phone: '13800000002',
+    email: 't2@aiccompanion.com',
+    name: '测试手机(会员)',
+    isPremium: true,
+    freeTrialUsed: 0,
+    subscriptionPlan: 'MONTHLY' as string | null,
+  },
+];
+
 async function main() {
-  const passwordHash = await bcrypt.hash('test1234', 12);
+  const passwordHash = await bcrypt.hash(TEST_PASSWORD, 12);
 
-  // 测试手机号用户
-  const phoneUser = await prisma.user.upsert({
-    where: { phone: '13800000001' },
-    update: { passwordHash },
-    create: {
-      phone: '13800000001',
-      email: 'test-phone@aiccompanion.com',
-      name: '测试用户(手机)',
-      passwordHash,
-      role: 'USER',
-      isPremium: false,
-      freeTrialUsed: 0,
-      profile: { create: {} },
-    },
-  });
-  console.log('✅ 手机测试用户已创建/更新:', phoneUser.phone, 'ID:', phoneUser.id);
+  for (const acc of TEST_ACCOUNTS) {
+    // 通过 phone 或 email 查找已有用户
+    let existing;
+    if (acc.phone) {
+      existing = await prisma.user.findUnique({ where: { phone: acc.phone } });
+    } else if (acc.email) {
+      existing = await prisma.user.findUnique({ where: { email: acc.email } });
+    }
 
-  // 测试邮箱用户
-  const emailUser = await prisma.user.upsert({
-    where: { email: 'test@aiccompanion.com' },
-    update: { passwordHash },
-    create: {
-      email: 'test@aiccompanion.com',
-      phone: null,
-      name: '测试用户(邮箱)',
-      passwordHash,
-      role: 'USER',
-      isPremium: false,
-      freeTrialUsed: 0,
-      profile: { create: {} },
-    },
-  });
-  console.log('✅ 邮箱测试用户已创建/更新:', emailUser.email, 'ID:', emailUser.id);
+    if (existing) {
+      // 更新已有用户 — 重置到初始状态
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          passwordHash,
+          name: acc.name,
+          isPremium: acc.isPremium,
+          freeTrialUsed: acc.freeTrialUsed,
+        },
+      });
 
-  // 会员测试用户（已开通月度会员）
-  const premiumHash = await bcrypt.hash('premium1234', 12);
-  const premiumUser = await prisma.user.upsert({
-    where: { phone: '13800000002' },
-    update: { passwordHash: premiumHash, isPremium: true },
-    create: {
-      phone: '13800000002',
-      email: 'premium@aiccompanion.com',
-      name: '会员测试用户',
-      passwordHash: premiumHash,
-      role: 'USER',
-      isPremium: true,
-      freeTrialUsed: 0,
-      profile: { create: {} },
-    },
-  });
+      // 会员账号: 重置订阅为 MONTHLY
+      if (acc.subscriptionPlan) {
+        // 取消所有现有订阅
+        await prisma.subscription.updateMany({
+          where: { userId: existing.id, status: 'ACTIVE' },
+          data: { status: 'CANCELLED', cancelledAt: new Date() },
+        });
+        // 创建新的 MONTHLY 订阅
+        await prisma.subscription.create({
+          data: {
+            userId: existing.id,
+            plan: acc.subscriptionPlan,
+            status: 'ACTIVE',
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        });
+      } else {
+        // 免费账号: 取消所有订阅
+        await prisma.subscription.updateMany({
+          where: { userId: existing.id, status: { in: ['ACTIVE', 'UPGRADED'] } },
+          data: { status: 'CANCELLED', cancelledAt: new Date() },
+        });
+      }
 
-  // 为会员用户创建有效订阅
-  const existingSub = await prisma.subscription.findFirst({
-    where: { userId: premiumUser.id, status: 'ACTIVE' },
-  });
-  if (!existingSub) {
-    await prisma.subscription.create({
-      data: {
-        userId: premiumUser.id,
-        plan: 'MONTHLY',
-        status: 'ACTIVE',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
+      console.log(`✅ 已重置: ${acc.phone || acc.email}`);
+    } else {
+      // 创建新用户
+      const userData: any = {
+        passwordHash,
+        name: acc.name,
+        isPremium: acc.isPremium,
+        freeTrialUsed: acc.freeTrialUsed,
+        profile: { create: {} },
+      };
+
+      if (acc.phone) {
+        userData.phone = acc.phone;
+        userData.email = acc.email;
+      } else {
+        userData.email = acc.email;
+        userData.phone = null;
+      }
+
+      const user = await prisma.user.create({ data: userData });
+
+      if (acc.subscriptionPlan) {
+        await prisma.subscription.create({
+          data: {
+            userId: user.id,
+            plan: acc.subscriptionPlan,
+            status: 'ACTIVE',
+            startDate: new Date(),
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      console.log(`✅ 已创建: ${acc.phone || acc.email}`);
+    }
   }
-  console.log('✅ 会员测试用户已创建/更新:', premiumUser.phone, 'ID:', premiumUser.id);
 
-  console.log('\n📋 测试账号汇总:');
-  console.log('┌──────────┬─────────────────────────┬────────────┐');
-  console.log('│ 类型     │ 账号                     │ 密码       │');
-  console.log('├──────────┼─────────────────────────┼────────────┤');
-  console.log('│ 手机(免) │ 13800000001              │ test1234   │');
-  console.log('│ 邮箱(免) │ test@aiccompanion.com    │ test1234   │');
-  console.log('│ 手机(会员)│ 13800000002             │ premium1234│');
-  console.log('└──────────┴─────────────────────────┴────────────┘');
-  console.log('\n💡 Mock 支付: 不需要验证码，点击"确认支付(模拟)"即可');
+  console.log('\n测试账号（统一密码 12345678）:');
+  console.log('手机(免费): 13800000001');
+  console.log('邮箱(免费): t@t.com');
+  console.log('手机(会员): 13800000002');
 }
 
 main()

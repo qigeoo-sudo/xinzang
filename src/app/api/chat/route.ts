@@ -17,6 +17,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { getMentorQuota } from '@/lib/plans';
 import { proxyFetch } from '@/lib/proxy-fetch';
+import { resetTestAccountsIfNeeded } from '@/lib/test-accounts';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -93,6 +94,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    // 1.5 测试账号自动恢复检查 — 5分钟后恢复初始状态
+    await resetTestAccountsIfNeeded(session.user.id);
 
     // 2. 速率限制 — 每用户每分钟10次
     const clientIP = getClientIP(request);
