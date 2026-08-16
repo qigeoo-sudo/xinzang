@@ -342,9 +342,9 @@ function RegisterContent() {
           <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
             <p className="text-xs font-medium text-slate-500 mb-1">测试账号（密码 12345678）</p>
             <div className="text-xs text-slate-600 space-y-0.5">
-              <p>手机(免费) 13800000001</p>
+              <p>手机(免费) 13821668570</p>
               <p>邮箱(免费) t@t.com</p>
-              <p>手机(会员) 13800000002</p>
+              <p>手机(会员) 13821668571</p>
             </div>
             <p className="text-xs text-slate-400 mt-2">
               无需注册，直接去登录页面使用测试账号。<br />

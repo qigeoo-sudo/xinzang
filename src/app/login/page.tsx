@@ -158,10 +158,10 @@ function LoginForm() {
             <div className="text-xs text-slate-600 space-y-1">
               <button
                 type="button"
-                onClick={() => { setMethod('phone'); setIdentifier('13800000001'); setPassword('12345678'); }}
+                onClick={() => { setMethod('phone'); setIdentifier('13821668570'); setPassword('12345678'); }}
                 className="block w-full text-left hover:text-accent transition-colors"
               >
-                手机(免费) 13800000001
+                手机(免费) 13821668570
               </button>
               <button
                 type="button"
@@ -172,10 +172,10 @@ function LoginForm() {
               </button>
               <button
                 type="button"
-                onClick={() => { setMethod('phone'); setIdentifier('13800000002'); setPassword('12345678'); }}
+                onClick={() => { setMethod('phone'); setIdentifier('13821668571'); setPassword('12345678'); }}
                 className="block w-full text-left hover:text-accent transition-colors"
               >
-                手机(会员) 13800000002
+                手机(会员) 13821668571
               </button>
             </div>
             <p className="text-xs text-slate-400 mt-2">点击可自动填充，5分钟后恢复初始状态</p>

@@ -15,9 +15,9 @@ const RESET_INTERVAL_MS = 5 * 60 * 1000;
 
 // 测试账号标识符（phone 或 email）
 const TEST_IDENTIFIERS = new Set([
-  '13800000001', // 手机(免费)
+  '13821668570', // 手机(免费)
   't@t.com',     // 邮箱(免费)
-  '13800000002', // 手机(会员)
+  '13821668571', // 手机(会员)
 ]);
 
 // 测试账号初始状态
@@ -26,9 +26,9 @@ const INITIAL_STATES: Record<string, {
   freeTrialUsed: number;
   subscriptionPlan: string | null;
 }> = {
-  '13800000001': { isPremium: false, freeTrialUsed: 0, subscriptionPlan: null },
+  '13821668570': { isPremium: false, freeTrialUsed: 0, subscriptionPlan: null },
   't@t.com':     { isPremium: false, freeTrialUsed: 0, subscriptionPlan: null },
-  '13800000002': { isPremium: true,  freeTrialUsed: 0, subscriptionPlan: 'MONTHLY' },
+  '13821668571': { isPremium: true,  freeTrialUsed: 0, subscriptionPlan: 'MONTHLY' },
 };
 
 /**

@@ -7,7 +7,7 @@
  * 测试账号（统一密码 12345678）:
  *
  * 手机(免费)
- * 13800000001
+ * 13821668570
  * 密码 12345678
  *
  * 邮箱(免费)
@@ -15,7 +15,7 @@
  * 密码 12345678
  *
  * 手机(会员)
- * 13800000002
+ * 13821668571
  * 密码 12345678
  *
  * 自动恢复: 测试账号被修改后（如免费→会员、月度→年度），
@@ -32,7 +32,7 @@ const TEST_PASSWORD = '12345678';
 // 测试账号配置 — 同时被 src/lib/test-accounts.ts 引用
 export const TEST_ACCOUNTS = [
   {
-    phone: '13800000001',
+    phone: '13821668570',
     email: 't1@aiccompanion.com',
     name: '测试手机(免费)',
     isPremium: false,
@@ -48,7 +48,7 @@ export const TEST_ACCOUNTS = [
     subscriptionPlan: null as string | null,
   },
   {
-    phone: '13800000002',
+    phone: '13821668571',
     email: 't2@aiccompanion.com',
     name: '测试手机(会员)',
     isPremium: true,
@@ -59,6 +59,18 @@ export const TEST_ACCOUNTS = [
 
 async function main() {
   const passwordHash = await bcrypt.hash(TEST_PASSWORD, 12);
+
+  // 清理旧测试账号（包括历史用过的号码）
+  const oldTestPhones = ['13800000001', '13800000002', '13821668570', '13821668571'];
+  const oldTestEmails = ['t1@aiccompanion.com', 't2@aiccompanion.com', 't@t.com'];
+  await prisma.user.deleteMany({
+    where: {
+      OR: [
+        { phone: { in: oldTestPhones } },
+        { email: { in: oldTestEmails } },
+      ],
+    },
+  }).catch(() => {}); // 忽略错误（如首次运行无数据）
 
   for (const acc of TEST_ACCOUNTS) {
     // 通过 phone 或 email 查找已有用户
@@ -144,9 +156,9 @@ async function main() {
   }
 
   console.log('\n测试账号（统一密码 12345678）:');
-  console.log('手机(免费): 13800000001');
+  console.log('手机(免费): 13821668570');
   console.log('邮箱(免费): t@t.com');
-  console.log('手机(会员): 13800000002');
+  console.log('手机(会员): 13821668571');
 }
 
 main()
