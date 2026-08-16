@@ -21,7 +21,7 @@
  * 自动恢复: 测试账号被修改后（如免费→会员、月度→年度），
  * 5分钟后自动恢复初始状态，方便不同人体验。
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../src/generated/prisma';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
