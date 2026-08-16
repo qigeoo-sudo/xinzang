@@ -36,7 +36,7 @@ export default function ChatPage() {
         {/* 问卷未完成提示 */}
         {needQuestionnaire && (
           <div className="bg-amber-50 border border-amber-200 text-amber-700 text-sm px-4 py-3 rounded-lg mb-4">
-            我们的访谈还没有完成，请继续回答 AI 职导的问题，完成后才能打开我的档案。
+            我们的访谈还没有完成，请继续回答 AI 职导的问题，完成后才能和导师聊天、查看我的档案等功能。
           </div>
         )}
 

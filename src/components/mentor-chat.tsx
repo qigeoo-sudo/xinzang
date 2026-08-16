@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import type { Mentor } from '@/lib/mentors';
+import { mentors, type Mentor } from '@/lib/mentors';
 import { MessageWithChoices } from '@/components/chat-options';
 
 interface ChatMessage {
@@ -36,6 +36,87 @@ const AI_GUIDE_VERSION = 'v2-student-only';
 // 24小时毫秒数
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// --- 需求4: 问卷完成消息动态生成辅助函数 ---
+
+// 安全解析 JSON 数组字符串
+function parseJsonArraySafe(str: string | null | undefined): string[] {
+  if (!str) return [];
+  try {
+    const arr = JSON.parse(str);
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+// 通过名称查找导师（支持部分匹配）
+function findMentorByName(name: string) {
+  return mentors.find(
+    (m) =>
+      m.id !== 'ai-guide' &&
+      (m.name === name ||
+        m.name.startsWith(name) ||
+        name.startsWith(m.name.split(' ')[0]))
+  );
+}
+
+// 截断到指定长度
+function truncateText(text: string, maxLen: number): string {
+  return text.length <= maxLen ? text : text.slice(0, maxLen);
+}
+
+// 根据档案数据动态生成问卷完成消息
+function generateCompletionMessage(profile: {
+  careerAnxiety?: string | null;
+  helpPriority?: string | null;
+  recommendedMentors?: string | null;
+}): string {
+  // 确定用户的主要困惑
+  let concern = '';
+  if (profile.careerAnxiety) {
+    concern = profile.careerAnxiety;
+  } else {
+    const priorities = parseJsonArraySafe(profile.helpPriority);
+    if (priorities.length > 0) {
+      concern = priorities[0];
+    }
+  }
+
+  // 解析推荐导师
+  const recommendedNames = parseJsonArraySafe(profile.recommendedMentors);
+
+  // 构建导师信息（名称 + 简介不超过25字）
+  const mentorInfos: { name: string; shortDesc: string }[] = [];
+  for (const name of recommendedNames) {
+    const mentor = findMentorByName(name);
+    if (mentor) {
+      mentorInfos.push({
+        name: mentor.name,
+        shortDesc: truncateText(mentor.tagline, 25),
+      });
+    }
+  }
+
+  let message = '祝贺！我们完成了交流访谈。';
+  if (concern) {
+    message += `根据目前我收集的信息，你主要的困惑是${concern}。`;
+  } else {
+    message += '根据目前我收集的信息，目前我还不清楚你主要的困惑。';
+  }
+
+  if (mentorInfos.length > 0) {
+    const names = mentorInfos.map((m) => m.name);
+    if (names.length === 1) {
+      message += `结合各方面信息，我向你推荐${names[0]}导师分身。`;
+    } else {
+      message += `结合各方面信息，我向你推荐${names.slice(0, -1).join('、')}以及${names[names.length - 1]}导师分身。`;
+    }
+    message += '\n\n' + mentorInfos.map((m) => `${m.name}：${m.shortDesc}`).join('\n');
+  }
+
+  return message;
+}
+
 export function MentorChat({ mentor }: MentorChatProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -53,6 +134,11 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [initialized, setInitialized] = useState(false);
   const [usageUsed, setUsageUsed] = useState<number>(0);
   const [usageLimit, setUsageLimit] = useState<number | null>(null);
+  const [profileData, setProfileData] = useState<{
+    careerAnxiety?: string | null;
+    helpPriority?: string | null;
+    recommendedMentors?: string | null;
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -169,10 +255,39 @@ export function MentorChat({ mentor }: MentorChatProps) {
           if (savedSessionId) {
             setSessionId(savedSessionId);
           }
-          if (isAiGuide && completedKey) {
-            setQuestionnaireCompleted(localStorage.getItem(completedKey) === 'true');
+          if (isAiGuide) {
+            // AI 职导：不信任 localStorage 的 completed 标记
+            // 先用 localStorage 值作为临时显示，然后异步向数据库验证
+            const localCompleted = completedKey ? localStorage.getItem(completedKey) === 'true' : false;
+            setQuestionnaireCompleted(localCompleted);
+            setInitialized(true);
+
+            // 异步验证：数据库是权威源
+            if (localCompleted) {
+              fetch('/api/user/profile')
+                .then((res) => (res.ok ? res.json() : null))
+                .then((data) => {
+                  const profile = data?.profile;
+                  const dbCompleted =
+                    profile?.profileSource === 'ai_extracted' ||
+                    (profile?.nickname != null && profile.nickname.length > 0);
+                  if (!dbCompleted) {
+                    // 数据库说未完成 — 清除 localStorage 的 completed 标记，回到问卷模式
+                    if (completedKey) localStorage.removeItem(completedKey);
+                    setQuestionnaireCompleted(false);
+                    window.dispatchEvent(new CustomEvent('questionnaireNotCompleted'));
+                  } else {
+                    // 数据库确认已完成 — 同步档案数据
+                    setProfileData(profile);
+                  }
+                })
+                .catch(() => {
+                  // 网络错误 — 信任 localStorage 作为 fallback
+                });
+            }
+          } else {
+            setInitialized(true);
           }
-          setInitialized(true);
           return;
         }
       }
@@ -204,6 +319,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
           if (interviewCompleted) {
             // 访谈已完成 — 进入轻量模式
             setQuestionnaireCompleted(true);
+            // 存储档案数据用于生成动态欢迎消息
+            setProfileData(profile);
             // 同步 localStorage
             try {
               localStorage.setItem(`ai-guide-completed-${session.user.id}`, 'true');
@@ -275,11 +392,14 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
     if (mentor.id === 'ai-guide') {
       if (questionnaireCompleted) {
-        // 轻量模式：档案已建立
+        // 轻量模式：档案已建立 — 使用动态消息
+        const completionMessage = profileData
+          ? generateCompletionMessage(profileData)
+          : '祝贺！我们完成了交流访谈。现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。';
         setMessages([
           {
             role: 'assistant',
-            content: `你好！我是AI职导。我的职责是会你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。`,
+            content: completionMessage,
           },
         ]);
       } else {
@@ -307,7 +427,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         },
       ]);
     }
-  }, [mentor.id, mentor.name, initialized, dailyLimitReached, questionnaireCompleted]);
+  }, [mentor.id, mentor.name, initialized, dailyLimitReached, questionnaireCompleted, profileData]);
 
   // 保存消息到 localStorage — 按用户+导师隔离
   const saveMessages = (msgs: ChatMessage[], sid: string | null) => {
@@ -450,9 +570,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
           return;
         }
         if (data.needUpgrade) {
-          setError('免费试用次数已用完，请升级会员继续使用');
+          setNeedSubscription(true);
         } else if (data.needSubscription) {
-          setError(`${mentor.name} 需要会员才能对话`);
           setNeedSubscription(true);
         } else if (data.needQuestionnaire) {
           // 未完成 AI 职导访谈 — 跳转到 AI 职导页面
@@ -493,23 +612,28 @@ export function MentorChat({ mentor }: MentorChatProps) {
             // ignore
           }
           // 自动触发档案提取 — 三步走第三步
-          fetch('/api/profile/extract', { method: 'POST' })
-            .then((res) => res.ok ? res.json() : null)
-            .then((data) => {
-              if (data?.success) {
-                console.log('档案已从AI职导对话中自动提取');
-              }
-            })
-            .catch(() => {});
+          // 等待档案提取完成 + 至少 1.5 秒延迟（让用户读完 AI 最后回复）
+          const extractPromise = fetch('/api/profile/extract', { method: 'POST' })
+            .then((res) => (res.ok ? res.json() : null))
+            .catch(() => null);
+          const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
 
-          // 清空旧问卷对话，切换到轻量模式
-          setTimeout(() => {
+          Promise.all([extractPromise, minDelay]).then(([extractData]) => {
+            let message: string;
+            if (extractData?.success && extractData.profile) {
+              message = generateCompletionMessage(extractData.profile);
+              setProfileData(extractData.profile);
+            } else {
+              message =
+                '祝贺！我们完成了交流访谈。现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。';
+            }
+
             try {
               const aiKeys = getAiGuideKeys(session.user.id);
               const lightweightMessages: ChatMessage[] = [
                 {
                   role: 'assistant',
-                  content: `你好！我是AI职导。我的职责是会你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。`,
+                  content: message,
                 },
               ];
               setMessages(lightweightMessages);
@@ -520,7 +644,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
             } catch {
               // ignore
             }
-          }, 1500);
+          });
         }
         // 延迟触发事件，让 UI 先更新
         setTimeout(() => {
@@ -726,7 +850,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         {needSubscription && (
           <div className="flex flex-col items-center gap-3 py-4">
             <p className="text-sm text-slate-600 text-center">
-              成为会员后，即可与 {mentor.name} 及所有行业导师深度对话
+              成为会员后，即可与{mentor.name}及所有行业导师分身深度对话。
             </p>
             <Link
               href="/dashboard/subscription"

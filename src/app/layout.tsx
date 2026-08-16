@@ -35,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="min-h-screen safe-bottom">
+      <body className="min-h-screen safe-bottom overflow-x-hidden">
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />
       </body>

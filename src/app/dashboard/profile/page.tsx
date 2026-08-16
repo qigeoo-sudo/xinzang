@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
+import { AccessBlocker } from '@/components/mentor-access-blocker';
 
 // JSON 数组字符串解析辅助
 function parseJsonArray(str: string | null | undefined): string[] {
@@ -54,6 +55,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showBlocker, setShowBlocker] = useState(false);
 
   // 折叠状态 — 默认全部展开
   const [basicOpen, setBasicOpen] = useState(true);
@@ -129,15 +131,15 @@ export default function ProfilePage() {
     setRecommendedMentors(parseJsonArray(p.recommendedMentors).join('、'));
   };
 
-  // 检查问卷是否完成 — 未完成则跳转到 AI 职导
+  // 检查问卷是否完成 — 未完成则显示拦截提示框
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/user/profile')
       .then((res) => res.json())
       .then((data: { profile?: ProfileData }) => {
         if (!data.profile) {
-          // 没有档案 = 问卷未完成，跳转到 AI 职导
-          router.push('/chat?need=questionnaire');
+          // 没有档案 = 问卷未完成，显示提示框
+          setShowBlocker(true);
         } else {
           applyProfile(data.profile);
         }
@@ -286,6 +288,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
+      {showBlocker && <AccessBlocker message={'访谈交流完成后才\n能查看个人档案'} />}
 
       <div className="page-container">
         {/* 标题 */}
@@ -296,7 +299,14 @@ export default function ProfilePage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 profile-form">
+          {/* 仅个人档案页面：输入框字体与标签一致(14px)，不加粗 */}
+          <style>{`
+            .profile-form input, .profile-form textarea, .profile-form select {
+              font-size: 14px;
+              font-weight: 400;
+            }
+          `}</style>
           {/* 基本信息 */}
           <div className="card space-y-4">
             <div className="flex items-center justify-between">
@@ -361,7 +371,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">年级</label>
-                    <input type="text" value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="仅在校生" className="input-field" />
+                    <input type="text" value={grade} onChange={(e) => setGrade(e.target.value)} className="input-field" />
                   </div>
                 </div>
 
@@ -390,7 +400,7 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">兴趣方向</label>
-                  <input type="text" value={interests} onChange={(e) => setInterests(e.target.value)} placeholder="用顿号分隔" className="input-field" />
+                  <input type="text" value={interests} onChange={(e) => setInterests(e.target.value)} className="input-field" />
                 </div>
 
                 <div>
@@ -400,7 +410,7 @@ export default function ProfilePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">信息渠道</label>
-                  <input type="text" value={infoChannels} onChange={(e) => setInfoChannels(e.target.value)} placeholder="用顿号分隔" className="input-field" />
+                  <input type="text" value={infoChannels} onChange={(e) => setInfoChannels(e.target.value)} className="input-field" />
                 </div>
 
                 <div>

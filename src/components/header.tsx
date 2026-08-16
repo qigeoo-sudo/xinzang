@@ -110,8 +110,13 @@ function HeaderInner() {
     }
 
     const handleCompleted = () => setLocked(true);
+    const handleNotCompleted = () => setLocked(false);
     window.addEventListener('questionnaireCompleted', handleCompleted);
-    return () => window.removeEventListener('questionnaireCompleted', handleCompleted);
+    window.addEventListener('questionnaireNotCompleted', handleNotCompleted);
+    return () => {
+      window.removeEventListener('questionnaireCompleted', handleCompleted);
+      window.removeEventListener('questionnaireNotCompleted', handleNotCompleted);
+    };
   }, [pathname, status, session?.user?.id]);
 
   const tr = mounted ? navLabels[lang] : navLabels.zh;

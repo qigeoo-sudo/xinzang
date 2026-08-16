@@ -152,15 +152,9 @@ export default async function PaymentSuccessPage({
           )}
 
           {/* 操作按钮 */}
-          <div className="space-y-3">
+          <div>
             <Link href="/mentors" className="btn-primary block text-center">
               开始与导师对话
-            </Link>
-            <Link
-              href="/dashboard"
-              className="btn-secondary block text-center"
-            >
-              返回我的档案
             </Link>
           </div>
         </div>

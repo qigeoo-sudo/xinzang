@@ -121,7 +121,7 @@ export async function createWxPayOrder(
 ): Promise<WxPayOrderResult> {
   // Mock 模式 — 开发环境或未配置密钥
   if (isMockMode) {
-    const mockPayUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/mock?orderNo=${params.orderNo}`;
+    const mockPayUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/mock?orderNo=${params.orderNo}&method=wechat&amount=${(params.amount / 100).toFixed(2)}`;
     return {
       success: true,
       prepayId: `mock_prepay_${Date.now()}`,

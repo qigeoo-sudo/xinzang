@@ -1,8 +1,9 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { Header } from '@/components/header';
 import { getMentorById, mentors } from '@/lib/mentors';
 import { MentorChat } from '@/components/mentor-chat';
 import { KnowledgePanel } from '@/components/knowledge-panel';
+import { MentorAccessBlocker } from '@/components/mentor-access-blocker';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
@@ -44,8 +45,13 @@ export default async function MentorDetailPage({
           (profile?.nickname != null && profile.nickname.length > 0);
 
         if (!interviewCompleted) {
-          // 未完成访谈 — 跳转到 AI 职导页面
-          redirect('/chat?need=questionnaire');
+          // 未完成访谈 — 显示拦截提示框，2.7 秒后自动跳转回 AI 职导
+          return (
+            <div className="min-h-screen flex flex-col">
+              <Header />
+              <MentorAccessBlocker />
+            </div>
+          );
         }
       }
     }

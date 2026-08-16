@@ -99,7 +99,7 @@
 
   /* 页面容器 */
   .page-container {
-    @apply max-w-3xl mx-auto px-4 py-6;
+    @apply max-w-3xl w-full mx-auto px-4 py-6;
   }
 
   /* 移动端底部安全区 */

@@ -2,6 +2,10 @@
 
 > 本文件供 AI 助手快速理解项目状态，新会话开始时请先阅读此文件。
 
+## 开发规则
+
+- **每次修改代码完毕，必须同时在总结和 work 中提供预览链接。**
+
 ## 重要文档
 
 | 文档 | 路径 | 说明 |
@@ -37,6 +41,17 @@ npm run dev          # 启动开发服务器 (localhost:3000)
 ```
 
 环境变量见 `.env.example`，实际开发配置在 `.env.local`。
+
+### 开发环境密钥
+
+密钥存储在本地 `.env.local` 中，请勿提交到公开仓库。配置项包括：
+
+```
+DEEPSEEK_API_KEY=<在 .env.local 中配置>
+AI_API_URL=https://api.deepseek.com/v1
+AI_MODEL=deepseek-chat
+AUTH_SECRET=<用 openssl rand -base64 32 生成>
+```
 
 ## 核心目录结构
 

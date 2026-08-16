@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { mentors } from '@/lib/mentors';
 import Link from 'next/link';
+import { ProfileLink } from '@/components/profile-link';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -13,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   // 从数据库获取用户数据和聊天历史
-  const [user, chatSessions, subscription] = await Promise.all([
+  const [user, chatSessions, subscription, userProfile] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -47,6 +48,10 @@ export default async function DashboardPage() {
         endDate: true,
       },
     }),
+    prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { nickname: true, profileSource: true },
+    }),
   ]);
 
   // 统计数据
@@ -54,6 +59,11 @@ export default async function DashboardPage() {
   const mentorChats = chatSessions.filter((s) => s.mentorId !== 'ai-guide').length;
   const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
   const freeTrialRemaining = Math.max(0, freeTrialLimit - (user?.freeTrialUsed || 0));
+
+  // 判断访谈是否完成
+  const interviewCompleted =
+    userProfile?.profileSource === 'ai_extracted' ||
+    (userProfile?.nickname != null && userProfile.nickname.length > 0);
 
   // 导师名称映射
   const mentorMap = new Map(mentors.map((m) => [m.id, m.name]));
@@ -71,8 +81,8 @@ export default async function DashboardPage() {
       id: 2,
       title: '首次 AI 职导对话',
       desc: '和 AI 职业导师聊了职业方向',
-      completed: totalChats > 0,
-      date: totalChats > 0 ? new Date(chatSessions[0]?.updatedAt || Date.now()).toLocaleDateString('zh-CN') : null,
+      completed: interviewCompleted,
+      date: interviewCompleted ? new Date(chatSessions[0]?.updatedAt || user?.createdAt || Date.now()).toLocaleDateString('zh-CN') : null,
     },
     {
       id: 3,
@@ -126,8 +136,8 @@ export default async function DashboardPage() {
 
         {/* 会员状态 */}
         <div className="card mb-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-xs text-slate-400 mb-1">会员状态</p>
               {user?.isPremium ? (
                 <>
@@ -257,16 +267,7 @@ export default async function DashboardPage() {
 
         {/* 快捷操作 */}
         <div className="grid grid-cols-2 gap-3">
-          <Link
-            href="/dashboard/profile"
-            className="card card-hover flex flex-col items-center gap-2 py-4"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5B7C5A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            <span className="text-sm text-brand-900">我的档案</span>
-          </Link>
+          <ProfileLink interviewCompleted={interviewCompleted} />
           <Link
             href="/dashboard/subscription"
             className="card card-hover flex flex-col items-center gap-2 py-4"

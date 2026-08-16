@@ -118,7 +118,7 @@ export async function createAlipayOrder(
 ): Promise<AlipayOrderResult> {
   // Mock 模式 — 开发环境或未配置密钥
   if (isAlipayMockMode) {
-    const mockPayUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/mock?orderNo=${params.orderNo}`;
+    const mockPayUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/payment/mock?orderNo=${params.orderNo}&method=alipay&amount=${(params.amount / 100).toFixed(2)}`;
     return {
       success: true,
       payUrl: mockPayUrl,
