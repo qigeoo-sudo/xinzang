@@ -40,8 +40,22 @@ AI 职业伴侣平台 — 通过 AI 职导访谈 + 行业导师 AI 分身，为�
 ```bash
 npm install          # 安装依赖（含 postinstall: prisma generate）
 npx prisma db push   # 同步数据库 schema
+npx tsx prisma/seed-test-users.ts  # 预置测试账号（可选）
 npm run dev          # 启动开发服务器 (localhost:3000)
 ```
+
+### 测试账号
+
+| 类型 | 账号 | 密码 | 说明 |
+|------|------|------|------|
+| 手机(免费) | `13800000001` | `test1234` | 非会员，可对话AI职导，行业导师3次试用 |
+| 邮箱(免费) | `test@aiccompanion.com` | `test1234` | 非会员，同上 |
+| 手机(会员) | `13800000002` | `premium1234` | 已开通月度会员，所有导师可对话 |
+
+- 测试账号由 `prisma/seed-test-users.ts` 创建，Docker 构建时自动预置到生产数据库
+- 本地运行：`npx tsx prisma/seed-test-users.ts`
+- **注册验证码**：Mock 模式下 API 直接返回验证码，前端显示"验证码已发送（模拟：XXXXXX）"
+- **Mock 支付**：不需要验证码，在模拟支付页面点击"确认支付(模拟)"即可完成
 
 环境变量见 `.env.example`，实际开发配置在 `.env.local`。
 
@@ -248,3 +262,14 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 - **修复**: Dockerfile 运行阶段（runner）内置环境变量兜底值：`DATABASE_URL`、`AUTH_TRUST_HOST`、`AUTH_SECRET`、`AUTH_URL`（显式指定 CloudBase 域名）；构建阶段额外生成含 schema 的生产数据库 `/app/data/prod.db` 并复制到运行镜像
 - **注意**: 修改 Dockerfile 后必须在 CloudBase 重新构建部署才生效，线上跑的仍是旧镜像则问题依旧
 - **待用户操作**: 在 CloudBase 重新构建部署；控制台配置 `AUTH_SECRET`（随机值）和 `DEEPSEEK_API_KEY`
+
+#### 5. 预置测试账号 + Mock 支付说明（2026-08-16 晚）
+- **背景**: CloudBase 生产环境无法收验证码，用户无法注册新账号；登录需要已有账号
+- **新增 `prisma/seed-test-users.ts`**: 种子脚本，预置3个测试账号（手机免费/邮箱免费/手机会员），密码使用 bcrypt 哈希
+- **Dockerfile 更新**: 构建阶段运行种子脚本，生产数据库自动包含测试账号
+- **`.env.example` 更新**: 追加测试账号汇总表和 Mock 验证码/支付说明
+- **测试账号**:
+  - 手机(免费): `13800000001` / `test1234`
+  - 邮箱(免费): `test@aiccompanion.com` / `test1234`
+  - 手机(会员): `13800000002` / `premium1234`
+- **Mock 支付**: 不需要验证码，点击"确认支付(模拟)"即可。生产环境未配 `WXPAY_MCH_ID` 时自动进入 Mock 模式
