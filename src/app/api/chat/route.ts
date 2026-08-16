@@ -363,6 +363,16 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
     // 11. P0-3: 从数据库构建对话上下文（弹性算法: 最多20条，最多8000字）
     const contextMessages = await buildContextFromDB(chatSessionId);
 
+    // 检查 API Key 是否配置
+    if (!apiKey) {
+      console.error('Chat API: DEEPSEEK_API_KEY not configured');
+      return NextResponse.json({
+        reply: 'AI 服务尚未配置，请联系管理员在 CloudBase 控制台设置 DEEPSEEK_API_KEY 环境变量。',
+        degraded: true,
+        sessionId: chatSessionId,
+      });
+    }
+
     // 12. 调用 AI API — 使用 proxyFetch 穿透沙箱代理
     const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
@@ -382,7 +392,8 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
     });
 
     if (!aiResponse.ok) {
-      console.error('AI API error:', aiResponse.status);
+      const errorBody = await aiResponse.text().catch(() => 'unreadable');
+      console.error('AI API error:', aiResponse.status, aiResponse.statusText, errorBody.slice(0, 500));
       return NextResponse.json({
         reply: '抱歉，我暂时无法回复，请稍后再试。',
         degraded: true,

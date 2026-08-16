@@ -10,6 +10,7 @@ const nextConfig = {
     '@prisma/client',
     '@auth/prisma-adapter',
     'bcryptjs',
+    'undici',
   ],
   // 确保 Prisma 引擎二进制文件被包含在 standalone 构建中
   outputFileTracingIncludes: {
