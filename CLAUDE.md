@@ -77,6 +77,7 @@ src/
 │   └── payment/                   # 支付页面
 ├── components/
 │   ├── mentor-chat.tsx            # 聊天组件（核心）— 支持断点续传、问卷流程
+│   ├── collapsible-text.tsx       # 长消息折叠组件 — 超屏80%高度自动折叠为4行+展开
 │   ├── header.tsx                 # 导航栏
 │   ├── chat-options.tsx           # 选项题渲染组件（[CHOICE] 标签）
 │   ├── subscription-flow.tsx      # 订阅支付流程
@@ -141,6 +142,7 @@ src/
 3. **AI 职导版本标记**: localStorage 中 `ai-guide-version-${userId}` = `v2-student-only`，版本不匹配时清空旧数据重来。
 4. **sessionId 验证**: API 收到 sessionId 时先验证是否存在于数据库，防止过期 sessionId 导致外键约束错误。
 5. **JWT 用户验证**: API 收到请求时检查 JWT 中的 userId 是否在数据库中存在，不存在则返回 401 + needRelogin。
+6. **P0-3 安全修订（已完成）**: 客户端只发送单条 message，服务端从数据库构建对话上下文。弹性上下文算法：最多20条消息或8000字符（ whichever comes first）。防注入安全规则追加到 system prompt 末尾。单条消息上限4000字。长消息折叠组件（CollapsibleText）自动折叠超屏内容。
 
 ## 待办 / 已知问题
 
@@ -161,7 +163,7 @@ src/
 - 详见 `docs/PRD.md` 第六章和 `docs/AICCloudBase_PG_v1.1.md`
 
 ### P0 阻断项（上线前必须修复）
-- P0-3: 客户端只提交本轮消息，服务端加载历史
+- ~~P0-3: 客户端只提交本轮消息，服务端加载历史~~ **✅ 已完成（2026-08-16）**
 - P0-4: 验证码不返回明文
 - P0-5: 支付正式验签
 - P0-6: Service Worker 不缓存私人页面
