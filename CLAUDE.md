@@ -5,6 +5,8 @@
 ## 开发规则
 
 - **每次修改代码完毕，必须同时在总结和 work 中提供预览链接。**
+- **Git 推送规则：每次推送必须同时推送到 `main` 和 `master` 两个分支。** 命令：`git push origin main && git push origin main:master`
+- **打标签时也需同时推送标签到远程。** 命令：`git push origin "标签名"`
 
 ## 重要文档
 
@@ -31,6 +33,7 @@ AI 职业伴侣平台 — 通过 AI 职导访谈 + 行业导师 AI 分身，为�
 - **认证**: NextAuth.js v5 (JWT 策略，Credentials Provider)
 - **AI**: DeepSeek API (`deepseek-chat` 模型)
 - **支付**: 支付宝 + 微信支付（Mock 模式）
+- **部署**: Docker (node:20-alpine) + 腾讯云 CloudBase
 
 ## 快速启动
 
@@ -94,6 +97,10 @@ src/
 │   └── proxy-fetch.ts             # 带代理支持的 fetch 封装
 ├── generated/prisma/              # Prisma 生成代码（git ignore）
 └── auth.ts                        # NextAuth 配置
+
+# 部署文件（项目根目录）
+Dockerfile                         # Docker 构建配置 — node:20-alpine，含 prisma generate + 临时 SQLite
+.dockerignore                      # Docker 构建忽略列表
 ```
 
 ## 业务流程
@@ -142,7 +149,13 @@ src/
 3. **AI 职导版本标记**: localStorage 中 `ai-guide-version-${userId}` = `v2-student-only`，版本不匹配时清空旧数据重来。
 4. **sessionId 验证**: API 收到 sessionId 时先验证是否存在于数据库，防止过期 sessionId 导致外键约束错误。
 5. **JWT 用户验证**: API 收到请求时检查 JWT 中的 userId 是否在数据库中存在，不存在则返回 401 + needRelogin。
-6. **P0-3 安全修订（已完成）**: 客户端只发送单条 message，服务端从数据库构建对话上下文。弹性上下文算法：最多20条消息或8000字符（ whichever comes first）。防注入安全规则追加到 system prompt 末尾。单条消息上限4000字。长消息折叠组件（CollapsibleText）自动折叠超屏内容。
+6. **P0-3 安全修订（已完成 2026-08-16）**:
+   - **防伪造对话历史**: 客户端只发送单条 `message`，不再发送 `messages` 数组。服务端通过 `buildContextFromDB()` 从数据库构建对话上下文，用户无法伪造历史。
+   - **弹性上下文算法**: 最多20条消息或8000字符（whichever comes first）。从最新消息向前累加，超出字数限制时截断。
+   - **防注入安全规则**: `ANTI_INJECTION_PROMPT` 追加到所有 system prompt 末尾，告知 AI 忽略用户消息中试图改变角色或指令的尝试。
+   - **消息长度限制**: 单条消息上限4000字（`chatMessageSchema` 校验）。AI 回复 `max_tokens: 800`（约400-500中文字）。
+   - **长消息折叠组件**: `CollapsibleText` 组件，超过屏幕80%高度时自动折叠为4行 + "...展开"链接，点击打开全屏遮罩层查看完整内容。用户消息和 AI 回复均使用此组件。
+   - **舞台提示词清除**: `stripStageDirections()` 自动清除 AI 回复中括号内的语气/动作/表情描述。
 
 ## 待办 / 已知问题
 
@@ -171,3 +184,44 @@ src/
 - P0-8: 隐私说明与功能一致
 - P0-9: 档案更新事务化 + 追加式历史
 - 详见 `docs/PRD.md` 第七章
+
+## Docker 部署（CloudBase）
+
+- **Dockerfile**: 基于 `node:20-alpine`，多阶段构建
+  - 构建阶段：安装依赖 → `prisma generate` → 创建临时 SQLite 数据库（解决 `File is not defined` 错误）→ `next build`
+  - 运行阶段：复制构建产物 + `node_modules` + `prisma` 目录，启动 `next start`
+- **.dockerignore**: 排除 `node_modules`、`.next`、`.git`、`prisma/dev.db` 等
+- **注意**: Docker 构建时需要临时 SQLite 数据库，因为 Next.js 构建过程中会初始化 Prisma Client
+
+## 变更日志
+
+### 2026-08-16
+
+#### 1. CloudBase 部署配置（提交 `923e6b4` → `286591f`）
+- 新增 `Dockerfile`：基于 `node:20-alpine` 多阶段构建
+- 新增 `.dockerignore`
+- 修复构建阶段 `prisma generate` 缺失问题（`fb34191`）
+- 修复构建阶段 `File is not defined` 错误 — 创建临时 SQLite 数据库（`203d075`）
+- 恢复 `node:20-alpine` 匹配原始成功部署版本（`286591f`）
+
+#### 2. P0-3 安全修订（提交 `120a53d`，标签 `修复P03`）
+- **`src/lib/validation.ts`**: `chatMessageSchema` 从接收 `messages` 数组改为只接收单条 `message`（上限4000字）
+- **`src/app/api/chat/route.ts`**: 完全重写
+  - 新增 `buildContextFromDB()` — 从数据库构建对话上下文（弹性算法：最多20条/8000字）
+  - 新增 `ANTI_INJECTION_PROMPT` — 防注入安全规则追加到 system prompt
+  - 新增 `stripStageDirections()` — 清除 AI 回复中的舞台提示词
+  - 用户消息先保存到数据库，再从数据库构建上下文
+  - `max_tokens: 800` 限制 AI 回复长度
+- **`src/components/collapsible-text.tsx`**: 新增长消息折叠组件
+  - 超过屏幕80%高度自动折叠为4行 + "...展开"链接
+  - 点击展开打开全屏遮罩层显示完整内容
+  - `useLayoutEffect` 在绘制前测量高度，避免闪烁
+- **`src/components/mentor-chat.tsx`**: 客户端适配
+  - 请求体改为 `{ mentorId, message, sessionId }`，不再发送 `messages` 数组
+  - 消息渲染统一使用 `CollapsibleText` 组件（含 `[CHOICE]` 标签的除外）
+  - 输入框 `maxLength={4000}` 限制字数
+
+#### 3. CLAUDE.md 更新（提交 `0314281`）
+- 新增 P0-3 修订记录到关键注意事项
+- P0-3 阻断项标记为已完成
+- 新增 `collapsible-text.tsx` 到目录结构
