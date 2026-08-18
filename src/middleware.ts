@@ -22,6 +22,6 @@ export const config = {
    * 仅对页面和 API 路由运行中间件
    */
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-*.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.json|sw.js|workbox-*.js|api/eval|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 };
