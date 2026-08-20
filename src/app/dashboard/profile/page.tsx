@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
-import { AccessBlocker } from '@/components/mentor-access-blocker';
 
 // JSON 数组字符串解析辅助
 function parseJsonArray(str: string | null | undefined): string[] {
@@ -55,7 +54,6 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [showBlocker, setShowBlocker] = useState(false);
 
   // 折叠状态 — 默认全部展开
   const [basicOpen, setBasicOpen] = useState(true);
@@ -131,16 +129,13 @@ export default function ProfilePage() {
     setRecommendedMentors(parseJsonArray(p.recommendedMentors).join('、'));
   };
 
-  // 检查问卷是否完成 — 未完成则显示拦截提示框
+  // 加载用户档案（无档案时使用空默认值）
   useEffect(() => {
     if (status !== 'authenticated') return;
     fetch('/api/user/profile')
       .then((res) => res.json())
       .then((data: { profile?: ProfileData }) => {
-        if (!data.profile) {
-          // 没有档案 = 问卷未完成，显示提示框
-          setShowBlocker(true);
-        } else {
+        if (data.profile) {
           applyProfile(data.profile);
         }
       })
@@ -288,7 +283,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      {showBlocker && <AccessBlocker message={'访谈交流完成后才\n能查看个人档案'} />}
 
       <div className="page-container">
         {/* 标题 */}

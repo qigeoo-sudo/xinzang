@@ -17,6 +17,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb';
 import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
+import { extractInferredProfile, mergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
 import { getMentorQuota } from '@/lib/plans';
 import { proxyFetch } from '@/lib/proxy-fetch';
 
@@ -312,27 +313,7 @@ export async function POST(request: NextRequest) {
 
     // 6. 会员/试用检查 — 免费导师跳过
     if (!mentor.isFree && !isPremium) {
-      // 非会员使用付费导师 — 先检查是否已完成 AI 职导访谈
-      const userProfile = await prisma.userProfile.findUnique({
-        where: { userId: session.user.id },
-        select: { nickname: true, profileSource: true },
-      });
-
-      const interviewCompleted =
-        userProfile?.profileSource === 'ai_extracted' ||
-        (userProfile?.nickname != null && userProfile.nickname.length > 0);
-
-      if (!interviewCompleted) {
-        return NextResponse.json(
-          {
-            error: '请先完成AI职导的访谈对话，才能与行业导师交流',
-            needQuestionnaire: true,
-          },
-          { status: 403 }
-        );
-      }
-
-      // 访谈已完成 — 检查免费试用次数
+      // 非会员 — 检查免费试用次数
       if (freeTrialUsed >= freeTrialLimit) {
         return NextResponse.json(
           {
@@ -532,6 +513,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
             helpPriority: true,
             mentorPreference: true,
             mentorHelpAreas: true,
+            inferredProfile: true,
           },
         });
 
@@ -548,6 +530,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
 
         const ctx: MentorChatContext = {
           userProfileConfirmed: renderUserProfile(userProfile),
+          userProfileInferred: renderInferredProfile(userProfile?.inferredProfile) || undefined,
           recentMessages: recentText,
           conversationSummary: conversationSummary ?? undefined,
           currentTime: new Date().toISOString(),
@@ -611,6 +594,22 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       where: { id: chatSessionId },
       data: { messageCount: { increment: 2 } },
     });
+
+    // 13.5 导师分身聊天：每轮轻量抽取用户档案并写入 inferredProfile（推断 vs 确认 分离）
+    if (mentorId !== 'ai-guide') {
+      try {
+        const inferred = await extractInferredProfile({
+          apiKey,
+          apiUrl,
+          model,
+          userMessage: message,
+          assistantReply: reply,
+        });
+        await mergeInferredProfile(session.user.id, inferred);
+      } catch (e) {
+        console.error('Profile inference failed:', e instanceof Error ? e.message : e);
+      }
+    }
 
     // 14. 非会员扣减免费试用次数 — 免费导师跳过
     if (!isPremium && !mentor.isFree) {

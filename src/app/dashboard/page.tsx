@@ -267,7 +267,7 @@ export default async function DashboardPage() {
 
         {/* 快捷操作 */}
         <div className="grid grid-cols-2 gap-3">
-          <ProfileLink interviewCompleted={interviewCompleted} />
+          <ProfileLink />
           <Link
             href="/dashboard/subscription"
             className="card card-hover flex flex-col items-center gap-2 py-4"

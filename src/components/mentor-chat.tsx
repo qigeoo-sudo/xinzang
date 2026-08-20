@@ -568,12 +568,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
           setNeedSubscription(true);
         } else if (data.needSubscription) {
           setNeedSubscription(true);
-        } else if (data.needQuestionnaire) {
-          // 未完成 AI 职导访谈 — 跳转到 AI 职导页面
-          setError(data.error || '请先完成AI职导的访谈对话');
-          setTimeout(() => {
-            router.push('/chat?need=questionnaire');
-          }, 1500);
         } else if (data.quotaExceeded) {
           setError(data.error || '导师分身对话次数已用完');
           setNeedSubscription(true);
