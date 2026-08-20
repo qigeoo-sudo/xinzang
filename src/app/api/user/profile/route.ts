@@ -74,13 +74,19 @@ export async function PUT(request: NextRequest) {
     // 数组字段转 JSON 字符串
     const arrayFields = ['interests', 'infoChannels', 'helpPriority', 'mentorPreference', 'mentorHelpAreas', 'productTrigger', 'productConcern'];
     const data: Record<string, unknown> = {};
+    const savedNonEmpty: string[] = [];
     for (const [key, value] of Object.entries(d)) {
       if (arrayFields.includes(key) && Array.isArray(value)) {
         data[key] = value.length > 0 ? JSON.stringify(value) : null;
+        if (value.length > 0) savedNonEmpty.push(key);
       } else {
         data[key] = value ?? undefined;
+        if (value !== null && value !== undefined && String(value).trim() !== '') {
+          savedNonEmpty.push(key);
+        }
       }
     }
+
     // 记录变更历史（upsert 之前查询现有档案快照）
     const existingProfile = await prisma.userProfile.findUnique({
       where: { userId: session.user.id },
@@ -92,6 +98,29 @@ export async function PUT(request: NextRequest) {
         snapshot: JSON.stringify(existingProfile),
       },
     });
+
+    // 手动保存即用户主动确认：清除对应字段的推断(inferredProfile)与待处理冲突(profileConflicts)
+    let inferred: Record<string, unknown> = {};
+    if (existingProfile?.inferredProfile) {
+      try { inferred = JSON.parse(existingProfile.inferredProfile); } catch { inferred = {}; }
+    }
+    let conflicts: { field: string; status?: string }[] = [];
+    if (existingProfile?.profileConflicts) {
+      try { conflicts = JSON.parse(existingProfile.profileConflicts); } catch { conflicts = []; }
+    }
+    for (const field of savedNonEmpty) {
+      delete inferred[field];
+    }
+    if (savedNonEmpty.length > 0) {
+      conflicts = conflicts.filter((c) => !savedNonEmpty.includes(c.field));
+    }
+    data.inferredProfile = JSON.stringify(inferred);
+    data.profileConflicts = JSON.stringify(conflicts);
+
+    // 手动确认过 → 来源标记 mixed（仅当之前是 ai_extracted）
+    if (savedNonEmpty.length > 0 && existingProfile?.profileSource === 'ai_extracted') {
+      data.profileSource = 'mixed';
+    }
 
     const profile = await prisma.userProfile.upsert({
       where: { userId: session.user.id },
