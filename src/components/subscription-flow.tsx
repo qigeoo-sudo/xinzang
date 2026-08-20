@@ -305,21 +305,31 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
         const current = isCurrentPlan(plan.id);
         const renewal = isRenewalPlan(plan.id);
         const renewalPrice = Math.round(plan.price * 0.8 * 100) / 100;
+        const isYearly = plan.id === 'YEARLY';
+        const yearlyOn = isYearly && !disabled;
 
         return (
           <div
             key={plan.id}
-            className={`card relative ${
-              plan.popular && !disabled ? 'border-accent border-2' : ''
+            className={`relative rounded-2xl p-5 ${
+              yearlyOn
+                ? 'bg-gradient-to-br from-[#4088A8] via-[#34728F] to-[#22566B] text-white shadow-lg ring-2 ring-[#7FB07F]/70'
+                : `card ${plan.popular && !disabled ? 'border-accent border-2' : ''}`
             } ${disabled ? 'opacity-50 grayscale' : ''}`}
           >
-            {plan.popular && !disabled && (
+            {yearlyOn ? (
+              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                <span className="tag text-xs px-3 py-0.5 bg-[#7FB07F] text-white">
+                  尊享
+                </span>
+              </div>
+            ) : plan.popular && !disabled ? (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
                 <span className="tag text-xs px-3 py-0.5 bg-accent text-white">
                   推荐
                 </span>
               </div>
-            )}
+            ) : null}
 
             {current && (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
@@ -338,31 +348,31 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
             )}
 
             <div className="flex items-baseline justify-between mb-2">
-              <h3 className="font-semibold text-ink">{plan.name}</h3>
+              <h3 className={`font-semibold ${yearlyOn ? 'text-white' : 'text-ink'}`}>{plan.name}</h3>
               <div className="flex items-baseline gap-0.5">
                 {renewal && (
                   <span className="text-xs text-muted line-through mr-1">￥{plan.price}</span>
                 )}
-                <span className="text-xs text-muted">￥</span>
-                <span className="text-2xl font-bold text-accent">
+                <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>￥</span>
+                <span className={`text-2xl font-bold ${yearlyOn ? 'text-white' : 'text-accent'}`}>
                   {renewal ? renewalPrice : plan.price}
                 </span>
-                <span className="text-xs text-muted">{plan.period}</span>
+                <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>{plan.period}</span>
               </div>
             </div>
 
-            <p className="text-xs text-muted mb-3">{plan.description}</p>
+            <p className={`text-xs mb-3 ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>{plan.description}</p>
 
             <ul className="space-y-1.5 mb-4">
               {plan.features.map((feature, i) => (
                 <li
                   key={i}
-                  className="flex items-center gap-2 text-sm text-ink"
+                  className={`flex items-center gap-2 text-sm ${yearlyOn ? 'text-[#EBE3D8]' : 'text-ink'}`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M5 13l4 4L19 7"
-                      stroke="#5B7C5A"
+                      stroke={yearlyOn ? '#7FB07F' : '#5B7C5A'}
                       strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -385,9 +395,11 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
               <button
                 onClick={() => handlePlanClick(plan.id, renewal)}
                 className={`w-full py-2.5 rounded-lg text-sm font-medium transition-all active:scale-95 ${
-                  plan.popular
-                    ? 'bg-accent text-white hover:bg-accent-bright'
-                    : 'bg-beige text-accent border border-accent hover:bg-sand'
+                  yearlyOn
+                    ? 'bg-white text-[#22566B] hover:bg-[#EBE3D8] font-semibold'
+                    : plan.popular
+                      ? 'bg-accent text-white hover:bg-accent-bright'
+                      : 'bg-beige text-accent border border-accent hover:bg-sand'
                 }`}
               >
                 {renewal

@@ -927,9 +927,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
             placeholder={
               dailyLimitReached
                 ? '今日消息已达上限...'
-                : (usageLimit !== null && usageUsed >= usageLimit)
-                  ? '免费次数已用完'
-                  : `问问 ${mentor.name}...`
+                : `问问 ${mentor.name}...`
             }
             rows={1}
             maxLength={4000}
