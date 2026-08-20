@@ -300,7 +300,8 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
         </div>
       )}
 
-      {plans.map((plan) => {
+      <div className="space-y-5">
+        {plans.map((plan) => {
         const disabled = isPlanDisabled(plan.id);
         const current = isCurrentPlan(plan.id);
         const renewal = isRenewalPlan(plan.id);
@@ -316,6 +317,7 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
                 ? 'bg-gradient-to-br from-[#4088A8] via-[#34728F] to-[#22566B] text-white shadow-lg ring-2 ring-[#7FB07F]/70'
                 : `card ${plan.popular && !disabled ? 'border-accent border-2' : ''}`
             } ${disabled ? 'opacity-50 grayscale' : ''}`}
+            style={plan.id === 'MONTHLY' && !disabled ? { borderColor: '#cbd5e1' } : undefined}
           >
             {yearlyOn ? (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
@@ -412,6 +414,7 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
           </div>
         );
       })}
+      </div>
 
       {/* 支付方式选择弹窗 */}
       {showPayModal && modalPlan && (

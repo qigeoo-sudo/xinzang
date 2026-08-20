@@ -17,7 +17,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb';
 import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
-import { extractInferredProfile, mergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
+import { extractInferredProfile, alignAndMergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
 import { getMentorQuota } from '@/lib/plans';
 import { proxyFetch } from '@/lib/proxy-fetch';
 
@@ -514,6 +514,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
             mentorPreference: true,
             mentorHelpAreas: true,
             inferredProfile: true,
+            profileConflicts: true,
           },
         });
 
@@ -530,7 +531,8 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
 
         const ctx: MentorChatContext = {
           userProfileConfirmed: renderUserProfile(userProfile),
-          userProfileInferred: renderInferredProfile(userProfile?.inferredProfile) || undefined,
+          userProfileInferred:
+            renderInferredProfile(userProfile?.inferredProfile, userProfile?.profileConflicts) || undefined,
           recentMessages: recentText,
           conversationSummary: conversationSummary ?? undefined,
           currentTime: new Date().toISOString(),
@@ -595,7 +597,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       data: { messageCount: { increment: 2 } },
     });
 
-    // 13.5 导师分身聊天：每轮轻量抽取用户档案并写入 inferredProfile（推断 vs 确认 分离）
+    // 13.5 导师分身聊天：每轮轻量抽取用户档案 + 语义对齐/冲突合并
     if (mentorId !== 'ai-guide') {
       try {
         const inferred = await extractInferredProfile({
@@ -605,7 +607,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           userMessage: message,
           assistantReply: reply,
         });
-        await mergeInferredProfile(session.user.id, inferred);
+        await alignAndMergeInferredProfile(session.user.id, inferred, { apiKey, apiUrl, model });
       } catch (e) {
         console.error('Profile inference failed:', e instanceof Error ? e.message : e);
       }

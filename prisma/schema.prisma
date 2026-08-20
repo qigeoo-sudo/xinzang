@@ -177,6 +177,9 @@ model UserProfile {
   // 导师聊天中实时提取、尚未经用户确认的档案信息 (JSON 对象，键同本表字段名)
   // 用于区分「确认 vs 推断」来源：主列 = 确认；inferredProfile = 推断
   inferredProfile String?
+  // 确认 vs 推断的待处理冲突 (JSON 数组字符串)
+  // 形如 [{field, confirmedValue, inferredValue, status:"pending", createdAt}]
+  profileConflicts String?
   lastAiExtractAt DateTime? // 最后一次 AI 提取时间
 
   // 审计字段

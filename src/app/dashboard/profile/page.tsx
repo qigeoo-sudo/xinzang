@@ -44,6 +44,42 @@ interface ProfileData {
   productConcern?: string | null;
   willingToPay?: string | null;
   recommendedMentors?: string | null;
+  inferredProfile?: string | null;
+  profileConflicts?: string | null;
+}
+
+// 档案冲突类型
+interface ProfileConflict {
+  field: string;
+  confirmedValue: string;
+  inferredValue: unknown;
+  status: string;
+}
+
+const CONFLICT_FIELD_LABELS: Record<string, string> = {
+  status: '当前状态',
+  city: '所在城市',
+  school: '学校',
+  major: '专业',
+  grade: '年级',
+  education: '学历',
+  industry: '行业',
+  companyType: '公司类型',
+  gradYears: '毕业年限',
+  goals: '职业目标',
+  interests: '兴趣方向',
+  careerAnxiety: '职业焦虑',
+  jobChangeStatus: '求职/换工作状态',
+};
+
+function parseConflicts(str?: string | null): ProfileConflict[] {
+  if (!str) return [];
+  try {
+    const arr = JSON.parse(str);
+    return Array.isArray(arr) ? arr.filter((c) => c.status === 'pending') : [];
+  } catch {
+    return [];
+  }
 }
 
 export default function ProfilePage() {
@@ -99,6 +135,9 @@ export default function ProfilePage() {
   // 推荐导师
   const [recommendedMentors, setRecommendedMentors] = useState('');
 
+  // 待处理冲突
+  const [conflicts, setConflicts] = useState<ProfileConflict[]>([]);
+
   // 将档案数据加载到表单状态
   const applyProfile = (p: ProfileData) => {
     setNickname(p.nickname || '');
@@ -137,6 +176,7 @@ export default function ProfilePage() {
       .then((data: { profile?: ProfileData }) => {
         if (data.profile) {
           applyProfile(data.profile);
+          setConflicts(parseConflicts(data.profile.profileConflicts));
         }
       })
       .catch(() => {});
@@ -178,6 +218,25 @@ export default function ProfilePage() {
     setProductConcern('');
     setWillingToPay('');
     setRecommendedMentors('');
+  };
+
+  const handleResolveConflict = async (field: string, choice: 'confirmed' | 'inferred') => {
+    setError('');
+    try {
+      const res = await fetch('/api/user/profile/resolve-conflict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ field, choice }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || '解决失败');
+        return;
+      }
+      setConflicts((prev) => prev.filter((c) => c.field !== field));
+    } catch {
+      setError('网络错误，请稍后再试');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,6 +351,48 @@ export default function ProfilePage() {
             AI职导访谈后自动生成，可随时修改
           </p>
         </div>
+
+        {/* 待确认冲突 */}
+        {conflicts.length > 0 && (
+          <div className="card space-y-3 mb-6 border-warn/40">
+            <div className="flex items-center gap-2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D4A574" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+              </svg>
+              <h2 className="text-sm font-semibold text-ink">资料存在待确认冲突</h2>
+            </div>
+            {conflicts.map((c) => (
+              <div key={c.field} className="bg-warn/5 rounded-lg p-3 space-y-2">
+                <p className="text-sm text-ink">
+                  <span className="font-medium">{CONFLICT_FIELD_LABELS[c.field] || c.field}</span>
+                  ：已确认「
+                  <span className="font-medium">{c.confirmedValue}</span>」vs 推断「
+                  <span className="text-accent font-medium">
+                    {typeof c.inferredValue === 'object' && c.inferredValue
+                      ? JSON.stringify(c.inferredValue)
+                      : String(c.inferredValue)}
+                  </span>」
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleResolveConflict(c.field, 'confirmed')}
+                    className="btn-secondary !py-1.5 !px-3 text-xs"
+                  >
+                    保留已确认
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleResolveConflict(c.field, 'inferred')}
+                    className="btn-primary !py-1.5 !px-3 text-xs"
+                  >
+                    采用推断
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4 profile-form">
           {/* 仅个人档案页面：输入框字体与标签一致(14px)，不加粗 */}
