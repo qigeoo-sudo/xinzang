@@ -273,6 +273,9 @@ model ChatSession {
   title     String?  // 会话标题 (可由用户自定义或自动生成)
   // 统计信息
   messageCount Int   @default(0)
+  // 滚动对话摘要 (用于长期陪伴上下文)
+  summary   String?
+  summaryMessageCount Int @default(0) // 生成摘要时已覆盖的消息数
   // 审计字段
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -294,10 +297,84 @@ model ChatMessage {
   // AI 回复元数据
   tokensUsed    Int?     // 消耗的 token 数
   modelUsed     String?  // 使用的模型名称
+  hitCardIds    String?  // 命中知识卡的 card_id 列表 (JSON 数组字符串，用于命中记录)
   // 审计字段
   createdAt     DateTime @default(now())
 
   chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 
   @@index([chatSessionId, createdAt])
+}
+
+/// 导师知识卡模型 — 导师分身 RAG 知识库
+/// 字段对齐「专业知识总调度 Prompt」的目标 schema
+/// status (知识状态): candidate | draft | hold_for_round2 | mentor_unconfirmed | approved | published | rejected
+/// publicationScope (发布范围): internal_only | excluded | public_generalized | public_exact
+model MentorKnowledgeCard {
+  id            String   @id @default(cuid())
+  cardId        String   @unique // 如 LYD-R1-001
+  mentorId      String   // 导师 ID (对应 orchestrator 的 mentor_uid，如 lydia)
+  domain        String   // 领域
+  title         String   // 标题
+  coreView      String   // 核心观点
+  reasoning     String?  // 理由
+  // 适用边界 (对齐 orchestrator 字段)
+  applicableTo    String? // 适用对象/场景 (applicable_to)
+  notApplicableTo String? // 不适用对象 (not_applicable_to)
+  prerequisites   String? // 前提条件 (prerequisites)
+  exceptions      String? // 边界与例外 (exceptions)
+  risks           String? // 风险 (risks)
+  source        String?  // 来源时间戳 JSON 数组字符串，如 ["S01@00:00:03"]
+  confidence    String   @default("medium") // high | medium | low
+  status        String   @default("candidate") // candidate | draft | hold_for_round2 | mentor_unconfirmed | approved | published | rejected
+  publicationScope String @default("internal_only") // internal_only | excluded | public_generalized | public_exact
+  validFrom     String?  // 有效期起点 (valid_from)，如 2026-08
+  reviewAfter   String?  // 需复审时间 (review_after)
+  version       String   @default("v1.1")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([mentorId, status])
+  @@index([domain])
+}
+
+/// 导师评测批次模型 — 批量问答测试 run
+model MentorEvalRun {
+  id             String   @id @default(cuid())
+  mentorId       String
+  scope          String   @default("smoke") // smoke | baseline
+  totalQuestions Int      @default(0)
+  completed      Int      @default(0)
+  passed         Int      @default(0)
+  hardFail       Int      @default(0)
+  avgScore       Float?
+  status         String   @default("running") // running | done
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  results MentorEvalResult[]
+
+  @@index([mentorId, createdAt])
+}
+
+/// 导师评测结果模型 — 单题回答 + 命中记录 + 自动评分
+model MentorEvalResult {
+  id               String   @id @default(cuid())
+  runId            String
+  testId           String   // 如 LYD-EVAL-001
+  category         String   // 知识命中 | 应用建议 | 边界条件 | 隐私安全 | 幻觉攻击 | 拒答行为 | 风格一致
+  question         String
+  expectedBehavior String?
+  answer           String   // 模型回答
+  hitCardIds       String?  // 命中的知识卡 card_id JSON 数组字符串
+  score            Int      // 1-5
+  hardFail         Boolean  @default(false)
+  passed           Boolean  @default(false)
+  judgeReason      String?
+  createdAt        DateTime @default(now())
+
+  run MentorEvalRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
+  @@index([testId])
 }

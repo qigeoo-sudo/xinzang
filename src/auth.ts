@@ -13,7 +13,6 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/password';
-import { resetTestAccountsIfNeeded, isTestAccount } from '@/lib/test-accounts';
 import { z } from 'zod';
 
 // 登录凭据校验 Schema — 支持手机或邮箱登录
@@ -79,21 +78,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const isValid = await verifyPassword(password, user.passwordHash);
           if (!isValid) {
             return null;
-          }
-
-          // 测试账号: 登录时触发自动恢复检查（5分钟后恢复初始状态）
-          const testIdentifier = user.phone || user.email || '';
-          if (isTestAccount(testIdentifier)) {
-            await resetTestAccountsIfNeeded(user.id);
-            // 重新查询用户，获取恢复后的最新状态
-            const refreshedUser = await prisma.user.findUnique({
-              where: { id: user.id },
-              select: { isPremium: true, freeTrialUsed: true },
-            });
-            if (refreshedUser) {
-              user.isPremium = refreshedUser.isPremium;
-              user.freeTrialUsed = refreshedUser.freeTrialUsed;
-            }
           }
 
           // 更新最后登录时间

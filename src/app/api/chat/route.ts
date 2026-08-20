@@ -15,9 +15,10 @@ import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
+import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb';
+import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
 import { getMentorQuota } from '@/lib/plans';
 import { proxyFetch } from '@/lib/proxy-fetch';
-import { resetTestAccountsIfNeeded } from '@/lib/test-accounts';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -84,6 +85,134 @@ async function buildContextFromDB(chatSessionId: string) {
   return context;
 }
 
+// =====================================================
+// 长期陪伴：滚动对话摘要 + 用户档案渲染
+// =====================================================
+const SUMMARY_MIN_MESSAGES = 10; // 超过该消息数才开始生成摘要
+const SUMMARY_REFRESH_INTERVAL = 6; // 每新增该消息数刷新一次摘要
+
+const SUMMARY_SYSTEM_PROMPT =
+  '你是对话摘要助手。请把历史对话（含可能存在的旧摘要）合并成不超过200字的中文滚动摘要，覆盖：用户核心诉求、已给出的关键建议、用户的最新状态与下一步。只输出摘要本身，不要任何解释。';
+
+function prettyArray(v?: string | null): string {
+  if (!v) return '';
+  try {
+    const a = JSON.parse(v);
+    if (Array.isArray(a)) return a.join('、');
+  } catch {
+    // ignore
+  }
+  return v;
+}
+
+/** 把 UserProfile 渲染成总调度 Prompt 的 {{user_profile_confirmed}} 文本 */
+function renderUserProfile(p: {
+  nickname?: string | null;
+  age?: number | null;
+  status?: string | null;
+  city?: string | null;
+  education?: string | null;
+  school?: string | null;
+  major?: string | null;
+  grade?: string | null;
+  industry?: string | null;
+  companyType?: string | null;
+  gradYears?: number | null;
+  interests?: string | null;
+  goals?: string | null;
+  careerAnxiety?: string | null;
+  jobChangeStatus?: string | null;
+  helpPriority?: string | null;
+  mentorPreference?: string | null;
+  mentorHelpAreas?: string | null;
+} | null): string {
+  if (!p) return '无（用户尚未填写档案）';
+  const parts: string[] = [];
+  if (p.nickname) parts.push(`称呼: ${p.nickname}`);
+  if (p.age) parts.push(`年龄: ${p.age}`);
+  if (p.status) parts.push(`状态: ${p.status}`);
+  if (p.city) parts.push(`城市: ${p.city}`);
+  if (p.education) parts.push(`学历: ${p.education}`);
+  if (p.school) parts.push(`学校: ${p.school}`);
+  if (p.major) parts.push(`专业: ${p.major}`);
+  if (p.grade) parts.push(`年级: ${p.grade}`);
+  if (p.industry) parts.push(`行业: ${p.industry}`);
+  if (p.companyType) parts.push(`公司类型: ${p.companyType}`);
+  if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}年`);
+  if (p.interests) parts.push(`兴趣方向: ${prettyArray(p.interests)}`);
+  if (p.goals) parts.push(`职业目标: ${p.goals}`);
+  if (p.careerAnxiety) parts.push(`职业焦虑: ${p.careerAnxiety}`);
+  if (p.jobChangeStatus) parts.push(`求职/换工作状态: ${p.jobChangeStatus}`);
+  if (p.helpPriority) parts.push(`最需要帮助: ${prettyArray(p.helpPriority)}`);
+  if (p.mentorPreference) parts.push(`想深聊的人群: ${prettyArray(p.mentorPreference)}`);
+  if (p.mentorHelpAreas) parts.push(`希望导师帮助的方面: ${prettyArray(p.mentorHelpAreas)}`);
+  return parts.join('；') || '无';
+}
+
+/** 滚动摘要：达到阈值后每 N 条消息刷新一次 */
+async function maybeRefreshSummary(opts: {
+  chatSessionId: string;
+  apiKey: string;
+  apiUrl: string;
+  model: string;
+}): Promise<string | null> {
+  const total = await prisma.chatMessage.count({
+    where: { chatSessionId: opts.chatSessionId },
+  });
+  if (total < SUMMARY_MIN_MESSAGES) return null;
+
+  const session = await prisma.chatSession.findUnique({
+    where: { id: opts.chatSessionId },
+    select: { summary: true, summaryMessageCount: true },
+  });
+  const prev = session?.summary ?? null;
+  const prevCount = session?.summaryMessageCount ?? 0;
+
+  if (prev && total - prevCount < SUMMARY_REFRESH_INTERVAL) return prev;
+
+  const newMessages = await prisma.chatMessage.findMany({
+    where: { chatSessionId: opts.chatSessionId },
+    orderBy: { createdAt: 'asc' },
+    skip: prevCount,
+    select: { role: true, content: true },
+  });
+  const text = newMessages
+    .map((m) => `${m.role === 'user' ? '用户' : '导师'}: ${stripStageDirections(m.content).slice(0, 400)}`)
+    .join('\n');
+  if (!text) return prev;
+
+  try {
+    const res = await proxyFetch(`${opts.apiUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${opts.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        messages: [
+          { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+          { role: 'user', content: `旧摘要：${prev || '（无）'}\n\n新增对话：\n${text}` },
+        ],
+        temperature: 0.3,
+        max_tokens: 400,
+      }),
+    });
+    if (!res.ok) return prev;
+    const data = await res.json();
+    const summary = stripStageDirections(data.choices?.[0]?.message?.content || '').trim();
+    if (!summary) return prev;
+    await prisma.chatSession.update({
+      where: { id: opts.chatSessionId },
+      data: { summary, summaryMessageCount: total },
+    });
+    return summary;
+  } catch (e) {
+    console.error('Summary refresh failed:', e instanceof Error ? e.message : e);
+    return prev;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // 1. 身份验证
@@ -95,8 +224,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1.5 测试账号自动恢复检查 — 5分钟后恢复初始状态
-    await resetTestAccountsIfNeeded(session.user.id);
+    // 1.5 测试账号自动恢复已禁用（见 src/lib/test-accounts.ts）
 
     // 2. 速率限制 — 每用户每分钟10次
     const clientIP = getClientIP(request);
@@ -262,11 +390,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. 构建 System Prompt（含防注入安全规则）
-    let systemPrompt = buildSystemPrompt(mentor, message);
+    // 7. System Prompt 变量声明（ai-guide 在下方分支构建；行业导师在构建上下文后构建）
+    let systemPrompt = '';
+    let hitCardIds: string[] = [];
 
     // AI 职导：检查问卷是否已完成
     if (mentorId === 'ai-guide') {
+      // ai-guide 基础 prompt（自包含问卷流程）
+      systemPrompt = buildSystemPrompt(mentor, message);
+
       const userProfile = await prisma.userProfile.findUnique({
         where: { userId: session.user.id },
         select: { nickname: true, age: true, school: true, major: true, city: true, interests: true, goals: true, recommendedMentors: true, profileSource: true },
@@ -312,8 +444,10 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       }
     }
 
-    // 追加防注入安全规则
-    systemPrompt += ANTI_INJECTION_PROMPT;
+    // 追加防注入安全规则（仅 AI 职导；行业导师由平台硬约束 Prompt 覆盖注入防护）
+    if (mentorId === 'ai-guide') {
+      systemPrompt += ANTI_INJECTION_PROMPT;
+    }
 
     // 8. API URL 白名单校验
     const apiUrl = process.env.AI_API_URL || 'https://api.deepseek.com/v1';
@@ -374,6 +508,59 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       });
     }
 
+    // 11.5 构建行业导师 System Prompt（三层：平台硬约束 + 导师人格 + 专业知识总调度）
+    if (mentorId !== 'ai-guide') {
+      if (mentor.usesDbKnowledge) {
+        const userProfile = await prisma.userProfile.findUnique({
+          where: { userId: session.user.id },
+          select: {
+            nickname: true,
+            age: true,
+            status: true,
+            city: true,
+            education: true,
+            school: true,
+            major: true,
+            grade: true,
+            industry: true,
+            companyType: true,
+            gradYears: true,
+            interests: true,
+            goals: true,
+            careerAnxiety: true,
+            jobChangeStatus: true,
+            helpPriority: true,
+            mentorPreference: true,
+            mentorHelpAreas: true,
+          },
+        });
+
+        const conversationSummary = await maybeRefreshSummary({
+          chatSessionId,
+          apiKey,
+          apiUrl,
+          model,
+        });
+
+        const recentText = contextMessages
+          .map((m) => `${m.role === 'user' ? '用户' : '导师'}: ${m.content}`)
+          .join('\n');
+
+        const ctx: MentorChatContext = {
+          userProfileConfirmed: renderUserProfile(userProfile),
+          recentMessages: recentText,
+          conversationSummary: conversationSummary ?? undefined,
+          currentTime: new Date().toISOString(),
+        };
+
+        const built = await buildMentorSystemPrompt(mentor, message, ctx);
+        systemPrompt = built.systemPrompt;
+        hitCardIds = built.hitCardIds;
+      } else {
+        systemPrompt = PLATFORM_CONSTRAINTS_PROMPT + '\n\n' + buildSystemPrompt(mentor, message);
+      }
+    }
+
     // 12. 调用 AI API — 使用 proxyFetch 穿透沙箱代理
     const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
@@ -415,6 +602,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
         content: reply,
         tokensUsed: aiData.usage?.total_tokens,
         modelUsed: model,
+        hitCardIds: hitCardIds.length ? JSON.stringify(hitCardIds) : null,
       },
     });
 
