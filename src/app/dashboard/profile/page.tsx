@@ -89,7 +89,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearStep, setClearStep] = useState<'none' | 'options' | 'b1' | 'b2'>('none');
 
   // 折叠状态 — 默认全部展开
   const [basicOpen, setBasicOpen] = useState(true);
@@ -189,8 +189,7 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
-  const handleClear = () => {
-    setShowClearConfirm(false);
+  const resetFormState = () => {
     setError('');
     setNickname('');
     setAge('');
@@ -218,6 +217,61 @@ export default function ProfilePage() {
     setProductConcern('');
     setWillingToPay('');
     setRecommendedMentors('');
+  };
+
+  // 仅清空档案字段（保留聊天记录）
+  const handleClearFields = async () => {
+    try {
+      const res = await fetch('/api/profile/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'fields' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || '清空失败');
+        setClearStep('none');
+        return;
+      }
+      resetFormState();
+      setConflicts([]);
+      setClearStep('none');
+    } catch {
+      setError('网络错误，请稍后再试');
+      setClearStep('none');
+    }
+  };
+
+  // 清空全部数据（聊天记录 + 档案 + 历史 + 本地缓存），成功后返回首页
+  const handleClearAll = async () => {
+    try {
+      const res = await fetch('/api/profile/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: 'all' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || '清空失败');
+        setClearStep('none');
+        return;
+      }
+      // 清除聊天相关 localStorage，避免旧对话被前端恢复
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('chat-') || key.startsWith('ai-guide-'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      router.push('/');
+      router.refresh();
+    } catch {
+      setError('网络错误，请稍后再试');
+      setClearStep('none');
+    }
   };
 
   const handleResolveConflict = async (field: string, choice: 'confirmed' | 'inferred') => {
@@ -606,7 +660,7 @@ export default function ProfilePage() {
             </button>
             <button
               type="button"
-              onClick={() => setShowClearConfirm(true)}
+              onClick={() => setClearStep('options')}
               className="btn-secondary flex-1 text-sm text-danger border-danger"
             >
               清空
@@ -617,29 +671,62 @@ export default function ProfilePage() {
           </div>
         </form>
 
-        {/* 清空确认弹窗 */}
-        {showClearConfirm && (
+        {/* 清空选项弹窗 */}
+        {clearStep === 'options' && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl">
-              <h3 className="text-base font-semibold text-ink mb-2">确认清空档案</h3>
-              <p className="text-sm text-muted mb-4">
-                确定要清空所有档案内容吗？此操作不可撤销，但变更历史会被保留。
-              </p>
-              <div className="flex gap-3">
+              <h3 className="text-base font-semibold text-ink mb-2">清空</h3>
+              <p className="text-sm text-muted mb-4">请选择清空范围：</p>
+              <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => setShowClearConfirm(false)}
-                  className="btn-secondary flex-1 text-sm"
+                  onClick={handleClearFields}
+                  className="w-full py-2.5 rounded-lg text-sm border border-slate-200 text-ink hover:bg-slate-50"
                 >
+                  仅清空档案字段（保留聊天记录）
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClearStep('b1')}
+                  className="w-full py-2.5 rounded-lg text-sm bg-danger text-white hover:bg-red-600"
+                >
+                  清空全部数据（含聊天记录）
+                </button>
+              </div>
+              <div className="mt-4 text-center">
+                <button type="button" onClick={() => setClearStep('none')} className="text-sm text-muted hover:text-ink">
                   取消
                 </button>
-                <button
-                  type="button"
-                  onClick={handleClear}
-                  className="btn-primary flex-1 text-sm bg-danger hover:bg-red-600"
-                >
-                  确认清空
-                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 清空全部 — 第一次确认 */}
+        {clearStep === 'b1' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl">
+              <h3 className="text-base font-semibold text-ink mb-2">确认清空</h3>
+              <p className="text-sm text-muted mb-4">
+                确定要清空吗？此操作不可撤销，它会清空所有聊天记录，所有数据库里你的信息，导师分身将不再记得你。
+              </p>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setClearStep('none')} className="btn-secondary flex-1 text-sm">取消</button>
+                <button type="button" onClick={() => setClearStep('b2')} className="btn-primary flex-1 text-sm bg-danger hover:bg-red-600">确认清空</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 清空全部 — 再次确认 */}
+        {clearStep === 'b2' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl">
+              <h3 className="text-base font-semibold text-ink mb-2">再次确认</h3>
+              <p className="text-sm text-muted mb-4">慎重起见，请再次确认。</p>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setClearStep('none')} className="btn-secondary flex-1 text-sm">取消</button>
+                <button type="button" onClick={handleClearAll} className="btn-primary flex-1 text-sm bg-danger hover:bg-red-600">确认清空</button>
               </div>
             </div>
           </div>
