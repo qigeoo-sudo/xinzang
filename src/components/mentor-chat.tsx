@@ -905,6 +905,19 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
+        {/* 免费次数用完 — 会员引导 */}
+        {usageLimit !== null && usageUsed >= usageLimit && (
+          <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
+            免费次数用完，成为
+            <Link
+              href="/dashboard/subscription"
+              className="text-accent font-semibold underline underline-offset-2 hover:text-accent-dark"
+            >
+              会员
+            </Link>
+            可继续交谈。
+          </div>
+        )}
         <div className="flex gap-2 items-end">
           <textarea
             ref={inputRef}
@@ -915,7 +928,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
               dailyLimitReached
                 ? '今日消息已达上限...'
                 : (usageLimit !== null && usageUsed >= usageLimit)
-                  ? '免费次数用完，成为会员可继续交谈。'
+                  ? '免费次数已用完'
                   : `问问 ${mentor.name}...`
             }
             rows={1}

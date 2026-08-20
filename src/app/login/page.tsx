@@ -151,35 +151,6 @@ function LoginForm() {
               免费注册
             </Link>
           </p>
-
-          {/* 测试账号 */}
-          <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-            <p className="text-xs font-medium text-slate-500 mb-2">测试账号（密码 12345678）</p>
-            <div className="text-xs text-slate-600 space-y-1">
-              <button
-                type="button"
-                onClick={() => { setMethod('phone'); setIdentifier('13821668570'); setPassword('12345678'); }}
-                className="block w-full text-left hover:text-accent transition-colors"
-              >
-                手机(免费) 13821668570
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMethod('email'); setIdentifier('t@t.com'); setPassword('12345678'); }}
-                className="block w-full text-left hover:text-accent transition-colors"
-              >
-                邮箱(免费) t@t.com
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMethod('phone'); setIdentifier('13821668571'); setPassword('12345678'); }}
-                className="block w-full text-left hover:text-accent transition-colors"
-              >
-                手机(会员) 13821668571
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">点击可自动填充，5分钟后恢复初始状态</p>
-          </div>
         </div>
       </div>
     </div>

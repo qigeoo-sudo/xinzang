@@ -210,7 +210,7 @@ G8. 如果学校提供这个工具（免费或优惠），你会用吗？
   {
     id: 'lydia',
     name: 'Lydia Chen',
-    avatar: 'https://aka.doubaocdn.com/s/nYxGuEYgoJ',
+    avatar: '/avatars/lydia-chen.jpg',
     title: 'HRVP',
     company: '心擎医疗',
     companyType: '创业',

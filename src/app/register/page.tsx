@@ -337,26 +337,6 @@ function RegisterContent() {
           <p className="text-center text-xs text-muted mt-4 leading-relaxed">
             我们仅收集必要的职业信息，你可以随时更新个人信息。
           </p>
-
-          {/* 测试账号 */}
-          <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-            <p className="text-xs font-medium text-slate-500 mb-1">测试账号（密码 12345678）</p>
-            <div className="text-xs text-slate-600 space-y-0.5">
-              <p>手机(免费) 13821668570</p>
-              <p>邮箱(免费) t@t.com</p>
-              <p>手机(会员) 13821668571</p>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              无需注册，直接去登录页面使用测试账号。<br />
-              账号被修改后5分钟自动恢复初始状态。
-            </p>
-            <Link
-              href={callbackUrl && callbackUrl !== '/' ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/login'}
-              className="block text-center text-xs text-accent font-medium mt-2 hover:underline"
-            >
-              去登录
-            </Link>
-          </div>
         </div>
       </div>
     </div>
