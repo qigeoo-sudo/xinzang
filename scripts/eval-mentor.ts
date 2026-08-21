@@ -294,7 +294,6 @@ async function main() {
         userProfileInferred: PLACEHOLDER_NONE,
         assessmentContext: PLACEHOLDER_NONE,
         conversationSummary: PLACEHOLDER_NONE,
-        recentMessages: PLACEHOLDER_NONE,
         currentTime: new Date().toISOString(),
         retrievedCardsText: formatKnowledgeCards(cards),
         persona: mentor.personalityPrompt,

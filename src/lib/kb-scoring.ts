@@ -81,19 +81,17 @@ export function formatKnowledgeCards(cards: KnowledgeCardLike[]): string {
   const blocks = cards.map((c, i) => {
     const lines: string[] = [];
     lines.push(
-      `【卡${i + 1}】card_id: ${c.cardId} | mentor_uid: ${c.mentorId} | status: ${c.status} | publication_scope: ${c.publicationScope} | confidence: ${c.confidence}` +
-        (c.validFrom ? ` | valid_from: ${c.validFrom}` : '')
+      `【卡${i + 1}】${c.cardId} | ${c.domain} | status:${c.status} | confidence:${c.confidence}` +
+        (c.validFrom ? ` | valid_from:${c.validFrom}` : '')
     );
-    lines.push(`领域: ${c.domain}`);
     lines.push(`标题: ${c.title}`);
-    lines.push(`核心观点: ${c.coreView}`);
+    lines.push(`观点: ${c.coreView}`);
     if (c.reasoning) lines.push(`理由: ${c.reasoning}`);
-    lines.push(`applicable_to: ${c.applicableTo || '未标注'}`);
-    lines.push(`not_applicable_to: ${c.notApplicableTo || '未标注'}`);
-    lines.push(`prerequisites: ${c.prerequisites || '未标注'}`);
-    lines.push(`exceptions: ${c.exceptions || '未标注'}`);
-    lines.push(`risks: ${c.risks || '未标注'}`);
-    if (c.reviewAfter) lines.push(`review_after: ${c.reviewAfter}`);
+    if (c.applicableTo) lines.push(`适用: ${c.applicableTo}`);
+    if (c.exceptions) lines.push(`边界/例外: ${c.exceptions}`);
+    if (c.risks) lines.push(`风险: ${c.risks}`);
+    if (c.notApplicableTo) lines.push(`不适用: ${c.notApplicableTo}`);
+    if (c.prerequisites) lines.push(`前提: ${c.prerequisites}`);
     if (c.source) lines.push(`来源: ${c.source}`);
     return lines.join('\n');
   });

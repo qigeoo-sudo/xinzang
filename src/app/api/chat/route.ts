@@ -522,15 +522,10 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           model,
         });
 
-        const recentText = contextMessages
-          .map((m) => `${m.role === 'user' ? '用户' : '导师'}: ${m.content}`)
-          .join('\n');
-
         const ctx: MentorChatContext = {
           userProfileConfirmed: renderUserProfile(userProfile),
           userProfileInferred:
             renderInferredProfile(userProfile?.inferredProfile, userProfile?.profileConflicts) || undefined,
-          recentMessages: recentText,
           conversationSummary: conversationSummary ?? undefined,
           currentTime: new Date().toISOString(),
         };

@@ -65,31 +65,7 @@ export const PLATFORM_CONSTRAINTS_PROMPT = `你运行在一个由真人导师授
 /** 专业知识总调度 Prompt v0.1 — 连接人格、用户上下文与知识卡 */
 export const ORCHESTRATOR_TEMPLATE = `你的任务是把当前用户的问题、用户上下文和本轮检索到的 {{mentor_name}} 已授权知识卡组织成一份准确、有边界、有现实帮助、并符合 {{mentor_name}} 人格的回答。
 
-你不是知识库复述器。你需要判断哪些材料真正适用于当前用户，哪些只能作为条件性参考，哪些不得使用。平台硬约束始终优先，{{mentor_name}} 人格 Prompt 决定表达气质，本 Prompt 决定知识的选择和应用。
-
-【当前时间】
-{{current_time}}
-
-【导师公开身份配置】
-{{mentor_profile_public}}
-
-【用户确认信息】
-{{user_profile_confirmed}}
-
-【系统推断但未经用户确认的信息】
-{{user_profile_inferred}}
-
-【测评与探索上下文】
-{{assessment_context}}
-
-【长期对话摘要】
-{{conversation_summary}}
-
-【近期对话】
-{{recent_messages}}
-
-【本轮检索知识卡】
-{{retrieved_knowledge_cards}}
+你不是知识库复述器。你需要判断哪些材料真正适用于当前用户，哪些只能作为条件性参考，哪些不得使用。平台硬约束始终优先，{{mentor_name}} 人格 Prompt 决定表达气质，本 Prompt 决定知识的选择和应用。本轮输入的上下文数据见文末【本轮输入数据】。
 
 一、先判断本轮任务
 
@@ -164,7 +140,16 @@ export const ORCHESTRATOR_TEMPLATE = `你的任务是把当前用户的问题、
 
 九、内部完成标准
 
-输出前静默确认：使用的每条导师信息均可发布；卡片边界与用户情境匹配；确定程度与导师置信度一致；案例没有被扩写；没有把推断当事实；回答不是知识卡拼贴；用户能够看见导师的真实判断，并知道下一步怎样验证或行动。`;
+输出前静默确认：使用的每条导师信息均可发布；卡片边界与用户情境匹配；确定程度与导师置信度一致；案例没有被扩写；没有把推断当事实；回答不是知识卡拼贴；用户能够看见导师的真实判断，并知道下一步怎样验证或行动。
+
+【本轮输入数据】
+当前时间：{{current_time}}
+导师公开身份：{{mentor_profile_public}}
+用户确认信息：{{user_profile_confirmed}}
+系统推断（未确认）：{{user_profile_inferred}}
+测评上下文：{{assessment_context}}
+长期对话摘要：{{conversation_summary}}
+本轮检索知识卡：{{retrieved_knowledge_cards}}`;
 
 /** 未实现/占位变量统一文案 */
 export const PLACEHOLDER_NONE = '无（暂无此信息）';
@@ -177,7 +162,6 @@ export interface AssemblyContext {
   userProfileInferred: string;
   assessmentContext: string;
   conversationSummary: string;
-  recentMessages: string;
   currentTime: string;
   retrievedCardsText: string;
   persona: string;
@@ -198,7 +182,6 @@ export function assembleSystemPrompt(ctx: AssemblyContext): string {
     .replaceAll('{{user_profile_inferred}}', ctx.userProfileInferred)
     .replaceAll('{{assessment_context}}', ctx.assessmentContext)
     .replaceAll('{{conversation_summary}}', ctx.conversationSummary)
-    .replaceAll('{{recent_messages}}', ctx.recentMessages)
     .replaceAll('{{retrieved_knowledge_cards}}', ctx.retrievedCardsText);
 
   let prompt = PLATFORM_CONSTRAINTS_PROMPT + '\n\n' + ctx.persona + '\n\n' + orchestrator;

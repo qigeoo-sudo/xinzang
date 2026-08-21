@@ -40,7 +40,6 @@ export interface MentorChatContext {
   userProfileInferred?: string;
   assessmentContext?: string;
   conversationSummary?: string;
-  recentMessages: string;
   currentTime: string;
 }
 
@@ -108,7 +107,6 @@ export async function buildMentorSystemPrompt(
     userProfileInferred: ctx.userProfileInferred || PLACEHOLDER_NONE,
     assessmentContext: ctx.assessmentContext || PLACEHOLDER_NONE,
     conversationSummary: ctx.conversationSummary || PLACEHOLDER_NONE,
-    recentMessages: ctx.recentMessages || PLACEHOLDER_NONE,
     currentTime: ctx.currentTime,
     retrievedCardsText: cardsText,
     persona: mentor.personalityPrompt,
