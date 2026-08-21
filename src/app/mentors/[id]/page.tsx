@@ -3,6 +3,7 @@ import { Header } from '@/components/header';
 import { getMentorById, mentors } from '@/lib/mentors';
 import { MentorChat } from '@/components/mentor-chat';
 import { KnowledgePanel } from '@/components/knowledge-panel';
+import { BackButton } from '@/components/back-button';
 
 // 预生成导师页面路径
 export function generateStaticParams() {
@@ -24,6 +25,8 @@ export default async function MentorDetailPage({
       <Header />
 
       <div className="page-container">
+        {/* 返回按钮 */}
+        <BackButton />
         {/* 导师信息卡 */}
         <div className="card mb-6">
           <div className="flex gap-4">

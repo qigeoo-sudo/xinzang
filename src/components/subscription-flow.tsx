@@ -9,6 +9,7 @@ interface SubscriptionFlowProps {
   plans: SubscriptionPlan[];
   currentPlanId?: PlanId;
   isPremium?: boolean;
+  from?: string;
 }
 
 type PayState = 'idle' | 'creating' | 'paying' | 'polling' | 'success' | 'error';
@@ -23,7 +24,7 @@ const planRank: Record<PlanId, number> = {
   YEARLY: 3,
 };
 
-export function SubscriptionFlow({ plans, currentPlanId, isPremium }: SubscriptionFlowProps) {
+export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
 
@@ -67,7 +68,8 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
               // 刷新失败不阻塞流程
             }
             setTimeout(() => {
-              router.push('/payment/success?orderNo=' + data.orderNo);
+              const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
+              router.push(`/payment/success?orderNo=${data.orderNo}${fromParam}`);
               router.refresh();
             }, 1500);
             return;
@@ -134,7 +136,12 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium }: Subscripti
         if (data.payUrl) {
           // 使用相对路径，避免 HTTPS 预览环境下 http:// 被浏览器拦截
           const mockUrl = data.payUrl.replace(/^https?:\/\/[^/]+/, '');
-          window.open(mockUrl, '_blank');
+          const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
+          // 在 query string 中追加 from 参数
+          const mockUrlWithFrom = mockUrl.includes('?')
+            ? `${mockUrl}${fromParam}`
+            : `${mockUrl}?from=${encodeURIComponent(from || '')}`;
+          window.open(mockUrlWithFrom, '_blank');
         }
         setPayState('polling');
         pollOrderStatus(data.orderId);

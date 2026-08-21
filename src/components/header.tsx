@@ -10,7 +10,7 @@ import { useLanguage } from '@/components/language-context';
 const navLabels = {
   zh: {
     home: '首页',
-    aiGuide: 'AI职导',
+    aiGuide: '榨职机',
     mentors: '行业导师',
     dashboard: '成长追踪',
     history: '对话记录',
@@ -52,6 +52,7 @@ function HeaderInner() {
   const searchParams = useSearchParams();
   const { lang, mounted } = useLanguage();
   const [locked, setLocked] = useState(false);
+  const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
 
   const handleLogout = async () => {
     try {
@@ -66,10 +67,10 @@ function HeaderInner() {
       keysToRemove.forEach((key) => localStorage.removeItem(key));
 
       await fetch('/api/logout');
-      router.push('/');
-      router.refresh();
+      // 强制完整页面刷新，确保服务端重新验证 session
+      window.location.href = '/';
     } catch {
-      router.push('/');
+      window.location.href = '/';
     }
   };
 
@@ -192,10 +193,16 @@ function HeaderInner() {
     return pathname.startsWith(href);
   };
 
+  // 聊天页面：locked 时用 fixed（悬浮在视口顶部，不占文档流）
+  // 其他页面：locked 时用 sticky（占文档流，不遮挡内容）
+  const lockedClass = locked
+    ? (pathname === '/chat' ? 'fixed top-0 left-0 right-0' : 'sticky top-0')
+    : '';
+
   return (
     <>
       {/* 移动端导航 — 5 个功能图标 */}
-      <nav className={`glass-nav z-50 md:hidden ${locked ? 'sticky top-0' : ''}`}>
+      <nav className={`glass-nav z-50 md:hidden ${lockedClass}`}>
         <div className="flex items-center justify-around px-1 py-1">
           {navItems.map((item) => (
             <Link
@@ -213,7 +220,7 @@ function HeaderInner() {
       </nav>
 
       {/* 桌面端导航 — Logo + 链接 + 按钮 */}
-      <nav className={`glass-nav z-50 hidden md:block ${locked ? 'sticky top-0' : ''}`}>
+      <nav className={`glass-nav z-50 hidden md:block ${lockedClass}`}>
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
@@ -295,7 +302,7 @@ function HeaderInner() {
                   <span className="hidden lg:inline">{tr.register}</span>
                 </Link>
                 <Link
-                  href="/dashboard/subscription"
+                  href={subHref}
                   className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-3 py-1.5 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

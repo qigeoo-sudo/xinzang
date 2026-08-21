@@ -2,7 +2,7 @@
 
 import { useLanguage } from '@/components/language-context';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { LanguageToggle } from '@/components/language-toggle';
 
 interface HomeContentProps {
@@ -23,21 +23,21 @@ const t = {
       ['职', '业', '伙', '伴'],
     ],
     // CTA
-    chatWithAI: '与AI职导对话',
+    chatWithAI: '榨职机在等你',
     browseMentors: '浏览行业导师',
     // 三步引导
     stepsTitle: '三步开始你的职业探索之旅',
-    step1Title: '和 AI 职导聊天',
+    step1Title: '和榨职机聊天',
     step1Desc: '通过一次访谈式交流，让我们更了解你',
     step2Title: '选行业导师对话',
-    step2Desc: 'AI 职导帮你引荐，找到匹配的行业导师深入聊',
+    step2Desc: '榨职机帮你引荐，找到匹配的导师分身，榨出干货',
     step3Title: '追踪你的成长',
     step3Desc: '每次对话都在积累，见证自己的成长轨迹',
     // 三卡片
-    feature1Title: '智能引导',
-    feature1Desc: 'AI 职导通过与你交流，在问答中完成对你基本档案的收集，从而帮你找到合适的AI导师分身，让它更有效率地帮助到你。',
+    feature1Title: '智能榨职',
+    feature1Desc: 'AI榨职机通过和你进行问卷访谈，以及今后会逐渐开发的更多在线测试，榨出你真正的职业潜力，让AI导师更有效率地帮到你。',
     feature2Title: '真实身份',
-    feature2Desc: '行业导师 AI 分身，拥有一线HR大咖的真实访谈知识库。理解你的状况，回答你的困惑，陪伴你的成长。',
+    feature2Desc: '行业导师 AI 分身，拥有一线HR大咖及其他行业大咖的真实访谈知识库。理解你的状况，回答你的困惑，陪伴你的成长。',
     feature3Title: '见证成长',
     feature3Desc: '从迷茫到清晰，因为有你，有爱，有光。',
     // 底部卡片
@@ -88,7 +88,9 @@ const t = {
 export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProps) {
   const { lang, mounted } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
   const tr = mounted ? t[lang] : t.zh;
+  const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
 
   const handleLogout = async () => {
     try {
@@ -103,10 +105,10 @@ export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProp
       keysToRemove.forEach((key) => localStorage.removeItem(key));
 
       await fetch('/api/logout');
-      router.push('/');
-      router.refresh();
+      // 强制完整页面刷新，确保服务端重新验证 session
+      window.location.href = '/';
     } catch {
-      router.push('/');
+      window.location.href = '/';
     }
   };
 
@@ -334,7 +336,7 @@ export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProp
                     {tr.logout}
                   </button>
                   <Link
-                    href="/dashboard/subscription"
+                    href={subHref}
                     className="flex items-center gap-1 rounded-xl border border-sand-400/50 bg-sand-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sand-200 shadow-sm transition-all hover:bg-sand-500/25 whitespace-nowrap"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -359,7 +361,7 @@ export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProp
                     {tr.logout}
                   </button>
                   <Link
-                    href="/dashboard/subscription"
+                    href={subHref}
                     className="flex items-center gap-1 rounded-xl border border-sand-400/50 bg-sand-500/15 px-2.5 py-1.5 text-[11px] font-medium text-sand-200 shadow-sm transition-all hover:bg-sand-500/25 whitespace-nowrap"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

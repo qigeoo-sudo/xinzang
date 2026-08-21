@@ -5,7 +5,11 @@ import { Header } from '@/components/header';
 import { SubscriptionFlow } from '@/components/subscription-flow';
 import { SUBSCRIPTION_PLANS, type PlanId } from '@/lib/plans';
 
-export default async function SubscriptionPage() {
+export default async function SubscriptionPage({
+  searchParams,
+}: {
+  searchParams: { from?: string };
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -104,6 +108,7 @@ export default async function SubscriptionPage() {
           plans={SUBSCRIPTION_PLANS}
           currentPlanId={currentPlanId}
           isPremium={!!user?.isPremium}
+          from={searchParams.from}
         />
 
         {/* 底部说明 */}

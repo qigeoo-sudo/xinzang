@@ -20,6 +20,7 @@ import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
 import { extractInferredProfile, alignAndMergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
 import { getMentorQuota } from '@/lib/plans';
 import { proxyFetch } from '@/lib/proxy-fetch';
+import { injectChoiceIfMissing } from '@/lib/choice-injection';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -29,12 +30,12 @@ const ALLOWED_API_URLS = [
 ];
 
 const MAX_MESSAGE_LENGTH = 4000;
-const DAILY_MESSAGE_LIMIT = 50; // 每日消息上限
+const DAILY_MESSAGE_LIMIT = 35; // 每日消息上限
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // 弹性上下文参数
-const CONTEXT_MAX_MESSAGES = 15;
-const CONTEXT_MAX_CHARS = 3000;
+const CONTEXT_MAX_MESSAGES = 20;
+const CONTEXT_MAX_CHARS = 8000;
 
 // 防注入安全规则 — 追加到所有 system prompt 末尾
 const ANTI_INJECTION_PROMPT = `
@@ -225,10 +226,10 @@ export async function POST(request: NextRequest) {
 
     // 1.5 测试账号自动恢复已禁用（见 src/lib/test-accounts.ts）
 
-    // 2. 速率限制 — 每用户每分钟10次
+    // 2. 速率限制 — 每用户每分钟60次（问卷对话需要快速来回）
     const clientIP = getClientIP(request);
     const rateKey = `chat:${session.user.id}`;
-    const rateCheck = rateLimit(rateKey, 10, 60 * 1000);
+    const rateCheck = rateLimit(rateKey, 60, 60 * 1000);
     if (!rateCheck.allowed) {
       return NextResponse.json(
         {
@@ -301,7 +302,7 @@ export async function POST(request: NextRequest) {
       if (dailyMessageCount >= DAILY_MESSAGE_LIMIT) {
         return NextResponse.json(
           {
-            error: '在我这里，一天最多发送50条消息，明天再来吧。',
+            error: '在我这里，一天最多发送35条消息，明天再来吧。',
             dailyLimitReached: true,
           },
           { status: 429 }
@@ -571,12 +572,17 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       aiData.choices?.[0]?.message?.content || '抱歉，我没有理解你的问题。'
     );
 
+    // P0: 服务端自动注入 CHOICE 标签 — 不信任 AI 的格式输出
+    const finalReply = mentorId === 'ai-guide'
+      ? injectChoiceIfMissing(reply)
+      : reply;
+
     // 13. 保存 AI 回复到数据库
     await prisma.chatMessage.create({
       data: {
         chatSessionId,
         role: 'assistant',
-        content: reply,
+        content: finalReply,
         tokensUsed: aiData.usage?.total_tokens,
         modelUsed: model,
         hitCardIds: hitCardIds.length ? JSON.stringify(hitCardIds) : null,
@@ -627,7 +633,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
     }
 
     return NextResponse.json({
-      reply,
+      reply: finalReply,
       sessionId: chatSessionId,
       degraded: false,
       freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed - 1,

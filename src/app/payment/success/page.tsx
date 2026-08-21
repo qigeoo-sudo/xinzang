@@ -2,12 +2,12 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
-import Link from 'next/link';
+import { PaymentSuccessActions } from '@/components/payment-success-actions';
 
 export default async function PaymentSuccessPage({
   searchParams,
 }: {
-  searchParams: { orderNo?: string };
+  searchParams: { orderNo?: string; from?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -152,11 +152,7 @@ export default async function PaymentSuccessPage({
           )}
 
           {/* 操作按钮 */}
-          <div>
-            <Link href="/mentors" className="btn-primary block text-center">
-              开始与导师对话
-            </Link>
-          </div>
+          <PaymentSuccessActions from={searchParams.from} />
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ function MockPaymentContent() {
   const orderNo = searchParams.get('orderNo');
   const method = searchParams.get('method') || 'wechat';
   const amount = searchParams.get('amount') || '';
+  const from = searchParams.get('from');
 
   const isWechat = method === 'wechat';
 
@@ -31,6 +32,8 @@ function MockPaymentContent() {
         // 忽略跨域错误
       }
 
+      const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
+
       // 2秒后尝试关闭窗口
       const closeTimer = setTimeout(() => {
         window.close();
@@ -38,7 +41,7 @@ function MockPaymentContent() {
 
       // 2.5秒后如果窗口仍未关闭，跳转到成功页作为回退
       const redirectTimer = setTimeout(() => {
-        window.location.href = `/payment/success?orderNo=${orderNo}`;
+        window.location.href = `/payment/success?orderNo=${orderNo}${fromParam}`;
       }, 2500);
 
       return () => {
@@ -46,7 +49,7 @@ function MockPaymentContent() {
         clearTimeout(redirectTimer);
       };
     }
-  }, [success, orderNo]);
+  }, [success, orderNo, from]);
 
   const handleMockPay = async () => {
     if (!orderNo) return;

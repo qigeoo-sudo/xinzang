@@ -12,7 +12,7 @@ import { prisma } from '@/lib/prisma';
 import { getMentorQuota } from '@/lib/plans';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const DAILY_MESSAGE_LIMIT = 50;
+const DAILY_MESSAGE_LIMIT = 35;
 
 export async function GET() {
   try {

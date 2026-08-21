@@ -700,13 +700,13 @@ export default function ProfilePage() {
 
         {/* 清空全部 — 再次确认 */}
         {clearStep === 'b2' && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl">
-              <h3 className="text-base font-semibold text-ink mb-2">再次确认</h3>
-              <p className="text-sm text-muted mb-4">慎重起见，请再次确认。</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+            <div className="rounded-xl p-6 mx-4 max-w-sm w-full shadow-xl bg-brand-900">
+              <h3 className="text-base font-semibold text-white mb-2">再次确认</h3>
+              <p className="text-sm text-brand-100 mb-4">慎重起见，请再次确认。清空后不可恢复。</p>
               <div className="flex gap-3">
-                <button type="button" onClick={() => setClearStep('none')} className="btn-secondary flex-1 text-sm">取消</button>
-                <button type="button" onClick={handleClearAll} className="btn-primary flex-1 text-sm bg-danger hover:bg-red-600">确认清空</button>
+                <button type="button" onClick={() => setClearStep('none')} className="flex-1 text-sm py-2.5 rounded-lg bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-colors">取消</button>
+                <button type="button" onClick={handleClearAll} className="flex-1 text-sm py-2.5 rounded-lg bg-danger text-white font-medium hover:opacity-90 transition-opacity">确认清空</button>
               </div>
             </div>
           </div>

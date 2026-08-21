@@ -79,8 +79,8 @@ export default async function DashboardPage() {
     },
     {
       id: 2,
-      title: '首次 AI 职导对话',
-      desc: '和 AI 职业导师聊了职业方向',
+      title: '首次和榨职机对话',
+      desc: '榨出了目前的职业情况',
       completed: interviewCompleted,
       date: interviewCompleted ? new Date(chatSessions[0]?.updatedAt || user?.createdAt || Date.now()).toLocaleDateString('zh-CN') : null,
     },
@@ -96,13 +96,6 @@ export default async function DashboardPage() {
       title: '和行业导师对话',
       desc: '选择一位行业导师深入交流',
       completed: mentorChats > 0,
-      date: null,
-    },
-    {
-      id: 5,
-      title: '完成面试模拟',
-      desc: '至少完成 1 次模拟面试',
-      completed: false,
       date: null,
     },
   ];
@@ -160,7 +153,7 @@ export default async function DashboardPage() {
             </div>
             {!user?.isPremium && (
               <Link
-                href="/dashboard/subscription"
+                href="/dashboard/subscription?from=/dashboard"
                 className="btn-primary !py-2 !px-3 text-xs"
               >
                 升级会员
@@ -173,14 +166,14 @@ export default async function DashboardPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-brand-900">成长里程碑</h2>
-            <span className="text-xs text-slate-400">{completedMilestones}/5 完成</span>
+            <span className="text-xs text-slate-400">{completedMilestones}/4 完成</span>
           </div>
 
           {/* 进度条 */}
           <div className="w-full h-2 bg-slate-100 rounded-full mb-4 overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-brand-400 to-sage-400 rounded-full transition-all duration-500"
-              style={{ width: `${(completedMilestones / 5) * 100}%` }}
+              style={{ width: `${(completedMilestones / 4) * 100}%` }}
             />
           </div>
 
@@ -224,52 +217,11 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* 最近对话 */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-brand-900">最近对话</h2>
-            <Link href="/history" className="text-xs text-brand-500 hover:underline">
-              查看全部
-            </Link>
-          </div>
-
-          {chatSessions.length === 0 ? (
-            <div className="card text-center py-8">
-              <p className="text-sm text-slate-400 mb-3">还没有对话记录</p>
-              <Link href="/chat" className="btn-primary inline-flex">
-                开始对话
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {chatSessions.map((session) => (
-                <Link
-                  key={session.id}
-                  href={`/chat?session=${session.id}`}
-                  className="card card-hover flex items-center gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-brand-900 truncate">
-                      {session.title || `与 ${mentorMap.get(session.mentorId) || 'AI导师'} 的对话`}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {mentorMap.get(session.mentorId) || session.mentorId} · {session.messageCount} 条消息
-                    </p>
-                  </div>
-                  <span className="text-xs text-slate-300 flex-shrink-0">
-                    {new Date(session.updatedAt).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* 快捷操作 */}
         <div className="grid grid-cols-2 gap-3">
           <ProfileLink />
           <Link
-            href="/dashboard/subscription"
+            href="/dashboard/subscription?from=/dashboard"
             className="card card-hover flex flex-col items-center gap-2 py-4"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A67B5B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

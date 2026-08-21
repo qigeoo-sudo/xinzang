@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { mentors, type Mentor } from '@/lib/mentors';
 import { MessageWithChoices } from '@/components/chat-options';
 import { CollapsibleText } from '@/components/collapsible-text';
+import { stripMentorTags, type MentorInfo } from '@/lib/mentor-links';
 
 interface ChatMessage {
   id?: string;
@@ -17,6 +18,43 @@ interface ChatMessage {
 
 interface MentorChatProps {
   mentor: Mentor;
+}
+
+/** 导师推荐卡片 — 点击直接进入该导师聊天 */
+function MentorCard({ mentor }: { mentor: MentorInfo }) {
+  return (
+    <Link
+      href={`/mentors/${mentor.id}`}
+      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors group"
+    >
+      <div className="flex-shrink-0">
+        {mentor.avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={mentor.avatar}
+            alt={mentor.name}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent-light flex items-center justify-center">
+            <span className="text-white text-sm font-bold">
+              {mentor.name.charAt(0)}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-brand-900">{mentor.name}</p>
+        <p className="text-xs text-slate-500 truncate">
+          {mentor.title} · {mentor.company}
+        </p>
+        <p className="text-xs text-slate-400 truncate mt-0.5">{mentor.tagline}</p>
+      </div>
+      <span className="text-xs text-brand-500 group-hover:text-brand-600 flex-shrink-0">
+        去聊聊 →
+      </span>
+    </Link>
+  );
 }
 
 // localStorage 键名 — 按用户+导师区分，确保对话记录隔离
@@ -122,6 +160,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -171,7 +210,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         if (data) {
           if (mentor.id === 'ai-guide') {
             setUsageUsed(data.aiGuide?.used ?? 0);
-            setUsageLimit(data.aiGuide?.limit ?? 50);
+            setUsageLimit(data.aiGuide?.limit ?? 35);
           } else {
             setUsageUsed(data.mentor?.used ?? 0);
             setUsageLimit(data.mentor?.limit ?? null);
@@ -233,7 +272,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           } else {
             // 24小时未过 — 仍处于限额状态
             setDailyLimitReached(true);
-            setError('在我这里，一天最多发送50条消息，明天再来吧。');
+            setError('在我这里，一天最多发送35条消息，明天再来吧。');
             if (savedMessages) {
               const parsed = JSON.parse(savedMessages) as ChatMessage[];
               setMessages(parsed);
@@ -276,6 +315,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
                     // 数据库说未完成 — 清除 localStorage 的 completed 标记，回到问卷模式
                     if (completedKey) localStorage.removeItem(completedKey);
                     setQuestionnaireCompleted(false);
+                    // 清空消息，让欢迎语 useEffect 重新设置问卷模式的开场
+                    setMessages([]);
                     window.dispatchEvent(new CustomEvent('questionnaireNotCompleted'));
                   } else {
                     // 数据库确认已完成 — 同步档案数据
@@ -393,14 +434,11 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
     if (mentor.id === 'ai-guide') {
       if (questionnaireCompleted) {
-        // 轻量模式：档案已建立 — 使用动态消息
-        const completionMessage = profileData
-          ? generateCompletionMessage(profileData)
-          : '祝贺！我们完成了交流访谈。现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。';
+        // 轻量模式：档案已建立 — 显示简短消息
         setMessages([
           {
             role: 'assistant',
-            content: completionMessage,
+            content: '你的个人档案已经建立，可以随时去个人档案查看和更新。有什么想聊的，随时说。',
           },
         ]);
       } else {
@@ -408,15 +446,15 @@ export function MentorChat({ mentor }: MentorChatProps) {
         setMessages([
           {
             role: 'assistant',
-            content: `你好！我是AI职导。我会帮你推荐合适的导师分身。\n目前导师分身拥有的知识经验，主要为高校学生求职提供服务，为其他群体提供的服务，会在今后逐渐完善，敬请等待。\n首先，在交流中，让我逐渐建立你的个人档案，可以推荐合适的AI导师分身，并让它的服务更有效率。`,
+            content: `我是一台AI榨职机，本机喜欢榨出人类的成长经历、能力特长、性格取向、职业偏好，从而帮助导师们的分身，找出最适合你的工作图景。\n目前本机主要为高校学生提供榨汁服务，今后会压榨到更多群体，敬请期待。`,
           },
           {
             role: 'assistant',
-            content: `在开始之前，我想先说明一下：我们的所有对话内容，在访谈交流结束后，都会脱敏后记录在后台数据库，数据绝对不会外泄。你可以随时去我的档案更新个人信息。 那么，我们开始吧。`,
+            content: `在开始压榨前，本机想先说明：这里所有对话内容，都会脱敏后记录在后台数据库，数据绝对不会外泄。你也可以随时去个人档案，修改或清空所有数据。`,
           },
           {
             role: 'assistant',
-            content: `第一个问题：如何称呼你？多大了？现在是大三还是大四了？（大三升大四算大四，大四最后一学期未结束就算大四。）或者你在其他年级？`,
+            content: `本机打算先了解一下你。你可以选择不回答，跳到下一题，或者索性离开，但本机会把你挂在中断点，等你回来，继续我们伟大的压榨工程。那么，没什么问题的话，本机开始榨了。先榨一下你叫什么，可以真姓实名，也可以用昵称。`,
           },
         ]);
       }
@@ -531,7 +569,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         }
         // 每日限额达到
         if (data.dailyLimitReached) {
-          setError(data.error || '在我这里，一天最多发送50条消息，明天再来吧。');
+          setError(data.error || '在我这里，一天最多发送35条消息，明天再来吧。');
           setDailyLimitReached(true);
           setMessages(messages);
           setInput(messageText);
@@ -548,7 +586,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           return;
         }
         // 消息条数超限
-        if (data.error && data.error.includes('一天最多发送50条消息')) {
+        if (data.error && data.error.includes('一天最多发送35条消息')) {
           setError(data.error);
           setDailyLimitReached(true);
           setMessages(messages);
@@ -608,25 +646,22 @@ export function MentorChat({ mentor }: MentorChatProps) {
           const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
 
           Promise.all([extractPromise, minDelay]).then(([extractData]) => {
-            let message: string;
             if (extractData?.success && extractData.profile) {
-              message = generateCompletionMessage(extractData.profile);
               setProfileData(extractData.profile);
-            } else {
-              message =
-                '祝贺！我们完成了交流访谈。现在，你的个人档案已经建立，你可以自行在那里不断更新你的情况，让我们更了解你，更好陪你成长。';
             }
 
             try {
               const aiKeys = getAiGuideKeys(session.user.id);
-              const lightweightMessages: ChatMessage[] = [
+              // 保留历史聊天记录，只追加一条简短的档案通知
+              const updatedMessages: ChatMessage[] = [
+                ...finalMessages,
                 {
                   role: 'assistant',
-                  content: message,
+                  content: '你的个人档案已经建立，可以随时去个人档案查看和更新。',
                 },
               ];
-              setMessages(lightweightMessages);
-              saveMessages(lightweightMessages, null);
+              setMessages(updatedMessages);
+              saveMessages(updatedMessages, null);
               // 清除旧的 sessionId，开始新的轻量模式会话
               setSessionId(null);
               localStorage.removeItem(aiKeys.sessionId);
@@ -650,7 +685,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       // 更新用量计数
       if (mentor.id === 'ai-guide' && data.dailyMessageCount !== undefined) {
         setUsageUsed(data.dailyMessageCount);
-        setUsageLimit(data.dailyMessageLimit ?? 50);
+        setUsageLimit(data.dailyMessageLimit ?? 35);
       } else if (mentor.id !== 'ai-guide' && data.mentorUsed !== undefined) {
         setUsageUsed(data.mentorUsed);
         setUsageLimit(data.mentorLimit ?? null);
@@ -684,9 +719,9 @@ export function MentorChat({ mentor }: MentorChatProps) {
               <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
           </div>
-          <p className="text-sm text-brand-900 mb-1">你好！我是AI职导</p>
+          <p className="text-sm text-brand-900 mb-1">你好呀。本机想说的是：</p>
           <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-            为了给你提供个性化的职业引导，请先登录。如果还没有账号，可以注册一个。
+            先登录，才能榨。要没号，先注册。
           </p>
           <div className="flex gap-2 justify-center">
             <button
@@ -752,7 +787,12 @@ export function MentorChat({ mentor }: MentorChatProps) {
     <div className="flex flex-col min-h-[400px] w-full">
       {/* 消息列表 */}
       <div className="flex-1 space-y-4 pb-4 w-full">
-        {messages.map((msg, i) => (
+        {messages.map((msg, i) => {
+          // 判断是否为最后一条 AI 消息（只有最后一条的选项可交互）
+          const isLastAssistant =
+            msg.role === 'assistant' &&
+            !messages.slice(i + 1).some((m) => m.role === 'assistant');
+          return (
           <div
             key={i}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -790,22 +830,46 @@ export function MentorChat({ mentor }: MentorChatProps) {
                   <MessageWithChoices
                     content={msg.content}
                     onSelect={(value) => handleSend(value)}
-                    disabled={loading || dailyLimitReached}
+                    disabled={loading || dailyLimitReached || !isLastAssistant}
                     enableMentorLinks={mentor.id === 'ai-guide'}
                   />
-                ) : (
-                  <CollapsibleText
-                    content={msg.content}
-                    isUser={false}
-                    enableMentorLinks={mentor.id === 'ai-guide'}
-                  />
-                )
+                ) : (() => {
+                  const { cleanText, mentors: recommendedMentors } = mentor.id === 'ai-guide'
+                    ? stripMentorTags(msg.content)
+                    : { cleanText: msg.content, mentors: [] };
+                  const showProfileBtn = mentor.id === 'ai-guide' && msg.content.includes('个人档案已经建立');
+                  return (
+                    <>
+                      <CollapsibleText content={cleanText} isUser={false} />
+                      {showProfileBtn && (
+                        <Link
+                          href="/dashboard/profile"
+                          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs text-brand-900 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                          </svg>
+                          我的档案
+                        </Link>
+                      )}
+                      {recommendedMentors.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {recommendedMentors.map((m) => (
+                            <MentorCard key={m.id} mentor={m} />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()
               ) : (
                 <CollapsibleText content={msg.content} isUser={true} />
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* 加载指示器 */}
         {loading && (
@@ -850,7 +914,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
               成为会员后，即可与{mentor.name}及所有行业导师分身深度对话。
             </p>
             <Link
-              href="/dashboard/subscription"
+              href={subHref}
               className="btn-primary"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -910,7 +974,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
             免费次数用完，成为
             <Link
-              href="/dashboard/subscription"
+              href={subHref}
               className="text-accent font-semibold underline underline-offset-2 hover:text-accent-dark"
             >
               会员
@@ -927,7 +991,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
             placeholder={
               dailyLimitReached
                 ? '今日消息已达上限...'
-                : `问问 ${mentor.name}...`
+                : `告诉 ${mentor.name}...`
             }
             rows={1}
             maxLength={4000}

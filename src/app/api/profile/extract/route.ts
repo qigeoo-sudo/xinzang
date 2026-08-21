@@ -22,7 +22,7 @@ const ALLOWED_API_URLS = [
   'https://api.moonshot.cn',
 ];
 
-const EXTRACT_PROMPT = `你是一个信息提取助手。以下是一段用户与AI职导的访谈对话记录。
+const EXTRACT_PROMPT = `你是一个信息提取助手。以下是一段用户与AI榨职机的访谈对话记录。
 请从对话中提取用户的个人档案信息，严格按照以下JSON格式输出。
 如果某个字段在对话中未提及，设为null。
 不要输出任何其他内容，只输出JSON。
@@ -57,6 +57,7 @@ JSON格式：
 }
 
 注意：
+- nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。
 - interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
 - 如果用户说了多个兴趣，全部放入数组
 - 排序题按用户给出的排序顺序填入数组
@@ -97,7 +98,7 @@ export async function POST() {
 
     // 2. 拼接对话文本
     const conversation = chatSessions[0].messages
-      .map((m) => `${m.role === 'user' ? '用户' : 'AI职导'}: ${m.content}`)
+      .map((m) => `${m.role === 'user' ? '用户' : 'AI榨职机'}: ${m.content}`)
       .join('\n\n');
 
     // 3. 调用 LLM 提取结构化信息
