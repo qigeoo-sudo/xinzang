@@ -37,6 +37,7 @@ JSON格式：
   "major": "专业（字符串或null）",
   "enrollmentYear": "入学年份（字符串或null，如 2022）",
   "industry": "行业（字符串或null）",
+  "jobContent": "工作内容/职业（字符串或null）",
   "companyType": "国企|民企|外企|创业公司|互联网|其他（字符串或null）",
   "jobSatisfaction": "工作满意度1-5（整数或null）",
   "gradYears": "毕业几年（整数或null）",
@@ -57,7 +58,8 @@ JSON格式：
 }
 
 注意：
-- nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。
+- nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。即使用户回答很短（如"阿毛"），也要提取。
+- industry 和 jobContent 要拆分：industry 是用户所在的行业（如"互联网""医疗""金融"），jobContent 是用户的具体工作内容或岗位（如"产品经理""前端开发""销售"）。如果用户回答"在互联网做产品经理"，则 industry="互联网"，jobContent="产品经理"。
 - interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
 - 如果用户说了多个兴趣，全部放入数组
 - 排序题按用户给出的排序顺序填入数组
@@ -194,6 +196,7 @@ export async function POST() {
         major: extracted.major || undefined,
         enrollmentYear: extracted.enrollmentYear || undefined,
         industry: extracted.industry || undefined,
+        jobContent: extracted.jobContent || undefined,
         companyType: extracted.companyType || undefined,
         jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
         gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
@@ -224,6 +227,7 @@ export async function POST() {
         major: extracted.major || undefined,
         enrollmentYear: extracted.enrollmentYear || undefined,
         industry: extracted.industry || undefined,
+        jobContent: extracted.jobContent || undefined,
         companyType: extracted.companyType || undefined,
         jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
         gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
@@ -249,6 +253,7 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       profile,
+      extractedStatus: extracted.status || null,
       extractedFields: Object.keys(extracted).filter((k) => extracted[k] !== null && !(Array.isArray(extracted[k]) && extracted[k].length === 0)),
     });
   } catch (error) {

@@ -4,12 +4,16 @@
  * LLM 不总是遵守 prompt 中的格式要求，有时会用纯文字提问选择题。
  * 此模块在服务端检测 AI 回复中是否缺少 CHOICE 标签，
  * 如果当前应该问选择题，则自动追加 [CHOICE] 块到回复末尾。
+ *
+ * 支持按用户分支（在校/在职/待业）注入不同选项。
  */
 
 interface ChoiceQuestion {
   id: string;
   keywords: string[];
   choiceBlock: string;
+  /** 仅对特定分支生效；不设置则对所有分支生效 */
+  branch?: string;
 }
 
 // 所有选择题定义（按提问顺序）
@@ -23,8 +27,9 @@ const CHOICE_QUESTIONS: ChoiceQuestion[] = [
 待业
 [/CHOICE]`,
   },
+  // ===== 在校分支选择题 =====
   {
-    id: 'A9',
+    id: 'A9-school',
     keywords: ['获取', '职业有关的信息', '信息渠道', '从哪里获取'],
     choiceBlock: `\n[CHOICE:type=multi]
 小红书
@@ -37,6 +42,7 @@ B站
 招聘平台
 其他渠道
 [/CHOICE]`,
+    branch: '在校',
   },
   {
     id: 'A11',
@@ -123,14 +129,60 @@ AI建议不靠谱太模板化
 不太想用
 无所谓
 [/CHOICE]`,
+    branch: '在校',
+  },
+  // ===== 在职分支选择题 =====
+  {
+    id: 'B7-company',
+    keywords: ['公司', '什么类型', '公司类型'],
+    choiceBlock: `\n[CHOICE:type=single]
+国企
+民企
+外企
+创业公司
+互联网
+其他
+[/CHOICE]`,
+    branch: '在职',
+  },
+  {
+    id: 'B8-satisfaction',
+    keywords: ['喜欢', '这份工作', '满意度', '打分'],
+    choiceBlock: `\n[CHOICE:type=single]
+5分 非常满意
+4分 比较满意
+3分 一般
+2分 不太满意
+1分 非常不满意
+[/CHOICE]`,
+    branch: '在职',
+  },
+  {
+    id: 'B11-channels',
+    keywords: ['获取', '职业有关的信息', '信息渠道', '从哪里获取'],
+    choiceBlock: `\n[CHOICE:type=multi]
+DeepSeek/ChatGPT等AI工具
+前同事/行业朋友
+家人/友人
+猎头
+付费职业咨询/教练/课程/社群
+小红书/抖音/B站/知乎
+脉脉/LinkedIn等职场社交
+公司内部的mentor/前辈
+其他渠道
+[/CHOICE]`,
+    branch: '在职',
   },
 ];
 
 /**
  * 检测 AI 回复是否应该包含选择题选项，
  * 如果应该包含但 AI 没有输出 [CHOICE] 标签，则追加相应选项块。
+ *
+ * @param reply AI 回复文本
+ * @param userStatus 用户分支状态（在校/在职/待业），用于选择对应分支的选项
  */
-export function injectChoiceIfMissing(reply: string): string {
+export function injectChoiceIfMissing(reply: string, userStatus?: string | null): string {
   // 如果回复中已有 [CHOICE 标签，不需要注入
   if (reply.includes('[CHOICE')) {
     return reply;
@@ -143,6 +195,11 @@ export function injectChoiceIfMissing(reply: string): string {
 
   // 遍历所有选择题，检测 AI 回复是否在问某道选择题
   for (const q of CHOICE_QUESTIONS) {
+    // 如果该题限定分支，且与用户分支不匹配，跳过
+    if (q.branch && userStatus && q.branch !== userStatus) {
+      continue;
+    }
+
     // 匹配条件：回复中包含至少 2 个关键词
     const matchCount = q.keywords.filter((kw) => reply.includes(kw)).length;
     if (matchCount >= 2) {

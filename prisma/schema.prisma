@@ -146,6 +146,7 @@ model UserProfile {
 
   // === 职业信息 ===
   industry       String?  // 行业
+  jobContent     String?  // 工作内容（在职）
   companyType    String?  // 国企 | 民企 | 外企 | 创业公司 | 互联网 | 其他
   jobSatisfaction Int?    // 工作满意度 1-5
   gradYears      Int?     // 毕业几年（在职/待业）

@@ -117,6 +117,7 @@ function renderUserProfile(p: {
   major?: string | null;
   enrollmentYear?: string | null;
   industry?: string | null;
+  jobContent?: string | null;
   companyType?: string | null;
   gradYears?: number | null;
   interests?: string | null;
@@ -137,6 +138,7 @@ function renderUserProfile(p: {
   if (p.major) parts.push(`专业: ${p.major}`);
   if (p.enrollmentYear) parts.push(`入学年份: ${p.enrollmentYear}`);
   if (p.industry) parts.push(`行业: ${p.industry}`);
+  if (p.jobContent) parts.push(`工作内容: ${p.jobContent}`);
   if (p.companyType) parts.push(`公司类型: ${p.companyType}`);
   if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}年`);
   if (p.interests) parts.push(`兴趣方向: ${prettyArray(p.interests)}`);
@@ -374,6 +376,9 @@ export async function POST(request: NextRequest) {
     let systemPrompt = '';
     let hitCardIds: string[] = [];
 
+    // 用户分支状态（用于 choice-injection 按分支注入不同选项）
+    let userStatus: string | null = null;
+
     // AI 职导：检查问卷是否已完成
     if (mentorId === 'ai-guide') {
       // ai-guide 基础 prompt（自包含问卷流程）
@@ -381,8 +386,10 @@ export async function POST(request: NextRequest) {
 
       const userProfile = await prisma.userProfile.findUnique({
         where: { userId: session.user.id },
-        select: { nickname: true, age: true, school: true, major: true, city: true, interests: true, goals: true, recommendedMentors: true, profileSource: true },
+        select: { nickname: true, age: true, status: true, school: true, major: true, city: true, interests: true, goals: true, recommendedMentors: true, profileSource: true },
       });
+
+      userStatus = userProfile?.status ?? null;
 
       const interviewCompleted =
         userProfile?.profileSource === 'ai_extracted' ||
@@ -572,9 +579,9 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       aiData.choices?.[0]?.message?.content || '抱歉，我没有理解你的问题。'
     );
 
-    // P0: 服务端自动注入 CHOICE 标签 — 不信任 AI 的格式输出
+    // P0: 服务端自动注入 CHOICE 标签 — 不信任 AI 的格式输出，按用户分支注入对应选项
     const finalReply = mentorId === 'ai-guide'
-      ? injectChoiceIfMissing(reply)
+      ? injectChoiceIfMissing(reply, userStatus)
       : reply;
 
     // 13. 保存 AI 回复到数据库
