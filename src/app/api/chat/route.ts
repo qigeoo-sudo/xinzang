@@ -33,8 +33,8 @@ const DAILY_MESSAGE_LIMIT = 50; // 每日消息上限
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // 弹性上下文参数
-const CONTEXT_MAX_MESSAGES = 20;
-const CONTEXT_MAX_CHARS = 8000;
+const CONTEXT_MAX_MESSAGES = 15;
+const CONTEXT_MAX_CHARS = 3000;
 
 // 防注入安全规则 — 追加到所有 system prompt 末尾
 const ANTI_INJECTION_PROMPT = `
