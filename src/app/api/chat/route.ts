@@ -112,10 +112,9 @@ function renderUserProfile(p: {
   age?: number | null;
   status?: string | null;
   city?: string | null;
-  education?: string | null;
   school?: string | null;
   major?: string | null;
-  grade?: string | null;
+  enrollmentYear?: string | null;
   industry?: string | null;
   companyType?: string | null;
   gradYears?: number | null;
@@ -133,10 +132,9 @@ function renderUserProfile(p: {
   if (p.age) parts.push(`年龄: ${p.age}`);
   if (p.status) parts.push(`状态: ${p.status}`);
   if (p.city) parts.push(`城市: ${p.city}`);
-  if (p.education) parts.push(`学历: ${p.education}`);
   if (p.school) parts.push(`学校: ${p.school}`);
   if (p.major) parts.push(`专业: ${p.major}`);
-  if (p.grade) parts.push(`年级: ${p.grade}`);
+  if (p.enrollmentYear) parts.push(`入学年份: ${p.enrollmentYear}`);
   if (p.industry) parts.push(`行业: ${p.industry}`);
   if (p.companyType) parts.push(`公司类型: ${p.companyType}`);
   if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}年`);
@@ -499,10 +497,9 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
             age: true,
             status: true,
             city: true,
-            education: true,
             school: true,
             major: true,
-            grade: true,
+            enrollmentYear: true,
             industry: true,
             companyType: true,
             gradYears: true,

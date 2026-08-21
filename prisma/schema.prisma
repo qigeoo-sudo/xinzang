@@ -140,10 +140,9 @@ model UserProfile {
   city           String?  // 所在城市
 
   // === 教育背景 ===
-  education      String?  // 高中 | 本科 | 硕士 | 博士 | 其他
   school         String?  // 学校名称
   major          String?  // 专业
-  grade          String?  // 年级（在校生）
+  enrollmentYear String?  // 入学年份
 
   // === 职业信息 ===
   industry       String?  // 行业

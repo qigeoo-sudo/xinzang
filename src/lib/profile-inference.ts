@@ -26,8 +26,7 @@ JSON 格式：
   "city": "字符串或 null",
   "school": "字符串或 null",
   "major": "字符串或 null",
-  "grade": "字符串或 null",
-  "education": "高中|本科|硕士|博士|其他 或 null",
+  "enrollmentYear": "字符串或 null（如 2022）",
   "industry": "字符串或 null",
   "companyType": "国企|民企|外企|创业公司|互联网|其他 或 null",
   "gradYears": "整数或 null",
@@ -45,8 +44,7 @@ const ALIGNABLE_FIELDS = [
   'city',
   'school',
   'major',
-  'grade',
-  'education',
+  'enrollmentYear',
   'industry',
   'companyType',
   'gradYears',
@@ -59,7 +57,7 @@ const ALIGNABLE_FIELDS = [
 const ALIGN_PROMPT = `你是用户档案一致性判断助手。下面每一对「已确认值 / 新推断值」来自用户档案的同一个字段。请判断两者是否指同一件事。
 
 只输出一个 JSON 对象，字段名与输入一致，值为 "same" 或 "conflict"：
-- same：含义一致，只是表述不同（如 "经济学" vs "经济方面"、"上海" vs "魔都"）。字段值随时间自然变化（如年级、在职状态）也视为 same。
+- same：含义一致，只是表述不同（如 "经济学" vs "经济方面"、"上海" vs "魔都"）。字段值随时间自然变化（如在职状态）也视为 same。
 - conflict：含义不同或相互矛盾（如 "经济学" vs "园林工程"、"在读" vs "已工作"）。
 
 输入示例：
@@ -345,8 +343,7 @@ const FIELD_LABELS: Record<string, string> = {
   city: '城市',
   school: '学校',
   major: '专业',
-  grade: '年级',
-  education: '学历',
+  enrollmentYear: '入学年份',
   industry: '行业',
   companyType: '公司类型',
   gradYears: '毕业年限',

@@ -26,12 +26,9 @@ export const loginSchema = z.object({
 
 // 用户档案更新 Schema
 export const updateProfileSchema = z.object({
-  education: z
-    .enum(['高中', '本科', '硕士', '博士', '其他'])
-    .optional(),
   school: z.string().max(100).optional(),
   major: z.string().max(100).optional(),
-  grade: z.string().max(50).optional(),
+  enrollmentYear: z.string().max(50).optional(),
   interests: z.array(z.string().max(50)).max(10).optional(),
   goals: z.string().max(500).optional(),
 });

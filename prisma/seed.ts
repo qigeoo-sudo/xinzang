@@ -25,7 +25,6 @@ async function main() {
       isPremium: true,
       profile: {
         create: {
-          education: '硕士',
           major: '计算机科学',
         },
       },
@@ -46,7 +45,6 @@ async function main() {
       freeTrialUsed: 0,
       profile: {
         create: {
-          education: '本科',
           major: '计算机科学',
           interests: JSON.stringify(['互联网', 'AI', '创业']),
           goals: '找到适合的职业方向',
@@ -68,7 +66,6 @@ async function main() {
       isPremium: true,
       profile: {
         create: {
-          education: '本科',
           major: '市场营销',
         },
       },

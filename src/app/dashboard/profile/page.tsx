@@ -22,10 +22,9 @@ interface ProfileData {
   age?: number | null;
   status?: string | null;
   city?: string | null;
-  education?: string | null;
   school?: string | null;
   major?: string | null;
-  grade?: string | null;
+  enrollmentYear?: string | null;
   industry?: string | null;
   companyType?: string | null;
   jobSatisfaction?: number | null;
@@ -61,8 +60,7 @@ const CONFLICT_FIELD_LABELS: Record<string, string> = {
   city: '所在城市',
   school: '学校',
   major: '专业',
-  grade: '年级',
-  education: '学历',
+  enrollmentYear: '入学年份',
   industry: '行业',
   companyType: '公司类型',
   gradYears: '毕业年限',
@@ -104,10 +102,9 @@ export default function ProfilePage() {
   const [city, setCity] = useState('');
 
   // 教育背景
-  const [education, setEducation] = useState('');
   const [school, setSchool] = useState('');
   const [major, setMajor] = useState('');
-  const [grade, setGrade] = useState('');
+  const [enrollmentYear, setEnrollmentYear] = useState('');
 
   // 职业信息
   const [industry, setIndustry] = useState('');
@@ -144,10 +141,9 @@ export default function ProfilePage() {
     setAge(p.age ? String(p.age) : '');
     setUserStatus(p.status || '');
     setCity(p.city || '');
-    setEducation(p.education || '');
     setSchool(p.school || '');
     setMajor(p.major || '');
-    setGrade(p.grade || '');
+    setEnrollmentYear(p.enrollmentYear || '');
     setIndustry(p.industry || '');
     setCompanyType(p.companyType || '');
     setJobSatisfaction(p.jobSatisfaction ? String(p.jobSatisfaction) : '');
@@ -195,10 +191,9 @@ export default function ProfilePage() {
     setAge('');
     setUserStatus('');
     setCity('');
-    setEducation('');
     setSchool('');
     setMajor('');
-    setGrade('');
+    setEnrollmentYear('');
     setIndustry('');
     setCompanyType('');
     setJobSatisfaction('');
@@ -302,10 +297,9 @@ export default function ProfilePage() {
       !age &&
       !userStatus &&
       !city &&
-      !education &&
       !school &&
       !major &&
-      !grade &&
+      !enrollmentYear &&
       !industry &&
       !companyType &&
       !jobSatisfaction &&
@@ -344,10 +338,9 @@ export default function ProfilePage() {
           age: age ? parseInt(age, 10) : undefined,
           status: userStatus || undefined,
           city: city || undefined,
-          education: education || undefined,
           school: school || undefined,
           major: major || undefined,
-          grade: grade || undefined,
+          enrollmentYear: enrollmentYear || undefined,
           industry: industry || undefined,
           companyType: companyType || undefined,
           jobSatisfaction: jobSatisfaction ? parseInt(jobSatisfaction, 10) : undefined,
@@ -506,22 +499,9 @@ export default function ProfilePage() {
             </div>
             {educationOpen && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-ink mb-1.5">学历</label>
-                    <select value={education} onChange={(e) => setEducation(e.target.value)} className="input-field">
-                      <option value="">请选择</option>
-                      <option value="高中">高中</option>
-                      <option value="本科">本科</option>
-                      <option value="硕士">硕士</option>
-                      <option value="博士">博士</option>
-                      <option value="其他">其他</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-ink mb-1.5">年级</label>
-                    <input type="text" value={grade} onChange={(e) => setGrade(e.target.value)} className="input-field" />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">入学年份</label>
+                  <input type="text" value={enrollmentYear} onChange={(e) => setEnrollmentYear(e.target.value)} placeholder="例如 2022" maxLength={50} className="input-field" />
                 </div>
 
                 <div>
