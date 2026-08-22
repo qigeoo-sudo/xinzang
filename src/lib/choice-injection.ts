@@ -44,6 +44,18 @@ B站
 [/CHOICE]`,
     branch: '在校',
   },
+  // 待业版最需要帮助场景 — 必须在通用 A11 之前，4选项而非5选项
+  {
+    id: 'C15-needed',
+    keywords: ['最需要帮助', '场景', '需要帮助的是'],
+    choiceBlock: `\n[CHOICE:type=single]
+看不到发展路径
+技能瓶颈需要提升建议
+跟人沟通人际关系困难
+想转行但不确定方向
+[/CHOICE]`,
+    branch: '待业',
+  },
   {
     id: 'A11',
     keywords: ['最需要帮助', '场景', '需要帮助的是'],
@@ -172,6 +184,48 @@ DeepSeek/ChatGPT等AI工具
 其他渠道
 [/CHOICE]`,
     branch: '在职',
+  },
+  // ===== 待业分支选择题 =====
+  {
+    id: 'C7-company',
+    keywords: ['公司', '什么类型', '公司类型'],
+    choiceBlock: `\n[CHOICE:type=single]
+国企
+民企
+外企
+创业公司
+互联网
+其他
+[/CHOICE]`,
+    branch: '待业',
+  },
+  {
+    id: 'C8-satisfaction',
+    keywords: ['喜欢', '那份工作', '满意度', '打分'],
+    choiceBlock: `\n[CHOICE:type=single]
+5分 非常满意
+4分 比较满意
+3分 一般
+2分 不太满意
+1分 非常不满意
+[/CHOICE]`,
+    branch: '待业',
+  },
+  {
+    id: 'C11-channels',
+    keywords: ['获取', '职业有关的信息', '信息渠道', '从哪里获取'],
+    choiceBlock: `\n[CHOICE:type=multi]
+DeepSeek/ChatGPT等AI工具
+前同事/行业朋友
+家人/友人
+猎头
+付费职业咨询/教练/课程/社群
+小红书/抖音/B站/知乎
+脉脉/LinkedIn等职场社交
+公司内部的mentor/前辈
+其他渠道
+[/CHOICE]`,
+    branch: '待业',
   },
 ];
 

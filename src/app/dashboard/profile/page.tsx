@@ -82,8 +82,15 @@ function parseConflicts(str?: string | null): ProfileConflict[] {
   }
 }
 
-// 模板底色 — 在校 sand, 在职 sage, 待业 brand
+// 模板底色 — 页面背景用 25 色阶（更淡），卡片用 50 色阶
 function getTemplateBg(status: string): string {
+  if (status === '在职') return 'bg-sage-25';
+  if (status === '待业') return 'bg-brand-25';
+  return 'bg-sand-25';
+}
+
+// 卡片底色 — 比 50 更淡，和页面背景区分
+function getCardBg(status: string): string {
   if (status === '在职') return 'bg-sage-50';
   if (status === '待业') return 'bg-brand-50';
   return 'bg-sand-50';
@@ -481,10 +488,14 @@ export default function ProfilePage() {
   }
 
   const isEmployed = userStatus === '在职';
+  const isUnemployed = userStatus === '待业';
+  const isStudent = userStatus === '在校';
+  const showCareerInfo = isEmployed || isUnemployed; // 在职/待业都显示职业信息
   const templateBg = getTemplateBg(userStatus);
+  const cardBg = getCardBg(userStatus);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${templateBg}`}>
       <Header />
 
       <div className="page-container">
@@ -548,7 +559,7 @@ export default function ProfilePage() {
           `}</style>
 
           {/* 基本信息 — 所有模板共用 */}
-          <div className={`card space-y-4 ${templateBg}`}>
+          <div className={`card space-y-4 ${cardBg}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">基本信息</h2>
               <button type="button" onClick={() => setBasicOpen(!basicOpen)} className="text-muted hover:text-ink text-sm">
@@ -588,7 +599,7 @@ export default function ProfilePage() {
           </div>
 
           {/* 教育背景 — 在校显示入学年份+学校+专业，在职显示学校+毕业年限 */}
-          <div className={`card space-y-4 ${templateBg}`}>
+          <div className={`card space-y-4 ${cardBg}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">教育背景</h2>
               <button type="button" onClick={() => setEducationOpen(!educationOpen)} className="text-muted hover:text-ink text-sm">
@@ -597,18 +608,7 @@ export default function ProfilePage() {
             </div>
             {educationOpen && (
               <div className="space-y-4">
-                {isEmployed ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
-                      <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">毕业年限</label>
-                      <input type="number" value={gradYears} onChange={(e) => setGradYears(e.target.value)} min="0" max="60" placeholder="毕业几年" className="input-field" />
-                    </div>
-                  </>
-                ) : (
+                {isStudent ? (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">入学年份</label>
@@ -623,14 +623,25 @@ export default function ProfilePage() {
                       <input type="text" value={major} onChange={(e) => setMajor(e.target.value)} maxLength={100} className="input-field" />
                     </div>
                   </>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
+                      <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-ink mb-1.5">毕业年限</label>
+                      <input type="number" value={gradYears} onChange={(e) => setGradYears(e.target.value)} min="0" max="60" placeholder="毕业几年" className="input-field" />
+                    </div>
+                  </>
                 )}
               </div>
             )}
           </div>
 
-          {/* 职业信息 — 仅在职显示 */}
-          {isEmployed && (
-            <div className={`card space-y-4 ${templateBg}`}>
+          {/* 职业信息 — 在职/待业显示 */}
+          {showCareerInfo && (
+            <div className={`card space-y-4 ${cardBg}`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-ink">职业信息</h2>
                 <button type="button" onClick={() => setCareerInfoOpen(!careerInfoOpen)} className="text-muted hover:text-ink text-sm">
@@ -681,7 +692,7 @@ export default function ProfilePage() {
           )}
 
           {/* 职业发展 — 在校和在职显示不同字段 */}
-          <div className={`card space-y-4 ${templateBg}`}>
+          <div className={`card space-y-4 ${cardBg}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">职业发展</h2>
               <button type="button" onClick={() => setDevelopmentOpen(!developmentOpen)} className="text-muted hover:text-ink text-sm">
@@ -691,7 +702,7 @@ export default function ProfilePage() {
             {developmentOpen && (
               <div className="space-y-4">
                 {/* 在校专属：兴趣方向 + 职业目标 */}
-                {!isEmployed && (
+                {isStudent && (
                   <>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">兴趣方向</label>
@@ -714,10 +725,10 @@ export default function ProfilePage() {
                   <input type="text" value={careerSpending} onChange={(e) => setCareerSpending(e.target.value)} className="input-field" />
                 </div>
 
-                {/* 在校：找工作困扰；在职：职业焦虑 */}
+                {/* 在校：找工作困扰；在职/待业：职业焦虑 */}
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">
-                    {isEmployed ? '职业焦虑' : '找工作困扰'}
+                    {isStudent ? '找工作困扰' : '职业焦虑'}
                   </label>
                   <textarea value={careerAnxiety} onChange={(e) => setCareerAnxiety(e.target.value)} maxLength={1000} rows={3} className="input-field resize-none" />
                 </div>
@@ -729,13 +740,21 @@ export default function ProfilePage() {
                     <textarea value={jobChangeStatus} onChange={(e) => setJobChangeStatus(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
                   </div>
                 )}
+
+                {/* 待业专属：求职情况 */}
+                {isUnemployed && (
+                  <div>
+                    <label className="block text-sm font-medium text-ink mb-1.5">求职情况</label>
+                    <textarea value={jobChangeStatus} onChange={(e) => setJobChangeStatus(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* 访谈结果 */}
           {(helpPriority || mentorPreference || mentorHelpAreas || productInterest || recommendedMentors) && (
-            <div className={`card space-y-4 ${templateBg}`}>
+            <div className={`card space-y-4 ${cardBg}`}>
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-ink">访谈结果</h2>
                 <button type="button" onClick={() => setResultsOpen(!resultsOpen)} className="text-muted hover:text-ink text-sm">
