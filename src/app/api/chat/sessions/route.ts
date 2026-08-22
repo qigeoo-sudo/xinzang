@@ -87,6 +87,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 // 获取会话列表
 export async function GET() {
   const session = await auth();

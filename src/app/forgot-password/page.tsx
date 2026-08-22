@@ -191,7 +191,7 @@ function ForgotPasswordForm() {
                 <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-lg">{error}</div>
               )}
               {info && (
-                <div className="bg-success/10 text-success text-sm px-4 py-3 rounded-lg">{info}</div>
+                <div className="bg-accent/10 text-accent text-sm px-4 py-3 rounded-lg">{info}</div>
               )}
 
               <div>
@@ -260,9 +260,9 @@ function ForgotPasswordForm() {
           {/* 步骤 4: 完成 */}
           {step === 'done' && (
             <div className="card text-center py-8 animate-fade-in">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 13l4 4L19 7" stroke="#5B8C5A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
               <h3 className="text-lg font-bold text-ink mb-2">密码重置成功！</h3>

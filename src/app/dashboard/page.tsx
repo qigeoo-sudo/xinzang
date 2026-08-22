@@ -6,6 +6,8 @@ import { mentors } from '@/lib/mentors';
 import Link from 'next/link';
 import { ProfileLink } from '@/components/profile-link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   const session = await auth();
 

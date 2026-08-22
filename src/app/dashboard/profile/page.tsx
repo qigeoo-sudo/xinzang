@@ -192,7 +192,7 @@ export default function ProfilePage() {
   // 加载用户档案（无档案时使用空默认值）
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/user/profile')
+    fetch('/api/user/profile', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data: { profile?: ProfileData }) => {
         if (data.profile) {

@@ -59,6 +59,7 @@ JSON格式：
 
 注意：
 - nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。即使用户回答很短（如"阿毛"），也要提取。
+- 【重要】nickname 必须原样提取，不要自作主张缩写、修改或"优化"。即使用户的名字是三个字以上（如"为王""欧阳小明"），也原样保留。只有当用户回答超过12个字、明显是一句话而不是名字时，才需要从中提炼。
 - industry 和 jobContent 要拆分：industry 是用户所在的行业（如"互联网""医疗""金融"），jobContent 是用户的具体工作内容或岗位（如"产品经理""前端开发""销售"）。如果用户回答"在互联网做产品经理"，则 industry="互联网"，jobContent="产品经理"。
 - interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
 - 如果用户说了多个兴趣，全部放入数组
