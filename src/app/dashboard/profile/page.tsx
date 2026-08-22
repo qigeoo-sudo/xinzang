@@ -582,22 +582,12 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">当前状态</label>
-                    <div className="flex gap-2">
-                      {['在校', '在职', '待业'].map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => handleStatusChange(s)}
-                          className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                            userStatus === s
-                              ? 'bg-accent text-white'
-                              : 'bg-white text-muted border border-rule hover:border-accent'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
+                    <select value={userStatus} onChange={(e) => handleStatusChange(e.target.value)} className="input-field">
+                      <option value="">请选择</option>
+                      <option value="在校">在校</option>
+                      <option value="在职">在职</option>
+                      <option value="待业">待业</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">所在城市</label>
