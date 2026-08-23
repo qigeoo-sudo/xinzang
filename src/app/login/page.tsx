@@ -10,7 +10,8 @@ type LoginMethod = 'phone' | 'email';
 
 function LoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const rawCallback = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/';
 
   const [method, setMethod] = useState<LoginMethod>('phone');
   const [identifier, setIdentifier] = useState('');
@@ -116,6 +117,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                maxLength={64}
                 autoComplete="current-password"
                 className="input-field"
               />

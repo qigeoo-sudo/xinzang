@@ -1,13 +1,12 @@
 /**
  * 退出登录 Route Handler
- * GET /api/logout — 清除 session cookie 并返回 JSON
+ * POST /api/logout — 清除 session cookie 并返回 JSON
  *
- * 使用 JSON 响应 + 客户端跳转，避免沙盒隧道环境重定向失败
+ * 仅接受 POST 防止 CSRF（GET 无法被 <img> 等标签触发状态变更）
  */
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
-  // 清除所有可能的 session cookie
+export async function POST(request: NextRequest) {
   const cookieNames = [
     'authjs.session-token',
     '__Secure-authjs.session-token',
@@ -24,12 +23,6 @@ export async function GET(request: NextRequest) {
   for (const name of cookieNames) {
     response.cookies.set(name, '', {
       httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 0,
-    });
-    response.cookies.set(name, '', {
-      httpOnly: false,
       sameSite: 'lax',
       path: '/',
       maxAge: 0,

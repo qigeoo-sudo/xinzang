@@ -19,7 +19,8 @@ export default function RegisterPage() {
 
 function RegisterContent() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const rawCallback = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/';
 
   const [method, setMethod] = useState<RegMethod>('phone');
   const [step, setStep] = useState<Step>('form');
@@ -33,11 +34,28 @@ function RegisterContent() {
   const [sendingCode, setSendingCode] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   // 手机号校验
   const isValidPhone = (val: string) => /^1[3-9]\d{9}$/.test(val);
   // 邮箱校验
   const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+
+  const validatePassword = (val: string): string => {
+    if (val.length === 0) return '';
+    if (val.length < 8) return '密码至少需要8位字符';
+    if (!/[a-zA-Z]/.test(val) || !/[0-9]/.test(val)) return '密码必须包含字母和数字';
+    return '';
+  };
+
+  const validateConfirmPassword = (val: string): string => {
+    if (val.length === 0) return '';
+    if (val !== password) return '两次输入的密码不一致';
+    return '';
+  };
 
   // 发送验证码（mock）
   const handleSendCode = async () => {
@@ -60,6 +78,10 @@ function RegisterContent() {
       setError('密码至少需要8位字符');
       return;
     }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('密码必须包含字母和数字');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('两次输入的密码不一致');
       return;
@@ -77,13 +99,7 @@ function RegisterContent() {
         setError(data.error || '发送验证码失败');
         return;
       }
-      // Mock 模式下返回验证码
-      if (data.code) {
-        setSentCode(data.code);
-        setInfo(`验证码已发送（模拟：${data.code}）`);
-      } else {
-        setInfo(method === 'phone' ? '验证码已发送到你的手机' : '验证邮件已发送到你的邮箱');
-      }
+      setInfo(method === 'phone' ? '验证码已发送到你的手机' : '验证邮件已发送到你的邮箱');
       setStep('verify');
     } catch {
       setError('网络错误，请稍后再试');
@@ -215,17 +231,32 @@ function RegisterContent() {
               {/* 密码 */}
               <div>
                 <label className="block text-sm font-medium text-ink mb-1.5">
-                  密码 <span className="text-muted text-xs font-normal">（任意8位或以上字母或数字）</span>
+                  密码 <span className="text-muted text-xs font-normal">（至少8位，必须包含字母和数字）</span>
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="input-field"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setPasswordError('');
+                    }}
+                    onBlur={() => setPasswordError(validatePassword(password))}
+                    required
+                    minLength={8}
+                    maxLength={64}
+                    autoComplete="new-password"
+                    className={`input-field pr-12 ${passwordError ? 'border-red-400' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-ink"
+                  >
+                    {showPassword ? '隐藏' : '显示'}
+                  </button>
+                </div>
+                {passwordError && <p className="text-xs text-red-500 mt-1">{passwordError}</p>}
               </div>
 
               {/* 确认密码 */}
@@ -233,15 +264,30 @@ function RegisterContent() {
                 <label className="block text-sm font-medium text-ink mb-1.5">
                   确认密码
                 </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                  className="input-field"
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      setConfirmPasswordError('');
+                    }}
+                    onBlur={() => setConfirmPasswordError(validateConfirmPassword(confirmPassword))}
+                    required
+                    minLength={8}
+                    maxLength={64}
+                    autoComplete="new-password"
+                    className={`input-field pr-12 ${confirmPasswordError ? 'border-red-400' : ''}`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted hover:text-ink"
+                  >
+                    {showConfirmPassword ? '隐藏' : '显示'}
+                  </button>
+                </div>
+                {confirmPasswordError && <p className="text-xs text-red-500 mt-1">{confirmPasswordError}</p>}
               </div>
 
               {/* 发送验证码按钮 */}

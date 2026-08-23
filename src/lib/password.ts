@@ -27,7 +27,7 @@ export async function verifyPassword(
 
 /**
  * 密码强度校验
- * 规则: 任意8位字母或数字
+ * 规则: 至少8位，必须包含英文字母和数字，最长64位
  */
 export function validatePasswordStrength(password: string): {
   valid: boolean;
@@ -36,8 +36,11 @@ export function validatePasswordStrength(password: string): {
   if (password.length < 8) {
     return { valid: false, message: '密码至少需要8位字符' };
   }
-  if (!/^[a-zA-Z0-9]+$/.test(password)) {
-    return { valid: false, message: '密码只能包含字母或数字' };
+  if (password.length > 64) {
+    return { valid: false, message: '密码不能超过64位字符' };
+  }
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return { valid: false, message: '密码必须包含字母和数字' };
   }
   return { valid: true };
 }

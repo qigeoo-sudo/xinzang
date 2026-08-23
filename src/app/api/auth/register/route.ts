@@ -22,7 +22,8 @@ const registerSchema = z.object({
   password: z
     .string()
     .min(8, '密码至少需要8位字符')
-    .regex(/^[a-zA-Z0-9]+$/, '密码只能包含字母或数字'),
+    .max(64, '密码不能超过64位字符')
+    .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, '密码必须包含字母和数字'),
   code: z.string().optional(),
 });
 
@@ -87,11 +88,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (code !== verificationRecord.code) {
-      // 增加尝试次数
-      await prisma.verificationCode.update({
-        where: { id: verificationRecord.id },
+      // 原子操作增加尝试次数，防止并发绕过
+      const result = await prisma.verificationCode.updateMany({
+        where: { id: verificationRecord.id, attempts: { lt: verificationRecord.maxAttempts } },
         data: { attempts: { increment: 1 } },
       });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: '验证码尝试次数过多，请重新获取' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: '验证码不正确' },
         { status: 400 }
@@ -127,9 +134,11 @@ export async function POST(request: NextRequest) {
     });
 
     // 8. 创建用户 + 用户档案
+    const now = new Date();
     const userData: any = {
       passwordHash,
       freeTrialUsed: 0,
+      emailVerified: method === 'email' ? now : null,
       profile: { create: {} },
     };
 

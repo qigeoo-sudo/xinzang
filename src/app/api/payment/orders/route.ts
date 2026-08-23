@@ -15,9 +15,17 @@ import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { getPlanById } from '@/lib/plans';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
 import { createAlipayOrder } from '@/lib/alipay';
+import { z } from 'zod';
 
 /** 支付方式 */
 type PaymentMethod = 'wechat' | 'alipay';
+
+/** 创建订单 Schema — 修复: isRenewal 纳入 Zod 校验 */
+const createOrderSchema = z.object({
+  planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
+  paymentMethod: z.enum(['wechat', 'alipay']).default('wechat'),
+  isRenewal: z.boolean().default(false),
+});
 
 /**
  * POST /api/payment/orders
@@ -42,21 +50,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { planId, paymentMethod = 'wechat', isRenewal = false }: {
-      planId: string;
-      paymentMethod?: PaymentMethod;
-      isRenewal?: boolean;
-    } = await request.json();
-
-    // 3. 验证支付方式 (运行时校验: body 来自不可信输入)
-    if (paymentMethod !== 'wechat' && paymentMethod !== 'alipay') {
+    const body = await request.json();
+    const parsed = createOrderSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: '无效的支付方式' },
+        { error: parsed.error.issues[0]?.message || '输入不合法' },
         { status: 400 }
       );
     }
 
-    // 4. 验证计划 ID
+    const { planId, paymentMethod, isRenewal } = parsed.data;
+
+    // 3. 验证计划 ID
     const plan = getPlanById(planId);
     if (!plan) {
       return NextResponse.json(
@@ -177,10 +182,16 @@ export async function POST(request: NextRequest) {
  */
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
+  }
+
+  const ip = getClientIP(request);
+  const { success } = rateLimit(`orders-list-${ip}`, 10, 60000);
+  if (!success) {
+    return NextResponse.json({ error: '请求过于频繁' }, { status: 429 });
   }
 
   const orders = await prisma.paymentOrder.findMany({

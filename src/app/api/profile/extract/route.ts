@@ -14,6 +14,26 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { proxyFetch } from '@/lib/proxy-fetch';
+import { fetchWithRetry } from '@/lib/ai-retry';
+import { rateLimit } from '@/lib/rate-limit';
+import { z } from 'zod';
+
+// AI 提取结果校验 — 限制字段类型和长度
+const extractedProfileSchema = z.object({
+  nickname: z.string().max(50).optional(),
+  age: z.number().int().min(1).max(150).optional(),
+  gender: z.string().max(10).optional(),
+  status: z.string().max(50).optional(),
+  industry: z.string().max(100).optional(),
+  jobContent: z.string().max(500).optional(),
+  skills: z.array(z.string().max(100)).max(20).optional(),
+  goals: z.string().max(500).optional(),
+  interests: z.array(z.string().max(100)).max(20).optional(),
+  education: z.string().max(100).optional(),
+  school: z.string().max(100).optional(),
+  major: z.string().max(100).optional(),
+  enrollmentYear: z.string().max(20).optional(),
+}).passthrough();
 
 // API URL 白名单 — 与 chat route 保持一致
 const ALLOWED_API_URLS = [
@@ -76,6 +96,15 @@ export async function POST() {
       );
     }
 
+    // 速率限制: 每用户每小时最多3次（AI API 成本保护）
+    const rateCheck = rateLimit(`profile-extract:${session.user.id}`, 3, 60 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { error: '提取操作过于频繁，请1小时后再试' },
+        { status: 429, headers: { 'Retry-After': '3600' } }
+      );
+    }
+
     // 1. 获取用户与 AI 职导的所有对话记录
     const chatSessions = await prisma.chatSession.findMany({
       where: {
@@ -128,7 +157,7 @@ export async function POST() {
       );
     }
 
-    const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
+    const aiResponse = await fetchWithRetry(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -161,7 +190,16 @@ export async function POST() {
 
     let extracted;
     try {
-      extracted = JSON.parse(extractedText);
+      const parsed = JSON.parse(extractedText);
+      const validated = extractedProfileSchema.safeParse(parsed);
+      if (!validated.success) {
+        console.error('AI extract validation failed:', validated.error.issues);
+        return NextResponse.json(
+          { error: '档案数据格式异常，请稍后再试' },
+          { status: 500 }
+        );
+      }
+      extracted = validated.data;
     } catch {
       console.error('Failed to parse extracted JSON');
       return NextResponse.json(
@@ -178,77 +216,81 @@ export async function POST() {
     const existingProfile = await prisma.userProfile.findUnique({
       where: { userId: session.user.id },
     });
-    await prisma.profileHistory.create({
-      data: {
-        userId: session.user.id,
-        action: 'extract',
-        snapshot: JSON.stringify(existingProfile),
+
+    // 事务: 历史快照 + 档案 upsert 原子化
+    const profile = await prisma.$transaction(async (tx) => {
+      await tx.profileHistory.create({
+        data: {
+          userId: session.user.id,
+          action: 'extract',
+          snapshot: JSON.stringify(existingProfile),
+        },
+      });
+
+      return tx.userProfile.upsert({
+        where: { userId: session.user.id },
+        update: {
+          nickname: extracted.nickname || undefined,
+          age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
+          status: extracted.status || undefined,
+          city: extracted.city || undefined,
+          school: extracted.school || undefined,
+          major: extracted.major || undefined,
+          enrollmentYear: extracted.enrollmentYear || undefined,
+          industry: extracted.industry || undefined,
+          jobContent: extracted.jobContent || undefined,
+          companyType: extracted.companyType || undefined,
+          jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
+          gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+          interests: arrayToJson(extracted.interests) || undefined,
+          goals: extracted.goals || undefined,
+          infoChannels: arrayToJson(extracted.infoChannels) || undefined,
+          careerSpending: extracted.careerSpending || undefined,
+          careerAnxiety: extracted.careerAnxiety || undefined,
+          jobChangeStatus: extracted.jobChangeStatus || undefined,
+          helpPriority: arrayToJson(extracted.helpPriority) || undefined,
+          mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
+          mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
+          productInterest: extracted.productInterest || undefined,
+          productTrigger: arrayToJson(extracted.productTrigger) || undefined,
+          productConcern: arrayToJson(extracted.productConcern) || undefined,
+          willingToPay: extracted.willingToPay || undefined,
+          recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
+          profileSource: 'ai_extracted',
+          lastAiExtractAt: new Date(),
+        },
+        create: {
+          userId: session.user.id,
+          nickname: extracted.nickname || undefined,
+          age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
+          status: extracted.status || undefined,
+          city: extracted.city || undefined,
+          school: extracted.school || undefined,
+          major: extracted.major || undefined,
+          enrollmentYear: extracted.enrollmentYear || undefined,
+          industry: extracted.industry || undefined,
+          jobContent: extracted.jobContent || undefined,
+          companyType: extracted.companyType || undefined,
+        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
+        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+        interests: arrayToJson(extracted.interests) || undefined,
+        goals: extracted.goals || undefined,
+        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
+        careerSpending: extracted.careerSpending || undefined,
+        careerAnxiety: extracted.careerAnxiety || undefined,
+        jobChangeStatus: extracted.jobChangeStatus || undefined,
+        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
+        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
+        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
+        productInterest: extracted.productInterest || undefined,
+        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
+        productConcern: arrayToJson(extracted.productConcern) || undefined,
+        willingToPay: extracted.willingToPay || undefined,
+        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
+        profileSource: 'ai_extracted',
+        lastAiExtractAt: new Date(),
       },
     });
-
-    const profile = await prisma.userProfile.upsert({
-      where: { userId: session.user.id },
-      update: {
-        nickname: extracted.nickname || undefined,
-        age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
-        status: extracted.status || undefined,
-        city: extracted.city || undefined,
-        school: extracted.school || undefined,
-        major: extracted.major || undefined,
-        enrollmentYear: extracted.enrollmentYear || undefined,
-        industry: extracted.industry || undefined,
-        jobContent: extracted.jobContent || undefined,
-        companyType: extracted.companyType || undefined,
-        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
-        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
-        interests: arrayToJson(extracted.interests) || undefined,
-        goals: extracted.goals || undefined,
-        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
-        careerSpending: extracted.careerSpending || undefined,
-        careerAnxiety: extracted.careerAnxiety || undefined,
-        jobChangeStatus: extracted.jobChangeStatus || undefined,
-        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
-        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
-        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
-        productInterest: extracted.productInterest || undefined,
-        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
-        productConcern: arrayToJson(extracted.productConcern) || undefined,
-        willingToPay: extracted.willingToPay || undefined,
-        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
-        profileSource: 'ai_extracted',
-        lastAiExtractAt: new Date(),
-      },
-      create: {
-        userId: session.user.id,
-        nickname: extracted.nickname || undefined,
-        age: typeof extracted.age === 'number' && extracted.age > 0 ? extracted.age : undefined,
-        status: extracted.status || undefined,
-        city: extracted.city || undefined,
-        school: extracted.school || undefined,
-        major: extracted.major || undefined,
-        enrollmentYear: extracted.enrollmentYear || undefined,
-        industry: extracted.industry || undefined,
-        jobContent: extracted.jobContent || undefined,
-        companyType: extracted.companyType || undefined,
-        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
-        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
-        interests: arrayToJson(extracted.interests) || undefined,
-        goals: extracted.goals || undefined,
-        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
-        careerSpending: extracted.careerSpending || undefined,
-        careerAnxiety: extracted.careerAnxiety || undefined,
-        jobChangeStatus: extracted.jobChangeStatus || undefined,
-        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
-        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
-        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
-        productInterest: extracted.productInterest || undefined,
-        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
-        productConcern: arrayToJson(extracted.productConcern) || undefined,
-        willingToPay: extracted.willingToPay || undefined,
-        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
-        profileSource: 'ai_extracted',
-        lastAiExtractAt: new Date(),
-      },
     });
 
     return NextResponse.json({

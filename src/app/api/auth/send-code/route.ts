@@ -39,7 +39,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { method, target } = parsed.data;
+    const { method, target: rawTarget } = parsed.data;
+    const target = method === 'email' ? rawTarget.toLowerCase() : rawTarget;
     const type = method === 'phone' ? 'PHONE_REGISTER' : 'EMAIL_REGISTER';
 
     // 校验格式
@@ -64,8 +65,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Mock: 生成6位随机验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // 生成6位密码学安全随机验证码
+    const { randomInt } = await import('crypto');
+    const code = randomInt(100000, 1000000).toString();
 
     // 删除该 identifier+type 的旧验证码，再创建新的
     await prisma.verificationCode.deleteMany({
@@ -81,11 +83,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Mock 模式: 直接返回验证码 (生产环境不返回)
+    // 验证码不返回到响应体，开发模式通过 console 查看
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[VerifyCode] ${method} ${target}: ${code}`);
+    }
     return NextResponse.json({
       success: true,
       message: method === 'phone' ? '短信验证码已发送' : '验证邮件已发送',
-      code, // Mock: 生产环境删除此行
     });
   } catch (error) {
     console.error('Send code error:', error);

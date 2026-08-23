@@ -36,7 +36,10 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://api.openai.com; font-src 'self' data:;",
+              process.env.NODE_ENV === 'production'
+                // TODO: 上线前改用 nonce 机制移除 'unsafe-inline'（script-src）
+                ? "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://api.openai.com; font-src 'self' data:;"
+                : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.deepseek.com https://api.openai.com ws:; font-src 'self' data:;",
           },
           {
             key: 'Strict-Transport-Security',

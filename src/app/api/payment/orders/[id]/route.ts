@@ -55,14 +55,19 @@ export async function GET(
   ) {
     const wxResult = await queryWxPayOrder(order.orderNo);
 
-    if (wxResult.status === 'PAID') {
-      // 微信已支付但回调未到达，主动更新
-      await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
-      return NextResponse.json({
-        ...order,
-        status: 'PAID',
-        transactionId: wxResult.transactionId,
-      });
+    if (wxResult.status === 'PAID' && wxResult.amount) {
+      // 微信已支付但回调未到达，主动更新 — 校验金额一致后才处理
+      const expectedAmountFen = Math.round(order.amount * 100);
+      if (wxResult.amount === expectedAmountFen) {
+        await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
+        return NextResponse.json({
+          ...order,
+          status: 'PAID',
+          transactionId: wxResult.transactionId,
+        });
+      } else {
+        console.error(`Order ${order.orderNo}: amount mismatch on query (expected=${expectedAmountFen}, got=${wxResult.amount})`);
+      }
     }
   }
 
