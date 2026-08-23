@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       transactionId = notifyData.transactionId || notifyData.transaction_id || `mock_tx_${Date.now()}`;
       // 金额不从请求体读取，防止伪造
       const mockOrder = await prisma.paymentOrder.findUnique({ where: { orderNo: outTradeNo } });
-      amount = mockOrder ? Math.round(mockOrder.amount * 100) : 0;
+      amount = mockOrder ? Math.round(Number(mockOrder.amount) * 100) : 0;
     } else {
       // 生产模式: 解密
       const decrypted = decryptNotifyResource(
