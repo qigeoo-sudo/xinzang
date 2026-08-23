@@ -180,13 +180,9 @@ export async function POST(request: NextRequest) {
  * GET /api/payment/orders
  * 获取用户订单列表
  */
-<<<<<<< HEAD
-export async function GET() {
-=======
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
->>>>>>> 3c36bc538cfc524bfd26be7aba14feb6dc986f05
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: '请先登录' }, { status: 401 });

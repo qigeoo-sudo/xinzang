@@ -88,7 +88,7 @@ export default async function PaymentSuccessPage({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">支付金额</span>
                   <span className="text-accent font-bold">
-                    ￥{order.amount}
+                    ￥{Number(order.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
