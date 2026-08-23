@@ -83,13 +83,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 验证码不返回到响应体，开发模式通过 console 查看
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`[VerifyCode] ${method} ${target}: ${code}`);
-    }
+    // Mock 模式：直接返回验证码（无真实短信/邮件服务）
     return NextResponse.json({
       success: true,
       message: method === 'phone' ? '短信验证码已发送' : '验证邮件已发送',
+      code,
     });
   } catch (error) {
     console.error('Send code error:', error);

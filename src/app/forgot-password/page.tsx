@@ -71,7 +71,13 @@ function ForgotPasswordForm() {
         setError(data.error || '发送验证码失败');
         return;
       }
-      setInfo(method === 'phone' ? '验证码已发送到你的手机' : '重置密码邮件已发送到你的邮箱');
+      if (data.code) {
+        setSentCode(data.code);
+        setVerifyCode(data.code);
+        setInfo(`验证码：${data.code}（Mock 模式，未真实发送）`);
+      } else {
+        setInfo(method === 'phone' ? '验证码已发送到你的手机' : '重置密码邮件已发送到你的邮箱');
+      }
       setStep('verify');
     } catch {
       setError('网络错误，请稍后再试');
