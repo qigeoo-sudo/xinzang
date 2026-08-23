@@ -4,6 +4,7 @@ import { useLanguage } from '@/components/language-context';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { LanguageToggle } from '@/components/language-toggle';
+import { signOut } from 'next-auth/react';
 
 interface HomeContentProps {
   isLoggedIn: boolean;
@@ -94,7 +95,6 @@ export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProp
 
   const handleLogout = async () => {
     try {
-      // 清除所有聊天相关的 localStorage
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -104,8 +104,7 @@ export function HomeContent({ isLoggedIn, isPremium, userInfo }: HomeContentProp
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-      await fetch('/api/logout');
-      // 强制完整页面刷新，确保服务端重新验证 session
+      await signOut({ redirect: false });
       window.location.href = '/';
     } catch {
       window.location.href = '/';
