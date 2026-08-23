@@ -57,7 +57,7 @@ export async function GET(
 
     if (wxResult.status === 'PAID' && wxResult.amount) {
       // 微信已支付但回调未到达，主动更新 — 校验金额一致后才处理
-      const expectedAmountFen = Math.round(order.amount * 100);
+      const expectedAmountFen = Math.round(Number(order.amount) * 100);
       if (wxResult.amount === expectedAmountFen) {
         await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
         return NextResponse.json({

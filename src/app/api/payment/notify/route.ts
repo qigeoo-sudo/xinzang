@@ -49,7 +49,7 @@ async function handlePaymentSuccess(
   }
 
   // 金额一致性校验 — 防止低金额回调获取高价值订阅
-  const orderAmountFen = Math.round(order.amount * 100);
+  const orderAmountFen = Math.round(Number(order.amount) * 100);
   if (expectedAmountFen !== orderAmountFen) {
     console.error(`Payment notify: amount mismatch. Expected ${orderAmountFen} fen, got ${expectedAmountFen} fen`, { orderNo });
     return { error: '金额不一致', status: 400 };
