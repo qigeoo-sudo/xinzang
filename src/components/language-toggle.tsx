@@ -14,7 +14,7 @@ export function LanguageToggle() {
     <button
       type="button"
       onClick={toggleLang}
-      className="fixed top-20 right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full border border-accent/40 bg-white/90 text-xs font-bold text-accent shadow-md backdrop-blur-md transition-all hover:bg-accent/10 active:scale-90 md:top-20 md:right-6 md:h-10 md:w-10 md:text-sm"
+      className="fixed top-20 right-3 z-[60] flex h-9 w-9 items-center justify-center rounded-full border border-brand-300 bg-white/90 text-xs font-bold text-brand-700 shadow-md backdrop-blur-md transition-all hover:bg-brand-50 active:scale-90 md:top-20 md:right-6 md:h-10 md:w-10 md:text-sm"
       title={lang === 'zh' ? 'Switch to English' : '切换到中文'}
     >
       {mounted ? (lang === 'zh' ? 'EN' : 'CH') : 'EN'}

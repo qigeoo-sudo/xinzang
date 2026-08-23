@@ -20,7 +20,6 @@ const updateProfileSchema = z.object({
   major: z.string().max(100).optional(),
   enrollmentYear: z.string().max(50).optional(),
   industry: z.string().max(50).optional(),
-  jobContent: z.string().max(200).optional(),
   companyType: z.string().max(50).optional(),
   jobSatisfaction: z.number().int().min(1).max(5).optional(),
   gradYears: z.number().int().min(0).max(60).optional(),
@@ -38,8 +37,6 @@ const updateProfileSchema = z.object({
   productConcern: z.array(z.string()).optional(),
   willingToPay: z.string().max(100).optional(),
 });
-
-export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const session = await auth();

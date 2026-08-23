@@ -26,7 +26,6 @@ interface ProfileData {
   major?: string | null;
   enrollmentYear?: string | null;
   industry?: string | null;
-  jobContent?: string | null;
   companyType?: string | null;
   jobSatisfaction?: number | null;
   gradYears?: number | null;
@@ -63,7 +62,6 @@ const CONFLICT_FIELD_LABELS: Record<string, string> = {
   major: '专业',
   enrollmentYear: '入学年份',
   industry: '行业',
-  jobContent: '工作内容',
   companyType: '公司类型',
   gradYears: '毕业年限',
   goals: '职业目标',
@@ -82,26 +80,6 @@ function parseConflicts(str?: string | null): ProfileConflict[] {
   }
 }
 
-// 模板底色 — 页面背景用 25 色阶（更淡），卡片用 50 色阶
-function getTemplateBg(status: string): string {
-  if (status === '在职') return 'bg-sage-25';
-  if (status === '待业') return 'bg-brand-25';
-  return 'bg-sand-25';
-}
-
-// 卡片底色 — 比 50 更淡，和页面背景区分
-function getCardBg(status: string): string {
-  if (status === '在职') return 'bg-sage-50';
-  if (status === '待业') return 'bg-brand-50';
-  return 'bg-sand-50';
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  '在校': '在校',
-  '在职': '在职',
-  '待业': '待业',
-};
-
 export default function ProfilePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -114,7 +92,6 @@ export default function ProfilePage() {
   // 折叠状态 — 默认全部展开
   const [basicOpen, setBasicOpen] = useState(true);
   const [educationOpen, setEducationOpen] = useState(true);
-  const [careerInfoOpen, setCareerInfoOpen] = useState(true);
   const [developmentOpen, setDevelopmentOpen] = useState(true);
   const [resultsOpen, setResultsOpen] = useState(true);
 
@@ -131,7 +108,6 @@ export default function ProfilePage() {
 
   // 职业信息
   const [industry, setIndustry] = useState('');
-  const [jobContent, setJobContent] = useState('');
   const [companyType, setCompanyType] = useState('');
   const [jobSatisfaction, setJobSatisfaction] = useState('');
   const [gradYears, setGradYears] = useState('');
@@ -169,7 +145,6 @@ export default function ProfilePage() {
     setMajor(p.major || '');
     setEnrollmentYear(p.enrollmentYear || '');
     setIndustry(p.industry || '');
-    setJobContent(p.jobContent || '');
     setCompanyType(p.companyType || '');
     setJobSatisfaction(p.jobSatisfaction ? String(p.jobSatisfaction) : '');
     setGradYears(p.gradYears ? String(p.gradYears) : '');
@@ -192,7 +167,7 @@ export default function ProfilePage() {
   // 加载用户档案（无档案时使用空默认值）
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/user/profile', { cache: 'no-store' })
+    fetch('/api/user/profile')
       .then((res) => res.json())
       .then((data: { profile?: ProfileData }) => {
         if (data.profile) {
@@ -220,7 +195,6 @@ export default function ProfilePage() {
     setMajor('');
     setEnrollmentYear('');
     setIndustry('');
-    setJobContent('');
     setCompanyType('');
     setJobSatisfaction('');
     setGradYears('');
@@ -314,79 +288,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 状态切换 — 直接切换，无需弹窗
-  // 切换后清空所有字段，仅当聊天记录里的状态与目标模板一致时才从聊天记录映射
-  const handleStatusChange = async (newStatus: string) => {
-    if (newStatus === userStatus || !newStatus) return;
-
-    // 1. 清除所有字段（含 nickname）
-    setNickname('');
-    setAge('');
-    setCity('');
-    setSchool('');
-    setMajor('');
-    setEnrollmentYear('');
-    setIndustry('');
-    setJobContent('');
-    setCompanyType('');
-    setJobSatisfaction('');
-    setGradYears('');
-    setInterests('');
-    setGoals('');
-    setInfoChannels('');
-    setCareerSpending('');
-    setCareerAnxiety('');
-    setJobChangeStatus('');
-    setHelpPriority('');
-    setMentorPreference('');
-    setMentorHelpAreas('');
-    setProductInterest('');
-    setProductTrigger('');
-    setProductConcern('');
-    setWillingToPay('');
-    setRecommendedMentors('');
-    setConflicts([]);
-
-    // 2. 切换状态，立即渲染新模板
-    setUserStatus(newStatus);
-
-    // 3. 调用 extract API（和聊天结束后自动提取是同一个流程）
-    //    extract 会从聊天记录提取所有字段（包括 status）并写入数据库
-    //    返回的 extractedStatus 是 LLM 从聊天记录提取出的原始 status
-    let needPutStatus = true;
-    try {
-      const res = await fetch('/api/profile/extract', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.profile) {
-          if (data.extractedStatus === newStatus) {
-            // 聊天记录里的状态与目标模板一致，映射字段
-            applyProfile(data.profile);
-            setConflicts(parseConflicts(data.profile.profileConflicts));
-            // extract 已经把正确的 status 写入数据库，不需要再 PUT
-            needPutStatus = false;
-          }
-          // 否则不映射，表单保持空白
-        }
-      }
-    } catch {
-      // 提取失败不阻塞，用户可手动填写
-    }
-
-    // 4. 如果 extract 的 status 和目标不一致，需要手动 PUT 目标 status
-    if (needPutStatus) {
-      try {
-        await fetch('/api/user/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus }),
-        });
-      } catch {
-        // 保存失败不阻塞
-      }
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -400,7 +301,6 @@ export default function ProfilePage() {
       !major &&
       !enrollmentYear &&
       !industry &&
-      !jobContent &&
       !companyType &&
       !jobSatisfaction &&
       !gradYears &&
@@ -442,7 +342,6 @@ export default function ProfilePage() {
           major: major || undefined,
           enrollmentYear: enrollmentYear || undefined,
           industry: industry || undefined,
-          jobContent: jobContent || undefined,
           companyType: companyType || undefined,
           jobSatisfaction: jobSatisfaction ? parseInt(jobSatisfaction, 10) : undefined,
           gradYears: gradYears ? parseInt(gradYears, 10) : undefined,
@@ -487,15 +386,8 @@ export default function ProfilePage() {
     );
   }
 
-  const isEmployed = userStatus === '在职';
-  const isUnemployed = userStatus === '待业';
-  const isStudent = userStatus === '在校';
-  const showCareerInfo = isEmployed || isUnemployed; // 在职/待业都显示职业信息
-  const templateBg = getTemplateBg(userStatus);
-  const cardBg = getCardBg(userStatus);
-
   return (
-    <div className={`min-h-screen flex flex-col ${templateBg}`}>
+    <div className="min-h-screen flex flex-col">
       <Header />
 
       <div className="page-container">
@@ -557,9 +449,8 @@ export default function ProfilePage() {
               font-weight: 400;
             }
           `}</style>
-
-          {/* 基本信息 — 所有模板共用 */}
-          <div className={`card space-y-4 ${cardBg}`}>
+          {/* 基本信息 */}
+          <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">基本信息</h2>
               <button type="button" onClick={() => setBasicOpen(!basicOpen)} className="text-muted hover:text-ink text-sm">
@@ -582,7 +473,7 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">当前状态</label>
-                    <select value={userStatus} onChange={(e) => handleStatusChange(e.target.value)} className="input-field">
+                    <select value={userStatus} onChange={(e) => setUserStatus(e.target.value)} className="input-field">
                       <option value="">请选择</option>
                       <option value="在校">在校</option>
                       <option value="在职">在职</option>
@@ -598,8 +489,8 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* 教育背景 — 在校显示入学年份+学校+专业，在职显示学校+毕业年限 */}
-          <div className={`card space-y-4 ${cardBg}`}>
+          {/* 教育背景 */}
+          <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">教育背景</h2>
               <button type="button" onClick={() => setEducationOpen(!educationOpen)} className="text-muted hover:text-ink text-sm">
@@ -608,91 +499,26 @@ export default function ProfilePage() {
             </div>
             {educationOpen && (
               <div className="space-y-4">
-                {isStudent ? (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">入学年份</label>
-                      <input type="text" value={enrollmentYear} onChange={(e) => setEnrollmentYear(e.target.value)} placeholder="例如 2022" maxLength={50} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
-                      <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">专业</label>
-                      <input type="text" value={major} onChange={(e) => setMajor(e.target.value)} maxLength={100} className="input-field" />
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
-                      <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">毕业年限</label>
-                      <input type="number" value={gradYears} onChange={(e) => setGradYears(e.target.value)} min="0" max="60" placeholder="毕业几年" className="input-field" />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">入学年份</label>
+                  <input type="text" value={enrollmentYear} onChange={(e) => setEnrollmentYear(e.target.value)} placeholder="例如 2022" maxLength={50} className="input-field" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
+                  <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">专业</label>
+                  <input type="text" value={major} onChange={(e) => setMajor(e.target.value)} maxLength={100} className="input-field" />
+                </div>
               </div>
             )}
           </div>
 
-          {/* 职业信息 — 在职/待业显示 */}
-          {showCareerInfo && (
-            <div className={`card space-y-4 ${cardBg}`}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-ink">职业信息</h2>
-                <button type="button" onClick={() => setCareerInfoOpen(!careerInfoOpen)} className="text-muted hover:text-ink text-sm">
-                  {careerInfoOpen ? '收起' : '展开'}
-                </button>
-              </div>
-              {careerInfoOpen && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">所在行业</label>
-                      <input type="text" value={industry} onChange={(e) => setIndustry(e.target.value)} maxLength={50} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">工作内容</label>
-                      <input type="text" value={jobContent} onChange={(e) => setJobContent(e.target.value)} maxLength={200} className="input-field" />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">企业类型</label>
-                      <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="input-field">
-                        <option value="">请选择</option>
-                        <option value="国企">国企</option>
-                        <option value="民企">民企</option>
-                        <option value="外企">外企</option>
-                        <option value="创业公司">创业公司</option>
-                        <option value="互联网">互联网</option>
-                        <option value="其他">其他</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">工作满意度</label>
-                      <select value={jobSatisfaction} onChange={(e) => setJobSatisfaction(e.target.value)} className="input-field">
-                        <option value="">请选择</option>
-                        <option value="5">5分 非常满意</option>
-                        <option value="4">4分 比较满意</option>
-                        <option value="3">3分 一般</option>
-                        <option value="2">2分 不太满意</option>
-                        <option value="1">1分 非常不满意</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 职业发展 — 在校和在职显示不同字段 */}
-          <div className={`card space-y-4 ${cardBg}`}>
+          {/* 职业发展 */}
+          <div className="card space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink">职业发展</h2>
               <button type="button" onClick={() => setDevelopmentOpen(!developmentOpen)} className="text-muted hover:text-ink text-sm">
@@ -701,60 +527,32 @@ export default function ProfilePage() {
             </div>
             {developmentOpen && (
               <div className="space-y-4">
-                {/* 在校专属：兴趣方向 + 职业目标 */}
-                {isStudent && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">兴趣方向</label>
-                      <input type="text" value={interests} onChange={(e) => setInterests(e.target.value)} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">职业目标</label>
-                      <textarea value={goals} onChange={(e) => setGoals(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
-                    </div>
-                  </>
-                )}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">兴趣方向</label>
+                  <input type="text" value={interests} onChange={(e) => setInterests(e.target.value)} className="input-field" />
+                </div>
 
-                {/* 共通：信息渠道 + 职业投资 */}
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1.5">职业目标</label>
+                  <textarea value={goals} onChange={(e) => setGoals(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">信息渠道</label>
                   <input type="text" value={infoChannels} onChange={(e) => setInfoChannels(e.target.value)} className="input-field" />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1.5">职业投资</label>
                   <input type="text" value={careerSpending} onChange={(e) => setCareerSpending(e.target.value)} className="input-field" />
                 </div>
-
-                {/* 在校：找工作困扰；在职/待业：职业焦虑 */}
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1.5">
-                    {isStudent ? '找工作困扰' : '职业焦虑'}
-                  </label>
-                  <textarea value={careerAnxiety} onChange={(e) => setCareerAnxiety(e.target.value)} maxLength={1000} rows={3} className="input-field resize-none" />
-                </div>
-
-                {/* 在职专属：换工作情况 */}
-                {isEmployed && (
-                  <div>
-                    <label className="block text-sm font-medium text-ink mb-1.5">换工作情况</label>
-                    <textarea value={jobChangeStatus} onChange={(e) => setJobChangeStatus(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
-                  </div>
-                )}
-
-                {/* 待业专属：求职情况 */}
-                {isUnemployed && (
-                  <div>
-                    <label className="block text-sm font-medium text-ink mb-1.5">求职情况</label>
-                    <textarea value={jobChangeStatus} onChange={(e) => setJobChangeStatus(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
-                  </div>
-                )}
               </div>
             )}
           </div>
 
           {/* 访谈结果 */}
           {(helpPriority || mentorPreference || mentorHelpAreas || productInterest || recommendedMentors) && (
-            <div className={`card space-y-4 ${cardBg}`}>
+            <div className="card space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-ink">访谈结果</h2>
                 <button type="button" onClick={() => setResultsOpen(!resultsOpen)} className="text-muted hover:text-ink text-sm">

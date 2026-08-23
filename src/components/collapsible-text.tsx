@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useLayoutEffect, useRef } from 'react';
 import { linkifyMentorNames } from '@/lib/mentor-links';
@@ -61,7 +61,7 @@ export function CollapsibleText({
         <button
           onClick={() => setShowFullView(true)}
           className={`text-xs mt-1 transition-colors ${
-            isUser ? 'text-white/70 hover:text-white/90' : 'text-accent hover:text-accent'
+            isUser ? 'text-white/70 hover:text-white/90' : 'text-brand-500 hover:text-brand-600'
           }`}
         >
           ...展开
@@ -78,11 +78,11 @@ export function CollapsibleText({
             className="bg-white rounded-2xl mx-4 mt-16 mb-16 p-5 max-w-md w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4 pb-3 border-b border-rule">
-              <span className="text-sm font-medium text-muted">完整内容</span>
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+              <span className="text-sm font-medium text-slate-600">完整内容</span>
               <button
                 onClick={() => setShowFullView(false)}
-                className="text-muted hover:text-muted transition-colors"
+                className="text-slate-400 hover:text-slate-600 transition-colors"
                 aria-label="关闭"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -92,14 +92,6 @@ export function CollapsibleText({
             </div>
             <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-slate-800">
               {renderContent()}
-            </div>
-            <div className="mt-5 pt-3 border-t border-rule flex justify-center">
-              <button
-                onClick={() => setShowFullView(false)}
-                className="text-xs text-muted hover:text-ink transition-colors px-4 py-1.5 rounded-full bg-slate-50 border border-rule"
-              >
-                关闭
-              </button>
             </div>
           </div>
         </div>

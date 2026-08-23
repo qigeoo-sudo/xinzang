@@ -4,8 +4,6 @@ import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { PaymentSuccessActions } from '@/components/payment-success-actions';
 
-export const dynamic = 'force-dynamic';
-
 export default async function PaymentSuccessPage({
   searchParams,
 }: {

@@ -175,8 +175,6 @@ export async function POST(request: NextRequest) {
  * GET /api/payment/orders
  * 获取用户订单列表
  */
-export const dynamic = 'force-dynamic';
-
 export async function GET() {
   const session = await auth();
   if (!session?.user?.id) {

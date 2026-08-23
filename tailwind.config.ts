@@ -25,7 +25,6 @@ const config: Config = {
         success: '#5B8C5A',
         // 原始 MVP 配色 — brand/sage/sand 三色体系
         brand: {
-          25: '#f8fbfc',
           50: '#f0f7f9',
           100: '#d9eef3',
           200: '#b3dde6',
@@ -38,7 +37,6 @@ const config: Config = {
           900: '#133340',
         },
         sage: {
-          25: '#f8fbf8',
           50: '#f0f7f0',
           100: '#e3f0e3',
           200: '#c7e0c7',
@@ -49,7 +47,6 @@ const config: Config = {
           700: '#395c37',
         },
         sand: {
-          25: '#fdfbf9',
           50: '#faf7f4',
           100: '#f3ede4',
           200: '#e8dcc8',
