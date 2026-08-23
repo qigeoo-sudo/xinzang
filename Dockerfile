@@ -38,12 +38,11 @@ ENV HOSTNAME=0.0.0.0
 # --- 运行时必需的环境变量（CloudBase 控制台可覆盖） ---
 # SQLite 数据库路径 — 容器内持久化目录
 ENV DATABASE_URL="file:/app/data/prod.db"
-# 信任 CloudBase 代理转发的 Host 头
+# 信任 CloudBase 代理转发的 Host 头（需确保代理层正确配置 X-Forwarded-Host）
 ENV AUTH_TRUST_HOST=true
-# 显式指定外部访问地址
-ENV AUTH_URL="https://xinzang-291393-10-1463037420.sh.run.tcloudbase.com"
-# 兜底密钥 — 强烈建议在 CloudBase 控制台环境变量中覆盖
-ENV AUTH_SECRET="fallback-secret-please-override-in-cloudbase-console-Kx9mQ2vT7wZ4nB8c"
+# AUTH_URL 和 AUTH_SECRET 必须在 CloudBase 控制台环境变量中设置
+# AUTH_URL: 外部访问地址（如 https://aihr.top）
+# AUTH_SECRET: JWT 签名密钥，未设置时启动会失败
 
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
@@ -77,4 +76,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "if [ -z \"$AUTH_SECRET\" ]; then echo 'FATAL: AUTH_SECRET is not set. Set it in CloudBase console environment variables.'; exit 1; fi && node server.js"]

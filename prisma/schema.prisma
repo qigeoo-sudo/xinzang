@@ -43,6 +43,11 @@ model User {
   // 审计字段
   lastLoginAt   DateTime?
   lastLoginIp   String?
+  // 登录安全: 失败锁定机制（5次失败后锁定15分钟）
+  loginAttempts Int       @default(0)
+  lockUntil     DateTime?
+  // 密码重置后使旧会话失效
+  passwordChangedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -214,7 +219,7 @@ model PaymentOrder {
   userId        String
   orderNo       String   @unique // 业务订单号 (如 ACC_20260901_xxxx)
   // 金额
-  amount        Float
+  amount        Decimal
   currency      String   @default("CNY")
   // 支付信息
   status        String   @default("PENDING") // PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED

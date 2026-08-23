@@ -41,9 +41,8 @@ export interface AlipayNotifyData {
 
 // ========== 配置 ==========
 
-const isDev = process.env.NODE_ENV === 'development';
-const isAlipayMockMode =
-  isDev || !process.env.ALIPAY_APP_ID || !process.env.ALIPAY_PRIVATE_KEY;
+// Mock 模式必须显式开启，防止生产环境配置缺失时静默降级
+const isAlipayMockMode = process.env.MOCK_PAYMENT_ENABLED === 'true';
 
 const config = {
   appId: process.env.ALIPAY_APP_ID || '',

@@ -15,7 +15,8 @@ const schema = z.object({
   newPassword: z
     .string()
     .min(8, '密码至少需要8位字符')
-    .regex(/^[a-zA-Z0-9]+$/, '密码只能包含字母或数字'),
+    .max(64, '密码不能超过64位字符')
+    .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, '密码必须包含字母和数字'),
 });
 
 export async function POST(request: NextRequest) {
@@ -38,7 +39,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { method, target, code, newPassword } = parsed.data;
+    const { method, target: rawTarget, code, newPassword } = parsed.data;
+    const target = method === 'email' ? rawTarget.toLowerCase() : rawTarget;
 
     // 密码强度校验
     const strengthCheck = validatePasswordStrength(newPassword);
@@ -62,11 +64,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '验证码已过期，请重新获取' }, { status: 400 });
     }
 
+    // 验证码尝试次数检查（与注册接口一致）
+    if (verificationRecord.attempts >= verificationRecord.maxAttempts) {
+      return NextResponse.json(
+        { error: '验证码尝试次数过多，请重新获取' },
+        { status: 400 }
+      );
+    }
+
     if (code !== verificationRecord.code) {
-      await prisma.verificationCode.update({
-        where: { id: verificationRecord.id },
+      // 原子操作增加尝试次数，防止并发绕过
+      const result = await prisma.verificationCode.updateMany({
+        where: { id: verificationRecord.id, attempts: { lt: verificationRecord.maxAttempts } },
         data: { attempts: { increment: 1 } },
       });
+      if (result.count === 0) {
+        return NextResponse.json(
+          { error: '验证码尝试次数过多，请重新获取' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json({ error: '验证码不正确' }, { status: 400 });
     }
 
@@ -82,11 +99,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 });
     }
 
-    // 更新密码
+    // 检查账户是否被锁定
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      return NextResponse.json(
+        { error: '账户已锁定，请稍后再试' },
+        { status: 423 }
+      );
+    }
+
+    // 更新密码并清除锁定状态，设置 passwordChangedAt 使旧会话失效
     const passwordHash = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id: user.id },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        loginAttempts: 0,
+        lockUntil: null,
+        passwordChangedAt: new Date(),
+      },
     });
 
     // 标记验证码已使用

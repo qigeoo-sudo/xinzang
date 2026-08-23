@@ -19,8 +19,11 @@ import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb
 import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
 import { extractInferredProfile, alignAndMergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
 import { getMentorQuota } from '@/lib/plans';
+import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } from '@/lib/member-cache';
 import { proxyFetch } from '@/lib/proxy-fetch';
+import { fetchWithRetry } from '@/lib/ai-retry';
 import { injectChoiceIfMissing } from '@/lib/choice-injection';
+import { redactPII } from '@/lib/ai-privacy';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -224,8 +227,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1.5 测试账号自动恢复已禁用（见 src/lib/test-accounts.ts）
-
     // 2. 速率限制 — 每用户每分钟60次（问卷对话需要快速来回）
     const clientIP = getClientIP(request);
     const rateKey = `chat:${session.user.id}`;
@@ -265,11 +266,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 从数据库实时获取会员状态 — 不依赖 JWT，避免支付后 token 过期导致权限判断错误
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { isPremium: true, freeTrialUsed: true },
-    });
+    // 从缓存或数据库获取会员状态 — 60秒缓存减少数据库压力
+    let dbUser = null;
+    const cached = getCachedMemberStatus(session.user.id);
+    if (cached) {
+      dbUser = { isPremium: cached.isPremium, freeTrialUsed: cached.freeTrialUsed };
+    } else {
+      dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { isPremium: true, freeTrialUsed: true },
+      });
+      if (dbUser) {
+        setCachedMemberStatus(session.user.id, {
+          isPremium: dbUser.isPremium,
+          freeTrialUsed: dbUser.freeTrialUsed,
+        });
+      }
+    }
 
     // 用户不存在（JWT 过期/数据库重置后旧 session 仍有效）— 必须拦截
     if (!dbUser) {
@@ -539,8 +552,8 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       }
     }
 
-    // 12. 调用 AI API — 使用 proxyFetch 穿透沙箱代理
-    const aiResponse = await proxyFetch(`${apiUrl}/chat/completions`, {
+    // 12. 调用 AI API — 使用 fetchWithRetry 穿透沙箱代理 + 指数退避重试
+    const aiResponse = await fetchWithRetry(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -550,7 +563,10 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
         model,
         messages: [
           { role: 'system', content: systemPrompt },
-          ...contextMessages,
+          ...contextMessages.map((m) => ({
+            role: m.role,
+            content: m.role === 'user' ? redactPII(m.content) : m.content,
+          })),
         ],
         temperature: 0.7,
         max_tokens: 800,
@@ -577,23 +593,35 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       ? injectChoiceIfMissing(reply)
       : reply;
 
-    // 13. 保存 AI 回复到数据库
-    await prisma.chatMessage.create({
-      data: {
-        chatSessionId,
-        role: 'assistant',
-        content: finalReply,
-        tokensUsed: aiData.usage?.total_tokens,
-        modelUsed: model,
-        hitCardIds: hitCardIds.length ? JSON.stringify(hitCardIds) : null,
-      },
-    });
+    // 13+14. 事务: 保存 AI 回复 + 更新计数 + 扣减免费试用 — 原子操作
+    const trialDecrement = !isPremium && !mentor.isFree
+      ? [prisma.user.update({
+          where: { id: session.user.id },
+          data: { freeTrialUsed: { increment: 1 } },
+        })]
+      : [];
 
-    // 更新会话消息计数
-    await prisma.chatSession.update({
-      where: { id: chatSessionId },
-      data: { messageCount: { increment: 2 } },
-    });
+    await prisma.$transaction([
+      prisma.chatMessage.create({
+        data: {
+          chatSessionId,
+          role: 'assistant',
+          content: finalReply,
+          tokensUsed: aiData.usage?.total_tokens,
+          modelUsed: model,
+          hitCardIds: hitCardIds.length ? JSON.stringify(hitCardIds) : null,
+        },
+      }),
+      prisma.chatSession.update({
+        where: { id: chatSessionId },
+        data: { messageCount: { increment: 2 } },
+      }),
+      ...trialDecrement,
+    ]);
+
+    if (!isPremium && !mentor.isFree) {
+      invalidateMemberCache(session.user.id);
+    }
 
     // 13.5 导师分身聊天：每轮轻量抽取用户档案 + 语义对齐/冲突合并
     if (mentorId !== 'ai-guide') {
@@ -609,14 +637,6 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       } catch (e) {
         console.error('Profile inference failed:', e instanceof Error ? e.message : e);
       }
-    }
-
-    // 14. 非会员扣减免费试用次数 — 免费导师跳过
-    if (!isPremium && !mentor.isFree) {
-      await prisma.user.update({
-        where: { id: session.user.id },
-        data: { freeTrialUsed: { increment: 1 } },
-      });
     }
 
     // 15. 返回回复

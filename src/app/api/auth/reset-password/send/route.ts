@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { method, target } = parsed.data;
+    const { method, target: rawTarget } = parsed.data;
+    const target = method === 'email' ? rawTarget.toLowerCase() : rawTarget;
     const type = method === 'phone' ? 'PHONE_LOGIN' : 'EMAIL_LOGIN';
 
     // 校验格式 & 检查用户是否存在
@@ -54,8 +55,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 生成验证码
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // 生成6位密码学安全随机验证码
+    const { randomInt } = await import('crypto');
+    const code = randomInt(100000, 1000000).toString();
 
     await prisma.verificationCode.deleteMany({
       where: { identifier: target, type, usedAt: null },
@@ -70,10 +72,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 验证码不返回到响应体，开发模式通过 console 查看
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[ResetCode] ${method} ${target}: ${code}`);
+    }
     return NextResponse.json({
       success: true,
       message: method === 'phone' ? '验证码已发送' : '重置邮件已发送',
-      code, // Mock: 生产环境删除
     });
   } catch (error) {
     console.error('Reset send error:', error);

@@ -74,16 +74,50 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          // 验证密码
-          const isValid = await verifyPassword(password, user.passwordHash);
-          if (!isValid) {
+          // 账户锁定检查: 5次失败后锁定15分钟
+          const MAX_ATTEMPTS = 5;
+          const LOCK_DURATION = 15 * 60 * 1000; // 15分钟
+          if (user.lockUntil && user.lockUntil > new Date()) {
+            const remainingMs = user.lockUntil.getTime() - Date.now();
+            const remainingMin = Math.ceil(remainingMs / 60000);
+            console.warn(`[Auth] 账户已锁定，剩余 ${remainingMin} 分钟`, { userId: user.id });
             return null;
           }
 
-          // 更新最后登录时间
+          // 锁定期已过，重置计数
+          if (user.lockUntil && user.lockUntil <= new Date()) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { loginAttempts: 0, lockUntil: null },
+            });
+            user.loginAttempts = 0;
+            user.lockUntil = null;
+          }
+
+          // 验证密码
+          const isValid = await verifyPassword(password, user.passwordHash);
+          if (!isValid) {
+            // 递增失败次数，达到阈值则锁定
+            const newAttempts = user.loginAttempts + 1;
+            const shouldLock = newAttempts >= MAX_ATTEMPTS;
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                loginAttempts: newAttempts,
+                lockUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION) : null,
+              },
+            });
+            return null;
+          }
+
+          // 登录成功: 重置失败计数
           await prisma.user.update({
             where: { id: user.id },
-            data: { lastLoginAt: new Date() },
+            data: {
+              loginAttempts: 0,
+              lockUntil: null,
+              lastLoginAt: new Date(),
+            },
           });
 
           // 返回用户信息 (写入 JWT)
@@ -94,6 +128,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role: user.role,
             isPremium: user.isPremium,
             freeTrialUsed: user.freeTrialUsed,
+            passwordChangedAt: user.passwordChangedAt,
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -112,6 +147,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as any).role;
         token.isPremium = (user as any).isPremium;
         token.freeTrialUsed = (user as any).freeTrialUsed;
+        token.passwordChangedAt = (user as any).passwordChangedAt?.getTime() || null;
       }
 
       // 会话更新时 (如支付成功后 update session)，从数据库重新获取最新状态
@@ -126,8 +162,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               isPremium: true,
               freeTrialUsed: true,
               name: true,
+              passwordChangedAt: true,
             },
           });
+
+          // 密码已重置后旧会话失效 — 返回空对象使 JWT 丢失 id 字段，middleware 自动拒绝
+          if (dbUser?.passwordChangedAt) {
+            const dbChangedAt = dbUser.passwordChangedAt.getTime();
+            const tokenChangedAt = token.passwordChangedAt as number | null;
+            if (tokenChangedAt === null || dbChangedAt > tokenChangedAt) {
+              return {} as any;
+            }
+          }
           if (dbUser) {
             token.role = dbUser.role;
             token.isPremium = dbUser.isPremium;
@@ -172,6 +218,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         '/api/logout',
         '/api/chat', // chat API 自身做权限校验
         '/api/payment/notify', // 微信支付回调 (服务器间调用)
+        '/api/maintenance', // 维护任务 (CRON_SECRET 鉴权)
         '/api/payment/mock-pay', // Mock 支付 (开发环境模拟回调)
       ];
       const isPublicPath = publicPaths.some(

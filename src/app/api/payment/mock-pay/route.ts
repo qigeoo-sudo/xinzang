@@ -9,6 +9,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
 import { isMockMode } from '@/lib/wxpay';
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest) {
       { error: 'Mock 支付仅在开发环境可用' },
       { status: 403 }
     );
+  }
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: '请先登录' }, { status: 401 });
   }
 
   try {
@@ -30,10 +36,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 查找订单
+    // 查找订单并校验归属
     const order = await prisma.paymentOrder.findUnique({
       where: { orderNo },
     });
+
+    if (!order) {
+      return NextResponse.json(
+        { error: '订单不存在' },
+        { status: 404 }
+      );
+    }
+
+    if (order.userId !== session.user.id) {
+      return NextResponse.json({ error: '无权操作此订单' }, { status: 403 });
+    }
 
     if (!order) {
       return NextResponse.json(
@@ -49,6 +66,14 @@ export async function POST(request: NextRequest) {
     if (order.status === 'EXPIRED' || (order.expiredAt && order.expiredAt < new Date())) {
       return NextResponse.json(
         { error: '订单已过期' },
+        { status: 400 }
+      );
+    }
+
+    // 非 PENDING 状态不允许 Mock 支付
+    if (order.status !== 'PENDING') {
+      return NextResponse.json(
+        { error: `订单状态为 ${order.status}，无法支付` },
         { status: 400 }
       );
     }

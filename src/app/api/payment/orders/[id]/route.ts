@@ -53,14 +53,19 @@ export async function GET(
   ) {
     const wxResult = await queryWxPayOrder(order.orderNo);
 
-    if (wxResult.status === 'PAID') {
-      // 微信已支付但回调未到达，主动更新
-      await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
-      return NextResponse.json({
-        ...order,
-        status: 'PAID',
-        transactionId: wxResult.transactionId,
-      });
+    if (wxResult.status === 'PAID' && wxResult.amount) {
+      // 微信已支付但回调未到达，主动更新 — 校验金额一致后才处理
+      const expectedAmountFen = Math.round(Number(order.amount) * 100);
+      if (wxResult.amount === expectedAmountFen) {
+        await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
+        return NextResponse.json({
+          ...order,
+          status: 'PAID',
+          transactionId: wxResult.transactionId,
+        });
+      } else {
+        console.error(`Order ${order.orderNo}: amount mismatch on query (expected=${expectedAmountFen}, got=${wxResult.amount})`);
+      }
     }
   }
 
@@ -94,19 +99,20 @@ async function handlePaymentSuccess(
   const planId = metadata.planId || 'MONTHLY';
   const durationDays = metadata.durationDays || 30;
 
-  // 事务: 更新订单 + 创建订阅 + 更新用户会员状态
-  await prisma.$transaction([
-    // 1. 更新订单状态
-    prisma.paymentOrder.update({
-      where: { id: order.id },
+  // 交互式事务: 先检查 PENDING 状态再创建订阅 — 防止并发重复处理
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.paymentOrder.updateMany({
+      where: { id: order.id, status: 'PENDING' },
       data: {
         status: 'PAID',
         transactionId,
         paidAt: new Date(),
       },
-    }),
-    // 2. 创建订阅记录
-    prisma.subscription.create({
+    });
+
+    if (result.count === 0) return;
+
+    await tx.subscription.create({
       data: {
         userId: order.userId,
         plan: planId,
@@ -115,11 +121,11 @@ async function handlePaymentSuccess(
         endDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
         paymentOrderId: order.id,
       },
-    }),
-    // 3. 更新用户会员状态
-    prisma.user.update({
+    });
+
+    await tx.user.update({
       where: { id: order.userId },
       data: { isPremium: true },
-    }),
-  ]);
+    });
+  });
 }

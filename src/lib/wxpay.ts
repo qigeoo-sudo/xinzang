@@ -43,9 +43,8 @@ export interface WxPayNotifyData {
 
 // ========== 配置 ==========
 
-const isDev = process.env.NODE_ENV === 'development';
-const isMockMode =
-  isDev || !process.env.WXPAY_MCH_ID || !process.env.WXPAY_API_V3_KEY;
+// Mock 模式必须显式开启，防止生产环境配置缺失时静默降级
+const isMockMode = process.env.MOCK_PAYMENT_ENABLED === 'true';
 
 const config = {
   appId: process.env.WXPAY_APP_ID || '',
@@ -53,6 +52,8 @@ const config = {
   apiV3Key: process.env.WXPAY_API_V3_KEY || '',
   serialNo: process.env.WXPAY_SERIAL_NO || '',
   privateKey: process.env.WXPAY_PRIVATE_KEY || '',
+  // 微信支付平台证书公钥（用于验证回调签名，非 API v3 密钥）
+  platformCertPem: process.env.WXPAY_PLATFORM_CERT_PEM || '',
   notifyUrl:
     process.env.WXPAY_NOTIFY_URL ||
     'https://your-domain.com/api/payment/notify',
@@ -198,6 +199,7 @@ export async function createWxPayOrder(
  * 验证微信支付回调签名 (生产环境)
  *
  * 安全: 修复审计 A09-9.1 — 回调必须验签
+ * 修复: 使用 RSA-SHA256 + 微信支付平台公钥验签（非 HMAC + API v3 密钥）
  */
 export function verifyNotifySignature(
   timestamp: string,
@@ -208,24 +210,28 @@ export function verifyNotifySignature(
 ): boolean {
   if (isMockMode) return true; // Mock 模式跳过验签
 
-  // 生产环境: 使用微信支付平台证书验签
-  // 实际实现需要获取微信支付平台证书并验签
-  // 这里预留接口，部署时需配置平台证书
-  if (!config.apiV3Key) return false;
+  // 生产环境: 必须配置微信支付平台证书公钥
+  if (!config.platformCertPem) {
+    console.error('WxPay: WXPAY_PLATFORM_CERT_PEM not configured, cannot verify callback signature');
+    return false;
+  }
 
   try {
-    // 构造验签串
+    // 构造验签串: timestamp\nnonce\nbody\n
     const verifyMessage = `${timestamp}\n${nonce}\n${body}\n`;
 
-    // 注意: 实际验签需要使用微信支付平台公钥
-    // 这里使用 API v3 密钥做简化验证
-    const expectedSignature = crypto
-      .createHmac('sha256', config.apiV3Key)
-      .update(verifyMessage)
-      .digest('base64');
+    // 使用 RSA-SHA256 + 微信支付平台公钥验签
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(verifyMessage);
 
-    return signature === expectedSignature;
-  } catch {
+    // 支持 PEM 格式的平台证书公钥
+    const publicKey = config.platformCertPem.includes('-----BEGIN')
+      ? config.platformCertPem
+      : `-----BEGIN CERTIFICATE-----\n${config.platformCertPem}\n-----END CERTIFICATE-----`;
+
+    return verifier.verify(publicKey, signature, 'base64');
+  } catch (error) {
+    console.error('WxPay signature verification error:', error);
     return false;
   }
 }
@@ -268,6 +274,7 @@ export function decryptNotifyResource(
 export async function queryWxPayOrder(orderNo: string): Promise<{
   status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
   transactionId?: string;
+  amount?: number;
 }> {
   if (isMockMode) {
     // Mock 模式: 从数据库查询状态
@@ -294,6 +301,7 @@ export async function queryWxPayOrder(orderNo: string): Promise<{
       return {
         status: 'PAID',
         transactionId: data.transaction_id,
+        amount: data.amount?.total,
       };
     } else if (data.trade_state === 'NOTPAY' || data.trade_state === 'USERPAYING') {
       return { status: 'PENDING' };

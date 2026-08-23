@@ -11,8 +11,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset",
+    "db:seed": "tsx prisma/seed-mentor-kb.ts",
+    "db:reset:dev": "prisma migrate reset",
     "postinstall": "prisma generate"
   },
   "dependencies": {

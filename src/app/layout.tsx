@@ -9,6 +9,10 @@ export const metadata: Metadata = {
     '通过 AI 导师分身技术，为大学生和职场新人提供真实的职业指导。温暖、有同理心，不说空话套话。',
   applicationName: 'AI Career Companion',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icons/favicon-32x32.png',
+    apple: '/icons/apple-touch-icon-180x180.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
