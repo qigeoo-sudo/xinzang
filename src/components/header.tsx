@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useLanguage } from '@/components/language-context';
 
 // 双语导航标签
@@ -56,7 +56,6 @@ function HeaderInner() {
 
   const handleLogout = async () => {
     try {
-      // 清除所有聊天相关的 localStorage
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -66,8 +65,7 @@ function HeaderInner() {
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
 
-      await fetch('/api/logout');
-      // 强制完整页面刷新，确保服务端重新验证 session
+      await signOut({ redirect: false });
       window.location.href = '/';
     } catch {
       window.location.href = '/';

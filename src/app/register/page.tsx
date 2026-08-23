@@ -348,14 +348,6 @@ function RegisterContent() {
               >
                 {loading ? '注册中...' : '验证并注册'}
               </button>
-
-              <button
-                type="button"
-                onClick={() => { setStep('form'); setError(''); setInfo(''); }}
-                className="w-full text-sm text-muted hover:text-ink transition-colors"
-              >
-                返回修改
-              </button>
             </form>
           )}
 
