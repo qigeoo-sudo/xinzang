@@ -274,6 +274,7 @@ export function decryptNotifyResource(
 export async function queryWxPayOrder(orderNo: string): Promise<{
   status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
   transactionId?: string;
+  amount?: number;
 }> {
   if (isMockMode) {
     // Mock 模式: 从数据库查询状态
@@ -300,6 +301,7 @@ export async function queryWxPayOrder(orderNo: string): Promise<{
       return {
         status: 'PAID',
         transactionId: data.transaction_id,
+        amount: data.amount?.total,
       };
     } else if (data.trade_state === 'NOTPAY' || data.trade_state === 'USERPAYING') {
       return { status: 'PENDING' };
