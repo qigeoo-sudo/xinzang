@@ -189,8 +189,8 @@ export async function GET(request: NextRequest) {
   }
 
   const ip = getClientIP(request);
-  const { success } = rateLimit(`orders-list-${ip}`, 10, 60000);
-  if (!success) {
+  const { allowed } = rateLimit(`orders-list-${ip}`, 10, 60000);
+  if (!allowed) {
     return NextResponse.json({ error: '请求过于频繁' }, { status: 429 });
   }
 
