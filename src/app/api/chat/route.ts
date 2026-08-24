@@ -616,6 +616,15 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       }
     }
 
+    // 敏感词检查 (导师分身) - 直接返回提醒，不调用AI
+    if (mentorId !== 'ai-guide' && containsSensitiveContent(message)) {
+      console.log(`[SENSITIVE] 导师聊天敏感内容检测: mentorId=${mentorId}, message="${message.slice(0, 30)}..."`);
+      return NextResponse.json({
+        reply: '你发送的内容可能包含不合规信息，请重新组织一下句子再发给我吧。',
+        sessionId: chatSessionId,
+      });
+    }
+
     // 检查 API Key 是否配置
     if (!apiKey) {
       console.error('Chat API: Neither DEEPSEEK_API_KEY nor OPENAI_API_KEY is configured');
