@@ -93,6 +93,14 @@ export function CollapsibleText({
             <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-slate-800">
               {renderContent()}
             </div>
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <button
+                onClick={() => setShowFullView(false)}
+                className="w-full py-2.5 rounded-lg bg-slate-100 text-slate-600 text-sm font-medium hover:bg-slate-200 transition-colors"
+              >
+                关闭
+              </button>
+            </div>
           </div>
         </div>
       )}

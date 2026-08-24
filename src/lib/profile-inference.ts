@@ -229,6 +229,8 @@ export async function alignAndMergeInferredProfile(
     select: select as any,
   });
 
+  if (!profile) return;
+
   // 已确认值（主列）
   const confirmed: Record<string, string> = {};
   for (const f of ALIGNABLE_FIELDS) {
@@ -302,6 +304,8 @@ export async function resolveProfileConflict(
     where: { userId },
     select: { inferredProfile: true, profileConflicts: true },
   });
+
+  if (!profile) return;
 
   let conflicts: ProfileConflict[] = [];
   if (profile?.profileConflicts) {

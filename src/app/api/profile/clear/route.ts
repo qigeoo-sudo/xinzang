@@ -28,56 +28,21 @@ export async function POST(request: NextRequest) {
       // 删除档案变更历史
       await prisma.profileHistory.deleteMany({ where: { userId } });
     } else {
-      // 仅清档案字段：记录清空前快照
-      const existingProfile = await prisma.userProfile.findUnique({ where: { userId } });
-      if (existingProfile) {
+      // 仅清档案字段：记录清空前所有 profile 的快照
+      const existingProfiles = await prisma.userProfile.findMany({ where: { userId } });
+      for (const p of existingProfiles) {
         await prisma.profileHistory.create({
           data: {
             userId,
             action: 'clear',
-            snapshot: JSON.stringify(existingProfile),
+            snapshot: JSON.stringify(p),
           },
         });
       }
     }
 
-    // 清空档案字段（两种 scope 都执行：主列 + 推断 + 冲突）
-    await prisma.userProfile.upsert({
-      where: { userId },
-      create: { userId },
-      update: {
-        nickname: null,
-        age: null,
-        status: null,
-        city: null,
-        school: null,
-        major: null,
-        enrollmentYear: null,
-        industry: null,
-        companyType: null,
-        jobSatisfaction: null,
-        gradYears: null,
-        interests: null,
-        goals: null,
-        infoChannels: null,
-        careerSpending: null,
-        careerAnxiety: null,
-        jobChangeStatus: null,
-        helpPriority: null,
-        mentorPreference: null,
-        mentorHelpAreas: null,
-        productInterest: null,
-        productTrigger: null,
-        productConcern: null,
-        willingToPay: null,
-        recommendedMentors: null,
-        preferredMentors: null,
-        lastAiExtractAt: null,
-        profileSource: 'manual',
-        inferredProfile: null,
-        profileConflicts: null,
-      },
-    });
+    // 删除 profile（两种 scope 都执行）
+    await prisma.userProfile.deleteMany({ where: { userId } });
 
     return NextResponse.json({ success: true, scope });
   } catch (error) {

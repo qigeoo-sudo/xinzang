@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -93,6 +93,7 @@ function findMentorByName(name: string) {
   return mentors.find(
     (m) =>
       m.id !== 'ai-guide' &&
+      !m.comingSoon &&
       (m.name === name ||
         m.name.startsWith(name) ||
         name.startsWith(m.name.split(' ')[0]))
@@ -165,6 +166,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const sendingRef = useRef(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
@@ -319,8 +321,32 @@ export function MentorChat({ mentor }: MentorChatProps) {
                     setMessages([]);
                     window.dispatchEvent(new CustomEvent('questionnaireNotCompleted'));
                   } else {
-                    // 数据库确认已完成 — 同步档案数据
+                    // 数据库确认已完成 — 同步档案数据 + 从数据库加载完整聊天记录
                     setProfileData(profile);
+                    fetch(`/api/chat/sessions/latest?mentorId=${mentor.id}`)
+                      .then((res) => (res.ok ? res.json() : null))
+                      .then((data) => {
+                        if (data?.session && data?.messages?.length > 0) {
+                          const dbMessages: ChatMessage[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string }) => ({
+                            id: m.id,
+                            role: m.role as 'user' | 'assistant',
+                            content: m.content,
+                            createdAt: m.createdAt,
+                          }));
+                          setMessages(dbMessages);
+                          setSessionId(data.session.id);
+                          if (session?.user?.id) {
+                            const userId = session.user.id;
+                            const isAi = mentor.id === 'ai-guide';
+                            const aiKeys = isAi ? getAiGuideKeys(userId) : null;
+                            const msgKey = isAi ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
+                            const sidKey = isAi ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
+                            localStorage.setItem(msgKey, JSON.stringify(dbMessages));
+                            localStorage.setItem(sidKey, data.session.id);
+                          }
+                        }
+                      })
+                      .catch(() => {});
                   }
                 })
                 .catch(() => {
@@ -369,10 +395,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
             } catch { /* ignore */ }
             // 通知导航栏锁定
             window.dispatchEvent(new CustomEvent('questionnaireCompleted'));
-
-            // 档案已存在，不需要加载旧问卷对话，直接进入轻量模式
-            setInitialized(true);
-            return;
           }
         }
       } catch {
@@ -380,8 +402,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
         const isCompleted = localStorage.getItem(`ai-guide-completed-${session.user.id}`) === 'true';
         if (isCompleted) {
           setQuestionnaireCompleted(true);
-          setInitialized(true);
-          return;
         }
       }
     }
@@ -497,7 +517,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     }
     const marker = '[QUESTIONNAIRE_COMPLETED]';
     if (content.includes(marker)) {
-      const cleanContent = content.replace(marker, '').trim();
+      const cleanContent = content.replace(/\[QUESTIONNAIRE_COMPLETED\]/gi, '').trim();
       return { content: cleanContent, completed: true };
     }
     return { content, completed: false };
@@ -505,7 +525,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
-    if (!messageText || loading || dailyLimitReached) return;
+    if (!messageText || loading || dailyLimitReached || sendingRef.current) return;
+    sendingRef.current = true;
 
     // 未登录提示
     if (status === 'unauthenticated') {
@@ -695,6 +716,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       setMessages(messages);
       setInput(messageText);
     } finally {
+      sendingRef.current = false;
       setLoading(false);
       inputRef.current?.focus();
     }

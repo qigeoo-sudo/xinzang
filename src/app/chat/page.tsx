@@ -22,7 +22,7 @@ export default function ChatPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <div className="page-container">
+      <div className="page-container pt-14">
         <MentorChat mentor={mentor} />
       </div>
     </div>

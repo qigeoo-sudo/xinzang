@@ -193,9 +193,9 @@ function HeaderInner() {
 
   // 聊天页面：locked 时用 fixed（悬浮在视口顶部，不占文档流）
   // 其他页面：locked 时用 sticky（占文档流，不遮挡内容）
-  const lockedClass = locked
-    ? (pathname === '/chat' ? 'fixed top-0 left-0 right-0' : 'sticky top-0')
-    : '';
+  const lockedClass = pathname === '/chat'
+    ? 'fixed top-0 left-0 right-0 z-50'
+    : 'sticky top-0 z-50';
 
   return (
     <>

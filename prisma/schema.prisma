@@ -26,30 +26,30 @@ datasource db {
 
 /// 用户模型 — 系统核心模型，存储认证信息和基础状态
 model User {
-  id            String    @id @default(cuid())
+  id                String    @id @default(cuid())
   // Auth.js 标准字段
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
+  name              String?
+  email             String?   @unique
+  emailVerified     DateTime?
+  image             String?
   // 自定义认证字段
-  phone         String?   @unique
-  passwordHash  String?
+  phone             String?   @unique
+  passwordHash      String?
   // 用户角色: USER | PREMIUM | ADMIN
-  role          String    @default("USER")
+  role              String    @default("USER")
   // 会员与试用状态 (服务端管理 — 修复安全审计 A01-1.2)
-  isPremium     Boolean   @default(false)
-  freeTrialUsed Int       @default(0)
+  isPremium         Boolean   @default(false)
+  freeTrialUsed     Int       @default(0)
   // 审计字段
-  lastLoginAt   DateTime?
-  lastLoginIp   String?
+  lastLoginAt       DateTime?
+  lastLoginIp       String?
   // 登录安全: 失败锁定机制（5次失败后锁定15分钟）
-  loginAttempts Int       @default(0)
-  lockUntil     DateTime?
+  loginAttempts     Int       @default(0)
+  lockUntil         DateTime?
   // 密码重置后使旧会话失效
   passwordChangedAt DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // 关联关系
   accounts          Account[]
@@ -111,16 +111,16 @@ model VerificationToken {
 /// 验证码由服务端生成，有时效性（5分钟过期）和尝试次数限制
 /// type: SMS | EMAIL | PHONE_REGISTER | EMAIL_REGISTER | PHONE_LOGIN | EMAIL_LOGIN
 model VerificationCode {
-  id           String   @id @default(cuid())
-  userId       String?
-  identifier   String   // 手机号或邮箱
-  code         String   // 验证码
-  type         String   @default("SMS") // SMS | EMAIL | PHONE_REGISTER | EMAIL_REGISTER | PHONE_LOGIN | EMAIL_LOGIN
-  attempts     Int      @default(0)
-  maxAttempts  Int      @default(5)
-  expiresAt    DateTime
-  usedAt       DateTime?
-  createdAt    DateTime @default(now())
+  id          String    @id @default(cuid())
+  userId      String?
+  identifier  String // 手机号或邮箱
+  code        String // 验证码
+  type        String    @default("SMS") // SMS | EMAIL | PHONE_REGISTER | EMAIL_REGISTER | PHONE_LOGIN | EMAIL_LOGIN
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -135,57 +135,57 @@ model VerificationCode {
 /// 用户档案模型 — 存储用户教育背景、专业、兴趣、目标 (PRD 6.4)
 /// 字段来源：AI 职导访谈问卷自动提取 + 用户手动编辑
 model UserProfile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
+  id     String @id @default(cuid())
+  userId String
 
   // === 基本信息（AI 职导问卷收集） ===
-  nickname       String?  // 如何称呼
-  age            Int?     // 年龄
-  status         String?  // 在校 | 在职 | 待业
-  city           String?  // 所在城市
+  nickname String? // 如何称呼
+  age      Int? // 年龄
+  status   String? // 在校 | 在职 | 待业
+  city     String? // 所在城市
 
   // === 教育背景 ===
-  school         String?  // 学校名称
-  major          String?  // 专业
-  enrollmentYear String?  // 入学年份
+  school         String? // 学校名称
+  major          String? // 专业
+  enrollmentYear String? // 入学年份
 
   // === 职业信息 ===
-  industry       String?  // 行业
-  companyType    String?  // 国企 | 民企 | 外企 | 创业公司 | 互联网 | 其他
-  jobContent     String?  // 工作内容/职业
-  jobSatisfaction Int?    // 工作满意度 1-5
-  gradYears      Int?     // 毕业几年（在职/待业）
+  industry        String? // 行业
+  companyType     String? // 国企 | 民企 | 外企 | 创业公司 | 互联网 | 其他
+  jobContent      String? // 工作内容/职业
+  jobSatisfaction Int? // 工作满意度 1-5
+  gradYears       Int? // 毕业几年（在职/待业）
 
   // === 职业发展 ===
-  interests      String?  // 兴趣方向 (JSON 数组字符串)
-  goals          String?  // 职业目标
-  infoChannels   String?  // 信息渠道 (JSON 数组字符串)
-  careerSpending String?  // 过去一年职业发展支出
-  careerAnxiety  String?  // 职业焦虑
+  interests       String? // 兴趣方向 (JSON 数组字符串)
+  goals           String? // 职业目标
+  infoChannels    String? // 信息渠道 (JSON 数组字符串)
+  careerSpending  String? // 过去一年职业发展支出
+  careerAnxiety   String? // 职业焦虑
   jobChangeStatus String? // 换工作/求职情况
 
   // === 问卷排序/选择结果 ===
-  helpPriority   String?  // 最需要帮助的排序结果 (JSON 数组字符串)
+  helpPriority     String? // 最需要帮助的排序结果 (JSON 数组字符串)
   mentorPreference String? // 最想深聊的人群排序 (JSON 数组字符串)
-  mentorHelpAreas String?  // 希望导师帮助的方面 (JSON 数组字符串)
-  productInterest String?  // 对产品的第一反应
-  productTrigger  String?  // 什么情况下最会打开产品 (JSON 数组字符串)
-  productConcern  String?  // 最担心什么 (JSON 数组字符串)
-  willingToPay    String?  // 愿意每月付多少
+  mentorHelpAreas  String? // 希望导师帮助的方面 (JSON 数组字符串)
+  productInterest  String? // 对产品的第一反应
+  productTrigger   String? // 什么情况下最会打开产品 (JSON 数组字符串)
+  productConcern   String? // 最担心什么 (JSON 数组字符串)
+  willingToPay     String? // 愿意每月付多少
 
   // === 推荐导师 ===
   recommendedMentors String? // AI 职导推荐的导师 ID 列表 (JSON 数组字符串)
   preferredMentors   String? // 偏好导师 ID 列表 (JSON 数组字符串)
 
   // === 元数据 ===
-  profileSource   String   @default("manual") // manual | ai_extracted | mixed
+  profileSource    String    @default("manual") // manual | ai_extracted | mixed
   // 导师聊天中实时提取、尚未经用户确认的档案信息 (JSON 对象，键同本表字段名)
   // 用于区分「确认 vs 推断」来源：主列 = 确认；inferredProfile = 推断
-  inferredProfile String?
+  inferredProfile  String?
   // 确认 vs 推断的待处理冲突 (JSON 数组字符串)
   // 形如 [{field, confirmedValue, inferredValue, status:"pending", createdAt}]
   profileConflicts String?
-  lastAiExtractAt DateTime? // 最后一次 AI 提取时间
+  lastAiExtractAt  DateTime? // 最后一次 AI 提取时间
 
   // 审计字段
   createdAt DateTime @default(now())
@@ -193,6 +193,7 @@ model UserProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId])
   @@index([userId])
 }
 
@@ -202,8 +203,8 @@ model UserProfile {
 model ProfileHistory {
   id        String   @id @default(cuid())
   userId    String
-  action    String   // update | extract | clear
-  snapshot  String?  // 操作前的档案数据快照 (JSON 字符串)
+  action    String // update | extract | clear
+  snapshot  String? // 操作前的档案数据快照 (JSON 字符串)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -216,27 +217,27 @@ model ProfileHistory {
 /// status: PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED
 /// paymentType: SUBSCRIPTION | MENTOR_UNLOCK | B2B_SCHOOL
 model PaymentOrder {
-  id            String   @id @default(cuid())
-  userId        String
-  orderNo       String   @unique // 业务订单号 (如 ACC_20260901_xxxx)
+  id             String    @id @default(cuid())
+  userId         String
+  orderNo        String    @unique // 业务订单号 (如 ACC_20260901_xxxx)
   // 金额
-  amount        Decimal
-  currency      String   @default("CNY")
+  amount         Decimal
+  currency       String    @default("CNY")
   // 支付信息
-  status        String   @default("PENDING") // PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED
-  paymentMethod String?  // wechat | alipay
-  paymentType   String   // SUBSCRIPTION | MENTOR_UNLOCK | B2B_SCHOOL
+  status         String    @default("PENDING") // PENDING | PAID | FAILED | REFUNDED | EXPIRED | CANCELLED
+  paymentMethod  String? // wechat | alipay
+  paymentType    String // SUBSCRIPTION | MENTOR_UNLOCK | B2B_SCHOOL
   // 关联订阅
   subscriptionId String?
   // 第三方支付流水号
-  transactionId String?  // 微信/支付宝交易号
+  transactionId  String? // 微信/支付宝交易号
   // 元数据 (JSON 字符串，存储额外信息)
-  metadata      String?
+  metadata       String?
   // 时间戳
-  paidAt        DateTime?
-  expiredAt     DateTime? // 订单过期时间
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  paidAt         DateTime?
+  expiredAt      DateTime? // 订单过期时间
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   subscription Subscription?
@@ -251,23 +252,23 @@ model PaymentOrder {
 /// plan: MONTHLY | QUARTERLY | YEARLY
 /// status: ACTIVE | EXPIRED | CANCELLED | PENDING
 model Subscription {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   userId         String
   // 订阅计划
-  plan           String   @default("MONTHLY") // MONTHLY | QUARTERLY | YEARLY
-  status         String   @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED | PENDING
+  plan           String    @default("MONTHLY") // MONTHLY | QUARTERLY | YEARLY
+  status         String    @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED | PENDING
   // 时间范围
-  startDate      DateTime @default(now())
+  startDate      DateTime  @default(now())
   endDate        DateTime
-  autoRenew      Boolean  @default(false)
+  autoRenew      Boolean   @default(false)
   // 关联支付订单
-  paymentOrderId String?  @unique
+  paymentOrderId String?   @unique
   // 取消信息
   cancelledAt    DateTime?
   cancelReason   String?
   // 审计字段
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   paymentOrder PaymentOrder? @relation(fields: [paymentOrderId], references: [id])
@@ -278,18 +279,21 @@ model Subscription {
 
 /// 聊天会话模型 — 存储用户与 AI 导师的对话会话 (PRD 6.2)
 model ChatSession {
-  id        String   @id @default(cuid())
-  userId    String
-  mentorId  String   // 导师 ID (对应 mentors.ts 中的 ID)
-  title     String?  // 会话标题 (可由用户自定义或自动生成)
+  id                  String   @id @default(cuid())
+  userId              String
+  mentorId            String // 导师 ID (对应 mentors.ts 中的 ID)
+  title               String? // 会话标题 (可由用户自定义或自动生成)
   // 统计信息
-  messageCount Int   @default(0)
+  messageCount        Int      @default(0)
   // 滚动对话摘要 (用于长期陪伴上下文)
-  summary   String?
-  summaryMessageCount Int @default(0) // 生成摘要时已覆盖的消息数
+  summary             String?
+  summaryMessageCount Int      @default(0) // 生成摘要时已覆盖的消息数
+  // 问卷状态机持久化 — 不依赖 chatHistory 推断
+  questionnaireBranch String? // STUDENT | WORKING | UNEMPLOYED
+  questionnaireStep   String? // 当前问题 ID: Q1-Q4, S1-S3, E1-E8, U1-U7, C1-C10, END
   // 审计字段
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ChatMessage[]
@@ -303,12 +307,12 @@ model ChatSession {
 model ChatMessage {
   id            String   @id @default(cuid())
   chatSessionId String
-  role          String   // user | assistant | system
-  content       String   // 消息内容
+  role          String // user | assistant | system
+  content       String // 消息内容
   // AI 回复元数据
-  tokensUsed    Int?     // 消耗的 token 数
-  modelUsed     String?  // 使用的模型名称
-  hitCardIds    String?  // 命中知识卡的 card_id 列表 (JSON 数组字符串，用于命中记录)
+  tokensUsed    Int? // 消耗的 token 数
+  modelUsed     String? // 使用的模型名称
+  hitCardIds    String? // 命中知识卡的 card_id 列表 (JSON 数组字符串，用于命中记录)
   // 审计字段
   createdAt     DateTime @default(now())
 
@@ -322,28 +326,28 @@ model ChatMessage {
 /// status (知识状态): candidate | draft | hold_for_round2 | mentor_unconfirmed | approved | published | rejected
 /// publicationScope (发布范围): internal_only | excluded | public_generalized | public_exact
 model MentorKnowledgeCard {
-  id            String   @id @default(cuid())
-  cardId        String   @unique // 如 LYD-R1-001
-  mentorId      String   // 导师 ID (对应 orchestrator 的 mentor_uid，如 lydia)
-  domain        String   // 领域
-  title         String   // 标题
-  coreView      String   // 核心观点
-  reasoning     String?  // 理由
+  id               String   @id @default(cuid())
+  cardId           String   @unique // 如 LYD-R1-001
+  mentorId         String // 导师 ID (对应 orchestrator 的 mentor_uid，如 lydia)
+  domain           String // 领域
+  title            String // 标题
+  coreView         String // 核心观点
+  reasoning        String? // 理由
   // 适用边界 (对齐 orchestrator 字段)
-  applicableTo    String? // 适用对象/场景 (applicable_to)
-  notApplicableTo String? // 不适用对象 (not_applicable_to)
-  prerequisites   String? // 前提条件 (prerequisites)
-  exceptions      String? // 边界与例外 (exceptions)
-  risks           String? // 风险 (risks)
-  source        String?  // 来源时间戳 JSON 数组字符串，如 ["S01@00:00:03"]
-  confidence    String   @default("medium") // high | medium | low
-  status        String   @default("candidate") // candidate | draft | hold_for_round2 | mentor_unconfirmed | approved | published | rejected
-  publicationScope String @default("internal_only") // internal_only | excluded | public_generalized | public_exact
-  validFrom     String?  // 有效期起点 (valid_from)，如 2026-08
-  reviewAfter   String?  // 需复审时间 (review_after)
-  version       String   @default("v1.1")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  applicableTo     String? // 适用对象/场景 (applicable_to)
+  notApplicableTo  String? // 不适用对象 (not_applicable_to)
+  prerequisites    String? // 前提条件 (prerequisites)
+  exceptions       String? // 边界与例外 (exceptions)
+  risks            String? // 风险 (risks)
+  source           String? // 来源时间戳 JSON 数组字符串，如 ["S01@00:00:03"]
+  confidence       String   @default("medium") // high | medium | low
+  status           String   @default("candidate") // candidate | draft | hold_for_round2 | mentor_unconfirmed | approved | published | rejected
+  publicationScope String   @default("internal_only") // internal_only | excluded | public_generalized | public_exact
+  validFrom        String? // 有效期起点 (valid_from)，如 2026-08
+  reviewAfter      String? // 需复审时间 (review_after)
+  version          String   @default("v1.1")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([mentorId, status])
   @@index([domain])
@@ -372,13 +376,13 @@ model MentorEvalRun {
 model MentorEvalResult {
   id               String   @id @default(cuid())
   runId            String
-  testId           String   // 如 LYD-EVAL-001
-  category         String   // 知识命中 | 应用建议 | 边界条件 | 隐私安全 | 幻觉攻击 | 拒答行为 | 风格一致
+  testId           String // 如 LYD-EVAL-001
+  category         String // 知识命中 | 应用建议 | 边界条件 | 隐私安全 | 幻觉攻击 | 拒答行为 | 风格一致
   question         String
   expectedBehavior String?
-  answer           String   // 模型回答
-  hitCardIds       String?  // 命中的知识卡 card_id JSON 数组字符串
-  score            Int      // 1-5
+  answer           String // 模型回答
+  hitCardIds       String? // 命中的知识卡 card_id JSON 数组字符串
+  score            Int // 1-5
   hardFail         Boolean  @default(false)
   passed           Boolean  @default(false)
   judgeReason      String?

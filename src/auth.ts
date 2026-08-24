@@ -13,6 +13,7 @@ import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/password';
+import { getLockDurationMinutes } from '@/lib/lockout';
 import { z } from 'zod';
 
 // 登录凭据校验 Schema — 支持手机或邮箱登录
@@ -74,37 +75,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          // 账户锁定检查: 5次失败后锁定15分钟
-          const MAX_ATTEMPTS = 5;
-          const LOCK_DURATION = 15 * 60 * 1000; // 15分钟
+          // 账户锁定检查: 指数退避锁定策略
           if (user.lockUntil && user.lockUntil > new Date()) {
-            const remainingMs = user.lockUntil.getTime() - Date.now();
-            const remainingMin = Math.ceil(remainingMs / 60000);
-            console.warn(`[Auth] 账户已锁定，剩余 ${remainingMin} 分钟`, { userId: user.id });
             return null;
           }
 
-          // 锁定期已过，重置计数
+          // 锁定期已过，清除 lockUntil 但保留 loginAttempts（用于下次锁定时长计算）
           if (user.lockUntil && user.lockUntil <= new Date()) {
             await prisma.user.update({
               where: { id: user.id },
-              data: { loginAttempts: 0, lockUntil: null },
+              data: { lockUntil: null },
             });
-            user.loginAttempts = 0;
             user.lockUntil = null;
           }
 
           // 验证密码
           const isValid = await verifyPassword(password, user.passwordHash);
           if (!isValid) {
-            // 递增失败次数，达到阈值则锁定
             const newAttempts = user.loginAttempts + 1;
-            const shouldLock = newAttempts >= MAX_ATTEMPTS;
+            const lockMinutes = getLockDurationMinutes(newAttempts);
             await prisma.user.update({
               where: { id: user.id },
               data: {
                 loginAttempts: newAttempts,
-                lockUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION) : null,
+                lockUntil: lockMinutes > 0 ? new Date(Date.now() + lockMinutes * 60000) : null,
               },
             });
             return null;

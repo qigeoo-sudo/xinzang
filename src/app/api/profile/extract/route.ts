@@ -19,36 +19,37 @@ import { rateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 // AI 提取结果校验 — 限制字段类型和长度
+// 使用 .nullish() 而非 .optional()，因为 AI 会对未提及的字段返回 null
 const extractedProfileSchema = z.object({
-  nickname: z.string().max(50).optional(),
-  age: z.number().int().min(1).max(150).optional(),
-  gender: z.string().max(10).optional(),
-  status: z.string().max(50).optional(),
-  city: z.string().max(100).optional(),
-  industry: z.string().max(100).optional(),
-  jobContent: z.string().max(500).optional(),
-  companyType: z.string().max(50).optional(),
-  jobSatisfaction: z.number().int().min(1).max(5).optional(),
-  gradYears: z.number().int().min(0).max(80).optional(),
-  skills: z.array(z.string().max(100)).max(20).optional(),
-  goals: z.string().max(500).optional(),
-  interests: z.array(z.string().max(100)).max(20).optional(),
-  education: z.string().max(100).optional(),
-  school: z.string().max(100).optional(),
-  major: z.string().max(100).optional(),
-  enrollmentYear: z.string().max(20).optional(),
-  infoChannels: z.array(z.string().max(100)).max(20).optional(),
-  careerSpending: z.string().max(200).optional(),
-  careerAnxiety: z.string().max(500).optional(),
-  jobChangeStatus: z.string().max(200).optional(),
-  helpPriority: z.array(z.string().max(100)).max(20).optional(),
-  mentorPreference: z.array(z.string().max(100)).max(20).optional(),
-  mentorHelpAreas: z.array(z.string().max(100)).max(20).optional(),
-  productInterest: z.string().max(500).optional(),
-  productTrigger: z.array(z.string().max(100)).max(20).optional(),
-  productConcern: z.array(z.string().max(100)).max(20).optional(),
-  willingToPay: z.string().max(100).optional(),
-  recommendedMentors: z.array(z.string().max(100)).max(20).optional(),
+  nickname: z.string().max(50).nullish(),
+  age: z.number().int().min(1).max(150).nullish(),
+  gender: z.string().max(10).nullish(),
+  status: z.string().max(50).nullish(),
+  city: z.string().max(100).nullish(),
+  industry: z.string().max(100).nullish(),
+  jobContent: z.string().max(500).nullish(),
+  companyType: z.string().max(50).nullish(),
+  jobSatisfaction: z.number().int().min(1).max(5).nullish(),
+  gradYears: z.number().int().min(0).max(80).nullish(),
+  skills: z.array(z.string().max(100)).max(20).nullish(),
+  goals: z.string().max(500).nullish(),
+  interests: z.array(z.string().max(100)).max(20).nullish(),
+  education: z.string().max(100).nullish(),
+  school: z.string().max(100).nullish(),
+  major: z.string().max(100).nullish(),
+  enrollmentYear: z.string().max(20).nullish(),
+  infoChannels: z.array(z.string().max(100)).max(20).nullish(),
+  careerSpending: z.string().max(200).nullish(),
+  careerAnxiety: z.string().max(500).nullish(),
+  jobChangeStatus: z.string().max(200).nullish(),
+  helpPriority: z.array(z.string().max(100)).max(20).nullish(),
+  mentorPreference: z.array(z.string().max(100)).max(20).nullish(),
+  mentorHelpAreas: z.array(z.string().max(100)).max(20).nullish(),
+  productInterest: z.string().max(500).nullish(),
+  productTrigger: z.array(z.string().max(100)).max(20).nullish(),
+  productConcern: z.array(z.string().max(100)).max(20).nullish(),
+  willingToPay: z.string().max(100).nullish(),
+  recommendedMentors: z.array(z.string().max(100)).max(20).nullish(),
 }).passthrough();
 
 // API URL 白名单 — 与 chat route 保持一致
@@ -73,6 +74,7 @@ JSON格式：
   "major": "专业（字符串或null）",
   "enrollmentYear": "入学年份（字符串或null，如 2022）",
   "industry": "行业（字符串或null）",
+  "jobContent": "工作内容/职业（字符串或null。问卷第5题'你在什么行业？做什么工作内容？'包含两部分：行业部分填industry，工作内容部分填jobContent）",
   "companyType": "国企|民企|外企|创业公司|互联网|其他（字符串或null）",
   "jobSatisfaction": "工作满意度1-5（整数或null）",
   "gradYears": "毕业几年（整数或null）",
@@ -94,6 +96,7 @@ JSON格式：
 
 注意：
 - nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。
+- jobContent（工作内容）和 industry（行业）是两个独立字段。当问卷问"你在什么行业？做什么工作内容？"时，行业部分提取到 industry，工作内容部分提取到 jobContent。例如用户回答"我在互联网行业做产品经理"，则 industry="互联网"，jobContent="产品经理"。
 - interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
 - 如果用户说了多个兴趣，全部放入数组
 - 排序题按用户给出的排序顺序填入数组
@@ -213,6 +216,7 @@ export async function POST() {
         );
       }
       extracted = validated.data;
+      console.log('Profile extract: nickname=', extracted.nickname, 'status=', extracted.status, 'age=', extracted.age);
     } catch {
       console.error('Failed to parse extracted JSON');
       return NextResponse.json(
@@ -284,26 +288,26 @@ export async function POST() {
           industry: extracted.industry || undefined,
           jobContent: extracted.jobContent || undefined,
           companyType: extracted.companyType || undefined,
-        jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
-        gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
-        interests: arrayToJson(extracted.interests) || undefined,
-        goals: extracted.goals || undefined,
-        infoChannels: arrayToJson(extracted.infoChannels) || undefined,
-        careerSpending: extracted.careerSpending || undefined,
-        careerAnxiety: extracted.careerAnxiety || undefined,
-        jobChangeStatus: extracted.jobChangeStatus || undefined,
-        helpPriority: arrayToJson(extracted.helpPriority) || undefined,
-        mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
-        mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
-        productInterest: extracted.productInterest || undefined,
-        productTrigger: arrayToJson(extracted.productTrigger) || undefined,
-        productConcern: arrayToJson(extracted.productConcern) || undefined,
-        willingToPay: extracted.willingToPay || undefined,
-        recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
-        profileSource: 'ai_extracted',
-        lastAiExtractAt: new Date(),
-      },
-    });
+          jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
+          gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+          interests: arrayToJson(extracted.interests) || undefined,
+          goals: extracted.goals || undefined,
+          infoChannels: arrayToJson(extracted.infoChannels) || undefined,
+          careerSpending: extracted.careerSpending || undefined,
+          careerAnxiety: extracted.careerAnxiety || undefined,
+          jobChangeStatus: extracted.jobChangeStatus || undefined,
+          helpPriority: arrayToJson(extracted.helpPriority) || undefined,
+          mentorPreference: arrayToJson(extracted.mentorPreference) || undefined,
+          mentorHelpAreas: arrayToJson(extracted.mentorHelpAreas) || undefined,
+          productInterest: extracted.productInterest || undefined,
+          productTrigger: arrayToJson(extracted.productTrigger) || undefined,
+          productConcern: arrayToJson(extracted.productConcern) || undefined,
+          willingToPay: extracted.willingToPay || undefined,
+          recommendedMentors: arrayToJson(extracted.recommendedMentors) || undefined,
+          profileSource: 'ai_extracted',
+          lastAiExtractAt: new Date(),
+        },
+      });
     });
 
     return NextResponse.json({

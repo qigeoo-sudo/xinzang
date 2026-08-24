@@ -5,7 +5,7 @@ import { Header } from '@/components/header';
 import { mentors, getAllIndustries } from '@/lib/mentors';
 
 export default function MentorsPage() {
-  // 排除 AI 职导，只展示行业导师
+  // 排除 AI 职导，展示所有行业导师（含未解锁）
   const industryMentors = mentors.filter((m) => m.id !== 'ai-guide');
   const industries = getAllIndustries().filter((i) => i !== '通用');
 

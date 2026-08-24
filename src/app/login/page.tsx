@@ -32,7 +32,13 @@ function LoginForm() {
       });
 
       if (result?.error) {
-        setError('手机号/邮箱或密码不正确');
+        try {
+          const statusRes = await fetch(`/api/auth/login-status?identifier=${encodeURIComponent(identifier)}`);
+          const statusData = await statusRes.json();
+          setError(statusData.message || '手机号/邮箱或密码不正确');
+        } catch {
+          setError('手机号/邮箱或密码不正确');
+        }
       } else if (result?.ok) {
         // 使用完整页面跳转确保 session cookie 生效后再渲染受保护页面
         window.location.href = callbackUrl;

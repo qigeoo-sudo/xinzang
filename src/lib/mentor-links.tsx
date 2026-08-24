@@ -22,7 +22,7 @@ const mentorNameMap = new Map<string, { id: string; name: string }>();
 const mentorIdMap = new Map<string, MentorInfo>();
 
 for (const m of mentors) {
-  if (m.id === 'ai-guide') continue;
+  if (m.id === 'ai-guide' || m.comingSoon) continue;
   mentorNameMap.set(m.name, { id: m.id, name: m.name });
   const firstName = m.name.split(' ')[0];
   if (firstName.length >= 3) {

@@ -130,7 +130,7 @@ AI建议不靠谱太模板化
  * 检测 AI 回复是否应该包含选择题选项，
  * 如果应该包含但 AI 没有输出 [CHOICE] 标签，则追加相应选项块。
  */
-export function injectChoiceIfMissing(reply: string): string {
+export function injectChoiceIfMissing(reply: string, userMessage?: string): string {
   // 如果回复中已有 [CHOICE 标签，不需要注入
   if (reply.includes('[CHOICE')) {
     return reply;
@@ -146,6 +146,13 @@ export function injectChoiceIfMissing(reply: string): string {
     // 匹配条件：回复中包含至少 2 个关键词
     const matchCount = q.keywords.filter((kw) => reply.includes(kw)).length;
     if (matchCount >= 2) {
+      // A4 特殊处理：如果用户已回答状态问题，不再注入状态选择题
+      if (q.id === 'A4' && userMessage) {
+        const statusOptions = ['在校', '在职', '待业'];
+        if (statusOptions.some((opt) => userMessage.includes(opt))) {
+          continue;
+        }
+      }
       // 追加 CHOICE 块到回复末尾
       return reply.trimEnd() + q.choiceBlock;
     }
