@@ -46,8 +46,8 @@ const mentorRegex = new RegExp(
   'g'
 );
 
-// 匹配 [mentor:xxx] 标记
-const mentorTagRegex = /\[mentor:([a-z-]+)\]/g;
+// 匹配 [mentor:xxx] 标记 (case-insensitive)
+const mentorTagRegex = /\[mentor:([a-zA-Z-]+)\]/gi;
 
 /**
  * 从文本中提取 [mentor:xxx] 标记
@@ -58,8 +58,9 @@ export function stripMentorTags(text: string): { cleanText: string; mentors: Men
   let tagMatch: RegExpExecArray | null;
   mentorTagRegex.lastIndex = 0;
   while ((tagMatch = mentorTagRegex.exec(text)) !== null) {
-    if (!mentorIds.includes(tagMatch[1])) {
-      mentorIds.push(tagMatch[1]);
+    const id = tagMatch[1].toLowerCase();
+    if (!mentorIds.includes(id)) {
+      mentorIds.push(id);
     }
   }
 

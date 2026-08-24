@@ -510,19 +510,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
     }
   };
 
-  // 检测问卷完成标记
-  const checkCompletion = (content: string): { content: string; completed: boolean } => {
-    if (mentor.id !== 'ai-guide') {
-      return { content, completed: false };
-    }
-    const marker = '[QUESTIONNAIRE_COMPLETED]';
-    if (content.includes(marker)) {
-      const cleanContent = content.replace(/\[QUESTIONNAIRE_COMPLETED\]/gi, '').trim();
-      return { content: cleanContent, completed: true };
-    }
-    return { content, completed: false };
-  };
-
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
     if (!messageText || loading || dailyLimitReached || sendingRef.current) return;
@@ -639,8 +626,9 @@ export function MentorChat({ mentor }: MentorChatProps) {
         return;
       }
 
-      // 检测问卷完成标记
-      const { content: cleanReply, completed } = checkCompletion(data.reply);
+      // 检测问卷完成 — 后端通过状态机检测，返回 questionnaireCompleted 标志
+      const cleanReply = data.reply;
+      const completed = data.questionnaireCompleted === true;
 
       // 添加 AI 回复
       const finalMessages = [...newMessages, { role: 'assistant' as const, content: cleanReply }];

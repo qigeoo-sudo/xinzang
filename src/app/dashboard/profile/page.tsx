@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
+import { CustomSelect } from '@/components/custom-select';
 
 // JSON 数组字符串解析辅助
 function parseJsonArray(str: string | null | undefined): string[] {
@@ -65,9 +66,9 @@ const CONFLICT_FIELD_LABELS: Record<string, string> = {
   industry: '行业',
   jobContent: '工作内容',
   companyType: '公司类型',
-  gradYears: '毕业年限',
-  goals: '职业目标',
-  interests: '兴趣方向',
+  gradYears: '毕业年份',
+  goals: '更多看法',
+  interests: '爱好倾向',
   careerAnxiety: '职业焦虑',
   jobChangeStatus: '求职/换工作状态',
 };
@@ -101,6 +102,22 @@ const STATUS_LABELS: Record<string, string> = {
   '在职': '在职',
   '待业': '待业',
 };
+
+const ENROLLMENT_YEAR_OPTIONS = [
+  { value: '<2006', label: '2006年以前' },
+  ...Array.from({ length: 21 }, (_, i) => {
+    const y = 2006 + i;
+    return { value: String(y), label: `${y}年` };
+  }),
+];
+
+const GRADUATION_YEAR_OPTIONS = [
+  { value: '<1986', label: '1986年以前' },
+  ...Array.from({ length: 41 }, (_, i) => {
+    const y = 1986 + i;
+    return { value: String(y), label: `${y}年` };
+  }),
+];
 
 export default function ProfilePage() {
   const { data: session, status } = useSession();
@@ -403,7 +420,7 @@ export default function ProfilePage() {
           jobContent: jobContent || undefined,
           companyType: companyType || undefined,
           jobSatisfaction: jobSatisfaction ? parseInt(jobSatisfaction, 10) : undefined,
-          gradYears: gradYears ? parseInt(gradYears, 10) : undefined,
+          gradYears: gradYears || undefined,
           interests: interests ? parseStringArray(interests) : undefined,
           goals: goals || undefined,
           infoChannels: infoChannels ? parseStringArray(infoChannels) : undefined,
@@ -540,12 +557,16 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">当前状态</label>
-                    <select value={userStatus} onChange={(e) => handleStatusChange(e.target.value)} className="input-field">
-                      <option value="">请选择</option>
-                      <option value="在校">在校</option>
-                      <option value="在职">在职</option>
-                      <option value="待业">待业</option>
-                    </select>
+                    <CustomSelect
+                      value={userStatus}
+                      onChange={handleStatusChange}
+                      options={[
+                        { value: '在校', label: '在校' },
+                        { value: '在职', label: '在职' },
+                        { value: '待业', label: '待业' },
+                      ]}
+                      placeholder="请选择"
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-ink mb-1.5">所在城市</label>
@@ -570,7 +591,12 @@ export default function ProfilePage() {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">入学年份</label>
-                      <input type="text" value={enrollmentYear} onChange={(e) => setEnrollmentYear(e.target.value)} placeholder="例如 2022" maxLength={50} className="input-field" />
+                      <CustomSelect
+                        value={enrollmentYear}
+                        onChange={setEnrollmentYear}
+                        options={ENROLLMENT_YEAR_OPTIONS}
+                        placeholder="请选择入学年份"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
@@ -583,13 +609,24 @@ export default function ProfilePage() {
                   </>
                 ) : (
                   <>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">学校</label>
-                      <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">毕业年限</label>
-                      <input type="number" value={gradYears} onChange={(e) => setGradYears(e.target.value)} min="0" max="60" placeholder="毕业几年" className="input-field" />
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-ink mb-1.5">毕业学校</label>
+                        <input type="text" value={school} onChange={(e) => setSchool(e.target.value)} maxLength={100} className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-ink mb-1.5">所学专业</label>
+                        <input type="text" value={major} onChange={(e) => setMajor(e.target.value)} maxLength={100} className="input-field" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-ink mb-1.5">毕业年份</label>
+                        <CustomSelect
+                          value={gradYears}
+                          onChange={setGradYears}
+                          options={GRADUATION_YEAR_OPTIONS}
+                          placeholder="请选择毕业年份"
+                        />
+                      </div>
                     </div>
                   </>
                 )}
@@ -610,11 +647,11 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">所在行业</label>
+                      <label className="block text-sm font-medium text-ink mb-1.5">{isUnemployed ? '曾在行业' : '所在行业'}</label>
                       <input type="text" value={industry} onChange={(e) => setIndustry(e.target.value)} maxLength={50} className="input-field" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">工作内容</label>
+                      <label className="block text-sm font-medium text-ink mb-1.5">{isUnemployed ? '曾工作过' : '工作内容'}</label>
                       <input type="text" value={jobContent} onChange={(e) => setJobContent(e.target.value)} maxLength={200} className="input-field" />
                     </div>
                   </div>
@@ -622,26 +659,34 @@ export default function ProfilePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">企业类型</label>
-                      <select value={companyType} onChange={(e) => setCompanyType(e.target.value)} className="input-field">
-                        <option value="">请选择</option>
-                        <option value="国企">国企</option>
-                        <option value="民企">民企</option>
-                        <option value="外企">外企</option>
-                        <option value="创业公司">创业公司</option>
-                        <option value="互联网">互联网</option>
-                        <option value="其他">其他</option>
-                      </select>
+                      <CustomSelect
+                        value={companyType}
+                        onChange={setCompanyType}
+                        options={[
+                          { value: '国企', label: '国企' },
+                          { value: '民企', label: '民企' },
+                          { value: '外企', label: '外企' },
+                          { value: '创业公司', label: '创业公司' },
+                          { value: '互联网', label: '互联网' },
+                          { value: '其他', label: '其他' },
+                        ]}
+                        placeholder="请选择"
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-ink mb-1.5">工作满意度</label>
-                      <select value={jobSatisfaction} onChange={(e) => setJobSatisfaction(e.target.value)} className="input-field">
-                        <option value="">请选择</option>
-                        <option value="5">5分 非常满意</option>
-                        <option value="4">4分 比较满意</option>
-                        <option value="3">3分 一般</option>
-                        <option value="2">2分 不太满意</option>
-                        <option value="1">1分 非常不满意</option>
-                      </select>
+                      <CustomSelect
+                        value={jobSatisfaction}
+                        onChange={setJobSatisfaction}
+                        options={[
+                          { value: '5', label: '5分 非常满意' },
+                          { value: '4', label: '4分 比较满意' },
+                          { value: '3', label: '3分 一般' },
+                          { value: '2', label: '2分 不太满意' },
+                          { value: '1', label: '1分 非常不满意' },
+                        ]}
+                        placeholder="请选择"
+                      />
                     </div>
                   </div>
                 </div>
@@ -659,15 +704,15 @@ export default function ProfilePage() {
             </div>
             {developmentOpen && (
               <div className="space-y-4">
-                {/* 在校专属：兴趣方向 + 职业目标 */}
+                {/* 在校专属：爱好倾向 + 职业目标 */}
                 {isStudent && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">兴趣方向</label>
+                      <label className="block text-sm font-medium text-ink mb-1.5">爱好倾向</label>
                       <input type="text" value={interests} onChange={(e) => setInterests(e.target.value)} className="input-field" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-ink mb-1.5">职业目标</label>
+                      <label className="block text-sm font-medium text-ink mb-1.5">更多看法</label>
                       <textarea value={goals} onChange={(e) => setGoals(e.target.value)} maxLength={500} rows={2} className="input-field resize-none" />
                     </div>
                   </>

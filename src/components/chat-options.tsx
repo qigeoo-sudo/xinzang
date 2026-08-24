@@ -31,15 +31,15 @@ export function parseChoiceTags(content: string): {
   let match: RegExpExecArray | null;
 
   while ((match = regex.exec(content)) !== null) {
-    // 添加标签前的文本
     if (match.index > lastIndex) {
-      const text = content.slice(lastIndex, match.index).trim();
+      const text = content.slice(lastIndex, match.index)
+        .replace(/\[\/?CHOICE[^\]]*\]/gi, '')
+        .trim();
       if (text) textParts.push(text);
     }
 
     const type = match[1] as 'single' | 'multi' | 'rank';
     const optionsText = match[2].trim();
-    // 按行分割，过滤空行
     const options = optionsText
       .split('\n')
       .map((line) => line.trim())
@@ -49,15 +49,16 @@ export function parseChoiceTags(content: string): {
     lastIndex = regex.lastIndex;
   }
 
-  // 添加最后的文本
   if (lastIndex < content.length) {
-    const text = content.slice(lastIndex).trim();
+    const text = content.slice(lastIndex)
+      .replace(/\[\/?CHOICE[^\]]*\]/gi, '')
+      .trim();
     if (text) textParts.push(text);
   }
 
-  // 如果没有匹配到任何标签，返回整个内容作为文本
   if (choices.length === 0 && textParts.length === 0) {
-    textParts.push(content);
+    const cleaned = content.replace(/\[\/?CHOICE[^\]]*\]/gi, '').trim();
+    if (cleaned) textParts.push(cleaned);
   }
 
   return { textParts, choices };

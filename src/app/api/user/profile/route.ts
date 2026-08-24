@@ -23,7 +23,7 @@ const updateProfileSchema = z.object({
   jobContent: z.string().max(500).optional(),
   companyType: z.string().max(50).optional(),
   jobSatisfaction: z.number().int().min(1).max(5).optional(),
-  gradYears: z.number().int().min(0).max(60).optional(),
+  gradYears: z.string().max(20).optional(),
   interests: z.array(z.string()).max(10).optional(),
   goals: z.string().max(500).optional(),
   infoChannels: z.array(z.string()).optional(),

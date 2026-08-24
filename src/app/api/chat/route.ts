@@ -22,7 +22,7 @@ import { getMentorQuota } from '@/lib/plans';
 import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } from '@/lib/member-cache';
 import { proxyFetch } from '@/lib/proxy-fetch';
 import { fetchWithRetry } from '@/lib/ai-retry';
-import { advanceFromStep, injectChoiceByState, buildStateHint } from '@/lib/questionnaire-state';
+import { advanceFromStep, injectChoiceByState, buildStateHint, extractAnswer, containsSensitiveContent, questions } from '@/lib/questionnaire-state';
 import { redactPII } from '@/lib/ai-privacy';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
@@ -42,6 +42,9 @@ const CONTEXT_MAX_CHARS = 8000;
 
 // 会话锁 — 防止并发重复请求
 const processingSessions = new Set<string>();
+
+// 选择题重试计数 — 同一题连续不匹配选项 2 次后自动跳过
+const choiceRetries = new Map<string, number>();
 
 // 防注入安全规则 — 追加到所有 system prompt 末尾
 const ANTI_INJECTION_PROMPT = `
@@ -402,8 +405,7 @@ export async function POST(request: NextRequest) {
       });
 
       const interviewCompleted =
-        userProfile?.profileSource === 'ai_extracted' ||
-        (userProfile?.nickname != null && userProfile.nickname.length > 0);
+        userProfile?.profileSource === 'ai_extracted';
 
       if (interviewCompleted && userProfile) {
         // 轻量模式：问卷已完成，使用简洁的问答 prompt
@@ -514,26 +516,104 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
 
     // 11.5 状态机: 从数据库持久化 step 推进 (仅 ai-guide)
     let currentQuestion = null;
+    let questionnaireCompleted = false;
     if (mentorId === 'ai-guide') {
-      const result = advanceFromStep(sessionStep, message, sessionBranch);
-      currentQuestion = result.question;
-      const nextStep = result.question.id;
-      const nextBranch = result.branch || sessionBranch;
+      const isSensitive = containsSensitiveContent(message);
+      console.log(`[STATE] 输入: sessionStep="${sessionStep}", sessionBranch="${sessionBranch}", message="${message.slice(0, 30)}...", sensitive=${isSensitive}`);
 
-      // 保存 next step + branch 到 session
-      await prisma.chatSession.update({
-        where: { id: chatSessionId },
-        data: {
-          questionnaireStep: nextStep,
-          ...(nextBranch ? { questionnaireBranch: nextBranch } : {}),
-        },
-      });
-
-      // 注入状态机指令到 system prompt
-      if (currentQuestion) {
+      if (isSensitive) {
+        // 敏感内容: 不推进状态机，保持当前问题
+        currentQuestion = questions[sessionStep || 'Q1'] || questions.Q1;
         systemPrompt += buildStateHint(currentQuestion);
+        systemPrompt += `\n\n# 敏感内容提醒\n用户输入的内容包含不合规信息（色情、暴力、辱骂或违法内容）。请礼貌地告知用户该内容不合适，请重新输入，或回复"跳过"以跳过此题。不要复述用户输入的内容。`;
+      } else {
+        // 正常流程
+        const result = advanceFromStep(sessionStep, message, sessionBranch);
+        currentQuestion = result.question;
+        const nextBranch = result.branch || sessionBranch;
+        const stayedOnSameStep = result.question.id === sessionStep;
+
+        // 选择题不匹配处理: 第一次保持当前题+提醒，第二次跳过
+        if (stayedOnSameStep && currentQuestion.type !== 'open' && currentQuestion.options) {
+          const retries = (choiceRetries.get(chatSessionId) || 0) + 1;
+          choiceRetries.set(chatSessionId, retries);
+          console.log(`[STATE] 选择题不匹配: step=${sessionStep}, retry=${retries}`);
+
+          if (retries >= 2) {
+            // 第二次: 强制跳过到下一题
+            choiceRetries.delete(chatSessionId);
+            const skipQ = currentQuestion;
+            const skipNext = skipQ.nextId ? questions[skipQ.nextId] : questions.END;
+            currentQuestion = skipNext;
+            if (skipNext.isLast) questionnaireCompleted = true;
+            console.log(`[STATE] 跳过选择题: ${sessionStep} → ${skipNext.id}`);
+
+            try {
+              await prisma.chatSession.update({
+                where: { id: chatSessionId },
+                data: {
+                  questionnaireStep: skipNext.id,
+                  ...(nextBranch ? { questionnaireBranch: nextBranch } : {}),
+                },
+              });
+            } catch (dbErr) {
+              console.error('[STATE] 保存失败:', dbErr);
+            }
+
+            if (currentQuestion) {
+              systemPrompt += buildStateHint(currentQuestion);
+            }
+            systemPrompt += `\n\n# 跳过提醒\n用户已连续两次未选择选项，系统已自动跳过该题。不要提及跳过的事，直接问当前问题。`;
+          } else {
+            // 第一次: 保持当前题，提醒用户选择
+            systemPrompt += buildStateHint(currentQuestion);
+            systemPrompt += `\n\n# 选项提醒\n用户没有选择选项而是输入了文字。请先简要回答用户的问题（不超过50字），然后告知用户这道题需要选择选项后才能继续。系统会自动呈现选项。不要跳到下一个问题。`;
+          }
+        } else {
+          // 正常推进
+          choiceRetries.delete(chatSessionId);
+          const nextStep = result.question.id;
+          if (result.question.isLast) questionnaireCompleted = true;
+          console.log(`[STATE] 输出: nextStep="${nextStep}", nextBranch="${nextBranch}", question="${currentQuestion?.text?.slice(0, 30)}...", completed=${questionnaireCompleted}`);
+
+          try {
+            await prisma.chatSession.update({
+              where: { id: chatSessionId },
+              data: {
+                questionnaireStep: nextStep,
+                ...(nextBranch ? { questionnaireBranch: nextBranch } : {}),
+              },
+            });
+            console.log(`[STATE] 保存成功: step=${nextStep}, branch=${nextBranch}`);
+          } catch (dbErr) {
+            console.error('[STATE] 保存失败:', dbErr);
+          }
+
+          // 硬逻辑: 用户答案直接映射到 UserProfile 字段
+          const extracted = extractAnswer(sessionStep, message);
+          if (extracted) {
+            try {
+              await prisma.userProfile.upsert({
+                where: { userId: session.user.id },
+                update: { [extracted.field]: extracted.dbValue },
+                create: { userId: session.user.id, [extracted.field]: extracted.dbValue },
+              });
+              console.log(`[HARD MAP] step=${sessionStep}, field=${extracted.field}, value=${typeof extracted.dbValue === 'string' ? extracted.dbValue.slice(0, 50) : extracted.dbValue}`);
+            } catch (dbErr) {
+              console.error('[HARD MAP] 写入失败:', dbErr);
+            }
+          }
+
+          if (currentQuestion) {
+            systemPrompt += buildStateHint(currentQuestion);
+          }
+
+          // Q1 特殊处理: 告知 AI 称呼已记录，不要解读字面含义
+          if (sessionStep === 'Q1') {
+            systemPrompt += `\n\n# 称呼记录\n用户称呼已通过系统记录。不要解读用户回答的字面含义，不要把回答当成行业、产品或设备。直接问下一题。`;
+          }
+        }
       }
-      console.log(`[STATE MACHINE] step=${sessionStep}, next=${nextStep}, branch=${nextBranch}, Q=${currentQuestion?.id}`);
     }
 
     // 检查 API Key 是否配置
@@ -703,6 +783,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       reply: finalReply,
       sessionId: chatSessionId,
       degraded: false,
+      questionnaireCompleted,
       freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed - 1,
       dailyMessageCount: mentorId === 'ai-guide' ? dailyMessageCount + 1 : undefined,
       dailyMessageLimit: mentorId === 'ai-guide' ? DAILY_MESSAGE_LIMIT : undefined,

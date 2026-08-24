@@ -30,7 +30,7 @@ const extractedProfileSchema = z.object({
   jobContent: z.string().max(500).nullish(),
   companyType: z.string().max(50).nullish(),
   jobSatisfaction: z.number().int().min(1).max(5).nullish(),
-  gradYears: z.number().int().min(0).max(80).nullish(),
+  gradYears: z.union([z.string().max(20), z.number().int().min(1900).max(2030)]).nullish(),
   skills: z.array(z.string().max(100)).max(20).nullish(),
   goals: z.string().max(500).nullish(),
   interests: z.array(z.string().max(100)).max(20).nullish(),
@@ -66,37 +66,40 @@ const EXTRACT_PROMPT = `你是一个信息提取助手。以下是一段用户�
 
 JSON格式：
 {
-  "nickname": "用户称呼（字符串或null）",
-  "age": "年龄（整数或null。如果对话中未提及年龄，必须返回null，不要返回0）",
-  "status": "在校|在职|待业（字符串或null）",
-  "city": "所在城市（字符串或null）",
-  "school": "学校名称（字符串或null）",
-  "major": "专业（字符串或null）",
-  "enrollmentYear": "入学年份（字符串或null，如 2022）",
-  "industry": "行业（字符串或null）",
-  "jobContent": "工作内容/职业（字符串或null。问卷第5题'你在什么行业？做什么工作内容？'包含两部分：行业部分填industry，工作内容部分填jobContent）",
-  "companyType": "国企|民企|外企|创业公司|互联网|其他（字符串或null）",
-  "jobSatisfaction": "工作满意度1-5（整数或null）",
-  "gradYears": "毕业几年（整数或null）",
+  "nickname": "用户称呼（字符串或null）。问卷Q1问'你叫什么名字'，用户回答的内容就是nickname",
+  "age": "年龄（整数或null。问卷Q2问'今年多大了'。如果对话中未提及年龄，必须返回null，不要返回0）",
+  "status": "在校|在职|待业（字符串或null）。问卷Q4问'目前你的状态是'，用户选择的选项",
+  "city": "所在城市（字符串或null）。问卷Q3问'你在哪个城市'",
+  "school": "毕业学校名称（字符串或null）。在校问卷S2问'什么学校'，在职问卷E3和待业问卷U2问'你毕业于哪个学校'",
+  "major": "专业（字符串或null）。在校问卷S2、在职问卷E3、待业问卷U2都问'学什么专业'",
+  "enrollmentYear": "入学年份（字符串或null）。在校问卷S1问'你是哪一年入学的'，如2022",
+  "industry": "行业（字符串或null）。在职问卷E1问'你在什么行业'，待业问卷U1问'之前做什么工作'（曾从事的行业）",
+  "jobContent": "工作内容/职业（字符串或null）。在职问卷E1问'做什么工作内容'，待业问卷U1问'之前做什么工作'（曾做的工作内容）",
+  "companyType": "国企|民企|外企|创业公司|互联网|其他（字符串或null）。在职问卷E2问'你所在的公司是什么类型'，待业问卷U4问'之前的公司是什么类型'",
+  "jobSatisfaction": "工作满意度1-5（整数或null）。在职问卷E6问'对现在的工作满意吗'，根据用户回答推断：很满意=5，满意=4，一般=3，不太满意=2，很不满意=1",
+  "gradYears": "毕业年份（字符串或null）。在职问卷E4和待业问卷U3问'哪年毕业的'，如2019",
   "interests": ["兴趣方向数组"],
-  "goals": "职业目标（字符串或null）",
-  "infoChannels": ["信息渠道数组"],
-  "careerSpending": "职业发展支出（字符串或null）",
-  "careerAnxiety": "职业焦虑（字符串或null）",
-  "jobChangeStatus": "换工作/求职情况（字符串或null）",
-  "helpPriority": ["最需要帮助的排序列表"],
-  "mentorPreference": ["最想深聊的人群排序列表"],
-  "mentorHelpAreas": ["希望导师帮助的方面数组"],
-  "productInterest": "对产品的第一反应（字符串或null）",
-  "productTrigger": ["什么情况下打开产品的数组"],
-  "productConcern": ["最担心什么的数组"],
-  "willingToPay": "愿意每月付多少（字符串或null）",
+  "goals": "目标/看法（字符串或null）。在校问卷S3问'喜欢这个专业吗'+追问，记录喜欢/不喜欢的理由和观点；待业问卷U7问'接下来想找什么方向的工作'，记录求职方向",
+  "infoChannels": ["信息渠道数组。问卷C2问'平时从哪里获取职业信息'，选项：小红书/抖音/B站/知乎/微信公众号/学校就业中心/朋友或同学推荐/招聘平台/其他"],
+  "careerSpending": "过去一年在职业发展上的花费（字符串或null）。问卷C3问：过去一年在简历修改、面试辅导、职业咨询、付费课程、付费社群、考证培训等花了多少钱。提取用户回答的金额或描述。",
+  "careerAnxiety": "职业困扰（字符串或null）。问卷C1问'目前你在找工作方面遇到的最大困扰是什么'",
+  "jobChangeStatus": "最近六个月求职情况（字符串或null）。问卷U6问'最近六个月有没有认真找过工作'，选项：一直在找/断断续续在找/最近开始找/还没开始找",
+  "helpPriority": ["最需要帮助的场景（数组）。问卷C4是单选题'以下哪一种场景是你最需要帮助的场景'，把用户选择的场景放入数组"],
+  "mentorPreference": ["最想深聊的人群类型（数组）。问卷C5是单选题'你最想和以下哪类人深聊'，选项：资深HR/同行业前辈/跨行业年轻职场人/职业规划师，把用户选择的放入数组"],
+  "mentorHelpAreas": ["希望导师帮助的方面数组。问卷C6多选题'你希望导师在哪些方面给你最多帮助'，选项：帮我看清自己适合什么/告诉我行业岗位的真实情况/教我具体的求职技巧/受挫时给鼓励复盘或帮我做具体决策/其他"],
+  "productInterest": "对产品的第一反应（字符串或null）。问卷C7问'你对AI Career Companion的第一反应是什么'，选项：很感兴趣一定会试用/有点兴趣可能会试用/不太感兴趣可能不会试用/完全没兴趣",
+  "productTrigger": ["什么情况下打开产品的数组。问卷C8多选题'什么情况下最会打开这个产品'，选项：遇到新的职业问题时/收到推送提醒时/朋友推荐时/其他"],
+  "productConcern": ["最担心什么的数组。问卷C9多选题'你最担心什么'，选项：AI建议不靠谱太模板化/隐私泄露对话内容被看到/不如跟真人聊/导师是假的不是真人经验/用了没什么实际帮助/其他"],
+  "willingToPay": "愿意每月付多少（字符串或null）。问卷C10问'如果试用期结束后需要付费你愿意每月付多少'，选项：不愿意付费/10元以内每月/10到30元每月/30到50元每月/50到100元每月/100元以上每月",
   "recommendedMentors": ["推荐的导师名字数组"]
 }
 
 注意：
 - nickname 是用户在对话中自我介绍的称呼。对话开头AI会问"你叫什么名字"，用户回答的内容就是 nickname。务必提取，即使用户用了昵称、英文名或非正式称呼也要提取。
 - jobContent（工作内容）和 industry（行业）是两个独立字段。当问卷问"你在什么行业？做什么工作内容？"时，行业部分提取到 industry，工作内容部分提取到 jobContent。例如用户回答"我在互联网行业做产品经理"，则 industry="互联网"，jobContent="产品经理"。
+- 如果用户回答用逗号、顿号、斜杠/、&、空格或多个空格简短分隔（如"插画，布展"、"设计/运营"、"销售 & 市场"、"教育  培训"），前半部分是行业，后半部分是工作内容。
+- 如果没有明显分隔符但语义可分（如"冶金我负责锻造"、"餐饮主要做后厨管理"），前面行业领域词是 industry，后面动作/职责描述是 jobContent。行业领域词的特征：是一个领域/行业名称（如冶金、餐饮、互联网、教育、金融、医疗、设计、销售、市场、运营、HR、人力资源、技术、研发等）。工作内容的特征：描述具体做什么事，常含"做"、"负责"、"管"、"搞"等动词。
+- 实在无法区分时，整个回答放入 industry，jobContent 留空。
 - interests, infoChannels, helpPriority, mentorPreference, mentorHelpAreas, productTrigger, productConcern, recommendedMentors 是数组
 - 如果用户说了多个兴趣，全部放入数组
 - 排序题按用户给出的排序顺序填入数组
@@ -216,7 +219,9 @@ export async function POST() {
         );
       }
       extracted = validated.data;
-      console.log('Profile extract: nickname=', extracted.nickname, 'status=', extracted.status, 'age=', extracted.age);
+      console.log('Profile extract: nickname=', extracted.nickname, 'status=', extracted.status, 'age=', extracted.age,
+        'careerSpending=', extracted.careerSpending, 'goals=', extracted.goals, 'careerAnxiety=', extracted.careerAnxiety,
+        'willingToPay=', extracted.willingToPay, 'infoChannels=', extracted.infoChannels);
     } catch {
       console.error('Failed to parse extracted JSON');
       return NextResponse.json(
@@ -258,7 +263,7 @@ export async function POST() {
           jobContent: extracted.jobContent || undefined,
           companyType: extracted.companyType || undefined,
           jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
-          gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+          gradYears: extracted.gradYears != null ? String(extracted.gradYears) : undefined,
           interests: arrayToJson(extracted.interests) || undefined,
           goals: extracted.goals || undefined,
           infoChannels: arrayToJson(extracted.infoChannels) || undefined,
@@ -289,7 +294,7 @@ export async function POST() {
           jobContent: extracted.jobContent || undefined,
           companyType: extracted.companyType || undefined,
           jobSatisfaction: typeof extracted.jobSatisfaction === 'number' ? extracted.jobSatisfaction : undefined,
-          gradYears: typeof extracted.gradYears === 'number' ? extracted.gradYears : undefined,
+          gradYears: extracted.gradYears != null ? String(extracted.gradYears) : undefined,
           interests: arrayToJson(extracted.interests) || undefined,
           goals: extracted.goals || undefined,
           infoChannels: arrayToJson(extracted.infoChannels) || undefined,
