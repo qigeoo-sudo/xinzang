@@ -170,8 +170,17 @@ export interface AssemblyContext {
 }
 
 /**
+ * 从人格 Prompt 中提取第一段（身份核心），用于顶部锚点
+ */
+function extractPersonaAnchor(persona: string): string {
+  const firstBlock = persona.split('\n\n')[0] || '';
+  return firstBlock.trim();
+}
+
+/**
  * 组装最终 System Prompt：
- * 平台硬约束 → 导师人格 → 专业知识总调度（注入变量）
+ * 人格顶部锚点 → 平台硬约束 → 导师人格 → 专业知识总调度 → 人格底部锚定
+ * 利用首尾效应（primacy + recency）对抗长对话人格衰减
  */
 export function assembleSystemPrompt(ctx: AssemblyContext): string {
   const orchestrator = ORCHESTRATOR_TEMPLATE
@@ -184,7 +193,25 @@ export function assembleSystemPrompt(ctx: AssemblyContext): string {
     .replaceAll('{{conversation_summary}}', ctx.conversationSummary)
     .replaceAll('{{retrieved_knowledge_cards}}', ctx.retrievedCardsText);
 
-  let prompt = PLATFORM_CONSTRAINTS_PROMPT + '\n\n' + ctx.persona + '\n\n' + orchestrator;
+  const personaAnchor = extractPersonaAnchor(ctx.persona);
+
+  const bottomAnchor = `【人格校准】
+输出前最后确认：你是 ${ctx.mentorName} 的 AI 分身，你的回答必须符合她的说话风格和核心判断。
+- 是不是她的声音？（温暖、直接、有锋芒、不客套、不滑向通用助手）
+- 有没有用她会用的表达方式？（自然的英文词、不打太极、落到行动）
+- 有没有出现她绝不会说的话？（套话结尾、鸡汤口号、表演式"直接"）
+如果不对，重新组织语言，保持内容不变，只换说法。`;
+
+  let prompt =
+    personaAnchor +
+    '\n\n' +
+    PLATFORM_CONSTRAINTS_PROMPT +
+    '\n\n' +
+    ctx.persona +
+    '\n\n' +
+    orchestrator +
+    '\n\n' +
+    bottomAnchor;
 
   if (ctx.testMode) {
     prompt +=
