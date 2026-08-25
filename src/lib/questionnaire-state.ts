@@ -369,7 +369,7 @@ export function advanceFromStep(
     for (const fu of sortedFollowUp) {
       if (fu.match === '__multi__') continue;
       if (userAnswer.includes(fu.match)) {
-        const originalIndex = currentQ.followUp.indexOf(fu);
+        const originalIndex: number = currentQ.followUp.indexOf(fu);
         const followUpId = currentQ.id + '_F' + (originalIndex + 1);
         if (questions[followUpId]) {
           return { question: questions[followUpId] };

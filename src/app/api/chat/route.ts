@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 聊天 API — P0-3 安全修订
  * POST /api/chat
  *
@@ -45,6 +45,7 @@ const processingSessions = new Set<string>();
 
 // 选择题重试计数 — 同一题连续不匹配选项 2 次后自动跳过
 const choiceRetries = new Map<string, number>();
+const q4Retries = new Map<string, number>();
 
 // 防注入安全规则 — 追加到所有 system prompt 末尾
 const ANTI_INJECTION_PROMPT = `
@@ -127,7 +128,7 @@ function renderUserProfile(p: {
   industry?: string | null;
   jobContent?: string | null;
   companyType?: string | null;
-  gradYears?: number | null;
+  gradYears?: string | null;
   interests?: string | null;
   goals?: string | null;
   careerAnxiety?: string | null;
@@ -148,7 +149,7 @@ function renderUserProfile(p: {
   if (p.industry) parts.push(`行业: ${p.industry}`);
   if (p.jobContent) parts.push(`工作内容: ${p.jobContent}`);
   if (p.companyType) parts.push(`公司类型: ${p.companyType}`);
-  if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}年`);
+  if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}`);
   if (p.interests) parts.push(`兴趣方向: ${prettyArray(p.interests)}`);
   if (p.goals) parts.push(`职业目标: ${p.goals}`);
   if (p.careerAnxiety) parts.push(`职业焦虑: ${p.careerAnxiety}`);
@@ -517,6 +518,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
     // 11.5 状态机: 从数据库持久化 step 推进 (仅 ai-guide)
     let currentQuestion = null;
     let questionnaireCompleted = false;
+    let redirectHome = false;
     if (mentorId === 'ai-guide') {
       const isSensitive = containsSensitiveContent(message);
       console.log(`[STATE] 输入: sessionStep="${sessionStep}", sessionBranch="${sessionBranch}", message="${message.slice(0, 30)}...", sensitive=${isSensitive}`);
@@ -533,8 +535,38 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
         const nextBranch = result.branch || sessionBranch;
         const stayedOnSameStep = result.question.id === sessionStep;
 
-        // 选择题不匹配处理: 第一次保持当前题+提醒，第二次跳过
-        if (stayedOnSameStep && currentQuestion.type !== 'open' && currentQuestion.options) {
+        // Q4 分支题不匹配处理: 3轮×5次循环，第15次放弃并返回首页
+        if (stayedOnSameStep && sessionStep === 'Q4') {
+          const q4Count = (q4Retries.get(chatSessionId) || 0) + 1;
+          q4Retries.set(chatSessionId, q4Count);
+          const cycle = Math.ceil(q4Count / 5);
+          const posInCycle = ((q4Count - 1) % 5) + 1;
+          console.log(`[STATE] Q4不匹配: count=${q4Count}, cycle=${cycle}, posInCycle=${posInCycle}`);
+
+          systemPrompt += buildStateHint(currentQuestion);
+
+          if (posInCycle === 5) {
+            if (cycle < 3) {
+              // 第5、10次: 榨不出，但继续循环
+              systemPrompt += `\n\n# Q4循环提醒\n用户连续${q4Count}次未选择状态。请用榨职机的口吻说：「看来本机榨不出你目前状态啊，失败，但你不回答，本机也不会放过你，我就在这里随时等你回答。」然后再次问当前问题。不要跳到其他问题。`;
+            } else {
+              // 第15次: 承认失败，返回首页
+              q4Retries.delete(chatSessionId);
+              redirectHome = true;
+              systemPrompt += `\n\n# Q4放弃\n用户连续${q4Count}次未选择状态。请用榨职机的口吻说：「本机承认输给你了，我们返回首页吧。」不要问任何问题，不要追加选项。`;
+            }
+          } else {
+            // 第1-4、6-9、11-14次: 略有变化的调皮提醒
+            const hints = [
+              `用户输入的内容跟状态选择无关。用榨职机的口吻，简短回一句有趣的话（不超过30字），然后说：选一个吧——在校、在职、待业。不要跳到其他问题。`,
+              `用户又在捣乱。换一种说法，简短回一句（不超过30字），再提醒选在校、在职或待业。不要跳到其他问题。`,
+              `用户继续不选。用不同的措辞再回一句（不超过30字），坚持让用户选在校、在职或待业。不要跳到其他问题。`,
+              `用户还是不选。最后再回一句不一样的（不超过30字），提醒这是状态选择题。不要跳到其他问题。`,
+            ];
+            systemPrompt += `\n\n# Q4选项提醒\n${hints[posInCycle - 1]}`;
+          }
+        } else if (stayedOnSameStep && currentQuestion.type !== 'open' && currentQuestion.options) {
+          // 其他选择题不匹配处理: 第一次保持当前题+提醒，第二次跳过
           const retries = (choiceRetries.get(chatSessionId) || 0) + 1;
           choiceRetries.set(chatSessionId, retries);
           console.log(`[STATE] 选择题不匹配: step=${sessionStep}, retry=${retries}`);
@@ -616,9 +648,9 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       }
     }
 
-    // 敏感词检查 (导师分身) - 直接返回提醒，不调用AI
-    if (mentorId !== 'ai-guide' && containsSensitiveContent(message)) {
-      console.log(`[SENSITIVE] 导师聊天敏感内容检测: mentorId=${mentorId}, message="${message.slice(0, 30)}..."`);
+    // 敏感词检查 (所有导师+榨职机) - 直接返回提醒，不调用AI
+    if (containsSensitiveContent(message)) {
+      console.log(`[SENSITIVE] 敏感内容检测: mentorId=${mentorId}, message="${message.slice(0, 30)}..."`);
       return NextResponse.json({
         reply: '你发送的内容可能包含不合规信息，请重新组织一下句子再发给我吧。',
         sessionId: chatSessionId,
@@ -723,8 +755,8 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       aiData.choices?.[0]?.message?.content || '抱歉，我没有理解你的问题。'
     );
 
-    // P0: 服务端自动注入 CHOICE 标签 — 状态机驱动（仅 ai-guide）
-    let finalReply = mentorId === 'ai-guide' && currentQuestion
+    // P0: 服务端自动注入 CHOICE 标签 — 状态机驱动（仅 ai-guide，非Q4放弃场景）
+    let finalReply = mentorId === 'ai-guide' && currentQuestion && !redirectHome
       ? injectChoiceByState(reply, currentQuestion)
       : reply;
 
@@ -793,6 +825,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       sessionId: chatSessionId,
       degraded: false,
       questionnaireCompleted,
+      redirectHome,
       freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed - 1,
       dailyMessageCount: mentorId === 'ai-guide' ? dailyMessageCount + 1 : undefined,
       dailyMessageLimit: mentorId === 'ai-guide' ? DAILY_MESSAGE_LIMIT : undefined,

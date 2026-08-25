@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -629,6 +629,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       // 检测问卷完成 — 后端通过状态机检测，返回 questionnaireCompleted 标志
       const cleanReply = data.reply;
       const completed = data.questionnaireCompleted === true;
+      const shouldRedirectHome = data.redirectHome === true;
 
       // 添加 AI 回复
       const finalMessages = [...newMessages, { role: 'assistant' as const, content: cleanReply }];
@@ -636,6 +637,14 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       // 保存到 localStorage — 所有导师都保存
       saveMessages(finalMessages, data.sessionId || sessionId);
+
+      // Q4 连续15次不匹配：2秒后返回首页
+      if (shouldRedirectHome) {
+        setTimeout(() => {
+          router.push('/');
+        }, 2000);
+        return;
+      }
 
       // 如果问卷完成，触发事件
       if (completed && !questionnaireCompleted) {
@@ -979,8 +988,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
-        {/* 免费次数用完 — 会员引导 */}
-        {usageLimit !== null && usageUsed >= usageLimit && (
+        {/* 免费次数用完 — 会员引导（仅导师分身） */}
+        {mentor.id !== 'ai-guide' && usageLimit !== null && usageUsed >= usageLimit && (
           <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
             免费次数用完，成为
             <Link
