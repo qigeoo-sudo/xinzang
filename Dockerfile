@@ -21,9 +21,10 @@ RUN npx prisma generate
 RUN npx prisma db push --skip-generate
 RUN npm run build
 
-# 生成生产数据库（含 schema）
+# 生成生产数据库（含 schema + 知识卡 seed）
 RUN mkdir -p /app/data \
- && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate
+ && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate \
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-mentor-kb.ts
 
 # ===== Stage 3: runner =====
 FROM node:20-alpine AS runner
@@ -62,15 +63,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/src/generated/prisma ./src/genera
 # bcryptjs — 外部化后需要单独复制
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modules/bcryptjs
 
-# Prisma schema（运行时可能需要）
+# Prisma schema + 知识卡数据（启动时自动 seed 需要）
 COPY --from=builder /app/prisma ./prisma
 
-# Prisma CLI — 用于生产环境手动执行 schema 更新（不自动执行）
+# Prisma CLI + tsx — 用于启动时 db push 和知识卡 seed（幂等）
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
+COPY --from=builder /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
+COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
 
-# 复制已初始化 schema 的生产数据库
+# 复制已初始化 schema + 知识卡的生产数据库
 RUN mkdir -p /app/data
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
+
+# 启动脚本（db push + seed + 启动服务）
+COPY --from=builder /app/startup.sh ./startup.sh
+RUN chmod +x ./startup.sh
 
 # 确保数据目录可写
 RUN chown -R nextjs:nodejs /app/data
@@ -79,4 +87,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "if [ -z \"$AUTH_SECRET\" ]; then echo 'FATAL: AUTH_SECRET is not set. Set it in CloudBase console environment variables.'; exit 1; fi && node server.js"]
+CMD ["./startup.sh"]
