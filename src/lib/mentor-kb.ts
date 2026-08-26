@@ -23,16 +23,18 @@ import {
 
 export type { KnowledgeCardLike };
 
-// 可参与检索的知识卡状态
-// rejected 不检索；candidate/hold_for_round2 会检索但由总调度做准入判断
+// 生产聊天只检索已确认知识卡。
+// candidate/draft/hold_for_round2/mentor_unconfirmed 只能走隔离的内部测试链路，
+// 不能在正常聊天中交给模型“自行判断是否可用”。
 const RETRIEVABLE_STATUSES = [
-  'candidate',
-  'draft',
-  'hold_for_round2',
-  'mentor_unconfirmed',
   'approved',
   'published',
 ];
+
+const USER_VISIBLE_SCOPES = new Set([
+  'public_exact',
+  'public_generalized',
+]);
 
 /** 聊天上下文（由 route 注入，用于总调度变量） */
 export interface MentorChatContext {
@@ -41,6 +43,28 @@ export interface MentorChatContext {
   assessmentContext?: string;
   conversationSummary?: string;
   currentTime: string;
+  domainRoute?: string;
+  evidencePolicy?: string;
+  allowedScope?: string;
+}
+
+function isUserPublishableCard(card: KnowledgeCardLike): boolean {
+  const compatCard = card as KnowledgeCardLike & {
+    publicationScope?: string | null;
+    validFrom?: Date | string | null;
+  };
+  const scope = compatCard.publicationScope;
+
+  // 兼容旧卡：历史 approved/published 卡若尚未填 publicationScope，
+  // 不在本次无 Schema 迁移中强制拦截；但已明确标为内部或排除的必须拦截。
+  if (scope && !USER_VISIBLE_SCOPES.has(scope)) return false;
+
+  if (compatCard.validFrom) {
+    const validFrom = new Date(compatCard.validFrom).getTime();
+    if (Number.isFinite(validFrom) && validFrom > Date.now()) return false;
+  }
+
+  return true;
 }
 
 /**
@@ -80,6 +104,7 @@ export async function searchKnowledgeCards(
   const tokens = tokenizeQuery(query);
 
   return cards
+    .filter(isUserPublishableCard)
     .map((card) => ({ card, score: scoreCard(card, tokens) }))
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -108,6 +133,9 @@ export async function buildMentorSystemPrompt(
     assessmentContext: ctx.assessmentContext || PLACEHOLDER_NONE,
     conversationSummary: ctx.conversationSummary || PLACEHOLDER_NONE,
     currentTime: ctx.currentTime,
+    domainRoute: ctx.domainRoute,
+    evidencePolicy: ctx.evidencePolicy,
+    allowedScope: ctx.allowedScope,
     retrievedCardsText: cardsText,
     persona: mentor.personalityPrompt,
   });
