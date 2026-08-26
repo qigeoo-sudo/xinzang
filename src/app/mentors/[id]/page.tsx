@@ -79,7 +79,7 @@ export default async function MentorDetailPage({
         {/* 对话区域 */}
         <div className="mb-4">
           <h2 className="text-sm font-semibold text-ink mb-3">
-            和 {mentor.name} 对话
+            和 {mentor.name} 分身对话
           </h2>
         </div>
 
