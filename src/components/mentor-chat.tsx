@@ -482,7 +482,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       setMessages([
         {
           role: 'assistant',
-          content: `你好！我是${mentor.name}。你可以问我关于行业、求职、职业发展的任何问题，我会用我真实的经验来回答你。`,
+          content: `你好！我是${mentor.name}的分身。你可以问我关于行业、求职、职业发展的任何问题，我会用导师真实的经验，配合上大模型的知识与技能，一起来协助回答你。另外，虽然作为分身，我拥有导师特有的说话方式和方法，但难免也会漏出几句土潮话，敬请海涵啦。`,
         },
       ]);
     }
