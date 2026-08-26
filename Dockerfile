@@ -77,10 +77,6 @@ COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pk
 RUN mkdir -p /app/data
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
 
-# 启动脚本（db push + seed + 启动服务）
-COPY --from=builder /app/startup.sh ./startup.sh
-RUN chmod +x ./startup.sh
-
 # 确保数据目录可写
 RUN chown -R nextjs:nodejs /app/data
 
@@ -88,4 +84,6 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["./startup.sh"]
+# 构建阶段已完成 db push + 知识卡 seed，直接启动 Next.js
+# （CloudBase 无持久卷，每次部署都是全新镜像，无需启动时重复 seed）
+CMD ["node", "server.js"]
