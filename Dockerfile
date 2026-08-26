@@ -65,6 +65,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/bcryptjs ./node_modu
 # Prisma schema（运行时可能需要）
 COPY --from=builder /app/prisma ./prisma
 
+# Prisma CLI — 用于生产环境手动执行 schema 更新（不自动执行）
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+
 # 复制已初始化 schema 的生产数据库
 RUN mkdir -p /app/data
 COPY --from=builder --chown=nextjs:nodejs /app/data ./data
