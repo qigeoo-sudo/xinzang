@@ -54,7 +54,8 @@ export default async function MentorDetailPage({
                 <h1 className="text-lg font-bold text-ink">{mentor.name}</h1>
               </div>
               <p className="text-xs text-muted mb-1">
-                {mentor.title} . {mentor.company} . {mentor.years}年经验
+                {mentor.title} . {mentor.company}
+                {mentor.years !== undefined ? ` . ${mentor.years}年经验` : ''}
               </p>
               <p className="text-sm text-ink/80 mb-2">{mentor.tagline}</p>
               <div className="flex flex-wrap gap-1">

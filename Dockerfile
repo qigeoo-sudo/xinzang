@@ -25,7 +25,8 @@ RUN npm run build
 # 生成生产数据库（含 schema + 知识卡 seed）
 RUN mkdir -p /app/data \
  && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-mentor-kb.ts
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-mentor-kb.ts \
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-winnie-kb.ts
 
 # ===== Stage 3: runner =====
 FROM node:20-alpine AS runner

@@ -6,7 +6,7 @@
  *
  * POST /api/eval/batch
  *   body: { token?, mentorId?, questions?: [{test_id, category, question, expected_behavior}] }
- *   缺省 questions 时使用内置 LYDIA_EVAL_V2（100 题）。
+ *   缺省 questions 时按 mentorId 选择内置题库：Lydia 或 Winnie。
  *   return: { runId, summary }
  *
  * GET /api/eval/batch?runId=xxx&token=yyy
@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { runEvalBatch, type EvalQuestion } from '@/lib/eval-core';
 import { LYDIA_EVAL_V2 } from '@/lib/lydia-eval-v2';
+import { WINNIE_EVAL_V1 } from '@/lib/winnie-eval-v1';
 
 function authorized(bodyToken?: string | null, queryToken?: string | null): boolean {
   const expected = process.env.EVAL_TOKEN;
@@ -34,10 +35,11 @@ export async function POST(request: NextRequest) {
     }
 
     const mentorId = body?.mentorId || 'lydia';
+    const defaultQuestions = mentorId === 'winnie' ? WINNIE_EVAL_V1 : LYDIA_EVAL_V2;
     const questions: EvalQuestion[] =
       body?.questions && Array.isArray(body.questions) && body.questions.length > 0
         ? body.questions
-        : LYDIA_EVAL_V2;
+        : defaultQuestions;
 
     const scope = body?.scope || 'api-batch';
 

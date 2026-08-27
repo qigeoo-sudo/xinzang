@@ -47,6 +47,20 @@ const processingSessions = new Set<string>();
 const choiceRetries = new Map<string, number>();
 const q4Retries = new Map<string, number>();
 
+// 危机内容必须先于通用敏感词拦截处理，不能把求助者回复成“内容不合规”。
+function containsImmediateSafetyRisk(text: string): boolean {
+  return [
+    '自杀',
+    '自伤',
+    '伤害自己',
+    '伤害别人',
+    '不想活',
+    '结束生命',
+    '活不下去',
+    '杀了自己',
+  ].some((phrase) => text.includes(phrase));
+}
+
 // 防注入安全规则 — 追加到所有 system prompt 末尾
 const ANTI_INJECTION_PROMPT = `
 
@@ -120,7 +134,7 @@ async function routeMentorRequest(
   userMessage: string,
   recentMessages: { role: 'user' | 'assistant'; content: string }[] = [],
 ): Promise<MentorRouteDecision> {
-  const lydiaPolicy = mentorId === 'lydia'
+  const mentorPolicy = mentorId === 'lydia'
     ? `
 对 Lydia 的额外规则：
 - HR、招聘、简历、面试、求职、职业探索、职业选择、薪酬沟通、反馈、绩效、冲突、组织和人才问题，通常是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。
@@ -128,7 +142,15 @@ async function routeMentorRequest(
 - 医疗器械注册分类、注册证、申报路径、法规策略、质量结论、研发原理、工程设计、性能参数、材料、算法、制造、临床试验、适应症、治疗和医学判断，是 OUT_OF_DOMAIN + SPECIALIST_REQUIRED。即使问题中出现 Lydia 任职公司或公司产品，也不改变这个结果。
 - 任何领域（数学、建筑、编程、文学、外语等）只要与用户的求职、职业选择、职业发展相关，是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。导师会坦诚说明这不是她的专业，然后用职业咨询视角解读。
 - 与职业完全无关的纯学术解题、技术教学或创作任务，是 OUT_OF_DOMAIN + NONE。`
-    : '';
+    : mentorId === 'winnie'
+      ? `
+对 Winnie 的额外规则：
+- HR、HRBP、招聘、面试、简历、求职、职业探索、职业选择、职场适应、组织沟通、员工关系、绩效反馈、工作与生活和一般职场情绪问题，通常是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。
+- Winnie 的个人履历、职位、年份、教育、前雇主、证书、任职公司、真实案例、私人关系或其他具体个人事实，是 MENTOR_ANSWER + APPROVED_CARDS_REQUIRED。
+- Winnie 可以提供非临床的工作心理支持：帮助命名感受、梳理工作关系、准备沟通、设置边界和寻找支持。精神疾病诊断、治疗方案、药物建议、临床咨询、危机处置和对具体心理咨询个案的判断，是 OUT_OF_DOMAIN + SPECIALIST_REQUIRED。
+- 涉及自伤、他伤或紧急危险时，不继续普通职业建议；应立即建议联系当地紧急服务、医疗机构和可信任的人。
+- 与职业完全无关的纯学术解题、技术教学或创作任务，是 OUT_OF_DOMAIN + NONE。`
+      : '';
 
   const recentContext = recentMessages
     .slice(-4)
@@ -140,7 +162,7 @@ async function routeMentorRequest(
 导师：${mentorName}
 导师 ID：${mentorId}
 获准领域：${expertiseDomains.join('、')}
-${lydiaPolicy}
+${mentorPolicy}
 
 通用规则：
 1. 核心判断标准是“这个问题是否与用户的求职、职业发展、职业选择或工作有关”。有关则允许（MENTOR_ANSWER），无关则拦截（OUT_OF_DOMAIN）。
@@ -830,6 +852,20 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       }
     }
 
+    // 自伤、他伤或紧急危险：优先进入安全回复，不能落入普通敏感词拦截。
+    if (mentorId !== 'ai-guide' && containsImmediateSafetyRisk(message)) {
+      const crisisReply = '我很重视你刚才提到的危险。如果你现在可能伤害自己或别人，请立刻联系当地急救、警方或最近的急诊，同时联系一位你信任的人陪在身边，不要独自承担。这个分身不能替代紧急援助、医疗评估或危机干预。';
+      await persistFixedMentorReply(chatSessionId, crisisReply, 'immediate-safety-risk');
+      return NextResponse.json({
+        reply: crisisReply,
+        sessionId: chatSessionId,
+        degraded: false,
+        freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed,
+        mentorUsed: !isPremium && !mentor.isFree ? freeTrialUsed + 1 : undefined,
+        mentorLimit: !isPremium && !mentor.isFree ? freeTrialLimit : undefined,
+      });
+    }
+
     // 敏感词检查 (所有导师+榨职机) - 直接返回提醒，不调用AI
     if (containsSensitiveContent(message)) {
       console.log(`[SENSITIVE] 敏感内容检测: mentorId=${mentorId}, message="${message.slice(0, 30)}..."`);
@@ -878,8 +914,13 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           '我handle不了这个。咱们还是聊聊你的求职和职业发展吧。',
         ];
         const replyIndex = Math.floor(Date.now() / 1000) % outOfDomainReplies.length;
+        const specialistReply = mentorId === 'winnie'
+          ? '这个问题已经涉及心理诊断、治疗、用药、临床咨询或危机处置，超出了我能提供的非临床工作心理支持范围。请联系持证心理健康专业人士或医疗机构；如果存在即时危险，请立刻联系当地紧急服务。'
+          : mentorId === 'lydia'
+            ? '这个问题已经涉及注册、法规、质量、研发、工程或临床等专业细节，超出了我的 HR、组织和职业经验范围。这类结论应该由对应的专业人士回答。'
+            : '这个问题需要相应领域的专业人士负责判断，我不适合在这里给出专业结论。';
         const boundaryReply = mentorRouteDecision.evidencePolicy === 'SPECIALIST_REQUIRED'
-          ? '这个问题已经涉及注册、法规、质量、研发、工程或临床等专业细节，超出了我的 HR、组织和职业经验范围。这类结论应该由对应的专业人士回答。'
+          ? specialistReply
           : mentorRouteDecision.route === 'SAFETY_PRIVACY'
             ? '我不能提供可识别个人的评价、隐私或公司内部信息。如果你想处理的是背后的职场问题，可以只讲不可识别的事实和你想达到的目的。'
             : mentorRouteDecision.route === 'ROUTER_UNAVAILABLE'
@@ -962,7 +1003,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           mentorRouteDecision.evidencePolicy === 'APPROVED_CARDS_REQUIRED' &&
           hitCardIds.length === 0
         ) {
-          const missingEvidenceReply = '这个问题目前不在分身已经确认的资料里，所以我现在不知道。它需要 Lydia 本人补充确认后才可能回答。';
+          const missingEvidenceReply = `这个问题目前不在分身已经确认的资料里，所以我现在不知道。它需要 ${mentor.name} 本人补充确认后才可能回答。`;
           await persistFixedMentorReply(
             chatSessionId,
             missingEvidenceReply,

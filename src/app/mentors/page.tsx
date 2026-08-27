@@ -67,7 +67,9 @@ export default function MentorsPage() {
                     <h3 className="font-semibold text-ink text-sm">
                       {mentor.name}
                     </h3>
-                    <span className="text-xs text-muted">{mentor.years}年经验</span>
+                    {mentor.years !== undefined && (
+                      <span className="text-xs text-muted">{mentor.years}年经验</span>
+                    )}
                     {isLocked && (
                       <span className="inline-flex items-center gap-1 ml-auto text-xs text-slate-400">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
