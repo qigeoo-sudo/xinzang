@@ -1,13 +1,39 @@
 'use client';
 
 import { useState, useLayoutEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { linkifyMentorNames } from '@/lib/mentor-links';
+
+const markdownComponents = {
+  p: ({ children }: { children?: React.ReactNode }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }: { children?: React.ReactNode }) => <ul className="list-disc pl-4 mb-2 space-y-0.5">{children}</ul>,
+  ol: ({ children }: { children?: React.ReactNode }) => <ol className="list-decimal pl-4 mb-2 space-y-0.5">{children}</ol>,
+  li: ({ children }: { children?: React.ReactNode }) => <li>{children}</li>,
+  strong: ({ children }: { children?: React.ReactNode }) => <strong className="font-semibold">{children}</strong>,
+  em: ({ children }: { children?: React.ReactNode }) => <em className="italic">{children}</em>,
+  h1: ({ children }: { children?: React.ReactNode }) => <h3 className="font-semibold text-base mb-1">{children}</h3>,
+  h2: ({ children }: { children?: React.ReactNode }) => <h3 className="font-semibold text-base mb-1">{children}</h3>,
+  h3: ({ children }: { children?: React.ReactNode }) => <h3 className="font-semibold text-sm mb-1">{children}</h3>,
+  blockquote: ({ children }: { children?: React.ReactNode }) => <blockquote className="border-l-2 border-slate-200 pl-2 text-slate-600">{children}</blockquote>,
+  code: ({ children }: { children?: React.ReactNode }) => <code className="bg-slate-100 rounded px-1 py-0.5 text-xs">{children}</code>,
+  a: ({ children, href }: { children?: React.ReactNode; href?: string }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-500 underline">{children}</a>,
+  hr: () => <hr className="border-slate-200 my-2" />,
+};
+
+function renderMarkdownContent(content: string, enableMentorLinks: boolean) {
+  if (enableMentorLinks) {
+    return linkifyMentorNames(content);
+  }
+  return <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{content}</ReactMarkdown>;
+}
 
 /**
  * 长消息折叠组件
  * - 超过一屏80%高度时，折叠为4行 + 省略号 + "展开"链接
  * - 点击"展开"打开全屏遮罩层显示完整内容
  * - 点击遮罩层或关闭按钮关闭
+ * - assistant 消息支持 markdown 渲染，user 消息纯文本
  */
 export function CollapsibleText({
   content,
@@ -22,27 +48,29 @@ export function CollapsibleText({
   const [showFullView, setShowFullView] = useState(false);
   const measureRef = useRef<HTMLDivElement>(null);
 
-  // useLayoutEffect: 在浏览器绘制前测量高度，避免闪烁
   useLayoutEffect(() => {
     if (measureRef.current) {
-      // scrollHeight 返回完整内容高度（即使 overflow:hidden 裁剪了）
       const fullHeight = measureRef.current.scrollHeight;
       const viewportHeight = window.innerHeight;
       setShouldCollapse(fullHeight > viewportHeight * 0.8);
     }
   }, [content]);
 
-  const renderContent = () =>
-    enableMentorLinks ? linkifyMentorNames(content) : content;
+  const renderContent = () => {
+    if (isUser) {
+      return enableMentorLinks ? linkifyMentorNames(content) : content;
+    }
+    return renderMarkdownContent(content, enableMentorLinks);
+  };
 
   return (
     <>
       <div
         ref={measureRef}
-        className={`whitespace-pre-wrap break-words ${
-          shouldCollapse
-            ? 'overflow-hidden'
-            : ''
+        className={`break-words ${
+          isUser ? 'whitespace-pre-wrap' : ''
+        } ${
+          shouldCollapse ? 'overflow-hidden' : ''
         }`}
         style={
           shouldCollapse
@@ -68,7 +96,6 @@ export function CollapsibleText({
         </button>
       )}
 
-      {/* 全屏查看遮罩层 */}
       {showFullView && (
         <div
           className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center overflow-y-auto"
@@ -90,7 +117,7 @@ export function CollapsibleText({
                 </svg>
               </button>
             </div>
-            <div className="text-sm leading-relaxed whitespace-pre-wrap break-words text-slate-800">
+            <div className="text-sm leading-relaxed text-slate-800">
               {renderContent()}
             </div>
             <div className="mt-5 pt-4 border-t border-slate-100">
