@@ -5,7 +5,9 @@
 ## 开发规则
 
 - **每次修改代码完毕，必须同时在总结和 work 中提供预览链接。**
-- **Git 推送规则：每次推送必须同时推送到 `main` 和 `master` 两个分支。** 命令：`git push origin main && git push origin main:master`
+- **Git 推送规则：日常开发与 staging 只推 `main` 分支。** 命令：`git push origin main`
+- **生产发布需单独确认后**，再从 main 合并到 master：`git push origin main:master`
+- **分支分工**：`main` = staging 环境（CloudBase 自动部署）；`master` = 生产环境
 - **打标签时也需同时推送标签到远程。** 命令：`git push origin "标签名"`
 
 ## 重要文档

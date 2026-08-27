@@ -14,10 +14,11 @@
 
 ### Git 推送规则
 
-- 每次推送必须同时推送到 `main` 和 `master` 两个分支：
-  `git push origin main && git push origin main:master`
+- **日常开发与 staging**：只推送到 `main` 分支。`git push origin main`
+- **生产发布**：单独确认后，从 main 合并到 master。`git push origin main:master`
 - 打标签时同时推送标签：`git push origin "标签名"`
 - 凭据走 Windows 凭据管理器（`credential.helper=manager`），无需额外配置
+- **分支分工**：`main` = staging 环境（CloudBase 自动部署）；`master` = 生产环境
 
 ## DeepSeek API
 
