@@ -2,7 +2,7 @@
 # Next.js standalone 模式
 
 # ===== Stage 1: deps =====
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package.json package-lock.json* ./
@@ -13,7 +13,7 @@ RUN npm_config_platform=linux npm_config_arch=x64 npm_config_libc=musl npm ci
 RUN npm install @next/swc-linux-x64-musl --save-optional
 
 # ===== Stage 2: builder =====
-FROM node:20-alpine AS builder
+FROM node:26-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -31,7 +31,7 @@ RUN mkdir -p /app/data \
  && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-winnie-kb.ts
 
 # ===== Stage 3: runner =====
-FROM node:20-alpine AS runner
+FROM node:26-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
