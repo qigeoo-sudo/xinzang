@@ -10,7 +10,7 @@
 | 仓库地址 | `https://github.com/qigeoo-sudo/xinzang.git` |
 | 远程名 | `origin`（已配置，clone 时自带） |
 | 默认分支 | `master`（`origin/HEAD -> origin/master`，另有 `origin/main`） |
-| 最新提交 | `6d8d97f`（master = main 同步） |
+| 最新提交 | `7fd074b`（master = main 同步） |
 
 ### Git 推送规则
 
@@ -39,6 +39,10 @@ npm install          # 安装依赖（含 postinstall: prisma generate）
 npx prisma db push   # 同步数据库 schema
 npm run dev          # 启动开发服务器 (localhost:3000)
 ```
+
+### Mock 支付与注册验证码
+
+- Mock 支付：点击"确认支付(模拟)"即可；注册验证码 Mock 模式直接返回
 
 ## 项目上下文
 

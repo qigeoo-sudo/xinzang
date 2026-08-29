@@ -45,6 +45,12 @@ npx prisma db push   # 同步数据库 schema
 npm run dev          # 启动开发服务器 (localhost:3000)
 ```
 
+### 注册与 Mock 模式
+
+- **注册验证码**: Mock 模式下 API 直接返回验证码，前端显示"验证码已发送（模拟：XXXXXX）"
+- **Mock 支付**: 不需要验证码，在模拟支付页面点击"确认支付(模拟)"即可完成
+- 无预置测试账号，用户自行注册即可
+
 环境变量见 `.env.example`，实际开发配置在 `.env.local`。
 
 ### 开发环境密钥

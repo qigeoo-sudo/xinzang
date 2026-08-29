@@ -6,7 +6,7 @@
   "deliverables": [
     {
       "path": "AGENTS.md",
-      "createdAt": 1787067589020
+      "createdAt": 1787850869516
     },
     {
       "path": ".env.local",
@@ -14,7 +14,7 @@
     },
     {
       "path": "CLAUDE.md",
-      "createdAt": 1787067589020
+      "createdAt": 1787850869516
     },
     {
       "path": "src/lib/mentors.ts",
@@ -42,7 +42,7 @@
     },
     {
       "path": "prisma/schema.prisma",
-      "createdAt": 1787246797575.7546
+      "createdAt": 1787848763146
     },
     {
       "path": "src/app/api/chat/route.ts",
@@ -106,7 +106,7 @@
     },
     {
       "path": "public/manifest.json",
-      "createdAt": 1787426009133
+      "createdAt": 1787283221977
     },
     {
       "path": "Dockerfile",
@@ -127,6 +127,22 @@
     {
       "path": "docs/PRD.md",
       "createdAt": 1787426009133
+    },
+    {
+      "path": "node_modules/.bin/tsx",
+      "createdAt": 1787849211760
+    },
+    {
+      "path": "node_modules/tsx/dist/cli.mjs",
+      "createdAt": 1787849211760
+    },
+    {
+      "path": "AI_Career_CloudBase_PG_交接实施文档_v1.0.md",
+      "createdAt": 1787850529065
+    },
+    {
+      "path": "docs/AICCloudBase_PG_v1.1.md",
+      "createdAt": 1787850529065
     }
   ],
   "media": [
