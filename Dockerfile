@@ -9,6 +9,8 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 # Alpine 使用 musl libc，明确指定平台以安装正确的 SWC 二进制
 RUN npm_config_platform=linux npm_config_arch=x64 npm_config_libc=musl npm ci
+# 显式安装 musl 版 SWC，防止 Next.js build 时找不到二进制
+RUN npm install @next/swc-linux-x64-musl --save-optional
 
 # ===== Stage 2: builder =====
 FROM node:20-alpine AS builder
