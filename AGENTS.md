@@ -37,16 +37,8 @@
 ```bash
 npm install          # 安装依赖（含 postinstall: prisma generate）
 npx prisma db push   # 同步数据库 schema
-npx tsx prisma/seed-test-users.ts  # 预置测试账号（可选）
 npm run dev          # 启动开发服务器 (localhost:3000)
 ```
-
-### 测试账号（统一密码 12345678）
-
-- 手机(免费)：`13821668570`
-- 邮箱(免费)：`t@t.com`
-- 手机(会员)：`13821668571`
-- Mock 支付：点击"确认支付(模拟)"即可；注册验证码 Mock 模式直接返回
 
 ## 项目上下文
 
