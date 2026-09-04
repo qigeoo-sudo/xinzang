@@ -1,14 +1,12 @@
 /**
- * Winnie Ni 第一轮+第二轮知识卡 seed。
+ * Tina Zhang 第一轮知识卡 seed。
  *
  * 运行：
- *   npx tsx prisma/seed-winnie-kb.ts --dry-run
- *   npx tsx prisma/seed-winnie-kb.ts
+ *   npx tsx prisma/seed-tina-kb.ts --dry-run
+ *   npx tsx prisma/seed-tina-kb.ts
  *
- * 本文件处理 mentorId=winnie 的 73 张知识卡：
- *   - WIN-R1-001~045（第一轮，其中 10 张经第二轮修订）
- *   - WIN-R2-001~028（第二轮新增）
- * 不会删除或修改 Lydia、Tina 或其他导师的知识卡。
+ * 本文件只处理 mentorId=tina、cardId=TIN-R1-* 的 42 张内部候选卡。
+ * 它不会删除或修改 Lydia、Winnie 或其他导师的知识卡，也不会把候选卡提升为公开状态。
  */
 import { PrismaClient } from '../src/generated/prisma';
 import { existsSync, readFileSync } from 'fs';
@@ -38,9 +36,9 @@ for (const file of ['.env', '.env.local']) {
 const DRY_RUN = process.argv.includes('--dry-run');
 const SOURCE_FILE = resolve(
   process.cwd(),
-  'prisma/data/winnie_r1_r2_cards_v0.7.jsonl',
+  'prisma/data/tina_r1_cards_v0.1.jsonl',
 );
-const EXPECTED_COUNT = 73;
+const EXPECTED_COUNT = 42;
 const VALID_CONFIDENCE = new Set(['high', 'medium', 'low']);
 const PROTECTED_STATUSES = new Set([
   'approved',
@@ -50,7 +48,7 @@ const PROTECTED_STATUSES = new Set([
   'mentor_unconfirmed',
 ]);
 
-interface WinnieCard {
+interface TinaCard {
   cardId: string;
   mentorId: string;
   domain: string;
@@ -76,7 +74,7 @@ function fail(message: string): never {
   process.exit(1);
 }
 
-function normalizeSource(source: WinnieCard['source']): string | null {
+function normalizeSource(source: TinaCard['source']): string | null {
   if (source === undefined || source === null) return null;
   let parsed: unknown = source;
   if (typeof source === 'string') {
@@ -92,7 +90,7 @@ function normalizeSource(source: WinnieCard['source']): string | null {
   return JSON.stringify(parsed);
 }
 
-function loadCards(): WinnieCard[] {
+function loadCards(): TinaCard[] {
   if (!existsSync(SOURCE_FILE)) fail(`知识卡文件不存在：${SOURCE_FILE}`);
   const lines = readFileSync(SOURCE_FILE, 'utf-8')
     .split('\n')
@@ -101,7 +99,7 @@ function loadCards(): WinnieCard[] {
 
   const cards = lines.map((line, index) => {
     try {
-      return JSON.parse(line) as WinnieCard;
+      return JSON.parse(line) as TinaCard;
     } catch {
       fail(`第 ${index + 1} 行 JSON 解析失败`);
     }
@@ -113,11 +111,10 @@ function loadCards(): WinnieCard[] {
 
   const ids = new Set<string>();
   for (const card of cards) {
-    if (!card.cardId.startsWith('WIN-R1-') && !card.cardId.startsWith('WIN-R2-'))
-      fail(`非法 cardId：${card.cardId}`);
+    if (!card.cardId.startsWith('TIN-R1-')) fail(`非法 cardId：${card.cardId}`);
     if (ids.has(card.cardId)) fail(`重复 cardId：${card.cardId}`);
     ids.add(card.cardId);
-    if (card.mentorId !== 'winnie') fail(`${card.cardId} mentorId 必须为 winnie`);
+    if (card.mentorId !== 'tina') fail(`${card.cardId} mentorId 必须为 tina`);
     if (!card.domain || !card.title || !card.coreView) {
       fail(`${card.cardId} 缺少 domain/title/coreView`);
     }
@@ -138,8 +135,8 @@ function loadCards(): WinnieCard[] {
 
 async function main() {
   const cards = loadCards();
-  console.log(`📥 Winnie 第一轮+第二轮：${cards.length} 张知识卡`);
-  console.log('✅ 源状态：approved / public_generalized');
+  console.log(`📥 Tina 第一轮：${cards.length} 张知识卡`);
+  console.log('✅ 源状态：approved / public_generalized（已审核通过）');
 
   if (DRY_RUN) {
     console.log('✅ DRY-RUN 通过，未连接或写入数据库');
@@ -168,7 +165,7 @@ async function main() {
         continue;
       }
 
-      if (existing.mentorId !== 'winnie') {
+      if (existing.mentorId !== 'tina') {
         fail(`${card.cardId} 已被其他导师占用：${existing.mentorId}`);
       }
 
@@ -188,30 +185,26 @@ async function main() {
       updated++;
     }
 
-    const r1Count = await prisma.mentorKnowledgeCard.count({
-      where: { mentorId: 'winnie', cardId: { startsWith: 'WIN-R1-' } },
+    const total = await prisma.mentorKnowledgeCard.count({
+      where: { mentorId: 'tina', cardId: { startsWith: 'TIN-R1-' } },
     });
-    const r2Count = await prisma.mentorKnowledgeCard.count({
-      where: { mentorId: 'winnie', cardId: { startsWith: 'WIN-R2-' } },
-    });
-    const total = r1Count + r2Count;
     const wrongMentor = await prisma.mentorKnowledgeCard.count({
-      where: { cardId: { startsWith: 'WIN-R' }, mentorId: { not: 'winnie' } },
+      where: { cardId: { startsWith: 'TIN-R1-' }, mentorId: { not: 'tina' } },
     });
     const sourceApproved = await prisma.mentorKnowledgeCard.count({
       where: {
-        mentorId: 'winnie',
-        cardId: { startsWith: 'WIN-R' },
+        mentorId: 'tina',
+        cardId: { startsWith: 'TIN-R1-' },
         status: 'approved',
         publicationScope: 'public_generalized',
       },
     });
 
-    if (total !== EXPECTED_COUNT) fail(`数据库中 WIN 卡数应为 ${EXPECTED_COUNT}，实际为 ${total}`);
-    if (wrongMentor !== 0) fail(`发现 ${wrongMentor} 张 WIN 卡归属错误`);
+    if (total !== EXPECTED_COUNT) fail(`数据库中 TIN-R1 卡数应为 42，实际为 ${total}`);
+    if (wrongMentor !== 0) fail(`发现 ${wrongMentor} 张 TIN-R1 卡归属错误`);
 
     console.log(`✅ 导入完成：新建 ${created}，更新 ${updated}，保留审核状态 ${preserved}`);
-    console.log(`✅ WIN-R1 ${r1Count} + WIN-R2 ${r2Count} = ${total}，其中 approved/public_generalized ${sourceApproved}`);
+    console.log(`✅ TIN-R1 总数 ${total}，其中 approved/public_generalized ${sourceApproved}`);
     console.log('ℹ️  正常用户聊天可检索 approved/public_generalized 卡。');
   } finally {
     await prisma.$disconnect();
@@ -219,6 +212,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('❌ Winnie 知识卡导入失败：', error);
+  console.error('❌ Tina 知识卡导入失败：', error);
   process.exit(1);
 });
