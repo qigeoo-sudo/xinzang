@@ -22,7 +22,7 @@ export interface Mentor {
   company: string;
   companyType: string;
   industry: string;
-  years: number;
+  years: number | string;
   tagline: string;
   tags: string[];
   price: number; // 0 = 免费
@@ -595,7 +595,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     company: '精品战略咨询',
     companyType: '咨询',
     industry: '战略咨询',
-    years: 25,
+    years: '>25',
     tagline: '精品咨询公司HR负责人 · 长期在咨询行业 · 从招聘到Staffing到综合HR',
     tags: ['咨询行业', '招聘', 'Staffing', '职业探索', '求职面试', '晋升与反馈', '职业转型'],
     price: 49,
