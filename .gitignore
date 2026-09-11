@@ -37,3 +37,6 @@ next-env.d.ts
 
 # vercel
 .vercel
+
+# 聊天记录导出（含真实用户数据，禁止提交）
+/outbox/
