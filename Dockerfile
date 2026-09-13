@@ -28,7 +28,8 @@ RUN npm run build
 RUN mkdir -p /app/data \
  && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate \
  && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-mentor-kb.ts \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-winnie-kb.ts
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-winnie-kb.ts \
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-tina-kb.ts
 
 # ===== Stage 3: runner =====
 FROM node:20-alpine AS runner

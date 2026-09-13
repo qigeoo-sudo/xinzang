@@ -161,7 +161,7 @@ export function AssessmentFlow() {
             </div>
 
             <p className="mt-6 rounded-xl bg-beige/70 px-4 py-3 text-xs leading-6 text-muted">
-              每次从 60 题题库中随机抽取 30 题（六个类型各 5 题），不同次抽到的题目不完全相同；答案没有对错好坏，按真实想法作答即可，以后也可以随时重测。
+              答案没有对错好坏，按真实想法作答即可，以后也可以随时重测。
             </p>
 
             <button
