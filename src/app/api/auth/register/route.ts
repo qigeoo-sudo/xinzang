@@ -14,6 +14,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, validatePasswordStrength } from '@/lib/password';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
+import {
+  registerProfileSchema,
+  assessmentSchema,
+  toUserProfileData,
+  toAssessmentCreate,
+} from '@/lib/register-v2';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -25,6 +31,9 @@ const registerSchema = z.object({
     .max(64, '密码不能超过64位字符')
     .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, '密码必须包含字母和数字'),
   code: z.string().optional(),
+  // register-v2 三步注册的档案与职业兴趣测评（均可选，兼容旧注册页）
+  profile: registerProfileSchema.optional(),
+  assessment: assessmentSchema.optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { method, target, password, code } = parsed.data;
+    const { method, target, password, code, profile, assessment } = parsed.data;
 
     // 3. 密码强度校验
     const strengthCheck = validatePasswordStrength(password);
@@ -133,14 +142,28 @@ export async function POST(request: NextRequest) {
       data: { usedAt: new Date() },
     });
 
-    // 8. 创建用户 + 用户档案
+    // 8. 创建用户 + 用户档案（register-v2 携带档案与测评时一并落库）
     const now = new Date();
+    const profileData = profile
+      ? {
+          ...toUserProfileData(profile),
+          profileSource: 'register_v2',
+          registrationCompletedAt: now,
+        }
+      : {};
+
     const userData: any = {
       passwordHash,
       freeTrialUsed: 0,
       emailVerified: method === 'email' ? now : null,
-      profile: { create: {} },
+      profile: { create: profileData },
     };
+
+    if (assessment) {
+      userData.interestAssessment = {
+        create: toAssessmentCreate(assessment),
+      };
+    }
 
     if (method === 'phone') {
       userData.phone = target;

@@ -22,33 +22,38 @@ function MockPaymentContent() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // 成功后自动关闭 — 先尝试 window.close()，失败则跳转到成功页
+  // 成功后的去向：
+  // - 当前窗口进入（正常流程）：短暂展示成功状态后直接跳成功页
+  // - 弹窗进入（兼容旧入口）：通知父窗口并尝试关窗，关不掉则自身跳转
   useEffect(() => {
-    if (success && orderNo) {
-      // 通知父窗口支付成功（触发轮询立即检测）
+    if (!success || !orderNo) return;
+
+    const successUrl = `/payment/success?orderNo=${orderNo}${
+      from ? `&from=${encodeURIComponent(from)}` : ''
+    }`;
+
+    if (window.opener) {
       try {
-        window.opener?.postMessage({ type: 'mock-pay-success', orderNo }, '*');
+        window.opener.postMessage({ type: 'mock-pay-success', orderNo }, '*');
       } catch {
         // 忽略跨域错误
       }
-
-      const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
-
-      // 2秒后尝试关闭窗口
       const closeTimer = setTimeout(() => {
         window.close();
       }, 2000);
-
-      // 2.5秒后如果窗口仍未关闭，跳转到成功页作为回退
       const redirectTimer = setTimeout(() => {
-        window.location.href = `/payment/success?orderNo=${orderNo}${fromParam}`;
+        window.location.href = successUrl;
       }, 2500);
-
       return () => {
         clearTimeout(closeTimer);
         clearTimeout(redirectTimer);
       };
     }
+
+    const timer = setTimeout(() => {
+      window.location.href = successUrl;
+    }, 1200);
+    return () => clearTimeout(timer);
   }, [success, orderNo, from]);
 
   const handleMockPay = async () => {

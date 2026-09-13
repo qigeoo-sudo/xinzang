@@ -20,6 +20,25 @@ interface MentorChatProps {
   mentor: Mentor;
 }
 
+// 导师分身开场白池：每句都覆盖四个重点——
+// 1) 表明分身身份 2) 只聊职业相关 3) 回答混合导师真实经验+大模型知识 4) 提问越清晰分析越到位
+// 句式各不相同；同时遵守导师 prompt 禁用句约束（不出现“咱们不绕/几句话把事情说透/我把它拆给你看”等空转句）
+const MENTOR_GREETINGS: string[] = [
+  '你好，我是{name}的分身。职业上遇到的各种问题都可以聊。我的回答会结合{name}的真实经验和大模型的知识与技能；你把情况和问题说得越清楚，我的分析就越到位。',
+  '嗨，我是{name}的AI分身，不是本人哦。行业、求职、职业发展上的问题都可以问我——回答里既有{name}沉淀的真实经验，也有大模型补充的通用知识。一个小建议：背景交代得越具体，我的分析就越能说到关键处。',
+  '你好呀，我是{name}的分身。我只聊职业相关的事：择业、求职、转行、成长都算。我的回答是「{name}的实战经验 + 大模型知识」的组合；为了让交流更高效，提问时尽量把你的处境和困惑讲清楚。',
+  '见到你很高兴，我是{name}的分身。关于职业，你现在最想解决什么问题？{name}多年积累的经验，加上大模型的知识储备，会一起为你所用；问题描述得越清晰，我给出的判断就越有针对性。',
+  '你好，{name}的分身上线了。职业上的难题都可以抛过来，无关话题我可不接。每一条回答，都可能融合{name}的亲身经验和大模型的通用知识——你问得越明白，我越能答到点上。',
+  '嗨，我是{name}的分身。不管你在求职路口、转行当口，还是碰到了职业困惑，都可以直接问。我的答案来自两部分：{name}的真实经验，以及大模型的知识能力；把情况说得越具体，问答的效率就越高。',
+  '你好，我是{name}的分身，你可以把我当成一个带着{name}经验的AI职业顾问。职业相关的问题尽管提。需要先说明：我的回答混合了{name}的授权经验与大模型的知识技能，所以提问越聚焦、背景越清楚，分析就越到位。',
+  '我是{name}的分身，专门陪你聊职业上的事。回答时我会用上{name}的真实经验，也会调用大模型的知识与技能；而问答质量很大程度取决于问题清不清晰。那么，你遇到的具体情况是什么？',
+];
+
+function pickMentorGreeting(name: string): string {
+  const tpl = MENTOR_GREETINGS[Math.floor(Math.random() * MENTOR_GREETINGS.length)];
+  return tpl.replaceAll('{name}', name);
+}
+
 /** 导师推荐卡片 — 点击直接进入该导师聊天 */
 function MentorCard({ mentor }: { mentor: MentorInfo }) {
   return (
@@ -482,7 +501,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       setMessages([
         {
           role: 'assistant',
-          content: `你好！我是${mentor.name}的分身。你可以问我关于行业、求职、职业发展的任何问题，我会用导师真实的经验，配合上大模型的知识与技能，一起来协助回答你。另外，虽然作为分身，我拥有导师特有的说话方式和方法，但难免也会漏出几句土潮话，敬请海涵啦。`,
+          content: pickMentorGreeting(mentor.name),
         },
       ]);
     }
@@ -750,7 +769,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
               登录
             </button>
             <button
-              onClick={() => router.push(`/register?callbackUrl=${pathname}`)}
+              onClick={() => router.push(`/register-v2?callbackUrl=${pathname}`)}
               className="btn-secondary"
             >
               注册

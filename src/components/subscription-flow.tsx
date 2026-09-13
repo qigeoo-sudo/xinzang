@@ -62,8 +62,9 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
           if (data.status === 'PAID') {
             setPayState('success');
             // 刷新 JWT session — 确保客户端 isPremium 立即更新
+            // update({}) 传参才会触发服务端 trigger==='update' 重读数据库
             try {
-              await update();
+              await update({});
             } catch {
               // 刷新失败不阻塞流程
             }
@@ -141,10 +142,11 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
           const mockUrlWithFrom = mockUrl.includes('?')
             ? `${mockUrl}${fromParam}`
             : `${mockUrl}?from=${encodeURIComponent(from || '')}`;
-          window.open(mockUrlWithFrom, '_blank');
+          // 当前窗口跳转到模拟收银台（与真实支付一致，也避免新窗口不继承设备模拟）
+          // 收银台支付完成后会自行跳回 /payment/success，当前页即将卸载，不再轮询
+          window.location.href = mockUrlWithFrom;
+          return;
         }
-        setPayState('polling');
-        pollOrderStatus(data.orderId);
       } else {
         if (data.payUrl) {
           window.location.href = data.payUrl;

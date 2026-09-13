@@ -3,8 +3,8 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { mentors } from '@/lib/mentors';
+import { HomeFooter } from '@/components/home/home-footer';
 import Link from 'next/link';
-import { ProfileLink } from '@/components/profile-link';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   // 从数据库获取用户数据和聊天历史
-  const [user, chatSessions, subscription, userProfile] = await Promise.all([
+  const [user, chatSessions, subscription] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -48,10 +48,6 @@ export default async function DashboardPage() {
         endDate: true,
       },
     }),
-    prisma.userProfile.findUnique({
-      where: { userId: session.user.id },
-      select: { nickname: true, profileSource: true },
-    }),
   ]);
 
   // 统计数据
@@ -59,11 +55,6 @@ export default async function DashboardPage() {
   const mentorChats = chatSessions.filter((s) => s.mentorId !== 'ai-guide').length;
   const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
   const freeTrialRemaining = Math.max(0, freeTrialLimit - (user?.freeTrialUsed || 0));
-
-  // 判断访谈是否完成
-  const interviewCompleted =
-    userProfile?.profileSource === 'ai_extracted' ||
-    (userProfile?.nickname != null && userProfile.nickname.length > 0);
 
   // 导师名称映射
   const mentorMap = new Map(mentors.map((m) => [m.id, m.name]));
@@ -79,20 +70,13 @@ export default async function DashboardPage() {
     },
     {
       id: 2,
-      title: '首次和榨职机对话',
-      desc: '榨出了目前的职业情况',
-      completed: interviewCompleted,
-      date: interviewCompleted ? new Date(chatSessions[0]?.updatedAt || user?.createdAt || Date.now()).toLocaleDateString('zh-CN') : null,
-    },
-    {
-      id: 3,
       title: '探索 3 个职业方向',
       desc: 'AI产品经理、HR、数据分析',
       completed: false,
       date: null,
     },
     {
-      id: 4,
+      id: 3,
       title: '和行业导师对话',
       desc: '选择一位行业导师深入交流',
       completed: mentorChats > 0,
@@ -106,7 +90,7 @@ export default async function DashboardPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <div className="page-container">
+      <div className="page-container flex-1">
         {/* 页面标题 */}
         <div className="mb-6">
           <h1 className="text-xl font-bold text-brand-900">成长追踪</h1>
@@ -166,14 +150,14 @@ export default async function DashboardPage() {
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-brand-900">成长里程碑</h2>
-            <span className="text-xs text-slate-400">{completedMilestones}/4 完成</span>
+            <span className="text-xs text-slate-400">{completedMilestones}/3 完成</span>
           </div>
 
           {/* 进度条 */}
           <div className="w-full h-2 bg-slate-100 rounded-full mb-4 overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-brand-400 to-sage-400 rounded-full transition-all duration-500"
-              style={{ width: `${(completedMilestones / 4) * 100}%` }}
+              style={{ width: `${(completedMilestones / 3) * 100}%` }}
             />
           </div>
 
@@ -216,21 +200,9 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
-
-        {/* 快捷操作 */}
-        <div className="grid grid-cols-2 gap-3">
-          <ProfileLink />
-          <Link
-            href="/dashboard/subscription?from=/dashboard"
-            className="card card-hover flex flex-col items-center gap-2 py-4"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#A67B5B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 2L2 7h20L12 2z M2 7v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7" />
-            </svg>
-            <span className="text-sm text-brand-900">会员订阅</span>
-          </Link>
-        </div>
       </div>
+
+      <HomeFooter lang="zh" />
     </div>
   );
 }

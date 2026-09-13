@@ -6,15 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 
-type LoginMethod = 'phone' | 'email';
-
 function LoginForm() {
   const searchParams = useSearchParams();
   const rawCallback = searchParams.get('callbackUrl') || '/';
   const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : '/';
 
-  const [method, setMethod] = useState<LoginMethod>('phone');
-  const [identifier, setIdentifier] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,18 +23,18 @@ function LoginForm() {
 
     try {
       const result = await signIn('credentials', {
-        email: identifier,
+        phone,
         password,
         redirect: false,
       });
 
       if (result?.error) {
         try {
-          const statusRes = await fetch(`/api/auth/login-status?identifier=${encodeURIComponent(identifier)}`);
+          const statusRes = await fetch(`/api/auth/login-status?identifier=${encodeURIComponent(phone)}`);
           const statusData = await statusRes.json();
-          setError(statusData.message || '手机号/邮箱或密码不正确');
+          setError(statusData.message || '手机号或密码不正确');
         } catch {
-          setError('手机号/邮箱或密码不正确');
+          setError('手机号或密码不正确');
         }
       } else if (result?.ok) {
         // 使用完整页面跳转确保 session cookie 生效后再渲染受保护页面
@@ -71,43 +68,17 @@ function LoginForm() {
               </div>
             )}
 
-            {/* 登录方式切换 */}
-            <div className="flex gap-2 p-1 bg-beige rounded-lg">
-              <button
-                type="button"
-                onClick={() => { setMethod('phone'); setError(''); }}
-                className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                  method === 'phone'
-                    ? 'bg-white text-accent shadow-sm'
-                    : 'text-muted'
-                }`}
-              >
-                手机登录
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMethod('email'); setError(''); }}
-                className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                  method === 'email'
-                    ? 'bg-white text-accent shadow-sm'
-                    : 'text-muted'
-                }`}
-              >
-                邮箱登录
-              </button>
-            </div>
-
-            {/* 手机/邮箱输入 */}
+            {/* 手机号输入 */}
             <div>
               <label className="block text-sm font-medium text-ink mb-1.5">
-                {method === 'phone' ? '手机号' : '邮箱'}
+                手机号
               </label>
               <input
-                type={method === 'phone' ? 'tel' : 'email'}
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 required
-                autoComplete={method === 'phone' ? 'tel' : 'email'}
+                autoComplete="tel"
                 className="input-field"
               />
             </div>
@@ -132,7 +103,7 @@ function LoginForm() {
             {/* 忘记密码 */}
             <div className="text-right">
               <Link
-                href={`/forgot-password${identifier ? `?method=${method}&target=${encodeURIComponent(identifier)}` : ''}`}
+                href={`/forgot-password${phone ? `?target=${encodeURIComponent(phone)}` : ''}`}
                 className="text-xs text-accent hover:underline"
               >
                 忘记密码？
@@ -153,7 +124,7 @@ function LoginForm() {
           <p className="text-center text-sm text-muted mt-6">
             还没有账号？{' '}
             <Link
-              href={callbackUrl && callbackUrl !== '/' ? `/register?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register'}
+              href={callbackUrl && callbackUrl !== '/' ? `/register-v2?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/register-v2'}
               className="text-accent font-medium hover:underline"
             >
               免费注册

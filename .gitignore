@@ -31,6 +31,9 @@ dev.log
 .DS_Store
 *.pem
 
+# IDE 本地文档
+/.trae/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

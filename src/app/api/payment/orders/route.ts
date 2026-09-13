@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const isYearlyRenewal = isRenewal && plan.id === 'YEARLY' && existingSub?.plan === 'YEARLY';
     const discountRate = isYearlyRenewal ? 0.8 : 1;
     const actualPriceFen = Math.round(plan.priceFen * discountRate);
-    const actualPrice = Math.round(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
+    const actualPrice = Math.floor(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
 
     if (existingSub) {
       if (isYearlyRenewal) {

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
+import { HomeFooter } from '@/components/home/home-footer';
 import { SubscriptionFlow } from '@/components/subscription-flow';
 import { SUBSCRIPTION_PLANS, type PlanId } from '@/lib/plans';
 
@@ -61,7 +62,7 @@ export default async function SubscriptionPage({
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <div className="page-container">
+      <div className="page-container flex-1">
         <div className="text-center mb-6">
           <h1 className="text-xl font-bold text-ink mb-2">
             {user?.isPremium ? '我的会员' : '升级会员'}
@@ -118,6 +119,8 @@ export default async function SubscriptionPage({
           导师分身对话次数按订阅周期计算，到期后重置
         </p>
       </div>
+
+      <HomeFooter lang="zh" />
     </div>
   );
 }

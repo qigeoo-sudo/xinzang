@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>榨职机 · 注册流程原型</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2E6D8; --hero:#FDF5EC; --ink:#2C3E5C; --body:#5A6B7E;
+    --orange:#F5A623; --orange-dark:#D4881A;
+    --input-bg:#FCF2F0; --input-border:#E8B5B5;
+    --card-line:rgba(209,213,219,.4); --muted:#9C8E7C; --danger:#C0654A;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    font-family:'Noto Sans SC',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,var(--hero) 0%,var(--bg) 360px);
+    min-height:100vh;
+  }
+  /* 顶栏 */
+  .topbar{
+    position:sticky; top:0; z-index:40;
+    background:rgba(255,255,255,.75);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-bottom:1px solid rgba(255,255,255,.6);
+  }
+  .topbar-inner{ max-width:448px; margin:0 auto; padding:12px 16px; display:flex; align-items:center; gap:12px; }
+  .logo{
+    width:40px; height:40px; border-radius:12px;
+    background:linear-gradient(135deg,#F5A623 0%,#E8853A 100%);
+    color:#fff; font-family:'Noto Serif SC',serif; font-weight:900; font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.12);
+  }
+  .brand-en{ font-size:14px; font-weight:600; color:#A67B5B; line-height:1.2; }
+  .brand-cn{ font-size:12px; color:var(--body); line-height:1.4; }
+
+  main{ max-width:448px; margin:0 auto; padding:32px 16px 64px; }
+  h1{
+    font-family:'Noto Serif SC',Georgia,serif;
+    font-size:30px; line-height:1.35; font-weight:900; letter-spacing:-.5px; margin-bottom:8px;
+  }
+  h1 .hl{ color:var(--orange); }
+  .subtitle{ font-size:14px; color:var(--body); margin-bottom:24px; }
+
+  /* 步骤条 */
+  .stepper{ display:flex; align-items:flex-start; padding:0 8px; margin-bottom:24px; }
+  .step-node{ width:56px; display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
+  .step-dot{
+    width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:600; background:rgba(255,255,255,.7); border:2px solid #E0D3BF; color:#A99E8C;
+    transition:all .2s;
+  }
+  .step-node.reached .step-dot{ background:#fff; border-color:var(--orange); color:var(--orange); }
+  .step-node.passed .step-dot{ background:var(--orange); border-color:var(--orange); color:#fff; }
+  .step-label{ font-size:11px; margin-top:6px; white-space:nowrap; color:#A99E8C; }
+  .step-node.reached .step-label,.step-node.passed .step-label{ color:var(--ink); font-weight:600; }
+  .step-line{ flex:1; height:2px; margin-top:15px; border-radius:2px; background:#E0D3BF; }
+  .step-line.done{ background:var(--orange); }
+
+  /* 卡片 */
+  .card{
+    background:rgba(255,255,255,.88);
+    border:1px solid var(--card-line);
+    border-radius:20px; padding:20px;
+    animation:fadeIn .3s ease-in-out;
+  }
+  @keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .badge{
+    display:inline-block; font-size:11px; border-radius:999px; padding:4px 10px;
+    background:rgba(245,166,35,.12); color:#B4780E; margin-bottom:16px;
+  }
+  .card h2{ font-size:18px; font-weight:700; margin-bottom:4px; }
+  .card .step-sub{ font-size:13px; color:var(--body); margin-bottom:20px; }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:14px; font-weight:600; margin-bottom:6px; }
+  .field label .hint{ font-weight:400; font-size:12px; color:var(--muted); margin-left:6px; }
+  .req{ color:#C0654A; margin-left:2px; }
+  .field-err{ color:#C0654A; font-size:12px; margin:6px 0 0; min-height:0; }
+  .field-err:empty{ display:none; }
+  input.input-err{ border-color:#C0654A !important; }
+
+  input[type=tel],input[type=text],input[type=password]{
+    width:100%; background:var(--input-bg); border:2px solid var(--input-border); border-radius:10px;
+    padding:12px 16px; font-size:15px; color:var(--ink); font-family:inherit;
+    outline:none; transition:border-color .2s, box-shadow .2s;
+  }
+  input::placeholder{ color:#B6A89C; }
+  input:focus{ border-color:var(--orange); box-shadow:0 0 0 3px rgba(245,166,35,.18); }
+  input:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .pwd-wrap{ position:relative; }
+  .pwd-toggle{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    background:none; border:none; font-size:12px; color:var(--body); font-family:inherit;
+  }
+  .code-row{ display:flex; gap:8px; }
+  .code-row input{ flex:1; letter-spacing:4px; }
+  .btn-code{
+    flex-shrink:0; min-width:104px; border:none; border-radius:10px;
+    background:var(--orange); color:#fff; font-size:14px; font-weight:600;
+    font-family:inherit; padding:0 14px; white-space:nowrap; cursor:pointer;
+    transition:transform .1s, opacity .2s;
+  }
+  .btn-code:active{ transform:scale(.96); }
+  .btn-code:disabled{ opacity:.5; cursor:default; }
+
+  /* 下拉 / 年月触发按钮 */
+  .select-btn{
+    width:100%; text-align:left; background:var(--input-bg); border:2px solid var(--input-border);
+    border-radius:10px; padding:11px 16px; font-size:15px; font-family:inherit;
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer; color:#B6A89C;
+  }
+  .select-btn.has-value{ color:var(--ink); }
+  .select-btn svg{ flex-shrink:0; margin-left:8px; color:var(--body); }
+  .select-btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .select-btn .btn-text{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .exp-group{ border:1px solid #E8B5B5; background:#FCF2F0; border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:12px; }
+  .exp-row{ display:flex; align-items:center; gap:12px; min-width:0; }
+  .exp-tag{ flex-shrink:0; width:34px; font-size:14px; color:#2C3E5C; }
+  .exp-row .select-btn{ flex:1; min-width:0; width:auto; background:#fff; }
+  .exp-row .select-btn .btn-text{ min-width:0; }
+  #toastBox{ position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:80; max-width:90vw; background:rgba(44,62,92,.92); color:#fff; font-size:14px; padding:10px 16px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.18); text-align:center; opacity:0; pointer-events:none; transition:opacity .25s; }
+  #toastBox.show{ opacity:1; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* 勾选框 */
+  .check-row{ display:flex; align-items:flex-start; gap:10px; margin-top:4px; cursor:pointer; user-select:none; }
+  .check-row input{ width:16px; height:16px; margin-top:2px; accent-color:var(--orange); cursor:pointer; }
+  .check-row span{ font-size:14px; line-height:1.6; color:var(--body); }
+
+  /* chips */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    border:1.5px solid #E8DCCB; background:#fff; color:var(--ink);
+    border-radius:999px; padding:8px 14px; font-size:13px; font-family:inherit; cursor:pointer;
+    transition:all .15s;
+  }
+  .chip:active{ transform:scale(.95); }
+  .chip.on{ background:var(--orange); border-color:var(--orange); color:#fff; font-weight:600; }
+  .chip-count{ font-size:12px; color:#B4780E; margin-top:8px; }
+
+  /* 报错：吸顶 freeze，滚动也始终可见（sticky 挂在父盒上，才有粘附行程） */
+  #alertBox{ position:sticky; top:72px; z-index:30; }
+  .alert{ font-size:14px; padding:12px 16px; border-radius:10px; margin-bottom:16px; }
+  .alert.err{
+    background:#FBEDE8; color:var(--danger);
+    border:1px solid rgba(192,101,74,.25);
+    box-shadow:0 4px 12px rgba(192,101,74,.15);
+  }
+  .alert.info{ background:rgba(245,166,35,.12); color:#8a5f10; }
+
+  .actions{ display:flex; gap:12px; margin-top:28px; }
+  .btn{
+    border:none; border-radius:10px; padding:13px 20px; font-size:14px; font-weight:700;
+    font-family:inherit; cursor:pointer; transition:transform .1s, background .2s;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn-primary{ flex:1; background:var(--orange); color:#fff; }
+  .btn-ghost{ background:rgba(90,107,126,.08); color:var(--body); font-weight:600; }
+  .btn-danger-ghost{ background:rgba(192,101,74,.08); color:var(--danger); font-weight:600; }
+
+  .foot-note{ text-align:center; font-size:12px; color:var(--muted); margin-top:24px; }
+
+  /* 成功页 */
+  .success-icon{
+    width:56px; height:56px; border-radius:50%; background:rgba(245,166,35,.14);
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+  }
+  .success-title{ font-family:'Noto Serif SC',serif; font-size:20px; font-weight:900; margin-bottom:4px; }
+  .success-sub{ font-size:14px; color:var(--body); margin-bottom:20px; }
+  .sum-group{ margin-bottom:20px; }
+  .sum-group h3{
+    font-size:14px; font-weight:700; padding-bottom:6px; margin-bottom:8px;
+    border-bottom:1px solid rgba(216,210,197,.7);
+  }
+  .sum-row{ display:flex; gap:12px; font-size:13px; line-height:1.7; }
+  .sum-row dt{ width:88px; flex-shrink:0; color:var(--muted); white-space:nowrap; }
+  .sum-row dd{ flex:1; }
+
+  /* 底部弹层 */
+  .mask{
+    position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.4);
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .mask.show{ display:flex; }
+  .sheet{
+    width:100%; max-width:448px; background:#fff; border-radius:16px 16px 0 0;
+    display:flex; flex-direction:column; max-height:72vh;
+    animation:slideUp .25s ease-out;
+  }
+  @keyframes slideUp{ from{ transform:translateY(100%);} to{ transform:translateY(0);} }
+  .sheet-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border-bottom:1px solid var(--input-border);
+    font-size:14px; font-weight:600; flex-shrink:0;
+  }
+  .sheet-close{ background:none; border:none; font-size:14px; color:var(--body); font-family:inherit; }
+  .sheet-body{ overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
+  .sheet-item{
+    width:100%; text-align:left; background:none; border:none; border-bottom:1px solid rgba(216,210,197,.3);
+    padding:14px 16px; font-size:14px; font-family:inherit; color:var(--ink);
+    display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+  }
+  .sheet-item:active{ background:#FAF7F4; }
+  .sheet-item.sel{ color:var(--orange); font-weight:600; }
+  .sheet-foot{
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--input-border);
+    display:flex; gap:12px; flex-shrink:0;
+  }
+  .sheet-foot .btn{ padding:11px 16px; }
+  .sheet-foot .spacer{ flex:1; }
+
+  /* 年月选择器 */
+  .month-years{ display:flex; gap:8px; overflow-x:auto; padding:12px 16px 4px; }
+  .year-chip{
+    flex-shrink:0; border:1.5px solid #E8DCCB; background:#fff; color:var(--ink);
+    border-radius:999px; padding:6px 14px; font-size:13px; font-family:inherit; cursor:pointer;
+  }
+  .year-chip.on{ background:var(--orange); border-color:var(--orange); color:#fff; font-weight:600; }
+  .month-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 16px 16px; }
+  .month-cell{
+    border:1.5px solid #E8DCCB; background:#fff; color:var(--ink);
+    border-radius:10px; padding:10px 0; font-size:14px; font-family:inherit; cursor:pointer;
+  }
+  .month-cell.on{ background:var(--orange); border-color:var(--orange); color:#fff; font-weight:600; }
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">榨</div>
+    <div>
+      <div class="brand-en">Career Companion</div>
+      <div class="brand-cn">榨职机</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 表单区 -->
+  <div id="formView">
+    <h1>创建你的<span class="hl">账号</span></h1>
+    <p class="subtitle">三步完成注册，开始和导师聊职业</p>
+
+    <div class="stepper">
+      <div class="step-node reached" data-node="1">
+        <div class="step-dot" data-dot="1">1</div><div class="step-label">手机验证</div>
+      </div>
+      <div class="step-line" data-line="1"></div>
+      <div class="step-node" data-node="2">
+        <div class="step-dot" data-dot="2">2</div><div class="step-label">你的状态</div>
+      </div>
+      <div class="step-line" data-line="2"></div>
+      <div class="step-node" data-node="3">
+        <div class="step-dot" data-dot="3">3</div><div class="step-label">方向与地点</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="badge">原型页面 · 信息不会真正提交</div>
+      <h2 id="stepTitle">第 1 步：手机验证</h2>
+      <p class="step-sub hidden" id="stepSub"></p>
+
+      <div id="alertBox"></div>
+      <div id="toastBox"></div>
+
+      <!-- 第 1 步 -->
+      <div data-step="1">
+        <div class="field">
+          <label>手机号<span class="req">*</span></label>
+          <input type="tel" id="phone" inputmode="numeric" maxlength="11" placeholder="请输入 11 位手机号" />
+        </div>
+        <div class="field">
+          <label>密码<span class="req">*</span> <span class="hint">至少 8 位，必须包含字母和数字</span></label>
+          <div class="pwd-wrap">
+            <input type="password" id="password" maxlength="64" autocomplete="new-password" />
+            <button type="button" class="pwd-toggle" id="pwdToggle">显示</button>
+          </div>
+          <p class="field-err" id="pwdErr"></p>
+        </div>
+        <div class="field">
+          <label>确认密码<span class="req">*</span></label>
+          <div class="pwd-wrap">
+            <input type="password" id="confirmPwd" maxlength="64" autocomplete="new-password" />
+            <button type="button" class="pwd-toggle" id="pwdToggle2">显示</button>
+          </div>
+          <p class="field-err" id="confirmErr"></p>
+        </div>
+        <div class="field">
+          <label>短信验证码<span class="req">*</span></label>
+          <div class="code-row">
+            <input type="tel" id="code" inputmode="numeric" maxlength="6" placeholder="6 位验证码" />
+            <button type="button" class="btn-code" id="btnSendCode">发送验证码</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>姓名 / 昵称<span class="req">*</span></label>
+          <input type="text" id="nickname" maxlength="20" placeholder="导师会这样称呼你" />
+        </div>
+        <div class="field">
+          <label>出生年月<span class="req">*</span></label>
+          <button type="button" class="select-btn" id="mBirth">
+            <span class="btn-text">选择出生年月</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 第 2 步 -->
+      <div data-step="2" class="hidden">
+        <div class="field">
+          <label>目前状态<span class="req">*</span></label>
+          <button type="button" class="select-btn" id="selIdentity">
+            <span class="btn-text">请选择在校 / 在职 / 待业</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+
+        <div id="studentFields" class="hidden">
+          <div class="field">
+            <label>入学年月<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="mEnroll">
+              <span class="btn-text">选择入学年月</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>学校名称<span class="req">*</span></label>
+            <input type="text" id="school" placeholder="如：西南财经大学" />
+          </div>
+          <div class="field">
+            <label>专业分类<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="selMajor">
+              <span class="btn-text">请选择专业分类</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>毕业日期<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="mExpected">
+              <span class="btn-text">选择毕业日期</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div id="workingFields" class="hidden">
+          <div class="field">
+            <label>最近打算<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="selWorkGoal">
+              <span class="btn-text" id="workGoalPlaceholder">请选择你最近的打算：</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>入学年月<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="mEnroll2">
+              <span class="btn-text">选择入学年月</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>学校名称<span class="req">*</span></label>
+            <input type="text" id="school2" placeholder="如：西南财经大学" />
+          </div>
+          <div class="field">
+            <label>专业分类<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="selMajor2">
+              <span class="btn-text">请选择专业分类</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>毕业日期<span class="req">*</span></label>
+            <button type="button" class="select-btn" id="mGrad">
+              <span class="btn-text">选择毕业日期</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+          </div>
+          <div class="field">
+            <label>工作经验</label>
+            <div class="exp-group">
+              <div class="exp-row">
+                <span class="exp-tag">全职</span>
+                <button type="button" class="select-btn" id="selFullTime">
+                  <span class="btn-text">请选择工作时长</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+              <div class="exp-row">
+                <span class="exp-tag">兼职</span>
+                <button type="button" class="select-btn" id="selPartTime">
+                  <span class="btn-text">请选择工作时长</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第 3 步 -->
+      <div data-step="3" class="hidden">
+        <div class="field">
+          <label>希望工作地点（省 / 市）<span class="req">*</span></label>
+          <div class="grid2">
+            <button type="button" class="select-btn" id="selWorkProvince"><span class="btn-text">选择省份</span></button>
+            <button type="button" class="select-btn" id="selWorkCity"><span class="btn-text">请先选省份</span></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>目前所在地（省 / 市）<span class="req">*</span></label>
+          <div class="grid2">
+            <button type="button" class="select-btn" id="selCurProvince"><span class="btn-text">选择省份</span></button>
+            <button type="button" class="select-btn" id="selCurCity"><span class="btn-text">请先选省份</span></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>感兴趣的职业方向<span class="req">*</span> <span class="hint">可多选，至少选 1 个</span></label>
+          <div class="chips" id="chips"></div>
+          <p class="chip-count" id="chipCount">已选 0 个</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-ghost hidden" id="btnBack">上一步</button>
+        <button type="button" class="btn btn-primary" id="btnNext">下一步</button>
+      </div>
+    </div>
+
+    <p class="foot-note">榨职机新版注册原型 · 供同伴验收讨论</p>
+  </div>
+
+  <!-- 成功页 -->
+  <div id="doneView" class="hidden">
+    <div class="card">
+      <div class="success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M20 6L9 17l-5-5" stroke="#F5A623" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2 class="success-title">原型提交成功</h2>
+      <p class="success-sub">数据仅在本页演示，没有写入服务器。下面是本次填写内容：</p>
+      <div id="summary"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-ghost" id="btnBackEdit">返回修改</button>
+        <button type="button" class="btn btn-primary" id="btnRestart">重新填写</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- 通用底部选择弹层 -->
+<div class="mask" id="mask">
+  <div class="sheet">
+    <div class="sheet-head">
+      <span id="sheetTitle">请选择</span>
+      <button type="button" class="sheet-close" id="sheetCloseX">关闭</button>
+    </div>
+
+    <!-- 列表模式 -->
+    <div class="sheet-body" id="sheetList"></div>
+
+    <!-- 年月模式 -->
+    <div class="sheet-body hidden" id="sheetMonth">
+      <div class="month-years" id="monthYears"></div>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+
+    <!-- 底部按钮：列表模式显示关闭；年月模式显示清除/取消/确认 -->
+    <div class="sheet-foot" id="sheetFoot">
+      <div class="spacer"></div>
+      <button type="button" class="btn btn-ghost" id="sheetCloseBtn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ 选项数据 ============ */
+var MAJORS = ['会计','商科 / 工商管理','计算机科学 / IT','工程','金融','健康相关','人文','法律','数学','医学','自然科学','社会科学','其他','还没选专业','无专业（高中生）'];
+var GOALS_WORKING = ['想换份工作','想提高技能','其他'];
+var GOALS_JOBLESS = ['想找份工作','想提高技能','其他'];
+var EXP_DURATIONS = ['3个月以内','3~6个月','6~12月','1~3年','3~5年','5~8年','8年以上'];
+var CAREERS = ['会计与审计','人工智能','银行与金融','职业发展与面试技巧','咨询与战略','客户成功与客户管理','数据与分析','设计与用户体验','教育','工程','创业','政府与公共服务','医疗健康','人力资源与招聘','保险','法律','生命科学','市场营销','军队与军工','产品管理','项目管理','房地产','零售与消费品','销售','网络安全','软件工程与 IT','供应链与物流'];
+
+var PROVINCE_CITIES = {
+  '北京市':['北京市'],'天津市':['天津市'],
+  '河北省':['石家庄市','唐山市','秦皇岛市','邯郸市','邢台市','保定市','张家口市','承德市','沧州市','廊坊市','衡水市'],
+  '山西省':['太原市','大同市','阳泉市','长治市','晋城市','朔州市','晋中市','运城市','忻州市','临汾市','吕梁市'],
+  '内蒙古自治区':['呼和浩特市','包头市','乌海市','赤峰市','通辽市','鄂尔多斯市','呼伦贝尔市','巴彦淖尔市','乌兰察布市','兴安盟','锡林郭勒盟','阿拉善盟'],
+  '辽宁省':['沈阳市','大连市','鞍山市','抚顺市','本溪市','丹东市','锦州市','营口市','阜新市','辽阳市','盘锦市','铁岭市','朝阳市','葫芦岛市'],
+  '吉林省':['长春市','吉林市','四平市','辽源市','通化市','白山市','松原市','白城市','延边朝鲜族自治州'],
+  '黑龙江省':['哈尔滨市','齐齐哈尔市','鸡西市','鹤岗市','双鸭山市','大庆市','伊春市','佳木斯市','七台河市','牡丹江市','黑河市','绥化市','大兴安岭地区'],
+  '上海市':['上海市'],
+  '江苏省':['南京市','无锡市','徐州市','常州市','苏州市','南通市','连云港市','淮安市','盐城市','扬州市','镇江市','泰州市','宿迁市'],
+  '浙江省':['杭州市','宁波市','温州市','嘉兴市','湖州市','绍兴市','金华市','衢州市','舟山市','台州市','丽水市'],
+  '安徽省':['合肥市','芜湖市','蚌埠市','淮南市','马鞍山市','淮北市','铜陵市','安庆市','黄山市','滁州市','阜阳市','宿州市','六安市','亳州市','池州市','宣城市'],
+  '福建省':['福州市','厦门市','莆田市','三明市','泉州市','漳州市','南平市','龙岩市','宁德市'],
+  '江西省':['南昌市','景德镇市','萍乡市','九江市','新余市','鹰潭市','赣州市','吉安市','宜春市','抚州市','上饶市'],
+  '山东省':['济南市','青岛市','淄博市','枣庄市','东营市','烟台市','潍坊市','济宁市','泰安市','威海市','日照市','临沂市','德州市','聊城市','滨州市','菏泽市'],
+  '河南省':['郑州市','开封市','洛阳市','平顶山市','安阳市','鹤壁市','新乡市','焦作市','濮阳市','许昌市','漯河市','三门峡市','南阳市','商丘市','信阳市','周口市','驻马店市','济源市'],
+  '湖北省':['武汉市','黄石市','十堰市','宜昌市','襄阳市','鄂州市','荆门市','孝感市','荆州市','黄冈市','咸宁市','随州市','恩施土家族苗族自治州','仙桃市','潜江市','天门市','神农架林区'],
+  '湖南省':['长沙市','株洲市','湘潭市','衡阳市','邵阳市','岳阳市','常德市','张家界市','益阳市','郴州市','永州市','怀化市','娄底市','湘西土家族苗族自治州'],
+  '广东省':['广州市','韶关市','深圳市','珠海市','汕头市','佛山市','江门市','湛江市','茂名市','肇庆市','惠州市','梅州市','汕尾市','河源市','阳江市','清远市','东莞市','中山市','潮州市','揭阳市','云浮市'],
+  '广西壮族自治区':['南宁市','柳州市','桂林市','梧州市','北海市','防城港市','钦州市','贵港市','玉林市','百色市','贺州市','河池市','来宾市','崇左市'],
+  '海南省':['海口市','三亚市','三沙市','儋州市','五指山市','琼海市','文昌市','万宁市','东方市'],
+  '重庆市':['重庆市'],
+  '四川省':['成都市','自贡市','攀枝花市','泸州市','德阳市','绵阳市','广元市','遂宁市','内江市','乐山市','南充市','眉山市','宜宾市','广安市','达州市','雅安市','巴中市','资阳市','阿坝藏族羌族自治州','甘孜藏族自治州','凉山彝族自治州'],
+  '贵州省':['贵阳市','六盘水市','遵义市','安顺市','毕节市','铜仁市','黔西南布依族苗族自治州','黔东南苗族侗族自治州','黔南布依族苗族自治州'],
+  '云南省':['昆明市','曲靖市','玉溪市','保山市','昭通市','丽江市','普洱市','临沧市','楚雄彝族自治州','红河哈尼族彝族自治州','文山壮族苗族自治州','西双版纳傣族自治州','大理白族自治州','德宏傣族景颇族自治州','怒江傈僳族自治州','迪庆藏族自治州'],
+  '西藏自治区':['拉萨市','日喀则市','昌都市','林芝市','山南市','那曲市','阿里地区'],
+  '陕西省':['西安市','铜川市','宝鸡市','咸阳市','渭南市','延安市','汉中市','榆林市','安康市','商洛市'],
+  '甘肃省':['兰州市','嘉峪关市','金昌市','白银市','天水市','武威市','张掖市','平凉市','酒泉市','庆阳市','定西市','陇南市','临夏回族自治州','甘南藏族自治州'],
+  '青海省':['西宁市','海东市','海北藏族自治州','黄南藏族自治州','海南藏族自治州','果洛藏族自治州','玉树藏族自治州','海西蒙古族藏族自治州'],
+  '宁夏回族自治区':['银川市','石嘴山市','吴忠市','固原市','中卫市'],
+  '新疆维吾尔自治区':['乌鲁木齐市','克拉玛依市','吐鲁番市','哈密市','昌吉回族自治州','博尔塔拉蒙古自治州','巴音郭楞蒙古自治州','阿克苏地区','克孜勒苏柯尔克孜自治州','喀什地区','和田地区','伊犁哈萨克自治州','塔城地区','阿勒泰地区','石河子市'],
+  '台湾省':['台北市','新北市','桃园市','台中市','台南市','高雄市','基隆市','新竹市','嘉义市'],
+  '香港特别行政区':['香港特别行政区'],
+  '澳门特别行政区':['澳门特别行政区']
+};
+var HOT = ['北京市','上海市','广东省','浙江省','江苏省','四川省'];
+var PROVINCES = HOT.concat(Object.keys(PROVINCE_CITIES).filter(function(p){ return HOT.indexOf(p) < 0; })).concat(['海外']);
+
+/* ============ 状态 ============ */
+var CURRENT_YEAR = new Date().getFullYear();
+var step = 1;
+var form = {
+  phone:'', password:'', code:'', sentCode:'', nickname:'', birthMonth:'',
+  identity:'', enrollMonth:'', school:'', major:'', expectedGrad:'',
+  workGoal:'', gradMonth:'', fullTimeExp:'', partTimeExp:'',
+  workProvince:'', workCity:'', curProvince:'', curCity:'', careers:[]
+};
+var countdown = 0, countdownTimer = null;
+
+// 年月弹层草稿
+var monthTarget = null; // {key,title,minY,maxY}
+var draftYear = null, draftMonth = null;
+
+// 年月字段配置
+var MONTH_CFG = {
+  birth:   { title:'选择出生年月', minY:1950, maxY:CURRENT_YEAR },
+  enroll:  { title:'选择入学年月', minY:2000, maxY:CURRENT_YEAR },
+  expected:{ title:'选择毕业日期', minY:CURRENT_YEAR, maxY:2040 },
+  grad:    { title:'选择毕业日期', minY:1960, maxY:CURRENT_YEAR }
+};
+
+var STEP_META = [
+  {title:'第 1 步：手机验证', sub:''},
+  {title:'第 2 步：你的状态', sub:''},
+  {title:'第 3 步：方向与地点', sub:''}
+];
+
+/* ============ 工具 ============ */
+function $(id){ return document.getElementById(id); }
+function val(id){ return $(id).value.trim(); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function monthNow(offsetYears){
+  var d = new Date(); var y = d.getFullYear() + (offsetYears||0);
+  return y + '-' + pad2(d.getMonth()+1);
+}
+function fmtMonth(v){
+  if(!v) return '—';
+  var p = v.split('-'); return p[0] + ' 年 ' + Number(p[1]) + ' 月';
+}
+/* 轻提示：浮层不占位，2.5 秒自动消失（验证码 Mock 用完即走） */
+var toastTimer = null;
+function showToast(msg){
+  var box = $('toastBox');
+  box.textContent = msg;
+  box.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ box.classList.remove('show'); }, 2500);
+}
+
+function showAlert(msg, type){
+  var box = $('alertBox');
+  if(!msg){ box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="alert ' + (type||'err') + '" id="alertMsg">' + msg + '</div>';
+  // 报错自动滚到可见位置，配合 sticky 吸顶，用户不用往上翻
+  if(type !== 'info'){
+    setTimeout(function(){
+      var el = $('alertMsg');
+      if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+    }, 30);
+  }
+}
+
+/* ============ 底部弹层（列表 / 年月双模式） ============ */
+function openSheet(){
+  $('mask').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function closeSheet(){
+  $('mask').classList.remove('show');
+  document.body.style.overflow = '';
+  monthTarget = null;
+}
+function showListMode(onClear){
+  $('sheetList').classList.remove('hidden');
+  $('sheetMonth').classList.add('hidden');
+  $('sheetFoot').innerHTML =
+    (onClear ? '<button type="button" class="btn btn-danger-ghost" id="sheetClearBtn">清除选择</button>' : '') +
+    '<div class="spacer"></div>' +
+    '<button type="button" class="btn btn-ghost" id="sheetCloseBtn">关闭</button>';
+  $('sheetCloseBtn').onclick = closeSheet;
+  if(onClear) $('sheetClearBtn').onclick = function(){ onClear(); closeSheet(); };
+}
+function openListSheet(title, options, current, onPick, onClear){
+  $('sheetTitle').textContent = title;
+  showListMode(current && onClear ? onClear : null);
+  var list = $('sheetList');
+  list.innerHTML = '';
+  options.forEach(function(opt){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sheet-item' + (opt === current ? ' sel' : '');
+    b.innerHTML = '<span>' + opt + '</span>' + (opt === current ?
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '');
+    b.onclick = function(){ onPick(opt); closeSheet(); };
+    list.appendChild(b);
+  });
+  openSheet();
+}
+
+function setSelectText(btnId, text, hasValue){
+  var btn = $(btnId);
+  btn.querySelector('.btn-text').textContent = text;
+  btn.classList.toggle('has-value', !!hasValue);
+}
+
+/* ---- 年月模式 ---- */
+function renderMonthSheet(){
+  // 年份（降序）
+  var yearsBox = $('monthYears');
+  yearsBox.innerHTML = '';
+  for(var y = monthTarget.maxY; y >= monthTarget.minY; y--){
+    (function(y){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'year-chip' + (draftYear === y ? ' on' : '');
+      b.textContent = y + ' 年';
+      b.onclick = function(){
+        draftYear = y; renderMonthSheet();
+        b.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'});
+      };
+      yearsBox.appendChild(b);
+    })(y);
+  }
+  // 月份 4×3
+  var grid = $('monthGrid');
+  grid.innerHTML = '';
+  for(var m = 1; m <= 12; m++){
+    (function(m){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'month-cell' + (draftMonth === m ? ' on' : '');
+      b.textContent = m + ' 月';
+      b.onclick = function(){ draftMonth = m; renderMonthSheet(); };
+      grid.appendChild(b);
+    })(m);
+  }
+  // 年、月都选了「确认」才可点
+  var mc = $('mConfirm');
+  if(mc) mc.disabled = !(draftYear && draftMonth);
+}
+function openMonthSheet(key){
+  var cfg = MONTH_CFG[key];
+  monthTarget = { key:key, title:cfg.title, minY:cfg.minY, maxY:cfg.maxY };
+  $('sheetTitle').textContent = cfg.title;
+  $('sheetList').classList.add('hidden');
+  $('sheetMonth').classList.remove('hidden');
+  // 显式映射取值
+  var v = {birth:form.birthMonth, enroll:form.enrollMonth, expected:form.expectedGrad, grad:form.gradMonth}[key];
+  if(v){ var p = v.split('-'); draftYear = Number(p[0]); draftMonth = Number(p[1]); }
+  else { draftYear = null; draftMonth = null; }
+  renderMonthSheet();
+  // 底部：清除 / 取消 / 确认
+  $('sheetFoot').innerHTML =
+    '<button type="button" class="btn btn-danger-ghost" id="mClear">清除</button>' +
+    '<div class="spacer"></div>' +
+    '<button type="button" class="btn btn-ghost" id="mCancel">取消</button>' +
+    '<button type="button" class="btn btn-primary" id="mConfirm" style="flex:0 0 auto;min-width:96px;">确认</button>';
+  $('mConfirm').disabled = !(draftYear && draftMonth);
+  $('mClear').onclick = function(){
+    if(key === 'birth') form.birthMonth = '';
+    else if(key === 'enroll') form.enrollMonth = '';
+    else if(key === 'expected') form.expectedGrad = '';
+    else { form.gradMonth = ''; }
+    syncMonthTriggers();
+    closeSheet();
+  };
+  $('mCancel').onclick = closeSheet;
+  $('mConfirm').onclick = function(){
+    if(!draftYear || !draftMonth) return;
+    var value = draftYear + '-' + pad2(draftMonth);
+    if(key === 'birth') form.birthMonth = value;
+    else if(key === 'enroll') form.enrollMonth = value;
+    else if(key === 'expected') form.expectedGrad = value;
+    else form.gradMonth = value;
+    syncMonthTriggers();
+    closeSheet();
+  };
+  openSheet();
+}
+function syncMonthTriggers(){
+  setSelectText('mBirth', form.birthMonth ? fmtMonth(form.birthMonth) : '选择出生年月', !!form.birthMonth);
+  setSelectText('mEnroll', form.enrollMonth ? fmtMonth(form.enrollMonth) : '选择入学年月', !!form.enrollMonth);
+  setSelectText('mEnroll2', form.enrollMonth ? fmtMonth(form.enrollMonth) : '选择入学年月', !!form.enrollMonth);
+  setSelectText('mExpected', form.expectedGrad ? fmtMonth(form.expectedGrad) : '选择毕业日期', !!form.expectedGrad);
+  setSelectText('mGrad', form.gradMonth ? fmtMonth(form.gradMonth) : '选择毕业日期', !!form.gradMonth);
+}
+
+$('mask').addEventListener('click', function(e){ if(e.target === this) closeSheet(); });
+$('sheetCloseX').onclick = closeSheet;
+
+/* ============ 第 1 步交互 ============ */
+function bindPwdToggle(btnId, inputId){
+  $(btnId).onclick = function(){
+    var input = $(inputId);
+    var show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    this.textContent = show ? '隐藏' : '显示';
+  };
+}
+bindPwdToggle('pwdToggle', 'password');
+bindPwdToggle('pwdToggle2', 'confirmPwd');
+
+/* 密码 / 确认密码：离开输入框即时校验 */
+function pwdHint(v){
+  if(!v) return '';
+  if(v.length < 8 || !/[a-zA-Z]/.test(v) || !/[0-9]/.test(v)) return '密码至少 8 位，且必须包含字母和数字';
+  return '';
+}
+function setFieldErr(errId, inputId, msg){
+  $(errId).textContent = msg || '';
+  $(inputId).classList.toggle('input-err', !!msg);
+}
+$('password').addEventListener('blur', function(){
+  setFieldErr('pwdErr', 'password', this.value ? pwdHint(this.value) : '');
+});
+$('password').addEventListener('input', function(){
+  setFieldErr('pwdErr', 'password', '');
+  if($('confirmPwd').value){
+    setFieldErr('confirmErr', 'confirmPwd', $('confirmPwd').value === this.value ? '' : '两次输入的密码不一致');
+  }
+});
+$('confirmPwd').addEventListener('blur', function(){
+  var msg = '';
+  if(this.value) msg = this.value === $('password').value ? '' : '两次输入的密码不一致';
+  setFieldErr('confirmErr', 'confirmPwd', msg);
+});
+$('confirmPwd').addEventListener('input', function(){
+  setFieldErr('confirmErr', 'confirmPwd', '');
+});
+
+$('mBirth').onclick = function(){ openMonthSheet('birth'); };
+$('mEnroll').onclick = function(){ openMonthSheet('enroll'); };
+$('mEnroll2').onclick = function(){ openMonthSheet('enroll'); };
+$('mExpected').onclick = function(){ openMonthSheet('expected'); };
+$('mGrad').onclick = function(){ openMonthSheet('grad'); };
+
+$('btnSendCode').onclick = function(){
+  var phone = val('phone');
+  var pwd = $('password').value;
+  var cpwd = $('confirmPwd').value;
+  if(!/^1[3-9]\d{9}$/.test(phone)){ showAlert('请输入有效的 11 位手机号'); return; }
+  if(pwd.length < 8 || !/[a-zA-Z]/.test(pwd) || !/[0-9]/.test(pwd)){ showAlert('密码至少 8 位，且必须包含字母和数字'); return; }
+  if(pwd !== cpwd){ showAlert('两次输入的密码不一致'); return; }
+
+  var mock = String(Math.floor(100000 + Math.random()*900000));
+  form.sentCode = mock;
+  $('code').value = mock;
+  showToast('验证码：' + mock + '（原型 Mock，不会真的发短信）');
+
+  countdown = 60;
+  var btn = $('btnSendCode');
+  btn.disabled = true;
+  btn.textContent = '60s 后重发';
+  clearInterval(countdownTimer);
+  countdownTimer = setInterval(function(){
+    countdown--;
+    if(countdown <= 0){
+      clearInterval(countdownTimer);
+      btn.disabled = false;
+      btn.textContent = '重新发送';
+    } else {
+      btn.textContent = countdown + 's 后重发';
+    }
+  }, 1000);
+};
+
+/* ============ 第 2 步交互 ============ */
+$('selIdentity').onclick = function(){
+  openListSheet('请选择在校 / 在职 / 待业', ['在校','在职','待业'],
+    form.identity === 'student' ? '在校' : (form.identity === 'working' ? '在职' : (form.identity === 'jobless' ? '待业' : '')),
+    function(v){
+      var next = v === '在校' ? 'student' : (v === '在职' ? 'working' : 'jobless');
+      form.identity = next;
+      setSelectText('selIdentity', v, true);
+      $('studentFields').classList.toggle('hidden', next !== 'student');
+      $('workingFields').classList.toggle('hidden', next === 'student');
+      // 切换在职/待业后，清空不属于新身份的想法
+      var goals = next === 'jobless' ? GOALS_JOBLESS : GOALS_WORKING;
+      if(form.workGoal && goals.indexOf(form.workGoal) < 0){
+        form.workGoal = '';
+      }
+      $('workGoalPlaceholder').textContent = '请选择你最近的打算：';
+      setSelectText('selWorkGoal', $('workGoalPlaceholder').textContent, !!form.workGoal);
+      // 同步两个分支共享字段的显示
+      syncMonthTriggers();
+      $('school').value = form.school || '';
+      $('school2').value = form.school || '';
+      setSelectText('selMajor', form.major || '请选择专业分类', !!form.major);
+      setSelectText('selMajor2', form.major || '请选择专业分类', !!form.major);
+    });
+};
+$('selMajor').onclick = function(){
+  openListSheet('请选择专业分类', MAJORS, form.major, function(v){
+    form.major = v; setSelectText('selMajor', v, true);
+  });
+};
+$('selMajor2').onclick = function(){
+  openListSheet('请选择专业分类', MAJORS, form.major, function(v){
+    form.major = v; setSelectText('selMajor2', v, true);
+  });
+};
+$('selWorkGoal').onclick = function(){
+  if(!form.identity || form.identity === 'student') return;
+  var goals = form.identity === 'jobless' ? GOALS_JOBLESS : GOALS_WORKING;
+  openListSheet('请选择你最近的打算：', goals, form.workGoal, function(v){
+    form.workGoal = v;
+    setSelectText('selWorkGoal', v, true);
+  });
+};
+$('selFullTime').onclick = function(){
+  openListSheet('全职：请选择工作时长', EXP_DURATIONS, form.fullTimeExp, function(v){
+    form.fullTimeExp = v; setSelectText('selFullTime', v, true);
+  }, function(){
+    form.fullTimeExp = ''; setSelectText('selFullTime', '请选择工作时长', false);
+  });
+};
+$('selPartTime').onclick = function(){
+  openListSheet('兼职：请选择工作时长', EXP_DURATIONS, form.partTimeExp, function(v){
+    form.partTimeExp = v; setSelectText('selPartTime', v, true);
+  }, function(){
+    form.partTimeExp = ''; setSelectText('selPartTime', '请选择工作时长', false);
+  });
+};
+
+/* ============ 第 3 步交互：省市级联 ============ */
+var SINGLE_CITY_PROVINCES = ['北京市','天津市','上海市','重庆市','香港特别行政区','澳门特别行政区','海外'];
+function isSingleCity(p){ return SINGLE_CITY_PROVINCES.indexOf(p) >= 0; }
+function cityListOf(p, tail){
+  return (PROVINCE_CITIES[p] || []).concat(isSingleCity(p) ? [] : [tail]);
+}
+function bindProvince(btnId, cityBtnId, keyP, keyC, tail){
+  $(btnId).onclick = function(){
+    openListSheet('选择省份', PROVINCES, form[keyP], function(v){
+      form[keyP] = v;
+      setSelectText(btnId, v, true);
+      var cityBtn = $(cityBtnId);
+      if(isSingleCity(v)){
+        // 直辖市/港澳/海外：市栏自动带出同名并置灰
+        form[keyC] = v;
+        setSelectText(cityBtnId, v, true);
+        cityBtn.disabled = true;
+      } else {
+        form[keyC] = '';
+        setSelectText(cityBtnId, '选择城市', false);
+        cityBtn.disabled = false;
+      }
+    });
+  };
+  $(cityBtnId).onclick = function(){
+    if(!form[keyP]){ return; }
+    if(isSingleCity(form[keyP])){ return; }
+    openListSheet(form[keyP] + ' · 选择城市', cityListOf(form[keyP], tail), form[keyC], function(v){
+      form[keyC] = v; setSelectText(cityBtnId, v, true);
+    });
+  };
+}
+bindProvince('selWorkProvince','selWorkCity','workProvince','workCity','均可考虑');
+bindProvince('selCurProvince','selCurCity','curProvince','curCity','其他');
+
+/* 职业 chips */
+CAREERS.forEach(function(name){
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'chip';
+  b.textContent = name;
+  b.onclick = function(){
+    var i = form.careers.indexOf(name);
+    if(i >= 0){ form.careers.splice(i,1); b.classList.remove('on'); }
+    else { form.careers.push(name); b.classList.add('on'); }
+    $('chipCount').textContent = '已选 ' + form.careers.length + ' 个';
+  };
+  $('chips').appendChild(b);
+});
+
+/* ============ 校验与翻页 ============ */
+function validateStep1(){
+  form.phone = val('phone');
+  form.password = $('password').value;
+  form.code = val('code');
+  form.nickname = val('nickname');
+  if(!/^1[3-9]\d{9}$/.test(form.phone)) return '请输入有效的 11 位手机号';
+  if(form.password.length < 8 || !/[a-zA-Z]/.test(form.password) || !/[0-9]/.test(form.password)) return '密码至少 8 位，且必须包含字母和数字';
+  if(form.password !== $('confirmPwd').value) return '两次输入的密码不一致';
+  if(!form.sentCode || form.code !== form.sentCode) return '请填写正确的短信验证码';
+  if(!form.nickname) return '请填写姓名或昵称';
+  if(!form.birthMonth) return '请选择出生年月';
+  if(form.birthMonth > monthNow(-15)) return '年龄需满 15 岁';
+  return '';
+}
+function validateStep2(){
+  var now = monthNow(0);
+  if(!form.identity) return '请选择你目前的状态';
+  if(form.identity === 'student'){
+    form.school = val('school');
+    if(!form.enrollMonth) return '请选择入学年月';
+    if(!form.school) return '请填写学校名称';
+    if(!form.major) return '请选择专业分类';
+    if(!form.expectedGrad) return '请选择毕业日期';
+    if(form.expectedGrad < now) return '毕业日期不能早于当前月份';
+    if(form.expectedGrad <= form.enrollMonth) return '毕业日期需要晚于入学年月';
+  } else {
+    form.school = val('school2');
+    if(!form.workGoal) return '请选择你最近的打算';
+    if(!form.enrollMonth) return '请选择入学年月';
+    if(!form.school) return '请填写学校名称';
+    if(!form.major) return '请选择专业分类';
+    if(!form.gradMonth) return '请选择毕业日期';
+    if(form.gradMonth > now) return '毕业日期不能晚于当前月份';
+    if(form.gradMonth <= form.enrollMonth) return '毕业日期需要晚于入学年月';
+  }
+  return '';
+}
+function validateStep3(){
+  if(!form.workProvince || !form.workCity) return '请选择希望工作地点（省 / 市）';
+  if(!form.curProvince || !form.curCity) return '请选择目前所在地（省 / 市）';
+  if(form.careers.length === 0) return '请至少选择一个感兴趣的职业方向';
+  return '';
+}
+
+function renderStep(){
+  $('stepTitle').textContent = STEP_META[step-1].title;
+  var subEl = $('stepSub');
+  var sub = STEP_META[step-1].sub;
+  if(sub){ subEl.textContent = sub; subEl.classList.remove('hidden'); }
+  else { subEl.textContent = ''; subEl.classList.add('hidden'); }
+  document.querySelectorAll('[data-step]').forEach(function(el){
+    el.classList.toggle('hidden', Number(el.getAttribute('data-step')) !== step);
+  });
+  for(var n=1; n<=3; n++){
+    var node = document.querySelector('[data-node="'+n+'"]');
+    node.classList.toggle('reached', step >= n);
+    node.classList.toggle('passed', step > n);
+    var dot = document.querySelector('[data-dot="'+n+'"]');
+    dot.innerHTML = step > n ?
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : String(n);
+  }
+  document.querySelector('[data-line="1"]').classList.toggle('done', step > 1);
+  document.querySelector('[data-line="2"]').classList.toggle('done', step > 2);
+  $('btnBack').classList.toggle('hidden', step === 1);
+  $('btnNext').textContent = step === 3 ? '完成注册' : '下一步';
+  showAlert('');
+}
+
+$('btnBack').onclick = function(){ if(step > 1){ step--; renderStep(); } };
+$('btnNext').onclick = function(){
+  var msg = '';
+  if(step === 1) msg = validateStep1();
+  else if(step === 2) msg = validateStep2();
+  else msg = validateStep3();
+  if(msg){ showAlert(msg); return; }
+  if(step < 3){ step++; renderStep(); return; }
+  submitPrototype();
+};
+
+/* ============ 成功页 ============ */
+function group(title, rows){
+  return '<div class="sum-group"><h3>' + title + '</h3>' +
+    rows.map(function(r){
+      return '<div class="sum-row"><dt>' + r[0] + '</dt><dd>' + (r[1] || '—') + '</dd></div>';
+    }).join('') + '</div>';
+}
+function submitPrototype(){
+  var identityText = form.identity === 'student' ? '在校' : (form.identity === 'working' ? '在职' : '待业');
+  var groups = '';
+  groups += group('账号信息', [
+    ['手机号', form.phone],
+    ['姓名 / 昵称', form.nickname],
+    ['出生年月', fmtMonth(form.birthMonth)]
+  ]);
+  if(form.identity === 'student'){
+    groups += group('在校信息', [
+      ['目前状态','在校'],
+      ['入学年月', fmtMonth(form.enrollMonth)],
+      ['学校', form.school],
+      ['专业分类', form.major],
+      ['毕业日期', fmtMonth(form.expectedGrad)]
+    ]);
+  } else {
+    groups += group(identityText + '信息', [
+      ['目前状态', identityText],
+      ['最近打算', form.workGoal],
+      ['入学年月', fmtMonth(form.enrollMonth)],
+      ['学校', form.school],
+      ['专业分类', form.major],
+      ['毕业日期', fmtMonth(form.gradMonth)],
+      ['全职', form.fullTimeExp || '未选'],
+      ['兼职', form.partTimeExp || '未选']
+    ]);
+  }
+  groups += group('方向与地点', [
+    ['希望工作地点', form.workProvince + ' · ' + form.workCity],
+    ['目前所在地', form.curProvince + ' · ' + form.curCity],
+    ['感兴趣的职业方向', form.careers.join('、')]
+  ]);
+  $('summary').innerHTML = groups;
+  $('formView').classList.add('hidden');
+  $('doneView').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+$('btnBackEdit').onclick = function(){
+  $('doneView').classList.add('hidden');
+  $('formView').classList.remove('hidden');
+};
+$('btnRestart').onclick = function(){ location.reload(); };
+
+/* 初始化 */
+renderStep();
+syncMonthTriggers();
+</script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useLanguage } from '@/components/language-context';
@@ -10,37 +11,38 @@ import { useLanguage } from '@/components/language-context';
 const navLabels = {
   zh: {
     home: '首页',
-    aiGuide: '榨职机',
+    aiGuide: '职业测试',
     mentors: '行业导师',
     dashboard: '成长追踪',
-    history: '对话记录',
+    myProfile: '我的档案',
     login: '登录',
     register: '注册',
-    join: '入会',
+    subscribe: '订阅',
+    renew: '续费',
     logout: '退出',
-    profile: '我的',
     loading: '加载中...',
   },
   en: {
     home: 'Home',
-    aiGuide: 'AI Guide',
+    aiGuide: 'Assessment',
     mentors: 'Mentors',
     dashboard: 'Growth',
-    history: 'History',
+    myProfile: 'My Profile',
     login: 'Log In',
     register: 'Sign Up',
-    join: 'Join',
+    subscribe: 'Subscribe',
+    renew: 'Renew',
     logout: 'Logout',
-    profile: 'Me',
     loading: 'Loading...',
   },
 };
 
 /**
- * 顶部导航栏 — 恢复原始 MVP 设计
- * 移动端: 5 个功能图标 (首页/AI职导/行业导师/成长追踪/对话记录)
- * 桌面端: Logo + 导航链接 + 登录/注册/入会按钮
- * 
+ * 顶部导航栏
+ * 移动端: 第一行 Logo + Career Companion + 功能按钮；第二行 5 个功能入口
+ * 桌面端: Logo + 导航链接 + 功能按钮（单行）
+ * 功能按钮三态: 未登录=注册/登录；非会员=订阅/退出；会员=续费/退出
+ *
  * 在 AI 职导对话页面：
  * - 问卷进行中：导航栏随页面滚动（不锁定）
  * - 问卷完成后：导航栏锁定在顶部（sticky），方便用户切换页面
@@ -132,11 +134,12 @@ function HeaderInner() {
       ),
     },
     {
-      href: '/chat',
+      href: '/assessment',
       label: tr.aiGuide,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+          <path d="m9 12 2 2 4-4" />
         </svg>
       ),
     },
@@ -165,30 +168,37 @@ function HeaderInner() {
       ),
     },
     {
-      href: '/history',
-      label: tr.history,
+      href: '/dashboard/profile',
+      label: tr.myProfile,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-          <path d="M3 3v5h5" />
-          <path d="M12 7v5l4 2" />
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
         </svg>
       ),
     },
   ];
+
+  // 取与路径前缀匹配「最长」的导航项，避免 /dashboard/profile 同时高亮「成长追踪」
+  const matchNavHref = (p: string): string | null => {
+    const matched = navItems
+      .filter((item) => item.href !== '/' && (p === item.href || p.startsWith(item.href + '/')))
+      .sort((a, b) => b.href.length - a.href.length);
+    return matched[0]?.href ?? null;
+  };
 
   // useSearchParams 是响应式的 — 当 URL 参数变化时自动重新渲染
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
 
     // 在登录/注册页面时，根据 callbackUrl 高亮对应图标
-    if (pathname === '/login' || pathname === '/register') {
+    if (pathname === '/login' || pathname === '/register-v2') {
       const cbUrl = searchParams.get('callbackUrl') || '/';
       if (href === '/') return cbUrl === '/';
-      return cbUrl.startsWith(href);
+      return matchNavHref(cbUrl) === href;
     }
 
-    return pathname.startsWith(href);
+    return matchNavHref(pathname) === href;
   };
 
   // 聊天页面：locked 时用 fixed（悬浮在视口顶部，不占文档流）
@@ -197,11 +207,109 @@ function HeaderInner() {
     ? 'fixed top-0 left-0 right-0 z-50'
     : 'sticky top-0 z-50';
 
+  // 功能按钮（三态）：未登录=注册/登录；非会员=订阅/退出；会员=续费/退出
+  // compact=true 用于手机端第一行
+  const renderActions = (compact: boolean) => {
+    const box = compact ? 'px-2.5 py-1 text-xs gap-1' : 'px-3 py-1.5 text-sm gap-1.5';
+    const iconPx = compact ? 14 : 16;
+
+    const crownIcon = (
+      <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
+        <path d="M5 21h14" />
+      </svg>
+    );
+
+    const logoutButton = (
+      <button
+        onClick={handleLogout}
+        className={`flex items-center rounded-xl border border-slate-300 bg-white font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-100 ${box}`}
+      >
+        <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" x2="9" y1="12" y2="12" />
+        </svg>
+        {tr.logout}
+      </button>
+    );
+
+    if (status === 'loading') {
+      return <span className={`text-slate-400 ${box}`}>{tr.loading}</span>;
+    }
+
+    if (session?.user) {
+      const isPremiumUser = !!session.user.isPremium;
+      return (
+        <>
+          <Link
+            href={subHref}
+            className={
+              isPremiumUser
+                ? `flex items-center rounded-xl border border-sage-300 bg-sage-50 font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100 ${box}`
+                : `flex items-center rounded-xl bg-brand-500 font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 ${box}`
+            }
+          >
+            {crownIcon}
+            {isPremiumUser ? tr.renew : tr.subscribe}
+          </Link>
+          {logoutButton}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Link
+          href="/register-v2"
+          className={`flex items-center rounded-xl bg-brand-500 font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 ${box}`}
+        >
+          <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <line x1="19" x2="19" y1="8" y2="14" />
+            <line x1="22" x2="16" y1="11" y2="11" />
+          </svg>
+          {tr.register}
+        </Link>
+        <Link
+          href="/login"
+          className={`flex items-center rounded-xl border border-slate-300 bg-white font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-100 ${box}`}
+        >
+          <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" x2="3" y1="12" y2="12" />
+          </svg>
+          {tr.login}
+        </Link>
+      </>
+    );
+  };
+
   return (
     <>
-      {/* 移动端导航 — 5 个功能图标 */}
+      {/* 移动端导航 — 第一行 Logo+名称+功能按钮，第二行 5 个功能入口 */}
       <nav className={`glass-nav z-50 md:hidden ${lockedClass}`}>
-        <div className="flex items-center justify-around px-1 py-1">
+        <div className="flex h-12 items-center justify-between gap-2 px-3">
+          <Link href="/" className="flex min-w-0 items-center gap-2">
+            <Image
+              src="/icons/icon-1024.png"
+              alt="榨职机 Career Companion"
+              width={28}
+              height={28}
+              priority
+              className="h-7 w-7 rounded-lg shadow-sm"
+            />
+            <span className="truncate text-xs font-semibold text-brand-900">
+              Career Companion
+            </span>
+          </Link>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {renderActions(true)}
+          </div>
+        </div>
+        <div className="flex items-center justify-around border-t border-rule/50 px-1">
           {navItems.map((item) => (
             <Link
               key={item.href + item.label}
@@ -217,14 +325,19 @@ function HeaderInner() {
         </div>
       </nav>
 
-      {/* 桌面端导航 — Logo + 链接 + 按钮 */}
+      {/* 桌面端导航 — Logo + 链接 + 功能按钮 */}
       <nav className={`glass-nav z-50 hidden md:block ${lockedClass}`}>
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-brand-500 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">AI</span>
-            </div>
+            <Image
+              src="/icons/icon-1024.png"
+              alt="榨职机 Career Companion"
+              width={36}
+              height={36}
+              priority
+              className="w-9 h-9 rounded-xl shadow-sm"
+            />
             <div className="hidden sm:flex flex-col leading-none">
               <span className="font-semibold text-sm text-brand-900">Career Companion</span>
               <span className="text-[9px] font-medium text-sage-600 mt-0.5">
@@ -251,66 +364,9 @@ function HeaderInner() {
             ))}
           </div>
 
-          {/* 登录/注册/入会按钮 */}
+          {/* 功能按钮：注册/登录 | 订阅/退出 | 续费/退出 */}
           <div className="flex items-center gap-2 shrink-0">
-            {status === 'loading' ? (
-              <span className="text-sm text-slate-400">{tr.loading}</span>
-            ) : session?.user ? (
-              <>
-                <Link
-                  href="/dashboard/profile"
-                  className="flex items-center gap-1.5 rounded-xl border border-sage-300 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                  </svg>
-                  <span className="hidden lg:inline">{session.user.name || tr.profile}</span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-100"
-                >
-                  {tr.logout}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="flex items-center gap-1.5 rounded-xl border border-sage-300 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                    <polyline points="10 17 15 12 10 7" />
-                    <line x1="15" x2="3" y1="12" y2="12" />
-                  </svg>
-                  <span className="hidden lg:inline">{tr.login}</span>
-                </Link>
-                <Link
-                  href="/register"
-                  className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <line x1="19" x2="19" y1="8" y2="14" />
-                    <line x1="22" x2="16" y1="11" y2="11" />
-                  </svg>
-                  <span className="hidden lg:inline">{tr.register}</span>
-                </Link>
-                <Link
-                  href={subHref}
-                  className="flex items-center gap-1.5 rounded-xl border border-sand-300 bg-sand-50 px-3 py-1.5 text-sm font-medium text-sand-700 shadow-sm transition-all hover:bg-sand-100"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
-                    <path d="M5 21h14" />
-                  </svg>
-                  <span>{tr.join}</span>
-                </Link>
-              </>
-            )}
+            {renderActions(false)}
           </div>
         </div>
       </nav>
@@ -325,7 +381,7 @@ export function Header() {
   return (
     <Suspense
       fallback={
-        <nav className="glass-nav z-50 h-14" />
+        <nav className="glass-nav z-50 h-[89px] md:h-14" />
       }
     >
       <HeaderInner />

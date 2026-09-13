@@ -8,44 +8,45 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // 沿用 MVP PRD 设计系统的配色方案
-        bg: { DEFAULT: '#FAFAF7', dark: '#F2EFE8' },
-        ink: '#2D2A24',
-        muted: '#6B6557',
-        rule: '#D8D2C5',
+        // 2026 新首页设计系统（home-sample-2）：暖米底 + 藏青墨 + 橙/金/鼠尾草绿 + 珊瑚红
+        bg: { DEFAULT: '#F2E6D8', dark: '#E8D9C4' },
+        ink: '#2C3E5C',
+        muted: '#5A6B7E',
+        rule: '#D1D5DB',
         accent: {
           DEFAULT: '#5B7C5A',
           light: '#8B9D77',
           bright: '#7A9B5E',
         },
         warm: '#A67B5B',
-        beige: '#F5F0E6',
+        beige: '#FBF0E0',
         danger: '#C0654A',
         warn: '#D4A574',
         success: '#5B8C5A',
-        // 原始 MVP 配色 — brand/sage/sand 三色体系
+        // brand：橙色行动色；900 为藏青墨色（标题/深色底）
         brand: {
-          50: '#f0f7f9',
-          100: '#d9eef3',
-          200: '#b3dde6',
-          300: '#80c5d4',
-          400: '#4aadd4',
-          500: '#3482a2',
-          600: '#2a6b85',
-          700: '#22566b',
-          800: '#1a4052',
-          900: '#133340',
+          50: '#FDF5EC',
+          100: '#FAEBD4',
+          200: '#F5D7A9',
+          300: '#F0C17D',
+          400: '#F9B34A',
+          500: '#F5A623',
+          600: '#D4881A',
+          700: '#B37015',
+          800: '#8A5510',
+          900: '#2C3E5C',
         },
         sage: {
-          50: '#f0f7f0',
-          100: '#e3f0e3',
-          200: '#c7e0c7',
-          300: '#9eca9e',
-          400: '#7ead78',
-          500: '#5e8f5a',
-          600: '#4a7347',
-          700: '#395c37',
+          50: '#F0F5ED',
+          100: '#E4EEDD',
+          200: '#CDE0C0',
+          300: '#A7BF94',
+          400: '#7A9E6E',
+          500: '#6B8E5E',
+          600: '#55734B',
+          700: '#435B3B',
         },
+        // 暖棕中性面（全站既有表面色，保留）
         sand: {
           50: '#faf7f4',
           100: '#f3ede4',
@@ -56,6 +57,30 @@ const config: Config = {
           600: '#9a7a50',
           700: '#7c6240',
           900: '#4a3a26',
+        },
+        // 珊瑚红（新首页关键词卡等强调色，模板中称 sand-500）
+        coral: {
+          50: '#FCF2F0',
+          100: '#FAE8E8',
+          200: '#F5D3D3',
+          300: '#E8B5B5',
+          400: '#F28383',
+          500: '#F05A5A',
+          600: '#D04848',
+          700: '#B83C3C',
+          800: '#C03838',
+          900: '#932424',
+        },
+        // 金黄（新首页第三张卡/高亮，模板中称 --blue）
+        gold: {
+          50: '#FFF8E1',
+          100: '#FFF3CC',
+          200: '#FDE89E',
+          300: '#FBDC6F',
+          400: '#F8C741',
+          500: '#F0B429',
+          600: '#D9A82E',
+          700: '#B88A1E',
         },
         slate: {
           100: '#f1f5f9',
@@ -85,6 +110,7 @@ const config: Config = {
         'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
         'breathe': 'breatheFirst 3s ease-in-out 1 forwards, breatheLoop 3s ease-in-out infinite',
         'hero-decor': 'heroDecorFadeIn 5s ease-in 3s forwards',
+        'card-in': 'cardIn .5s ease-out both',
       },
       keyframes: {
         fadeIn: {
@@ -110,6 +136,10 @@ const config: Config = {
         heroDecorFadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        cardIn: {
+          '0%': { opacity: '0', transform: 'translateY(16px) scale(.97)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
         },
       },
     },

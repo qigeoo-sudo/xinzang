@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
+import { registerProfileSchema, toUserProfileData } from '@/lib/register-v2';
 
 // 更新档案的校验 schema — 覆盖所有字段
 const updateProfileSchema = z.object({
@@ -45,11 +46,36 @@ export async function GET() {
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
 
-  const profile = await prisma.userProfile.findUnique({
-    where: { userId: session.user.id },
-  });
+  const [profile, assessmentRow, user] = await Promise.all([
+    prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+    }),
+    prisma.interestAssessment.findUnique({
+      where: { userId: session.user.id },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { phone: true },
+    }),
+  ]);
 
-  return NextResponse.json({ profile });
+  // scores/answers 落库为 JSON 字符串，这里解析后给前端直接用
+  let assessment = null;
+  if (assessmentRow) {
+    try {
+      assessment = {
+        code: assessmentRow.code,
+        questionVersion: assessmentRow.questionVersion,
+        takenAt: assessmentRow.takenAt.toISOString(),
+        scores: JSON.parse(assessmentRow.scores),
+        answers: JSON.parse(assessmentRow.answers),
+      };
+    } catch {
+      assessment = null;
+    }
+  }
+
+  return NextResponse.json({ profile, assessment, phone: user?.phone ?? null });
 }
 
 export async function PUT(request: NextRequest) {
@@ -82,6 +108,19 @@ export async function PUT(request: NextRequest) {
       } else {
         data[key] = value ?? undefined;
         if (value !== null && value !== undefined && String(value).trim() !== '') {
+          savedNonEmpty.push(key);
+        }
+      }
+    }
+
+    // register-v2 结构化字段（新注册流程 / 档案分步编辑共用）
+    // 全可选，校验失败直接忽略，不影响旧字段保存
+    const v2Parsed = registerProfileSchema.safeParse(body);
+    if (v2Parsed.success) {
+      const v2Data = toUserProfileData(v2Parsed.data);
+      for (const [key, value] of Object.entries(v2Data)) {
+        data[key] = value; // v2 字段优先，覆盖旧 schema 的同名列（如 status/nickname）
+        if (value !== null && String(value).trim() !== '') {
           savedNonEmpty.push(key);
         }
       }

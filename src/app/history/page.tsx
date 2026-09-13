@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { mentors } from '@/lib/mentors';
+import { HomeFooter } from '@/components/home/home-footer';
 import Link from 'next/link';
 
 export default async function HistoryPage() {
@@ -32,7 +33,7 @@ export default async function HistoryPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <div className="page-container">
+      <div className="page-container flex-1">
         {/* 页面标题 */}
         <div className="mb-6">
           <h1 className="text-xl font-bold text-brand-900">对话记录</h1>
@@ -48,18 +49,7 @@ export default async function HistoryPage() {
               </svg>
             </div>
             <p className="text-base font-medium text-brand-900 mb-2">还没有对话记录</p>
-            <p className="text-sm text-slate-400 mb-6">开始你的第一次对话吧</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/chat" className="btn-primary">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-                </svg>
-                与AI职导对话
-              </Link>
-              <Link href="/mentors" className="btn-secondary">
-                浏览行业导师
-              </Link>
-            </div>
+            <p className="text-sm text-slate-400">开始你的第一次对话吧</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -120,6 +110,8 @@ export default async function HistoryPage() {
           </div>
         )}
       </div>
+
+      <HomeFooter lang="zh" />
     </div>
   );
 }

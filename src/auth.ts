@@ -16,9 +16,9 @@ import { verifyPassword } from '@/lib/password';
 import { getLockDurationMinutes } from '@/lib/lockout';
 import { z } from 'zod';
 
-// 登录凭据校验 Schema — 支持手机或邮箱登录
+// 登录凭据校验 Schema — 仅支持手机号登录
 const credentialsSchema = z.object({
-  email: z.string().min(1, '请输入手机号或邮箱'),
+  phone: z.string().regex(/^1[3-9]\d{9}$/, '请输入正确的手机号'),
   password: z.string().min(1, '密码不能为空'),
 });
 
@@ -41,9 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   providers: [
     Credentials({
-      name: '邮箱密码登录',
+      name: '手机密码登录',
       credentials: {
-        email: { label: '邮箱', type: 'email' },
+        phone: { label: '手机号', type: 'tel' },
         password: { label: '密码', type: 'password' },
       },
       authorize: async (credentials) => {
@@ -54,21 +54,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return null;
           }
 
-          const { email: identifier, password } = parsed.data;
+          const { phone, password } = parsed.data;
 
-          // 判断是手机号还是邮箱，查询用户
-          const isPhone = /^1[3-9]\d{9}$/.test(identifier);
-          let user;
-
-          if (isPhone) {
-            user = await prisma.user.findUnique({
-              where: { phone: identifier },
-            });
-          } else {
-            user = await prisma.user.findUnique({
-              where: { email: identifier.toLowerCase() },
-            });
-          }
+          // 按手机号查询用户
+          const user = await prisma.user.findUnique({
+            where: { phone },
+          });
 
           // 用户不存在或未设置密码
           if (!user || !user.passwordHash) {
@@ -202,7 +193,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const publicPaths = [
         '/',
         '/login',
-        '/register',
+        '/register-v2', // 注册流程页（公开，注册完成自动建会话）
+        '/assessment', // RIASEC 职业兴趣测试（访客可测，保存结果时再引导注册）
+        '/search', // 导师关键词搜索结果页（公开）
         '/logout',
         '/forgot-password',
         '/chat', // AI 职导对话页公开，聊天组件自行检查登录
@@ -211,6 +204,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         '/api/auth',
         '/api/logout',
         '/api/chat', // chat API 自身做权限校验
+        '/api/assessment', // 测评结果接口自身做 401 校验
         '/api/payment/notify', // 微信支付回调 (服务器间调用)
         '/api/maintenance', // 维护任务 (CRON_SECRET 鉴权)
         '/api/payment/mock-pay', // Mock 支付 (开发环境模拟回调)
@@ -219,8 +213,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         (p) => pathname === p || pathname.startsWith(p + '/')
       );
 
-      // 已登录用户访问登录/注册页 → 重定向到首页
-      if (isLoggedIn && (pathname === '/login' || pathname === '/register')) {
+      // 已登录用户访问登录页 → 重定向到首页
+      if (isLoggedIn && pathname === '/login') {
         return Response.redirect(new URL('/', request.nextUrl));
       }
 

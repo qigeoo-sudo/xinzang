@@ -68,8 +68,8 @@
 
   /* 玻璃导航栏 — 原始 MVP */
   .glass-nav {
-    @apply border-b border-slate-100/60;
-    background-color: hsla(0,0%,100%,.75);
+    @apply border-b border-rule/50;
+    background-color: hsla(0,0%,100%,.85);
     backdrop-filter: blur(24px);
   }
 

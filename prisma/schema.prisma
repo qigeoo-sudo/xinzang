@@ -60,6 +60,7 @@ model User {
   subscriptions     Subscription[]
   chatSessions      ChatSession[]
   verificationCodes VerificationCode[]
+  interestAssessment InterestAssessment?
 
   @@index([email])
   @@index([phone])
@@ -177,6 +178,21 @@ model UserProfile {
   recommendedMentors String? // AI 职导推荐的导师 ID 列表 (JSON 数组字符串)
   preferredMentors   String? // 偏好导师 ID 列表 (JSON 数组字符串)
 
+  // === 新注册流程（register-v2）收集的结构化字段 ===
+  birthMonth      String? // 出生年月 YYYY-MM
+  enrollMonth     String? // 入学年月 YYYY-MM
+  expectedGrad    String? // 预计毕业（在校）
+  gradMonth       String? // 毕业日期 YYYY-MM（在职/待业）
+  workGoal        String? // 最近打算
+  fullTimeExp     String? // 全职工作时长档位
+  partTimeExp     String? // 兼职工作时长档位
+  workProvince    String? // 希望工作地点-省/地区
+  workCity        String? // 希望工作地点-市（含 __any__ 均可考虑 / __other__ 其他 等特殊值）
+  curProvince     String? // 目前所在地-省/地区
+  curCity         String? // 目前所在地-市
+  careers         String? // 感兴趣的职业方向 (JSON 数组字符串)
+  registrationCompletedAt DateTime? // 新注册流程完成时间
+
   // === 元数据 ===
   profileSource    String    @default("manual") // manual | ai_extracted | mixed
   // 导师聊天中实时提取、尚未经用户确认的档案信息 (JSON 对象，键同本表字段名)
@@ -210,6 +226,29 @@ model ProfileHistory {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+}
+
+// ============================================================
+// 测评模型
+// ============================================================
+
+/// 职业兴趣测评（RIASEC 霍兰德）— 一人一份，重测覆盖
+model InterestAssessment {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  // 六维得分 JSON: {"R":number,"I":number,"A":number,"S":number,"E":number,"C":number}
+  scores          String
+  // 原始作答 JSON: [{ "qid": string, "value": 1-5 }]
+  answers         String
+  // 题库版本（题目改版后可据此重算/区分）
+  questionVersion String
+  // 主码/副码，如 "SIA"（便于列表与推荐直接使用）
+  code            String?
+  takenAt         DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 /// 支付订单模型 — 记录所有支付交易 (PRD 6.5)

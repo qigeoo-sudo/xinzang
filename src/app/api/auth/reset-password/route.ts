@@ -9,7 +9,7 @@ import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { z } from 'zod';
 
 const schema = z.object({
-  method: z.enum(['phone', 'email']),
+  method: z.enum(['phone']),
   target: z.string().min(1),
   code: z.string().min(1, '请输入验证码'),
   newPassword: z
@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { method, target: rawTarget, code, newPassword } = parsed.data;
-    const target = method === 'email' ? rawTarget.toLowerCase() : rawTarget;
+    const { target, code, newPassword } = parsed.data;
 
     // 密码强度校验
     const strengthCheck = validatePasswordStrength(newPassword);
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 验证码校验
-    const codeType = method === 'phone' ? 'PHONE_LOGIN' : 'EMAIL_LOGIN';
+    const codeType = 'PHONE_LOGIN';
     const verificationRecord = await prisma.verificationCode.findFirst({
       where: {
         identifier: target,
@@ -87,13 +86,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '验证码不正确' }, { status: 400 });
     }
 
-    // 查找用户
-    let user;
-    if (method === 'phone') {
-      user = await prisma.user.findUnique({ where: { phone: target } });
-    } else {
-      user = await prisma.user.findUnique({ where: { email: target.toLowerCase() } });
-    }
+    // 按手机号查找用户
+    const user = await prisma.user.findUnique({ where: { phone: target } });
 
     if (!user) {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 });

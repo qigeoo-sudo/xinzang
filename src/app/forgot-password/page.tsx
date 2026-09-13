@@ -1,20 +1,16 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 
-type ResetMethod = 'phone' | 'email';
 type Step = 'request' | 'verify' | 'reset' | 'done';
 
 function ForgotPasswordForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMethod = (searchParams.get('method') as ResetMethod) || 'phone';
   const initialTarget = searchParams.get('target') || '';
 
-  const [method, setMethod] = useState<ResetMethod>(initialMethod);
   const [target, setTarget] = useState(initialTarget);
   const [verifyCode, setVerifyCode] = useState('');
   const [sentCode, setSentCode] = useState('');
@@ -30,7 +26,6 @@ function ForgotPasswordForm() {
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   const isValidPhone = (val: string) => /^1[3-9]\d{9}$/.test(val);
-  const isValidEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
   const validatePassword = (val: string): string => {
     if (val.length === 0) return '';
@@ -50,12 +45,8 @@ function ForgotPasswordForm() {
     setError('');
     setInfo('');
 
-    if (method === 'phone' && !isValidPhone(target)) {
+    if (!isValidPhone(target)) {
       setError('请输入有效的手机号码');
-      return;
-    }
-    if (method === 'email' && !isValidEmail(target)) {
-      setError('请输入有效的邮箱地址');
       return;
     }
 
@@ -64,7 +55,7 @@ function ForgotPasswordForm() {
       const res = await fetch('/api/auth/reset-password/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method, target }),
+        body: JSON.stringify({ method: 'phone', target }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -76,7 +67,7 @@ function ForgotPasswordForm() {
         setVerifyCode(data.code);
         setInfo(`验证码：${data.code}（Mock 模式，未真实发送）`);
       } else {
-        setInfo(method === 'phone' ? '验证码已发送到你的手机' : '重置密码邮件已发送到你的邮箱');
+        setInfo('验证码已发送到你的手机');
       }
       setStep('verify');
     } catch {
@@ -126,7 +117,7 @@ function ForgotPasswordForm() {
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method, target, code: verifyCode, newPassword }),
+        body: JSON.stringify({ method: 'phone', target, code: verifyCode, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -149,48 +140,26 @@ function ForgotPasswordForm() {
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-ink mb-2">重置密码</h1>
-            <p className="text-sm text-muted">
-              {method === 'phone' ? '通过手机号重置密码' : '通过邮箱重置密码'}
-            </p>
+            <p className="text-sm text-muted">通过手机号重置密码</p>
           </div>
 
-          {/* 步骤 1: 输入手机/邮箱 */}
+          {/* 步骤 1: 输入手机号 */}
           {step === 'request' && (
             <div className="card space-y-4">
               {error && (
                 <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-lg">{error}</div>
               )}
 
-              <div className="flex gap-2 p-1 bg-beige rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => { setMethod('phone'); setError(''); }}
-                  className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                    method === 'phone' ? 'bg-white text-accent shadow-sm' : 'text-muted'
-                  }`}
-                >
-                  手机找回
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setMethod('email'); setError(''); }}
-                  className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
-                    method === 'email' ? 'bg-white text-accent shadow-sm' : 'text-muted'
-                  }`}
-                >
-                  邮箱找回
-                </button>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-ink mb-1.5">
-                  {method === 'phone' ? '手机号' : '邮箱'}
+                  手机号
                 </label>
                 <input
-                  type={method === 'phone' ? 'tel' : 'email'}
+                  type="tel"
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
                   required
+                  autoComplete="tel"
                   className="input-field"
                 />
               </div>
@@ -201,7 +170,7 @@ function ForgotPasswordForm() {
                 disabled={loading}
                 className="btn-primary w-full"
               >
-                {loading ? '发送中...' : method === 'phone' ? '发送短信验证码' : '发送重置邮件'}
+                {loading ? '发送中...' : '发送短信验证码'}
               </button>
             </div>
           )}
@@ -264,7 +233,7 @@ function ForgotPasswordForm() {
                     minLength={8}
                     maxLength={64}
                     autoComplete="new-password"
-                    className={`input-field pr-12 ${passwordError ? 'border-red-400' : ''}`}
+                    className={`input-field pr-12 ${passwordError ? 'border-coral-300' : ''}`}
                   />
                   <button
                     type="button"
@@ -274,7 +243,7 @@ function ForgotPasswordForm() {
                     {showPassword ? '隐藏' : '显示'}
                   </button>
                 </div>
-                {passwordError && <p className="text-xs text-red-500 mt-1">{passwordError}</p>}
+                {passwordError && <p className="text-xs text-coral-600 mt-1">{passwordError}</p>}
               </div>
 
               <div>
@@ -292,7 +261,7 @@ function ForgotPasswordForm() {
                     minLength={8}
                     maxLength={64}
                     autoComplete="new-password"
-                    className={`input-field pr-12 ${confirmPasswordError ? 'border-red-400' : ''}`}
+                    className={`input-field pr-12 ${confirmPasswordError ? 'border-coral-300' : ''}`}
                   />
                   <button
                     type="button"
@@ -302,7 +271,7 @@ function ForgotPasswordForm() {
                     {showConfirmPassword ? '隐藏' : '显示'}
                   </button>
                 </div>
-                {confirmPasswordError && <p className="text-xs text-red-500 mt-1">{confirmPasswordError}</p>}
+                {confirmPasswordError && <p className="text-xs text-coral-600 mt-1">{confirmPasswordError}</p>}
               </div>
 
               <button type="submit" disabled={loading} className="btn-primary w-full">

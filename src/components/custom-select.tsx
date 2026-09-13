@@ -13,9 +13,11 @@ interface CustomSelectProps {
   options: Option[];
   placeholder?: string;
   className?: string;
+  clearable?: boolean;
+  disabled?: boolean;
 }
 
-export function CustomSelect({ value, onChange, options, placeholder = '请选择', className = '' }: CustomSelectProps) {
+export function CustomSelect({ value, onChange, options, placeholder = '请选择', className = '', clearable = false, disabled = false }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const listRef = useRef<HTMLDivElement>(null);
@@ -72,8 +74,9 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
     <>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen(!open)}
-        className={`input-field w-full text-left flex items-center justify-between ${className}`}
+        className={`input-field w-full text-left flex items-center justify-between disabled:opacity-45 disabled:cursor-not-allowed ${className}`}
       >
         <span className={selectedLabel ? 'text-ink truncate' : 'text-muted truncate'}>
           {selectedLabel || placeholder}
@@ -146,11 +149,20 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
                 );
               })}
             </div>
-            <div className="px-4 py-3 border-t border-rule" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            <div className="px-4 py-3 border-t border-rule flex gap-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+              {clearable && value && (
+                <button
+                  type="button"
+                  onClick={() => { onChange(''); setOpen(false); }}
+                  className="flex-1 py-2.5 text-sm text-center text-coral-700 bg-coral-50 rounded-lg hover:bg-coral-100 transition-colors"
+                >
+                  清除选择
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="w-full py-2.5 text-sm text-center text-ink bg-sand-50 rounded-lg hover:bg-sand-100 transition-colors"
+                className="flex-1 py-2.5 text-sm text-center text-ink bg-sand-50 rounded-lg hover:bg-sand-100 transition-colors"
               >
                 关闭
               </button>

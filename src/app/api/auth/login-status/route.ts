@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
   const isPhone = /^1[3-9]\d{9}$/.test(identifier);
   const user = isPhone
     ? await prisma.user.findUnique({ where: { phone: identifier } })
-    : await prisma.user.findUnique({ where: { email: identifier.toLowerCase() } });
+    : null;
 
   if (!user) {
     return NextResponse.json({
-      message: '手机号/邮箱或密码不正确',
+      message: '手机号或密码不正确',
       remainingAttempts: 4,
       isLocked: false,
     });
@@ -34,14 +34,14 @@ export async function GET(request: NextRequest) {
 
   if (user.loginAttempts >= 5) {
     return NextResponse.json({
-      message: '手机号/邮箱或密码不正确',
+      message: '手机号或密码不正确',
       remainingAttempts: 0,
       isLocked: false,
     });
   }
 
   return NextResponse.json({
-    message: `手机号/邮箱或密码不正确，还有 ${5 - user.loginAttempts}/5次机会`,
+    message: `手机号或密码不正确，还有 ${5 - user.loginAttempts}/5次机会`,
     remainingAttempts: 5 - user.loginAttempts,
     isLocked: false,
   });
