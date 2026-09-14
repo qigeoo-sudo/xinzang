@@ -20,6 +20,7 @@ import {
   toUserProfileData,
   toAssessmentCreate,
 } from '@/lib/register-v2';
+import { containsSensitiveWord } from '@/lib/sensitive-words';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -66,6 +67,40 @@ export async function POST(request: NextRequest) {
     if (!strengthCheck.valid) {
       return NextResponse.json(
         { error: strengthCheck.message },
+        { status: 400 }
+      );
+    }
+
+    // 3.5 昵称敏感词校验（早期拦截，不消耗验证码；命中词只进服务端日志）
+    if (profile?.nickname && containsSensitiveWord(profile.nickname)) {
+      console.warn('[sensitive] register nickname blocked, length =', profile.nickname.length);
+      return NextResponse.json(
+        { error: '昵称含违规内容，请修改后再提交', field: 'nickname' },
+        { status: 400 }
+      );
+    }
+
+    // 学校名称敏感词校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
+    if (profile?.school && containsSensitiveWord(profile.school)) {
+      console.warn('[sensitive] register school blocked, length =', profile.school.length);
+      return NextResponse.json(
+        { error: '学校名称含违规内容，请修改后再提交', field: 'school' },
+        { status: 400 }
+      );
+    }
+
+    // “让导师分身更懂你”选填区文本敏感词校验（焦虑自述 + 帮助方面“其他”原文）
+    if (profile?.careerAnxiety && containsSensitiveWord(profile.careerAnxiety)) {
+      console.warn('[sensitive] register careerAnxiety blocked, length =', profile.careerAnxiety.length);
+      return NextResponse.json(
+        { error: '内容含违规词，请修改后再提交', field: 'careerAnxiety' },
+        { status: 400 }
+      );
+    }
+    if (profile?.helpPriority?.some((v) => v && containsSensitiveWord(v))) {
+      console.warn('[sensitive] register helpPriority blocked');
+      return NextResponse.json(
+        { error: '内容含违规词，请修改后再提交', field: 'helpPriority' },
         { status: 400 }
       );
     }

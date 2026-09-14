@@ -3,10 +3,11 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import type { SubscriptionPlan, PlanId } from '@/lib/plans';
+import type { SubscriptionPlan, PlanId, CreditPack } from '@/lib/plans';
 
 interface SubscriptionFlowProps {
   plans: SubscriptionPlan[];
+  creditPacks: CreditPack[];
   currentPlanId?: PlanId;
   isPremium?: boolean;
   from?: string;
@@ -24,7 +25,7 @@ const planRank: Record<PlanId, number> = {
   YEARLY: 3,
 };
 
-export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: SubscriptionFlowProps) {
+export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium, from }: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
 
@@ -302,10 +303,10 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
       {isPremium && currentPlanId && (
         <div className="bg-accent/10 text-accent text-sm px-4 py-3 rounded-lg text-center">
           {currentPlanId === 'YEARLY'
-            ? '你当前是年度会员，可享受会员期内续费一年打8折的优惠。'
+            ? '你当前是年度会员，到期后可按原价续费一年'
             : currentPlanId === 'MONTHLY'
-              ? '你当前是月度会员，可选择更高级别方案升级'
-              : '你当前是季度会员，可选择更高级别方案升级'}
+              ? '你当前是月度会员，可选择更高级别方案升级，剩余时长自动接续'
+              : '你当前是季度会员，可升级年度会员，剩余时长自动接续'}
         </div>
       )}
 
@@ -314,7 +315,6 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
         const disabled = isPlanDisabled(plan.id);
         const current = isCurrentPlan(plan.id);
         const renewal = isRenewalPlan(plan.id);
-        const renewalPrice = Math.round(plan.price * 0.8 * 100) / 100;
         const isYearly = plan.id === 'YEARLY';
         const yearlyOn = isYearly && !disabled;
 
@@ -353,7 +353,7 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
             {renewal && (
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
                 <span className="tag text-xs px-3 py-0.5 bg-accent text-white">
-                  续费8折
+                  续费
                 </span>
               </div>
             )}
@@ -361,12 +361,9 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
             <div className="flex items-baseline justify-between mb-2">
               <h3 className={`font-semibold ${yearlyOn ? 'text-white' : 'text-ink'}`}>{plan.name}</h3>
               <div className="flex items-baseline gap-0.5">
-                {renewal && (
-                  <span className="text-xs text-muted line-through mr-1">￥{plan.price}</span>
-                )}
                 <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>￥</span>
                 <span className={`text-2xl font-bold ${yearlyOn ? 'text-white' : 'text-accent'}`}>
-                  {renewal ? renewalPrice : plan.price}
+                  {plan.price}
                 </span>
                 <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>{plan.period}</span>
               </div>
@@ -414,7 +411,7 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
                 }`}
               >
                 {renewal
-                  ? `续费 ￥${renewalPrice}`
+                  ? `续费 ￥${plan.price}`
                   : isPremium
                     ? `升级到 ￥${plan.price}`
                     : `支付 ￥${plan.price}`}
@@ -424,6 +421,69 @@ export function SubscriptionFlow({ plans, currentPlanId, isPremium, from }: Subs
         );
       })}
       </div>
+
+      {/* 加榨包 — 横向布局 + 虚线描边，与上方会员卡片明确区分 */}
+      {creditPacks.length > 0 && (
+        <div className="mt-7">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="h-px flex-1 bg-rule" />
+            <span className="text-xs text-muted shrink-0">不想开通会员？也可单买加榨包</span>
+            <span className="h-px flex-1 bg-rule" />
+          </div>
+
+          <div className="space-y-4">
+            {creditPacks.map((pack) => (
+              <div
+                key={pack.id}
+                className="relative rounded-2xl border-2 border-dashed border-brand-300 bg-gradient-to-r from-brand-50 via-white to-white px-4 py-4 flex items-center gap-4 shadow-[0_8px_24px_-10px_rgba(212,136,26,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-[0_14px_30px_-12px_rgba(212,136,26,0.55)]"
+              >
+                <div className="absolute -top-2.5 left-4">
+                  <span className="tag text-xs px-2.5 py-0.5 bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-sm">
+                    加榨包
+                  </span>
+                </div>
+
+                {/* 图标 — 票券造型 */}
+                <div className="w-11 h-11 rounded-xl bg-brand-100/80 border border-brand-200 flex items-center justify-center shrink-0">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M4 9a2 2 0 012-2h12a2 2 0 012 2 2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V9z"
+                      stroke="#B37015"
+                      strokeWidth="1.7"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M14 8.5v7" stroke="#D4881A" strokeWidth="1.5" strokeDasharray="2 2.5" strokeLinecap="round" />
+                    <circle cx="9" cy="12" r="1.1" fill="#D4881A" />
+                  </svg>
+                </div>
+
+                {/* 文案 */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-brand-900 text-sm">{pack.name}</h3>
+                  <p className="text-xs text-muted mt-0.5">{pack.description}</p>
+                  {pack.features.map((feature, i) => (
+                    <p key={i} className="text-xs text-brand-700/80 mt-0.5">{feature}</p>
+                  ))}
+                </div>
+
+                {/* 价格 + 按钮 */}
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <div className="flex items-baseline gap-0.5">
+                    <span className="text-xs text-brand-600">￥</span>
+                    <span className="text-xl font-bold text-brand-600">{pack.price}</span>
+                  </div>
+                  <button
+                    onClick={() => handlePlanClick(pack.id, false)}
+                    className="px-4 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white shadow-sm hover:bg-brand-600 transition-all active:scale-95"
+                  >
+                    购买
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 支付方式选择弹窗 */}
       {showPayModal && modalPlan && (

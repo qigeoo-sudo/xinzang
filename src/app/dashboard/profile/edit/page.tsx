@@ -36,6 +36,9 @@ interface RawProfile {
   curProvince?: string | null;
   curCity?: string | null;
   careers?: string | null;
+  careerAnxiety?: string | null;
+  helpPriority?: string | null;
+  mentorPreference?: string | null;
 }
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -93,6 +96,9 @@ export default function ProfileEditPage() {
           curProvince: p.curProvince ?? '',
           curCity: p.curCity === '其他' ? '__other__' : p.curCity ?? '',
           careers: parseCareers(p.careers),
+          careerAnxiety: p.careerAnxiety ?? '',
+          helpPriority: parseCareers(p.helpPriority),
+          mentorPreference: parseCareers(p.mentorPreference),
         });
         setPhone(data.phone ?? '');
         setReady(true);

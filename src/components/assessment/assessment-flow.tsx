@@ -20,6 +20,8 @@ import { savePendingAssessment } from '@/lib/riasec/storage';
 type Stage = 'intro1' | 'intro2' | 'test' | 'result';
 
 const RATING_LABELS = ['非常不想做', '不太想做', '一般，没有明显偏好', '比较想做', '非常想做'];
+// 五档情绪表情：吐 → 皱眉 → 微笑 → 好的 → 哇
+const RATING_EMOJI = ['🤢', '😕', '🙂', '😊', '🤩'];
 // 结果条形图配色，按名次循环
 const BAR_COLORS = [
   'bg-brand-500',
@@ -177,7 +179,7 @@ export function AssessmentFlow() {
           <section className="rounded-2xl border border-rule/40 bg-white/85 p-6 shadow-sm md:p-8">
             <h1 className="font-serif text-2xl font-black text-ink md:text-3xl">怎么作答</h1>
             <p className="mt-3 text-sm leading-7 text-muted">
-              每道题描述一种工作活动，暂时不考虑会不会、要学多久，只看你有多想做，请选择 1-5 分：
+              每道题描述一种工作活动，暂时不考虑会不会、要学多久，只看你有多想做，从下面五档心情中选一个：
             </p>
 
             <div className="mt-5 grid grid-cols-5 gap-2">
@@ -186,8 +188,8 @@ export function AssessmentFlow() {
                   key={label}
                   className="flex flex-col items-center gap-2 rounded-xl border border-rule/50 bg-bg/60 px-1 py-3"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">
-                    {i + 1}
+                  <span className="text-2xl leading-none" aria-hidden>
+                    {RATING_EMOJI[i]}
                   </span>
                   <span className="text-[11px] leading-tight text-muted">{label}</span>
                 </div>
@@ -260,18 +262,22 @@ export function AssessmentFlow() {
                     <button
                       key={label}
                       onClick={() => choose(value)}
-                      className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-all active:scale-[.99] ${
+                      aria-pressed={selected}
+                      className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-all active:scale-[.99] ${
                         selected
                           ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm'
                           : 'border-rule/60 bg-white text-ink/80 hover:border-brand-300 hover:bg-brand-50/50'
                       }`}
                     >
                       <span
-                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          selected ? 'bg-brand-500 text-white' : 'bg-bg text-muted'
+                        aria-hidden
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl leading-none transition-all duration-150 ${
+                          selected
+                            ? 'scale-110 bg-brand-100'
+                            : 'bg-bg/70 opacity-60 group-hover:opacity-90'
                         }`}
                       >
-                        {value}
+                        {RATING_EMOJI[i]}
                       </span>
                       {label}
                     </button>

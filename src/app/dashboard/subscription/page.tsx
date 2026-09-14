@@ -1,10 +1,11 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { HomeFooter } from '@/components/home/home-footer';
 import { SubscriptionFlow } from '@/components/subscription-flow';
-import { SUBSCRIPTION_PLANS, type PlanId } from '@/lib/plans';
+import { SUBSCRIPTION_PLANS, CREDIT_PACKS, type PlanId } from '@/lib/plans';
 
 export default async function SubscriptionPage({
   searchParams,
@@ -70,7 +71,7 @@ export default async function SubscriptionPage({
           <p className="text-sm text-muted">
             {user?.isPremium
               ? '你正在享受会员全部权益'
-              : '解锁无限次 AI 导师分身对话，获得完整职业指导体验。'}
+              : '解锁 AI 导师分身对话，获得完整职业指导体验。'}
           </p>
         </div>
 
@@ -107,6 +108,7 @@ export default async function SubscriptionPage({
         {/* 订阅方案 + 支付流程 — 已是会员也显示，用于升级 */}
         <SubscriptionFlow
           plans={SUBSCRIPTION_PLANS}
+          creditPacks={CREDIT_PACKS}
           currentPlanId={currentPlanId}
           isPremium={!!user?.isPremium}
           from={searchParams.from}
@@ -117,6 +119,14 @@ export default async function SubscriptionPage({
           支付即表示同意会员服务条款
           <br />
           导师分身对话次数按订阅周期计算，到期后重置
+        </p>
+        <p className="text-center text-xs mt-2">
+          <Link
+            href="/dashboard/subscription/qa"
+            className="text-accent hover:text-accent-dark underline underline-offset-2"
+          >
+            购买Q&amp;A（升级规则 / 轮次计算 / 加榨包说明）
+          </Link>
         </p>
       </div>
 

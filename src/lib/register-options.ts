@@ -84,6 +84,32 @@ export const WORK_EXP_DURATION_OPTIONS: Option[] = [
   { value: 'gt_8y', label: '8年以上' },
 ];
 
+// “让导师分身更懂你”选填区选项
+// 存库直接存中文文案（helpPriority/mentorPreference 列为 JSON 数组字符串）
+// “你最希望在以下哪方面获得帮助”——单选；选中“其他”时存用户输入原文（≤20 字）
+export const HELP_OTHER_VALUE = '__other__';
+export const HELP_PRIORITY_OPTIONS: Option[] = [
+  { value: '帮我看清自己适合什么', label: '帮我看清自己适合什么' },
+  { value: '告诉我行业岗位真实情况', label: '告诉我行业岗位真实情况' },
+  { value: '教我具体求职技巧', label: '教我具体求职技巧' },
+  { value: '受挫后帮我复盘并给出具体建议', label: '受挫后帮我复盘并给出具体建议' },
+];
+
+// “现实生活中最想跟谁深聊”——多选，固定名单
+export const MENTOR_PREFERENCE_OPTIONS: Option[] = [
+  { value: '资深HR', label: '资深 HR' },
+  { value: '职业规划师', label: '职业规划师' },
+  { value: '猎头', label: '猎头' },
+  { value: '行业大咖', label: '行业大咖' },
+  { value: '创业导师', label: '创业导师' },
+  { value: '目标单位在职员工', label: '目标单位在职员工' },
+  { value: '学哥学姐', label: '学哥学姐' },
+  { value: '心理咨询师', label: '心理咨询师' },
+  { value: '家人', label: '家人' },
+  { value: '好友', label: '好友' },
+  { value: '其他', label: '其他' },
+];
+
 // 省级行政区 → 下辖地级行政区（直辖市/特别行政区仅一项）
 export const PROVINCE_CITIES: Record<string, string[]> = {
   北京市: ['北京市'],
@@ -131,4 +157,25 @@ export const PROVINCE_OPTIONS: Option[] = [
     .filter((p) => !HOT_PROVINCES.includes(p))
     .map((p) => ({ value: p, label: p })),
   { value: '海外', label: '海外' },
+];
+
+// 省/市栏选"海外"后，第二栏的国家/地区选项
+export const OVERSEAS_COUNTRY_OPTIONS: Option[] = [
+  { value: '美国', label: '美国' },
+  { value: '英国', label: '英国' },
+  { value: '澳大利亚', label: '澳大利亚' },
+  { value: '加拿大', label: '加拿大' },
+  { value: '日本', label: '日本' },
+  { value: '韩国', label: '韩国' },
+  { value: '马来西亚', label: '马来西亚' },
+  { value: '德国', label: '德国' },
+  { value: '新西兰', label: '新西兰' },
+  { value: '法国', label: '法国' },
+  { value: '新加坡', label: '新加坡' },
+  { value: '爱尔兰', label: '爱尔兰' },
+  { value: '荷兰', label: '荷兰' },
+  { value: '意大利', label: '意大利' },
+  { value: '西班牙', label: '西班牙' },
+  { value: '瑞士', label: '瑞士' },
+  { value: '其他', label: '其他' },
 ];

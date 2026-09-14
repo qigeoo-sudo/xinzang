@@ -24,6 +24,7 @@ export default async function PaymentSuccessPage({
           status: true,
           paidAt: true,
           paymentMethod: true,
+          paymentType: true,
           metadata: true,
         },
       })
@@ -47,9 +48,11 @@ export default async function PaymentSuccessPage({
     MONTHLY: '月度会员',
     QUARTERLY: '季度会员',
     YEARLY: '年度会员',
+    CREDIT_10: '加榨包 10轮次',
   };
 
   const metadata = order?.metadata ? JSON.parse(order.metadata) : {};
+  const isCreditPackOrder = order?.paymentType === 'CREDIT_PACK';
 
   return (
     <div className="min-h-screen flex flex-col bg-beige">
@@ -71,7 +74,9 @@ export default async function PaymentSuccessPage({
               </svg>
             </div>
             <h1 className="text-xl font-bold text-ink mb-2">支付成功</h1>
-            <p className="text-sm text-muted">会员已激活，享受全部权益</p>
+            <p className="text-sm text-muted">
+              {isCreditPackOrder ? '加榨包已到账，可继续与导师分身对话' : '会员已激活，享受全部权益'}
+            </p>
           </div>
 
           {/* 订单信息 */}
@@ -106,7 +111,7 @@ export default async function PaymentSuccessPage({
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted">订阅方案</span>
+                  <span className="text-muted">商品名称</span>
                   <span className="text-ink">
                     {planNames[metadata.planId] || metadata.planName || '-'}
                   </span>

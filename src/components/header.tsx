@@ -18,7 +18,7 @@ const navLabels = {
     login: '登录',
     register: '注册',
     subscribe: '订阅',
-    renew: '续费',
+    renew: '升级',
     logout: '退出',
     loading: '加载中...',
   },
@@ -31,7 +31,7 @@ const navLabels = {
     login: 'Log In',
     register: 'Sign Up',
     subscribe: 'Subscribe',
-    renew: 'Renew',
+    renew: 'Upgrade',
     logout: 'Logout',
     loading: 'Loading...',
   },
@@ -41,7 +41,7 @@ const navLabels = {
  * 顶部导航栏
  * 移动端: 第一行 Logo + Career Companion + 功能按钮；第二行 5 个功能入口
  * 桌面端: Logo + 导航链接 + 功能按钮（单行）
- * 功能按钮三态: 未登录=注册/登录；非会员=订阅/退出；会员=续费/退出
+ * 功能按钮三态: 未登录=注册/登录；非会员=订阅/退出；会员=升级/退出
  *
  * 在 AI 职导对话页面：
  * - 问卷进行中：导航栏随页面滚动（不锁定）
@@ -207,7 +207,7 @@ function HeaderInner() {
     ? 'fixed top-0 left-0 right-0 z-50'
     : 'sticky top-0 z-50';
 
-  // 功能按钮（三态）：未登录=注册/登录；非会员=订阅/退出；会员=续费/退出
+  // 功能按钮（三态）：未登录=注册/登录；非会员=订阅/退出；会员=升级/退出
   // compact=true 用于手机端第一行
   const renderActions = (compact: boolean) => {
     const box = compact ? 'px-2.5 py-1 text-xs gap-1' : 'px-3 py-1.5 text-sm gap-1.5';
@@ -364,7 +364,7 @@ function HeaderInner() {
             ))}
           </div>
 
-          {/* 功能按钮：注册/登录 | 订阅/退出 | 续费/退出 */}
+          {/* 功能按钮：注册/登录 | 订阅/退出 | 升级/退出 */}
           <div className="flex items-center gap-2 shrink-0">
             {renderActions(false)}
           </div>

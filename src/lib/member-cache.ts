@@ -5,6 +5,8 @@
 interface MemberStatus {
   isPremium: boolean;
   freeTrialUsed: number;
+  mentorCredits: number;
+  mentorCreditsConsumed: number;
   fetchedAt: number;
 }
 
@@ -23,7 +25,12 @@ export function getCachedMemberStatus(userId: string): MemberStatus | null {
 
 export function setCachedMemberStatus(
   userId: string,
-  data: { isPremium: boolean; freeTrialUsed: number }
+  data: {
+    isPremium: boolean;
+    freeTrialUsed: number;
+    mentorCredits: number;
+    mentorCreditsConsumed: number;
+  }
 ): void {
   memberCache.set(userId, { ...data, fetchedAt: Date.now() });
 }

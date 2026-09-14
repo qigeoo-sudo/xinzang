@@ -1,3 +1,5 @@
+import { PwaInstall } from '@/components/pwa-install';
+
 const copy = {
   zh: {
     name: 'AI Career Companion',
@@ -11,10 +13,21 @@ const copy = {
   },
 };
 
-export function HomeFooter({ lang }: { lang: 'zh' | 'en' }) {
+export function HomeFooter({
+  lang,
+  showInstall = false,
+}: {
+  lang: 'zh' | 'en';
+  showInstall?: boolean;
+}) {
   const t = copy[lang];
   return (
     <footer className="bg-brand-900 px-5 py-7 text-center">
+      {showInstall && (
+        <div className="mx-auto mb-5 max-w-xs">
+          <PwaInstall lang={lang} />
+        </div>
+      )}
       <p className="text-[13px] text-white/85">{t.name}</p>
       <p className="mt-1 text-[11px] text-white/75">{t.slogan}</p>
       <p className="mt-3.5 text-[10px] text-white/40">{t.copyright}</p>

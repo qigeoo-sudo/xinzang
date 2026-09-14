@@ -3,6 +3,7 @@
  * 注册接口、档案编辑接口、前端向导共享同一份口径
  */
 import { z } from 'zod';
+import { MENTOR_PREFERENCE_OPTIONS } from './register-options';
 
 // 身份内部值 → UserProfile.status 中文值
 export const IDENTITY_STATUS_MAP: Record<string, string> = {
@@ -19,8 +20,19 @@ const monthText = z
   .optional()
   .nullable();
 
+// 昵称按 UTF-8 字节限制（中文 8 字 = 24 字节，英文 24 字母 = 24 字节）
+const NICKNAME_MAX_BYTES = 24;
+const nicknameText = z
+  .string()
+  .optional()
+  .nullable()
+  .refine(
+    (v) => v == null || Buffer.byteLength(v, 'utf8') <= NICKNAME_MAX_BYTES,
+    { message: `昵称最多 ${NICKNAME_MAX_BYTES} 字节（中文约 ${Math.floor(NICKNAME_MAX_BYTES / 3)} 字）` }
+  );
+
 export const registerProfileSchema = z.object({
-  nickname: z.string().max(24).optional().nullable(),
+  nickname: nicknameText,
   birthMonth: monthText,
   identity: z.enum(['student', 'working', 'jobless']).optional().nullable(),
   enrollMonth: monthText,
@@ -36,6 +48,21 @@ export const registerProfileSchema = z.object({
   curProvince: shortText,
   curCity: shortText,
   careers: z.array(z.string().max(40)).max(30).optional().nullable(),
+  // “让导师分身更懂你”选填区（复用旧问卷列：开放文本 + JSON 数组）
+  // careerAnxiety：职业焦虑自述（≤100 字，前后端敏感词校验）
+  careerAnxiety: z.string().max(100).optional().nullable(),
+  // helpPriority：希望获得帮助的方面，单选存 0/1 元素数组；“其他”为用户原文（≤20 字，敏感词校验）
+  helpPriority: z.array(z.string().max(20)).max(1).optional().nullable(),
+  // mentorPreference：想深聊的人，多选固定名单（≤11 项）
+  mentorPreference: z
+    .array(z.string().max(20))
+    .max(11)
+    .optional()
+    .nullable()
+    .refine(
+      (arr) => !arr || arr.every((v) => MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)),
+      { message: '想深聊的人包含无效选项' }
+    ),
 });
 
 export type RegisterProfilePayload = z.infer<typeof registerProfileSchema>;
@@ -70,6 +97,14 @@ export function toUserProfileData(p: RegisterProfilePayload) {
   }
   if (p.careers !== undefined) {
     data.careers = p.careers ? JSON.stringify(p.careers) : null;
+  }
+  put('careerAnxiety', p.careerAnxiety);
+  if (p.helpPriority !== undefined) {
+    data.helpPriority = p.helpPriority && p.helpPriority.length ? JSON.stringify(p.helpPriority) : null;
+  }
+  if (p.mentorPreference !== undefined) {
+    data.mentorPreference =
+      p.mentorPreference && p.mentorPreference.length ? JSON.stringify(p.mentorPreference) : null;
   }
   return data;
 }

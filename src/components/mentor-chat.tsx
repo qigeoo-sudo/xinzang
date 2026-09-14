@@ -195,6 +195,11 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [initialized, setInitialized] = useState(false);
   const [usageUsed, setUsageUsed] = useState<number>(0);
   const [usageLimit, setUsageLimit] = useState<number | null>(null);
+  // 会员导师分身：24 小时滚动窗口内已用/上限（仅会员有值）
+  const [usageDailyUsed, setUsageDailyUsed] = useState<number | null>(null);
+  const [usageDailyLimit, setUsageDailyLimit] = useState<number | null>(null);
+  // 加购轮次余额（永久有效，会员/非会员通用，0 = 无加购）
+  const [usageCredits, setUsageCredits] = useState(0);
   const [profileData, setProfileData] = useState<{
     careerAnxiety?: string | null;
     helpPriority?: string | null;
@@ -235,6 +240,9 @@ export function MentorChat({ mentor }: MentorChatProps) {
           } else {
             setUsageUsed(data.mentor?.used ?? 0);
             setUsageLimit(data.mentor?.limit ?? null);
+            setUsageDailyUsed(data.mentor?.dailyUsed ?? null);
+            setUsageDailyLimit(data.mentor?.dailyLimit ?? null);
+            setUsageCredits(data.mentor?.creditsBalance ?? 0);
           }
         }
       })
@@ -636,6 +644,16 @@ export function MentorChat({ mentor }: MentorChatProps) {
         } else if (data.quotaExceeded) {
           setError(data.error || '导师分身对话次数已用完');
           setNeedSubscription(true);
+        } else if (data.dailyQuotaExceeded) {
+          setError(data.error || '今日导师分身对话已达上限，请明天再聊');
+          if (data.mentorUsed !== undefined) {
+            setUsageUsed(data.mentorUsed);
+            setUsageLimit(data.mentorLimit ?? null);
+          }
+          if (data.mentorDailyUsed !== undefined) {
+            setUsageDailyUsed(data.mentorDailyUsed);
+            setUsageDailyLimit(data.mentorDailyLimit ?? null);
+          }
         } else {
           setError(data.error || '发送失败');
         }
@@ -726,6 +744,13 @@ export function MentorChat({ mentor }: MentorChatProps) {
       } else if (mentor.id !== 'ai-guide' && data.mentorUsed !== undefined) {
         setUsageUsed(data.mentorUsed);
         setUsageLimit(data.mentorLimit ?? null);
+        if (data.mentorDailyUsed !== undefined) {
+          setUsageDailyUsed(data.mentorDailyUsed);
+          setUsageDailyLimit(data.mentorDailyLimit ?? null);
+        }
+      }
+      if (mentor.id !== 'ai-guide' && data.creditsBalance !== undefined) {
+        setUsageCredits(data.creditsBalance);
       }
     } catch {
       setError('网络错误，请稍后再试');
@@ -992,14 +1017,44 @@ export function MentorChat({ mentor }: MentorChatProps) {
               <span className="font-medium">{usageLimit}</span> 次
             </span>
           ) : usageLimit !== null ? (
-            <span>
-              导师分身对话已用 <span className="font-medium text-accent">{usageUsed}</span>
-              {' / '}
-              <span className="font-medium text-accent">{usageLimit}</span> 次
+            <span className="flex items-center gap-2 flex-wrap justify-center">
+              <span>
+                导师分身对话 <span className="font-medium text-accent">{usageUsed}</span>
+                {' / '}
+                <span className="font-medium text-accent">{usageLimit}</span>
+              </span>
+              {usageDailyLimit !== null && usageDailyUsed !== null && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span>
+                    今日 <span className="font-medium text-accent">{usageDailyUsed}</span>
+                    {' / '}
+                    <span className="font-medium text-accent">{usageDailyLimit}</span>
+                  </span>
+                </>
+              )}
+              {usageCredits > 0 && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span>
+                    +<span className="font-medium text-slate-600">{usageCredits}</span>
+                  </span>
+                </>
+              )}
             </span>
           ) : (
-            <span className="text-success font-medium">
-              无限次对话
+            <span className="flex items-center gap-2">
+              <span className="text-success font-medium">
+                无限次对话
+              </span>
+              {usageCredits > 0 && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span>
+                    +<span className="font-medium text-slate-600">{usageCredits}</span>
+                  </span>
+                </>
+              )}
             </span>
           )}
         </div>
@@ -1007,17 +1062,17 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
-        {/* 免费次数用完 — 会员引导（仅导师分身） */}
-        {mentor.id !== 'ai-guide' && usageLimit !== null && usageUsed >= usageLimit && (
+        {/* 次数用完 — 会员/加榨包引导（仅导师分身，有加榨包余额时不显示） */}
+        {mentor.id !== 'ai-guide' && usageLimit !== null && usageUsed >= usageLimit && usageCredits === 0 && (
           <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
-            免费次数用完，成为
+            次数用完，开通
             <Link
               href={subHref}
               className="text-accent font-semibold underline underline-offset-2 hover:text-accent-dark"
             >
               会员
             </Link>
-            可继续交谈。
+            或购买加榨包可继续交谈。
           </div>
         )}
         <div className="flex gap-2 items-end">

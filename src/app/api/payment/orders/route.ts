@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
-import { getPlanById } from '@/lib/plans';
+import { getPlanById, getCreditPackById } from '@/lib/plans';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
 import { createAlipayOrder } from '@/lib/alipay';
 import { z } from 'zod';
@@ -20,9 +20,9 @@ import { z } from 'zod';
 /** 支付方式 */
 type PaymentMethod = 'wechat' | 'alipay';
 
-/** 创建订单 Schema — 修复: isRenewal 纳入 Zod 校验 */
+/** 创建订单 Schema */
 const createOrderSchema = z.object({
-  planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY']),
+  planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_10']),
   paymentMethod: z.enum(['wechat', 'alipay']).default('wechat'),
   isRenewal: z.boolean().default(false),
 });
@@ -31,7 +31,7 @@ const createOrderSchema = z.object({
  * POST /api/payment/orders
  * 创建支付订单 + 调用支付下单 (微信支付 / 支付宝)
  *
- * Body: { planId: "MONTHLY" | "QUARTERLY" | "YEARLY", paymentMethod?: "wechat" | "alipay" }
+ * Body: { planId: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CREDIT_10", paymentMethod?: "wechat" | "alipay" }
  */
 export async function POST(request: NextRequest) {
   // 1. 身份验证
@@ -59,37 +59,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { planId, paymentMethod, isRenewal } = parsed.data;
+    const { planId, paymentMethod } = parsed.data;
 
-    // 3. 验证计划 ID
-    const plan = getPlanById(planId);
-    if (!plan) {
+    // 3. 识别商品：轮次加购包 或 会员订阅
+    const creditPack = getCreditPackById(planId);
+    const plan = creditPack ? undefined : getPlanById(planId);
+
+    if (!creditPack && !plan) {
       return NextResponse.json(
-        { error: '无效的订阅计划' },
+        { error: '无效的商品' },
         { status: 400 }
       );
     }
 
-    // 5. 检查是否已有有效订阅
-    const existingSub = await prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        status: 'ACTIVE',
-        endDate: { gt: new Date() },
-      },
-    });
+    // 4. 会员订阅：校验升级/续费等级（加购包任何人可重复购买）
+    let existingSub: Awaited<ReturnType<typeof prisma.subscription.findFirst>> = null;
+    if (plan) {
+      existingSub = await prisma.subscription.findFirst({
+        where: {
+          userId: session.user.id,
+          status: 'ACTIVE',
+          endDate: { gt: new Date() },
+        },
+      });
 
-    // 续费折扣：年度会员续费年度享8折
-    const isYearlyRenewal = isRenewal && plan.id === 'YEARLY' && existingSub?.plan === 'YEARLY';
-    const discountRate = isYearlyRenewal ? 0.8 : 1;
-    const actualPriceFen = Math.round(plan.priceFen * discountRate);
-    const actualPrice = Math.floor(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
-
-    if (existingSub) {
-      if (isYearlyRenewal) {
-        // 年度续费：允许
-      } else {
-        // 套餐等级判断
+      if (existingSub) {
         const planRank: Record<string, number> = {
           MONTHLY: 1,
           QUARTERLY: 2,
@@ -97,9 +91,10 @@ export async function POST(request: NextRequest) {
         };
         const currentRank = planRank[existingSub.plan] || 0;
         const newRank = planRank[plan.id] || 0;
+        const isSamePlanRenewal = existingSub.plan === plan.id;
 
-        // 不允许降级或同级重复订阅（非续费）
-        if (newRank <= currentRank) {
+        // 同级仅允许年度续费；低级/同级重复订阅一律拒绝
+        if (newRank < currentRank || (newRank === currentRank && !isSamePlanRenewal)) {
           return NextResponse.json(
             { error: '你已有同级或更高级会员，无需重复订阅' },
             { status: 400 }
@@ -107,6 +102,12 @@ export async function POST(request: NextRequest) {
         }
       }
     }
+
+    // 5. 价格（恒价，无折扣）与订单描述
+    const actualPriceFen = creditPack ? creditPack.priceFen : plan!.priceFen;
+    const actualPrice = Math.floor(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
+    const productName = creditPack ? creditPack.name : plan!.name;
+    const paymentType = creditPack ? 'CREDIT_PACK' : 'SUBSCRIPTION';
 
     // 6. 创建业务订单号
     const orderNo = generateOrderNo();
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     const orderParams = {
       orderNo,
       amount: actualPriceFen,
-      description: isYearlyRenewal ? `AI职业导师-${plan.name}续费(8折)` : `AI职业导师-${plan.name}`,
+      description: `AI职业导师-${productName}`,
       clientIP,
       userId: session.user.id,
     };
@@ -142,17 +143,22 @@ export async function POST(request: NextRequest) {
         currency: 'CNY',
         status: 'PENDING',
         paymentMethod,
-        paymentType: 'SUBSCRIPTION',
+        paymentType,
         expiredAt: new Date(Date.now() + 30 * 60 * 1000), // 30分钟过期
-        metadata: JSON.stringify({
-          planId: plan.id,
-          planName: plan.name,
-          durationDays: plan.durationDays,
-          mockPayment: payResult.mock || false,
-          isRenewal: isYearlyRenewal,
-          originalPrice: plan.price,
-          discountRate,
-        }),
+        metadata: JSON.stringify(
+          creditPack
+            ? {
+                planId: creditPack.id,
+                planName: creditPack.name,
+                credits: creditPack.credits,
+                mockPayment: payResult.mock || false,
+              }
+            : {
+                planId: plan!.id,
+                planName: plan!.name,
+                mockPayment: payResult.mock || false,
+              }
+        ),
       },
     });
 
@@ -161,7 +167,7 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
       orderNo: order.orderNo,
       amount: actualPrice,
-      planName: plan.name,
+      planName: productName,
       paymentMethod,
       payUrl: payResult.payUrl,
       mock: payResult.mock || false,

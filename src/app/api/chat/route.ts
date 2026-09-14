@@ -16,14 +16,23 @@ import { rateLimit, getClientIP } from '@/lib/rate-limit';
 import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb';
-import { PLATFORM_CONSTRAINTS_PROMPT } from '@/lib/prompts';
+import { PLATFORM_CONSTRAINTS_PROMPT, PLACEHOLDER_NONE } from '@/lib/prompts';
 import { extractInferredProfile, alignAndMergeInferredProfile, renderInferredProfile } from '@/lib/profile-inference';
-import { getMentorQuota } from '@/lib/plans';
+import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
 import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } from '@/lib/member-cache';
 import { proxyFetch } from '@/lib/proxy-fetch';
 import { fetchWithRetry } from '@/lib/ai-retry';
 import { advanceFromStep, injectChoiceByState, buildStateHint, extractAnswer, containsSensitiveContent, questions } from '@/lib/questionnaire-state';
 import { redactPII } from '@/lib/ai-privacy';
+import {
+  CAREER_OPTIONS,
+  MAJOR_OPTIONS,
+  WORK_GOAL_WORKING,
+  WORK_GOAL_JOBLESS,
+  WORK_EXP_DURATION_OPTIONS,
+  type Option,
+} from '@/lib/register-options';
+import { DIMENSIONS, DIMENSION_META, type Dimension } from '@/lib/riasec/questions';
 
 // API URL 白名单 — 修复安全审计 A10-10.1
 const ALLOWED_API_URLS = [
@@ -299,12 +308,26 @@ function prettyArray(v?: string | null): string {
 
 /** 把 UserProfile 渲染成总调度 Prompt 的 {{user_profile_confirmed}} 文本 */
 function renderUserProfile(p: {
+  // 新注册流程（register-v2）
   nickname?: string | null;
-  age?: number | null;
   status?: string | null;
-  city?: string | null;
+  birthMonth?: string | null;
+  enrollMonth?: string | null;
+  expectedGrad?: string | null;
+  gradMonth?: string | null;
   school?: string | null;
   major?: string | null;
+  workGoal?: string | null;
+  fullTimeExp?: string | null;
+  partTimeExp?: string | null;
+  workProvince?: string | null;
+  workCity?: string | null;
+  curProvince?: string | null;
+  curCity?: string | null;
+  careers?: string | null;
+  // 旧 AI 职导问卷（老用户存量数据，继续兼容）
+  age?: number | null;
+  city?: string | null;
   enrollmentYear?: string | null;
   industry?: string | null;
   jobContent?: string | null;
@@ -319,26 +342,91 @@ function renderUserProfile(p: {
   mentorHelpAreas?: string | null;
 } | null): string {
   if (!p) return '无（用户尚未填写档案）';
+
+  // 枚举值 → 中文 label（找不到映射时回退原值）
+  const optLabel = (opts: Option[], v: string | null | undefined) => {
+    if (!v) return '';
+    return opts.find((o) => o.value === v)?.label ?? v;
+  };
+  const joinLoc = (prov?: string | null, city?: string | null) =>
+    [prov, city].filter(Boolean).join(' · ');
+
   const parts: string[] = [];
   if (p.nickname) parts.push(`称呼: ${p.nickname}`);
-  if (p.age) parts.push(`年龄: ${p.age}`);
   if (p.status) parts.push(`状态: ${p.status}`);
-  if (p.city) parts.push(`城市: ${p.city}`);
+  if (p.birthMonth) parts.push(`出生年月: ${p.birthMonth}`);
+  else if (p.age) parts.push(`年龄: ${p.age}`);
   if (p.school) parts.push(`学校: ${p.school}`);
-  if (p.major) parts.push(`专业: ${p.major}`);
-  if (p.enrollmentYear) parts.push(`入学年份: ${p.enrollmentYear}`);
+  if (p.major) parts.push(`专业: ${optLabel(MAJOR_OPTIONS, p.major)}`);
+  if (p.enrollMonth) parts.push(`入学年月: ${p.enrollMonth}`);
+  else if (p.enrollmentYear) parts.push(`入学年份: ${p.enrollmentYear}`);
+  if (p.expectedGrad) parts.push(`预计毕业: ${p.expectedGrad}`);
+  if (p.gradMonth) parts.push(`毕业年月: ${p.gradMonth}`);
+  else if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}`);
+  if (p.workGoal) {
+    parts.push(`最近打算: ${optLabel([...WORK_GOAL_WORKING, ...WORK_GOAL_JOBLESS], p.workGoal)}`);
+  }
+  if (p.fullTimeExp) parts.push(`全职经验: ${optLabel(WORK_EXP_DURATION_OPTIONS, p.fullTimeExp)}`);
+  if (p.partTimeExp) parts.push(`兼职经验: ${optLabel(WORK_EXP_DURATION_OPTIONS, p.partTimeExp)}`);
+  const workLoc = joinLoc(p.workProvince, p.workCity);
+  if (workLoc) parts.push(`希望工作地点: ${workLoc}`);
+  const curLoc = joinLoc(p.curProvince, p.curCity);
+  if (curLoc) parts.push(`目前所在地: ${curLoc}`);
+  else if (p.city) parts.push(`城市: ${p.city}`);
+  // 职业方向：新字段 careers 优先，回退旧 interests
+  const careersLabel = prettyArray(p.careers)
+    .split('、')
+    .map((v) => optLabel(CAREER_OPTIONS, v.trim()))
+    .filter(Boolean)
+    .join('、');
+  if (careersLabel) parts.push(`感兴趣的职业方向: ${careersLabel}`);
+  else if (prettyArray(p.interests)) parts.push(`兴趣方向: ${prettyArray(p.interests)}`);
+  // 旧问卷存量职业字段
   if (p.industry) parts.push(`行业: ${p.industry}`);
   if (p.jobContent) parts.push(`工作内容: ${p.jobContent}`);
   if (p.companyType) parts.push(`公司类型: ${p.companyType}`);
-  if (p.gradYears != null) parts.push(`毕业年限: ${p.gradYears}`);
-  if (p.interests) parts.push(`兴趣方向: ${prettyArray(p.interests)}`);
   if (p.goals) parts.push(`职业目标: ${p.goals}`);
-  if (p.careerAnxiety) parts.push(`职业焦虑: ${p.careerAnxiety}`);
+  // 冷启动高价值字段：焦虑 / 希望获得帮助的方面 / 想深聊的人
+  if (p.careerAnxiety) parts.push(`当前最大的职业焦虑: ${p.careerAnxiety}`);
   if (p.jobChangeStatus) parts.push(`求职/换工作状态: ${p.jobChangeStatus}`);
-  if (p.helpPriority) parts.push(`最需要帮助: ${prettyArray(p.helpPriority)}`);
-  if (p.mentorPreference) parts.push(`想深聊的人群: ${prettyArray(p.mentorPreference)}`);
+  if (p.helpPriority) parts.push(`最希望获得帮助的方面: ${prettyArray(p.helpPriority)}`);
+  if (p.mentorPreference) parts.push(`想深聊的人: ${prettyArray(p.mentorPreference)}`);
   if (p.mentorHelpAreas) parts.push(`希望导师帮助的方面: ${prettyArray(p.mentorHelpAreas)}`);
   return parts.join('；') || '无';
+}
+
+/**
+ * 把 RIASEC 职业兴趣测评结果渲染成 {{assessment_context}} 文本。
+ * 只取主码（前三维）+ 六维排序，并明确告知模型：兴趣不是能力，只能当探讨线索。
+ */
+function renderAssessmentContext(assessment: { code: string | null; scores: string } | null): string {
+  if (!assessment) return PLACEHOLDER_NONE;
+  let scores: Record<string, number>;
+  try {
+    scores = JSON.parse(assessment.scores);
+  } catch {
+    return PLACEHOLDER_NONE;
+  }
+  const ranked = (Object.keys(scores) as Dimension[])
+    .filter((d) => DIMENSION_META[d])
+    .sort((a, b) =>
+      scores[b] !== scores[a] ? scores[b] - scores[a] : DIMENSIONS.indexOf(a) - DIMENSIONS.indexOf(b)
+    );
+  if (ranked.length === 0) return PLACEHOLDER_NONE;
+
+  const top3 = ranked.slice(0, 3);
+  const code = assessment.code || top3.join('');
+  const topText = top3
+    .map((d) => `${DIMENSION_META[d].name}（${DIMENSION_META[d].desc}）`)
+    .join('；');
+  const orderText = ranked.map((d) => `${DIMENSION_META[d].name}${scores[d]}`).join(' > ');
+
+  return [
+    `霍兰德 RIASEC 兴趣测评主码: ${code}`,
+    `前三维兴趣: ${topText}`,
+    `六维得分排序: ${orderText}`,
+    '注意：这是兴趣倾向（喜欢做什么），不是能力评估，不代表能不能做好；仅作为理解用户偏好的线索，与用户本人意愿冲突时以用户说法为准，不得据此断言"你不适合做某行"。',
+  ].join('；');
 }
 
 /** 滚动摘要：达到阈值后每 N 条消息刷新一次 */
@@ -455,20 +543,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 从缓存或数据库获取会员状态 — 60秒缓存减少数据库压力
+    // 旧版榨职机问卷流程已停用（信息改由注册/个人档案收集）：
+    // 直接 410，不创建会话、不推进状态机、不写入 UserProfile
+    if (mentorId === 'ai-guide') {
+      return NextResponse.json(
+        { error: '榨职机访谈已升级，个人信息请在「个人档案」中填写，职业问题可以找行业导师分身聊聊。', guideRetired: true },
+        { status: 410 }
+      );
+    }
+
+    // 从缓存或数据库获取会员状态 — 10秒缓存减少数据库压力
     let dbUser = null;
     const cached = getCachedMemberStatus(session.user.id);
     if (cached) {
-      dbUser = { isPremium: cached.isPremium, freeTrialUsed: cached.freeTrialUsed };
+      dbUser = {
+        isPremium: cached.isPremium,
+        freeTrialUsed: cached.freeTrialUsed,
+        mentorCredits: cached.mentorCredits,
+        mentorCreditsConsumed: cached.mentorCreditsConsumed,
+      };
     } else {
       dbUser = await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { isPremium: true, freeTrialUsed: true },
+        select: {
+          isPremium: true,
+          freeTrialUsed: true,
+          mentorCredits: true,
+          mentorCreditsConsumed: true,
+        },
       });
       if (dbUser) {
         setCachedMemberStatus(session.user.id, {
           isPremium: dbUser.isPremium,
           freeTrialUsed: dbUser.freeTrialUsed,
+          mentorCredits: dbUser.mentorCredits,
+          mentorCreditsConsumed: dbUser.mentorCreditsConsumed,
         });
       }
     }
@@ -485,6 +594,13 @@ export async function POST(request: NextRequest) {
     const isPremium = dbUser.isPremium;
     const freeTrialUsed = dbUser.freeTrialUsed;
     const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
+    // 加购轮次余额（永久有效）：会员周期配额/免费试用耗尽后兜底
+    const creditBalance = Math.max(
+      0,
+      (dbUser.mentorCredits || 0) - (dbUser.mentorCreditsConsumed || 0)
+    );
+    // 本轮对话是否消耗加购轮次（配额检查中判定，落库时扣减）
+    let consumeCredit = false;
 
     // 5. 每日消息限额检查 (AI 职导) — 24小时滚动窗口
     let dailyMessageCount = 0;
@@ -514,23 +630,29 @@ export async function POST(request: NextRequest) {
 
     // 6. 会员/试用检查 — 免费导师跳过
     if (!mentor.isFree && !isPremium) {
-      // 非会员 — 检查免费试用次数
+      // 非会员 — 免费试用次数耗尽后，可用加购轮次兜底
       if (freeTrialUsed >= freeTrialLimit) {
-        return NextResponse.json(
-          {
-            error: `${mentor.name} 需要会员才能对话`,
-            needSubscription: true,
-            freeTrialUsed,
-            freeTrialLimit,
-          },
-          { status: 403 }
-        );
+        if (creditBalance > 0) {
+          consumeCredit = true;
+        } else {
+          return NextResponse.json(
+            {
+              error: `${mentor.name} 需要会员才能对话`,
+              needSubscription: true,
+              freeTrialUsed,
+              freeTrialLimit,
+            },
+            { status: 403 }
+          );
+        }
       }
     }
 
     // 6.5 导师分身对话次数配额检查（非 AI 职导）
     let mentorUsedCount = 0;
     let mentorQuotaLimit: number | null = null;
+    let mentorDailyUsedCount = 0;
+    let mentorDailyQuotaLimit: number | null = null;
     if (mentorId !== 'ai-guide' && isPremium) {
       const subscription = await prisma.subscription.findFirst({
         where: {
@@ -544,24 +666,65 @@ export async function POST(request: NextRequest) {
 
       if (subscription) {
         mentorQuotaLimit = getMentorQuota(subscription.plan);
+        mentorDailyQuotaLimit = getMentorDailyQuota(subscription.plan);
 
-        if (mentorQuotaLimit !== null) {
-          mentorUsedCount = await prisma.chatMessage.count({
-            where: {
-              role: 'user',
-              createdAt: { gte: subscription.startDate },
-              chatSession: {
-                userId: session.user.id,
-                mentorId: { not: 'ai-guide' },
+        if (mentorQuotaLimit !== null || mentorDailyQuotaLimit !== null) {
+          // 周期内总用量
+          if (mentorQuotaLimit !== null) {
+            mentorUsedCount = await prisma.chatMessage.count({
+              where: {
+                role: 'user',
+                createdAt: { gte: subscription.startDate },
+                chatSession: {
+                  userId: session.user.id,
+                  mentorId: { not: 'ai-guide' },
+                },
               },
-            },
-          });
+            });
+          }
 
-          if (mentorUsedCount >= mentorQuotaLimit) {
+          // 24 小时滚动窗口每日用量（防个人蒸馏）
+          if (mentorDailyQuotaLimit !== null) {
+            const twentyFourHoursAgo = new Date(Date.now() - ONE_DAY_MS);
+            mentorDailyUsedCount = await prisma.chatMessage.count({
+              where: {
+                role: 'user',
+                createdAt: { gte: twentyFourHoursAgo },
+                chatSession: {
+                  userId: session.user.id,
+                  mentorId: { not: 'ai-guide' },
+                },
+              },
+            });
+          }
+
+          const quotaAvailable =
+            mentorQuotaLimit === null || mentorUsedCount < mentorQuotaLimit;
+          const dailyAvailable =
+            mentorDailyQuotaLimit === null || mentorDailyUsedCount < mentorDailyQuotaLimit;
+
+          if (quotaAvailable && dailyAvailable) {
+            // 订阅周期池内正常消耗
+          } else if (creditBalance > 0) {
+            // 周期总轮次或今日轮次触顶 — 有加购余额时改走加购池（不受日限约束）
+            consumeCredit = true;
+          } else if (!quotaAvailable) {
             return NextResponse.json(
               {
-                error: `你的导师分身对话次数已用完（${mentorUsedCount}/${mentorQuotaLimit}），升级更高套餐可获得更多次数`,
+                error: `你的导师分身对话次数已用完（${mentorUsedCount}/${mentorQuotaLimit}），升级更高套餐或加购轮次包可继续对话`,
                 quotaExceeded: true,
+                mentorUsed: mentorUsedCount,
+                mentorLimit: mentorQuotaLimit,
+              },
+              { status: 429 }
+            );
+          } else {
+            return NextResponse.json(
+              {
+                error: `今日导师分身对话已达 ${mentorDailyQuotaLimit} 轮次上限，请明天再聊`,
+                dailyQuotaExceeded: true,
+                mentorDailyUsed: mentorDailyUsedCount,
+                mentorDailyLimit: mentorDailyQuotaLimit,
                 mentorUsed: mentorUsedCount,
                 mentorLimit: mentorQuotaLimit,
               },
@@ -911,12 +1074,26 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
         const userProfile = await prisma.userProfile.findUnique({
           where: { userId: session.user.id },
           select: {
+            // register-v2 新字段
             nickname: true,
-            age: true,
             status: true,
-            city: true,
+            birthMonth: true,
+            enrollMonth: true,
+            expectedGrad: true,
+            gradMonth: true,
             school: true,
             major: true,
+            workGoal: true,
+            fullTimeExp: true,
+            partTimeExp: true,
+            workProvince: true,
+            workCity: true,
+            curProvince: true,
+            curCity: true,
+            careers: true,
+            // 旧问卷存量字段
+            age: true,
+            city: true,
             enrollmentYear: true,
             industry: true,
             jobContent: true,
@@ -934,6 +1111,12 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           },
         });
 
+        // RIASEC 职业兴趣测评（一人一份，重测覆盖；未测过为 null）
+        const interestAssessment = await prisma.interestAssessment.findUnique({
+          where: { userId: session.user.id },
+          select: { code: true, scores: true },
+        });
+
         const conversationSummary = await maybeRefreshSummary({
           chatSessionId,
           apiKey,
@@ -945,6 +1128,7 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
           userProfileConfirmed: renderUserProfile(userProfile),
           userProfileInferred:
             renderInferredProfile(userProfile?.inferredProfile, userProfile?.profileConflicts) || undefined,
+          assessmentContext: renderAssessmentContext(interestAssessment),
           conversationSummary: conversationSummary ?? undefined,
           currentTime: new Date().toISOString(),
           domainRoute: mentorRouteDecision.route,
@@ -1068,13 +1252,19 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       : reply;
 
 
-    // 13+14. 事务: 保存 AI 回复 + 更新计数 + 扣减免费试用 — 原子操作
-    const trialDecrement = !isPremium && !mentor.isFree
+    // 13+14. 事务: 保存 AI 回复 + 更新计数 — 原子操作
+    // 额度扣减：走加购池则消耗加购轮次；非会员付费导师且试用未耗尽则计免费试用
+    const quotaDecrement = consumeCredit
       ? [prisma.user.update({
           where: { id: session.user.id },
-          data: { freeTrialUsed: { increment: 1 } },
+          data: { mentorCreditsConsumed: { increment: 1 } },
         })]
-      : [];
+      : !isPremium && !mentor.isFree
+        ? [prisma.user.update({
+            where: { id: session.user.id },
+            data: { freeTrialUsed: { increment: 1 } },
+          })]
+        : [];
 
     await prisma.$transaction([
       prisma.chatMessage.create({
@@ -1091,10 +1281,10 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
         where: { id: chatSessionId },
         data: { messageCount: { increment: 2 } },
       }),
-      ...trialDecrement,
+      ...quotaDecrement,
     ]);
 
-    if (!isPremium && !mentor.isFree) {
+    if (consumeCredit || (!isPremium && !mentor.isFree)) {
       invalidateMemberCache(session.user.id);
     }
 
@@ -1117,15 +1307,40 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
     // 15. 返回回复
     let respMentorUsed: number | undefined;
     let respMentorLimit: number | null | undefined;
+    let respMentorDailyUsed: number | undefined;
+    let respMentorDailyLimit: number | null | undefined;
     if (mentorId !== 'ai-guide') {
-      if (!isPremium && !mentor.isFree) {
+      if (consumeCredit) {
+        // 本轮走加购池：订阅/试用计数不变，前端主要看 creditsBalance
+        if (isPremium) {
+          respMentorUsed = mentorUsedCount;
+          respMentorLimit = mentorQuotaLimit;
+          if (mentorDailyQuotaLimit !== null) {
+            respMentorDailyUsed = mentorDailyUsedCount;
+            respMentorDailyLimit = mentorDailyQuotaLimit;
+          }
+        } else {
+          respMentorUsed = freeTrialUsed;
+          respMentorLimit = freeTrialLimit;
+        }
+      } else if (!isPremium && !mentor.isFree) {
         respMentorUsed = freeTrialUsed + 1;
         respMentorLimit = freeTrialLimit;
       } else if (isPremium) {
         respMentorUsed = mentorUsedCount + 1;
         respMentorLimit = mentorQuotaLimit;
+        if (mentorDailyQuotaLimit !== null) {
+          respMentorDailyUsed = mentorDailyUsedCount + 1;
+          respMentorDailyLimit = mentorDailyQuotaLimit;
+        }
       }
     }
+
+    // 加购余额（本轮消耗后）
+    const respCreditsBalance =
+      mentorId !== 'ai-guide'
+        ? Math.max(0, creditBalance - (consumeCredit ? 1 : 0))
+        : undefined;
 
     return NextResponse.json({
       reply: finalReply,
@@ -1133,11 +1348,17 @@ ${userProfile.recommendedMentors ? `- 之前推荐的导师：${userProfile.reco
       degraded: false,
       questionnaireCompleted,
       redirectHome,
-      freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed - 1,
+      freeTrialRemaining:
+        !isPremium && !mentor.isFree && !consumeCredit
+          ? freeTrialLimit - freeTrialUsed - 1
+          : null,
       dailyMessageCount: mentorId === 'ai-guide' ? dailyMessageCount + 1 : undefined,
       dailyMessageLimit: mentorId === 'ai-guide' ? DAILY_MESSAGE_LIMIT : undefined,
       mentorUsed: respMentorUsed,
       mentorLimit: respMentorLimit,
+      mentorDailyUsed: respMentorDailyUsed,
+      mentorDailyLimit: respMentorDailyLimit,
+      creditsBalance: respCreditsBalance,
     });
     } finally {
       processingSessions.delete(chatSessionId);

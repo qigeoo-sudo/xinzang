@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { getMentorQuota } from '@/lib/plans';
+import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const DAILY_MESSAGE_LIMIT = 35;
@@ -26,16 +26,30 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // 获取用户会员状态、免费试用次数和当前订阅
+    // 获取用户会员状态、免费试用次数、加购余额和当前订阅
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isPremium: true, freeTrialUsed: true },
+      select: {
+        isPremium: true,
+        freeTrialUsed: true,
+        mentorCredits: true,
+        mentorCreditsConsumed: true,
+      },
     });
 
     const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
 
+    // 加购轮次余额（永久有效，会员/非会员通用）
+    const creditsBalance = Math.max(
+      0,
+      (user?.mentorCredits ?? 0) - (user?.mentorCreditsConsumed ?? 0)
+    );
+
     let mentorUsed = 0;
     let mentorLimit: number | null = null;
+    let mentorDailyUsed = 0;
+    let mentorDailyLimit: number | null = null;
+    const twentyFourHoursAgo = new Date(Date.now() - ONE_DAY_MS);
 
     if (user?.isPremium) {
       // 会员 — 获取当前订阅
@@ -51,6 +65,7 @@ export async function GET() {
 
       if (subscription) {
         mentorLimit = getMentorQuota(subscription.plan);
+        mentorDailyLimit = getMentorDailyQuota(subscription.plan);
 
         // 统计当前订阅周期内所有导师分身的用户消息数
         if (mentorLimit !== null) {
@@ -65,8 +80,21 @@ export async function GET() {
             },
           });
         }
+
+        // 统计 24 小时滚动窗口内所有导师分身的用户消息数（每日防蒸馏上限）
+        if (mentorDailyLimit !== null) {
+          mentorDailyUsed = await prisma.chatMessage.count({
+            where: {
+              role: 'user',
+              createdAt: { gt: twentyFourHoursAgo },
+              chatSession: {
+                userId,
+                mentorId: { not: 'ai-guide' },
+              },
+            },
+          });
+        }
       }
-      // mentorLimit 为 null 表示无限次（高级套餐）
     } else {
       // 非会员 — 返回免费试用次数
       mentorUsed = user?.freeTrialUsed ?? 0;
@@ -74,7 +102,6 @@ export async function GET() {
     }
 
     // AI 职导：统计24小时内的用户消息数
-    const twentyFourHoursAgo = new Date(Date.now() - ONE_DAY_MS);
     const aiGuideUsed = await prisma.chatMessage.count({
       where: {
         role: 'user',
@@ -90,6 +117,9 @@ export async function GET() {
       mentor: {
         used: mentorUsed,
         limit: mentorLimit, // null = 无限
+        dailyUsed: mentorDailyUsed,
+        dailyLimit: mentorDailyLimit, // null = 无每日限制（非会员/免费试用）
+        creditsBalance, // 加购轮次余额（永久有效）
       },
       aiGuide: {
         used: aiGuideUsed,

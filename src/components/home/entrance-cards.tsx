@@ -4,13 +4,31 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+/**
+ * 渲染入口卡片的引用语：
+ * - 中文：按 \n 拆为两行，第二行缩进一个汉字宽度（1em）
+ * - 英文：单行直接输出
+ * 左引号在第一行首，右引号在第二行尾。
+ */
+function Quote({ text }: { text: string }) {
+  const lines = text.split('\n');
+  if (lines.length <= 1) return <>{text}</>;
+  return (
+    <>
+      {lines[0]}
+      <br />
+      <span className="pl-[1em]">{lines.slice(1).join('\n')}</span>
+    </>
+  );
+}
+
 const copy = {
   zh: {
-    quote1: '「我不清楚我的职业方向，请给我建议」',
+    quote1: '“我不清楚我的职业方向，\n请给我建议”',
     action1: '做职业兴趣测试',
-    quote2: '「我先浏览一下导师，可能会发现我要的方向」',
+    quote2: '“我先浏览一下导师，\n可能会发现我要的方向”',
     action2: '看所有导师分身',
-    quote3: '「我清楚我的职业方向，直接匹配导师」',
+    quote3: '“我清楚我的职业方向，\n直接匹配导师”',
     placeholder: '输入关键词，如：战略咨询，投融资',
   },
   en: {
@@ -47,7 +65,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </svg>
         </div>
         <h2 className="mb-5 font-serif text-[17px] font-bold leading-relaxed text-ink md:text-xl">
-          {t.quote1}
+          <Quote text={t.quote1} />
         </h2>
         <Link
           href="/assessment"
@@ -72,7 +90,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </svg>
         </div>
         <h2 className="mb-5 font-serif text-[17px] font-bold leading-relaxed text-ink md:text-xl">
-          {t.quote2}
+          <Quote text={t.quote2} />
         </h2>
         <Link
           href="/mentors"
@@ -97,7 +115,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </svg>
         </div>
         <h2 className="mb-5 font-serif text-[17px] font-bold leading-relaxed text-ink md:text-xl">
-          {t.quote3}
+          <Quote text={t.quote3} />
         </h2>
         <div className="flex w-full items-stretch overflow-hidden rounded-[10px] border-2 border-coral-300 bg-coral-50 transition-all focus-within:border-gold-400 md:max-w-md">
           <input

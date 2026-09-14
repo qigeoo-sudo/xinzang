@@ -72,8 +72,8 @@ export function HomeContent() {
       {/* 为什么选择榨职机 */}
       <FeatureCards lang={uiLang} />
 
-      {/* 页脚 */}
-      <HomeFooter lang={uiLang} />
+      {/* 页脚（首页提供 PWA 安装入口） */}
+      <HomeFooter lang={uiLang} showInstall />
     </main>
   );
 }

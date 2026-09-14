@@ -26,13 +26,14 @@ import {
   verifyAlipayNotifySignature,
   isAlipayMockMode,
 } from '@/lib/alipay';
+import { fulfillPaidOrder, type FulfillResult } from '@/lib/payment-fulfillment';
 
-// 处理支付成功后的通用逻辑（更新订单 + 创建订阅 + 更新用户）
+// 支付成功后：金额一致性校验 + 统一履约（创建/接续订阅或加购轮次包）
 async function handlePaymentSuccess(
   orderNo: string,
   transactionId: string,
   expectedAmountFen: number
-) {
+): Promise<FulfillResult> {
   // 查找订单
   const order = await prisma.paymentOrder.findUnique({
     where: { orderNo },
@@ -40,68 +41,17 @@ async function handlePaymentSuccess(
 
   if (!order) {
     console.error('Payment notify: order not found', orderNo);
-    return { error: '订单不存在', status: 404 };
+    return { success: false, error: '订单不存在', status: 404 };
   }
 
-  // 幂等检查 — 已支付的订单不重复处理
-  if (order.status === 'PAID') {
-    return { success: true, message: '成功（已处理）' };
-  }
-
-  // 金额一致性校验 — 防止低金额回调获取高价值订阅
+  // 金额一致性校验 — 防止低金额回调获取高价值商品
   const orderAmountFen = Math.round(Number(order.amount) * 100);
   if (expectedAmountFen !== orderAmountFen) {
     console.error(`Payment notify: amount mismatch. Expected ${orderAmountFen} fen, got ${expectedAmountFen} fen`, { orderNo });
-    return { error: '金额不一致', status: 400 };
+    return { success: false, error: '金额不一致', status: 400 };
   }
 
-  // 解析订单元数据
-  const metadata = order.metadata ? JSON.parse(order.metadata) : {};
-  const planId = metadata.planId || 'MONTHLY';
-  const durationDays = metadata.durationDays || 30;
-
-  // 交互式事务: 先检查 PENDING 状态再创建订阅 — 防止并发重复处理
-  try {
-    await prisma.$transaction(async (tx) => {
-      const result = await tx.paymentOrder.updateMany({
-        where: { id: order.id, status: 'PENDING' },
-        data: {
-          status: 'PAID',
-          transactionId,
-          paidAt: new Date(),
-        },
-      });
-
-      if (result.count === 0) {
-        throw new Error('ORDER_NOT_PENDING');
-      }
-
-      await tx.subscription.create({
-        data: {
-          userId: order.userId,
-          plan: planId,
-          status: 'ACTIVE',
-          startDate: new Date(),
-          endDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-          paymentOrderId: order.id,
-        },
-      });
-
-      await tx.user.update({
-        where: { id: order.userId },
-        data: { isPremium: true },
-      });
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message === 'ORDER_NOT_PENDING') {
-      console.error('Payment notify: order not in PENDING state', orderNo);
-      return { error: '订单状态异常', status: 400 };
-    }
-    throw error;
-  }
-
-  console.log('Payment success:', orderNo, transactionId);
-  return { success: true, message: '成功' };
+  return fulfillPaidOrder(orderNo, transactionId);
 }
 
 // ========== 微信支付回调 ==========
@@ -174,7 +124,7 @@ export async function POST(request: NextRequest) {
 
     // 4. 处理支付成功（含金额校验）
     const result = await handlePaymentSuccess(outTradeNo, transactionId, amount);
-    if (result.error) {
+    if (!result.success) {
       return NextResponse.json(
         { code: 'FAIL', message: result.error },
         { status: result.status }
@@ -229,7 +179,7 @@ export async function PUT(request: NextRequest) {
     // 支付宝金额为元（字符串），需转为分
     const amountFen = Math.round(totalAmount * 100);
     const result = await handlePaymentSuccess(outTradeNo, tradeNo, amountFen);
-    if (result.error) {
+    if (!result.success) {
       return new NextResponse('fail', { status: result.status });
     }
 

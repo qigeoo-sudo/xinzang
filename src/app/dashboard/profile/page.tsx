@@ -44,6 +44,9 @@ interface ProfileData {
   curProvince?: string | null;
   curCity?: string | null;
   careers?: string | null;
+  careerAnxiety?: string | null;
+  helpPriority?: string | null;
+  mentorPreference?: string | null;
 }
 
 // GET /api/user/profile 返回的测评（scores 已在服务端 parse）
@@ -243,11 +246,22 @@ function ProfileSections({ profile, phone }: { profile: ProfileData | null; phon
     ['感兴趣的职业方向', careerNames || '—'],
   ];
 
+  // “让导师分身更懂你”选填内容：未填则整张卡不显示
+  const hintRows: [string, string][] = [];
+  if (p?.careerAnxiety?.trim()) hintRows.push(['当前最大焦虑', p.careerAnxiety.trim()]);
+  const helpPriorities = parseJsonArray(p?.helpPriority);
+  if (helpPriorities.length) hintRows.push(['希望获得的帮助', helpPriorities.join('、')]);
+  const mentorPrefs = parseJsonArray(p?.mentorPreference);
+  if (mentorPrefs.length) hintRows.push(['想深聊的人', mentorPrefs.join('、')]);
+
   return (
     <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
       <InfoCard title="账号信息" rows={accountRows} />
       <InfoCard title={isStudent ? '在校信息' : p?.status === '待业' ? '待业信息' : '在职信息'} rows={schoolRows} />
       <InfoCard title="方向与地点" rows={locationRows} className="md:col-span-2" />
+      {hintRows.length > 0 && (
+        <InfoCard title="让导师分身更懂你" rows={hintRows} className="md:col-span-2" />
+      )}
     </div>
   );
 }

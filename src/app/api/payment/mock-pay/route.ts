@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { isMockMode } from '@/lib/wxpay';
+import { fulfillPaidOrder } from '@/lib/payment-fulfillment';
 
 export async function POST(request: NextRequest) {
   // 生产环境禁用
@@ -78,51 +79,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 模拟微信支付回调: 直接调用 notify 逻辑
+    // 模拟支付成功：走与微信/支付宝回调一致的统一履约逻辑
     const mockTransactionId = `mock_tx_${Date.now()}`;
-    const metadata = order.metadata ? JSON.parse(order.metadata) : {};
-    const planId = metadata.planId || 'MONTHLY';
-    const durationDays = metadata.durationDays || 30;
+    const result = await fulfillPaidOrder(orderNo, mockTransactionId);
 
-    // 事务: 更新订单 + 取消旧订阅 + 创建新订阅 + 更新用户
-    await prisma.$transaction([
-      prisma.paymentOrder.update({
-        where: { id: order.id },
-        data: {
-          status: 'PAID',
-          transactionId: mockTransactionId,
-          paidAt: new Date(),
-        },
-      }),
-      // 将旧的有效订阅标记为已升级
-      prisma.subscription.updateMany({
-        where: {
-          userId: order.userId,
-          status: 'ACTIVE',
-          endDate: { gt: new Date() },
-        },
-        data: {
-          status: 'UPGRADED',
-          cancelledAt: new Date(),
-          cancelReason: 'upgraded',
-        },
-      }),
-      // 创建新订阅
-      prisma.subscription.create({
-        data: {
-          userId: order.userId,
-          plan: planId,
-          status: 'ACTIVE',
-          startDate: new Date(),
-          endDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-          paymentOrderId: order.id,
-        },
-      }),
-      prisma.user.update({
-        where: { id: order.userId },
-        data: { isPremium: true },
-      }),
-    ]);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: result.status }
+      );
+    }
 
     return NextResponse.json({
       success: true,

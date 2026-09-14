@@ -15,15 +15,21 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { CustomSelect } from '@/components/custom-select';
+import { SchoolSearch } from '@/components/school-search';
 import { AssessmentSummary } from '@/components/assessment/assessment-summary';
+import { HomeFooter } from '@/components/home/home-footer';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
   WORK_GOAL_WORKING,
   WORK_GOAL_JOBLESS,
   WORK_EXP_DURATION_OPTIONS,
+  HELP_PRIORITY_OPTIONS,
+  HELP_OTHER_VALUE,
+  MENTOR_PREFERENCE_OPTIONS,
   PROVINCE_OPTIONS,
   PROVINCE_CITIES,
+  OVERSEAS_COUNTRY_OPTIONS,
 } from '@/lib/register-options';
 import {
   getPendingAssessment,
@@ -34,8 +40,9 @@ import type { AssessmentPayload } from '@/lib/register-v2';
 type Identity = '' | 'student' | 'working' | 'jobless';
 type MonthFieldKey = 'birth' | 'enroll' | 'expected' | 'grad';
 
-// 选省后市栏自动置灰的地区：四个直辖市 + 港澳 + 海外
-const SINGLE_CITY_PROVINCES = ['北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区', '海外'];
+// 选省后市栏自动置灰的地区：四个直辖市 + 港澳
+// （"海外"不在此列：选中后市栏改为国家/地区下拉，见 OVERSEAS_COUNTRY_OPTIONS）
+const SINGLE_CITY_PROVINCES = ['北京市', '天津市', '上海市', '重庆市', '香港特别行政区', '澳门特别行政区'];
 // 非单市级地区，市列表末尾追加项（希望工作地点 / 目前所在地 文案不同）
 const ANY_CITY = { value: '__any__', label: '均可考虑' };
 const OTHER_CITY = { value: '__other__', label: '其他' };
@@ -43,7 +50,8 @@ const OTHER_CITY = { value: '__other__', label: '其他' };
 // 各年月字段的可选年份范围
 const CURRENT_YEAR = new Date().getFullYear();
 const MONTH_FIELDS: Record<MonthFieldKey, { title: string; minY: number; maxY: number }> = {
-  birth: { title: '出生年月', minY: 1950, maxY: CURRENT_YEAR },
+  // 出生年份选择器从 2014 开始递减（chips 按 maxY→minY 渲染，maxY 即首选项）
+  birth: { title: '出生年月', minY: 1950, maxY: 2014 },
   enroll: { title: '入学年月', minY: 2000, maxY: CURRENT_YEAR },
   expected: { title: '毕业日期', minY: CURRENT_YEAR, maxY: 2040 },
   grad: { title: '毕业日期', minY: 1960, maxY: CURRENT_YEAR },
@@ -74,6 +82,22 @@ function monthNow(offsetYears = 0): string {
   return `${y}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// 昵称字节上限（与后端 zod / profile 路由一致：24 字节 ≈ 中文 8 字 / 英文 24 字母）
+const NICKNAME_MAX_BYTES = 24;
+const nicknameEncoder = new TextEncoder();
+function truncateByBytes(text: string, maxBytes: number): string {
+  if (!text) return '';
+  const bytes = nicknameEncoder.encode(text);
+  if (bytes.length <= maxBytes) return text;
+  // 按 UTF-8 边界截断，不破坏多字节字符
+  let truncated = '';
+  for (const ch of text) {
+    if (nicknameEncoder.encode(truncated + ch).length > maxBytes) break;
+    truncated += ch;
+  }
+  return truncated;
+}
+
 function fmtMonth(v: string): string {
   if (!v) return '未填写';
   const [y, m] = v.split('-');
@@ -98,6 +122,10 @@ export interface WizardInitialValues {
   curProvince?: string;
   curCity?: string; // '其他' → '__other__'
   careers?: string[];
+  // 让导师分身更懂你（选填；helpPriority 单选数组 0/1 项，mentorPreference 多选）
+  careerAnxiety?: string;
+  helpPriority?: string[];
+  mentorPreference?: string[];
 }
 
 export function RegisterWizard({
@@ -135,6 +163,12 @@ export function RegisterWizard({
   const [sentCode, setSentCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
+  // 昵称敏感词本地预检（词库模块独立 chunk，挂载后预加载；blocked 即不允许提交）
+  const [nicknameBlocked, setNicknameBlocked] = useState(false);
+  const sensitiveModRef = useRef<{ containsSensitiveWord: (t: string) => boolean } | null>(null);
+  const nicknameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const anxietyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const helpOtherTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [birthMonth, setBirthMonth] = useState(initial?.birthMonth ?? '');
 
   // 年月选择弹层（自定义，替代原生 month 控件）
@@ -155,11 +189,46 @@ export function RegisterWizard({
   const [partTimeExp, setPartTimeExp] = useState(initial?.partTimeExp ?? '');
 
   // 第三步（地点与方向）
+  // 旧档案"海外"省市栏曾自动填"海外"，现在第二栏是国家下拉，旧值映射到"其他"
+  const legacyCity = (province: string | undefined, city: string | undefined) =>
+    province === '海外' && city === '海外' ? '其他' : city ?? '';
   const [workProvince, setWorkProvince] = useState(initial?.workProvince ?? '');
-  const [workCity, setWorkCity] = useState(initial?.workCity ?? '');
+  const [workCity, setWorkCity] = useState(() => legacyCity(initial?.workProvince, initial?.workCity));
   const [currentProvince, setCurrentProvince] = useState(initial?.curProvince ?? '');
-  const [currentCity, setCurrentCity] = useState(initial?.curCity ?? '');
+  const [currentCity, setCurrentCity] = useState(() => legacyCity(initial?.curProvince, initial?.curCity));
   const [careers, setCareers] = useState<string[]>(initial?.careers ?? []);
+
+  // 让导师分身更懂你（选填，默认收起；已有内容时默认展开）
+  const [careerAnxiety, setCareerAnxiety] = useState(initial?.careerAnxiety ?? '');
+  const [anxietyBlocked, setAnxietyBlocked] = useState(false);
+  // 帮助方面为单选：helpChoice 取固定 value 或 HELP_OTHER_VALUE；helpOther 为“其他”原文
+  const initialHelp = initial?.helpPriority?.[0] ?? '';
+  const [helpChoice, setHelpChoice] = useState(
+    initialHelp && HELP_PRIORITY_OPTIONS.some((o) => o.value === initialHelp)
+      ? initialHelp
+      : initialHelp
+        ? HELP_OTHER_VALUE
+        : ''
+  );
+  const [helpOther, setHelpOther] = useState(
+    initialHelp && !HELP_PRIORITY_OPTIONS.some((o) => o.value === initialHelp)
+      ? initialHelp.slice(0, 20)
+      : ''
+  );
+  const [helpOtherBlocked, setHelpOtherBlocked] = useState(false);
+  // 想深聊的人：多选，仅回填新名单内的值（旧名单废弃值不迁移）
+  const [mentorPreference, setMentorPreference] = useState<string[]>(
+    (initial?.mentorPreference ?? []).filter((v) =>
+      MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)
+    )
+  );
+  const [showMentorHints, setShowMentorHints] = useState(
+    Boolean(
+      (initial?.careerAnxiety && initial.careerAnxiety.trim()) ||
+        initial?.helpPriority?.length ||
+        initial?.mentorPreference?.some((v) => MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v))
+    )
+  );
 
   // 年月字段值 / 写回方法映射
   const MONTH_VALUES: Record<MonthFieldKey, string> = {
@@ -230,12 +299,14 @@ export function RegisterWizard({
 
   const cityOptions = useMemo(() => {
     if (!workProvince) return [];
+    if (workProvince === '海外') return OVERSEAS_COUNTRY_OPTIONS;
     if (SINGLE_CITY_PROVINCES.includes(workProvince)) return [{ value: workProvince, label: workProvince }];
     return [...PROVINCE_CITIES[workProvince].map((c) => ({ value: c, label: c })), ANY_CITY];
   }, [workProvince]);
 
   const currentCityOptions = useMemo(() => {
     if (!currentProvince) return [];
+    if (currentProvince === '海外') return OVERSEAS_COUNTRY_OPTIONS;
     if (SINGLE_CITY_PROVINCES.includes(currentProvince)) return [{ value: currentProvince, label: currentProvince }];
     return [...PROVINCE_CITIES[currentProvince].map((c) => ({ value: c, label: c })), OTHER_CITY];
   }, [currentProvince]);
@@ -251,6 +322,106 @@ export function RegisterWizard({
   }, [identity]);
 
   const isValidPhone = (v: string) => /^1[3-9]\d{9}$/.test(v);
+
+  /**
+   * 手机号输入归一化：
+   * 手机自动填充常带国际区号（如 +86 139xxxx 或 +1 862 xxx）。
+   * 去掉所有非数字后，若以 86 开头且总长 13 位（中国区号 + 11 位手机号），
+   * 去掉 86，保留 11 位；其余情况保留纯数字，交由校验拦截。
+   */
+  const normalizePhone = (raw: string): string => {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.startsWith('86') && digits.length >= 13) {
+      return digits.slice(2, 13);
+    }
+    return digits.slice(0, 11);
+  };
+
+  // 挂载后预加载敏感词 chunk（失败静默，后端仍有硬校验兜底）
+  useEffect(() => {
+    let cancelled = false;
+    import('@/lib/sensitive-words')
+      .then((m) => {
+        if (cancelled) return;
+        sensitiveModRef.current = m;
+        // 编辑模式回填的选填区文本也补检一次
+        if (initial?.careerAnxiety?.trim()) setAnxietyBlocked(m.containsSensitiveWord(initial.careerAnxiety.trim()));
+        if (helpOther.trim()) setHelpOtherBlocked(m.containsSensitiveWord(helpOther.trim()));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (nicknameTimerRef.current) clearTimeout(nicknameTimerRef.current);
+      if (anxietyTimerRef.current) clearTimeout(anxietyTimerRef.current);
+      if (helpOtherTimerRef.current) clearTimeout(helpOtherTimerRef.current);
+    };
+    // 仅挂载时执行
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const runNicknameCheck = (value: string) => {
+    const v = value.trim();
+    if (!v) { setNicknameBlocked(false); return; }
+    const mod = sensitiveModRef.current;
+    if (mod) {
+      setNicknameBlocked(mod.containsSensitiveWord(v));
+    } else {
+      // 模块还没加载完：加载后再判一次
+      import('@/lib/sensitive-words')
+        .then((m) => { sensitiveModRef.current = m; setNicknameBlocked(m.containsSensitiveWord(v)); })
+        .catch(() => {});
+    }
+  };
+
+  const onNicknameChange = (value: string) => {
+    // 按字节截断，避免用户输入到一半被卡死
+    const safe = truncateByBytes(value, NICKNAME_MAX_BYTES);
+    setNickname(safe);
+    setNicknameBlocked(false); // 打字过程先清除，停顿后再判
+    if (nicknameTimerRef.current) clearTimeout(nicknameTimerRef.current);
+    nicknameTimerRef.current = setTimeout(() => runNicknameCheck(safe), 300);
+  };
+
+  // 选填区文本框的敏感词检查（与昵称同一套词库）
+  const runHintCheck = (value: string, setBlocked: (b: boolean) => void) => {
+    const v = value.trim();
+    if (!v) { setBlocked(false); return; }
+    const mod = sensitiveModRef.current;
+    if (mod) {
+      setBlocked(mod.containsSensitiveWord(v));
+    } else {
+      import('@/lib/sensitive-words')
+        .then((m) => { sensitiveModRef.current = m; setBlocked(m.containsSensitiveWord(v)); })
+        .catch(() => {});
+    }
+  };
+
+  const onAnxietyChange = (value: string) => {
+    const safe = value.slice(0, 100);
+    setCareerAnxiety(safe);
+    setAnxietyBlocked(false);
+    if (anxietyTimerRef.current) clearTimeout(anxietyTimerRef.current);
+    anxietyTimerRef.current = setTimeout(() => runHintCheck(safe, setAnxietyBlocked), 300);
+  };
+
+  const onHelpOtherChange = (value: string) => {
+    const safe = value.slice(0, 20);
+    setHelpOther(safe);
+    setHelpOtherBlocked(false);
+    if (helpOtherTimerRef.current) clearTimeout(helpOtherTimerRef.current);
+    helpOtherTimerRef.current = setTimeout(() => runHintCheck(safe, setHelpOtherBlocked), 300);
+  };
+
+  // 帮助方面单选：点已选中项可取消；选固定项时清掉“其他”文本
+  const toggleHelpChoice = (v: string) => {
+    setError('');
+    if (helpChoice === v) {
+      setHelpChoice('');
+    } else {
+      setHelpChoice(v);
+      if (v !== HELP_OTHER_VALUE) setHelpOther('');
+    }
+  };
 
   const passwordHint = (v: string) => {
     if (!v) return '';
@@ -283,11 +454,16 @@ export function RegisterWizard({
       return;
     }
     setSending(true);
+    // 用 AbortController 做超时兜底：网络异常导致 fetch 永不返回时，
+    // 10 秒后主动 abort，避免按钮永远卡在「发送中…」。
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
     try {
       const res = await fetch('/api/auth/send-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method: 'phone', target: phone }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -297,16 +473,22 @@ export function RegisterWizard({
       // Mock 环境接口直接回传验证码，仅用于本地/演示；生产环境该字段不存在
       if (data.code) {
         setSentCode(data.code);
-        showToast(`演示环境验证码：${data.code}`);
+        setCode(data.code); // Mock 模式自动填入验证码输入框
+        showToast(`演示环境验证码：${data.code}，已自动填入`);
       } else {
         setSentCode('__sent__');
+        setCode('');
         showToast('验证码已发送，请注意查收短信');
       }
-      setCode('');
       setCountdown(60);
-    } catch {
-      setError('网络不太通，验证码没发出去，请稍后再试');
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('请求超时，请检查网络后重试');
+      } else {
+        setError('网络不太通，验证码没发出去，请稍后再试');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setSending(false);
     }
   };
@@ -321,6 +503,7 @@ export function RegisterWizard({
     // Mock 模式前端知道验证码，可提前拦错；生产环境以服务端校验为准
     if (sentCode !== '__sent__' && code !== sentCode) return '验证码不正确';
     if (!nickname.trim()) return '请填写姓名或昵称';
+    if (nicknameBlocked) return '昵称含违规内容，请换一个';
     if (!birthMonth) return '请选择出生年月';
     if (birthMonth > monthNow(-15)) return '年龄需满 15 岁';
     return '';
@@ -330,6 +513,7 @@ export function RegisterWizard({
     // 编辑模式：姓名 / 出生年月在本步
     if (isEdit) {
       if (!nickname.trim()) return '请填写姓名或昵称';
+      if (nicknameBlocked) return '昵称含违规内容，请换一个';
       if (!birthMonth) return '请选择出生年月';
       if (birthMonth > monthNow(-15)) return '年龄需满 15 岁';
     }
@@ -360,6 +544,12 @@ export function RegisterWizard({
     if (!workProvince || !workCity) return '请选择希望工作地点（省 / 市）';
     if (!currentProvince || !currentCity) return '请选择目前所在地（省 / 市）';
     if (careers.length === 0) return '请至少选择一个感兴趣的职业方向';
+    // 选填区：填了就必须合规
+    if (anxietyBlocked) return '职业焦虑描述含违规内容，请修改后再保存';
+    if (helpChoice === HELP_OTHER_VALUE) {
+      if (!helpOther.trim()) return '请填写“其他”方面的内容';
+      if (helpOtherBlocked) return '“其他”内容含违规词，请修改后再保存';
+    }
     return '';
   };
 
@@ -401,6 +591,26 @@ export function RegisterWizard({
       curProvince: val(currentProvince),
       curCity: currentCity === '__other__' ? '其他' : val(currentCity),
       careers: careers.length ? careers : isEdit ? null : undefined,
+      // 让导师分身更懂你（选填；编辑模式删空时显式置 null）
+      careerAnxiety: careerAnxiety.trim()
+        ? careerAnxiety.trim()
+        : isEdit
+          ? null
+          : undefined,
+      // 帮助方面单选 → 单元素数组；“其他”存用户原文
+      helpPriority:
+        helpChoice === HELP_OTHER_VALUE
+          ? helpOther.trim()
+            ? [helpOther.trim()]
+            : isEdit
+              ? null
+              : undefined
+          : helpChoice
+            ? [helpChoice]
+            : isEdit
+              ? null
+              : undefined,
+      mentorPreference: mentorPreference.length ? mentorPreference : isEdit ? null : undefined,
     };
   };
 
@@ -540,10 +750,7 @@ export function RegisterWizard({
               </button>
               <div className="leading-tight">
                 <p className="text-sm font-semibold" style={{ color: C.ink }}>
-                  修改档案资料
-                </p>
-                <p className="text-xs" style={{ color: C.body }}>
-                  改完保存，档案会同步更新
+                  返回我的档案
                 </p>
               </div>
             </>
@@ -691,9 +898,9 @@ export function RegisterWizard({
                       <input
                         type="tel"
                         inputMode="numeric"
-                        maxLength={11}
+                        maxLength={13}
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => setPhone(normalizePhone(e.target.value))}
                         placeholder="请输入 11 位手机号"
                         autoComplete="tel"
                         className={inputCls}
@@ -769,6 +976,9 @@ export function RegisterWizard({
                           value={code}
                           onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
                           placeholder="6 位验证码"
+                          autoComplete="one-time-code"
+                          autoCapitalize="none"
+                          autoCorrect="off"
                           className={`${inputCls} flex-1 tracking-widest`}
                         />
                         <button
@@ -793,8 +1003,7 @@ export function RegisterWizard({
                       <input
                         type="text"
                         value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        maxLength={20}
+                        onChange={(e) => onNicknameChange(e.target.value)}
                         placeholder="导师会这样称呼你"
                         className={inputCls}
                       />
@@ -819,11 +1028,17 @@ export function RegisterWizard({
                           <input
                             type="text"
                             value={nickname}
-                            onChange={(e) => setNickname(e.target.value)}
-                            maxLength={20}
+                            onChange={(e) => onNicknameChange(e.target.value)}
+                            onBlur={() => {
+                              if (nicknameTimerRef.current) clearTimeout(nicknameTimerRef.current);
+                              runNicknameCheck(nickname);
+                            }}
                             placeholder="导师会这样称呼你"
                             className={inputCls}
                           />
+                          {nicknameBlocked && (
+                            <p className="mt-1.5 text-xs text-red-500">昵称含违规内容，请换一个</p>
+                          )}
                         </Field>
                         <Field label="出生年月" required>
                           <MonthTrigger
@@ -868,12 +1083,11 @@ export function RegisterWizard({
                           />
                         </Field>
                         <Field label="学校名称" required>
-                          <input
-                            type="text"
+                          <SchoolSearch
                             value={school}
-                            onChange={(e) => setSchool(e.target.value)}
-                            placeholder="如：西南财经大学"
-                            className={inputCls}
+                            onChange={setSchool}
+                            placeholder="请输入学校名称/简称"
+                            inputClassName={inputCls}
                           />
                         </Field>
                         <Field label="专业分类" required>
@@ -914,12 +1128,11 @@ export function RegisterWizard({
                           />
                         </Field>
                         <Field label="学校名称" required>
-                          <input
-                            type="text"
+                          <SchoolSearch
                             value={school}
-                            onChange={(e) => setSchool(e.target.value)}
-                            placeholder="如：西南财经大学"
-                            className={inputCls}
+                            onChange={setSchool}
+                            placeholder="请输入学校名称/简称"
+                            inputClassName={inputCls}
                           />
                         </Field>
                         <Field label="专业分类" required>
@@ -1051,6 +1264,156 @@ export function RegisterWizard({
                         已选 {careers.length} 个
                       </p>
                     </Field>
+
+                    {/* 让导师分身更懂你 — 选填折叠区，默认收起，不增加注册负担 */}
+                    <div
+                      className="rounded-[14px] border p-4"
+                      style={{ borderColor: 'rgba(123,155,94,0.35)', background: 'rgba(240,245,237,0.55)' }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowMentorHints((v) => !v)}
+                        className="w-full flex items-center justify-between text-left"
+                        aria-expanded={showMentorHints}
+                      >
+                        <span>
+                          <span className="block text-[14px] font-semibold" style={{ color: '#435B3B' }}>
+                            让导师分身更懂你（选填）
+                          </span>
+                          {!showMentorHints && (
+                            <span className="block text-xs mt-0.5" style={{ color: '#7A9E6E' }}>
+                              让它更快知道该怎么帮你，节约问答轮次
+                            </span>
+                          )}
+                        </span>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="shrink-0 transition-transform duration-200"
+                          style={{ transform: showMentorHints ? 'rotate(180deg)' : 'none', color: '#7A9E6E' }}
+                        >
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+
+                      {showMentorHints && (
+                        <div className="mt-4 space-y-4 animate-fade-in">
+                          <div>
+                            <p className="text-[13px] font-medium mb-1.5" style={{ color: C.ink }}>
+                              在工作/找工作上，你目前碰到的最大焦虑是什么
+                            </p>
+                            <textarea
+                              value={careerAnxiety}
+                              onChange={(e) => onAnxietyChange(e.target.value)}
+                              rows={3}
+                              maxLength={100}
+                              placeholder="比如：投简历没回音、不会谈薪资、入职适应困难……"
+                              className={`${inputCls} resize-none text-[13px] leading-relaxed`}
+                            />
+                            {anxietyBlocked ? (
+                              <p className="text-[11px] mt-1 text-red-500">内容含违规词，请修改后再保存</p>
+                            ) : (
+                              <p className="text-[11px] text-right mt-1" style={{ color: '#9C8E7C' }}>
+                                {careerAnxiety.length}/100
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-[13px] font-medium mb-1.5" style={{ color: C.ink }}>
+                              你最希望在以下哪方面获得帮助（单选）
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {HELP_PRIORITY_OPTIONS.map((o) => {
+                                const active = helpChoice === o.value;
+                                return (
+                                  <button
+                                    key={o.value}
+                                    type="button"
+                                    onClick={() => toggleHelpChoice(o.value)}
+                                    className="px-3 py-1.5 rounded-full text-[12.5px] transition-all active:scale-95"
+                                    style={{
+                                      background: active ? '#6B8E5E' : '#fff',
+                                      color: active ? '#fff' : C.ink,
+                                      border: `1.5px solid ${active ? '#6B8E5E' : 'rgba(123,155,94,0.4)'}`,
+                                      fontWeight: active ? 600 : 400,
+                                    }}
+                                  >
+                                    {o.label}
+                                  </button>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() => toggleHelpChoice(HELP_OTHER_VALUE)}
+                                className="px-3 py-1.5 rounded-full text-[12.5px] transition-all active:scale-95"
+                                style={{
+                                  background: helpChoice === HELP_OTHER_VALUE ? '#6B8E5E' : '#fff',
+                                  color: helpChoice === HELP_OTHER_VALUE ? '#fff' : C.ink,
+                                  border: `1.5px solid ${helpChoice === HELP_OTHER_VALUE ? '#6B8E5E' : 'rgba(123,155,94,0.4)'}`,
+                                  fontWeight: helpChoice === HELP_OTHER_VALUE ? 600 : 400,
+                                }}
+                              >
+                                其他
+                              </button>
+                            </div>
+                            {helpChoice === HELP_OTHER_VALUE && (
+                              <div className="mt-2">
+                                <input
+                                  value={helpOther}
+                                  onChange={(e) => onHelpOtherChange(e.target.value)}
+                                  maxLength={20}
+                                  placeholder="用一句话写下你希望获得的帮助（20 字以内）"
+                                  className={`${inputCls} text-[13px]`}
+                                />
+                                {helpOtherBlocked ? (
+                                  <p className="text-[11px] mt-1 text-red-500">内容含违规词，请修改后再保存</p>
+                                ) : (
+                                  <p className="text-[11px] text-right mt-1" style={{ color: '#9C8E7C' }}>
+                                    {helpOther.length}/20
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="text-[13px] font-medium mb-1.5" style={{ color: C.ink }}>
+                              在现实生活中，如果有机会，你最想跟谁深聊工作/找工作上的事（多选）
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {MENTOR_PREFERENCE_OPTIONS.map((o) => {
+                                const active = mentorPreference.includes(o.value);
+                                return (
+                                  <button
+                                    key={o.value}
+                                    type="button"
+                                    onClick={() =>
+                                      setMentorPreference((prev) =>
+                                        prev.includes(o.value)
+                                          ? prev.filter((x) => x !== o.value)
+                                          : [...prev, o.value]
+                                      )
+                                    }
+                                    className="px-3.5 py-1.5 rounded-full text-[12.5px] transition-all active:scale-95"
+                                    style={{
+                                      background: active ? '#6B8E5E' : '#fff',
+                                      color: active ? '#fff' : C.ink,
+                                      border: `1.5px solid ${active ? '#6B8E5E' : 'rgba(123,155,94,0.4)'}`,
+                                      fontWeight: active ? 600 : 400,
+                                    }}
+                                  >
+                                    {o.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
@@ -1168,6 +1531,20 @@ export function RegisterWizard({
               ['感兴趣的职业方向', careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean).join('、')],
             ]} />
 
+            {(() => {
+              // “让导师分身更懂你”选填内容：三项全空则整块不显示
+              const hintRows: [string, string][] = [];
+              const anxietyText = careerAnxiety.trim();
+              if (anxietyText) hintRows.push(['当前最大焦虑', anxietyText]);
+              const helpText = helpChoice === HELP_OTHER_VALUE ? helpOther.trim() : (helpChoice || '');
+              if (helpText) hintRows.push(['希望获得的帮助', helpText]);
+              const mentorNames = mentorPreference
+                .map((v) => MENTOR_PREFERENCE_OPTIONS.find((o) => o.value === v)?.label || v)
+                .join('、');
+              if (mentorNames) hintRows.push(['想深聊的人', mentorNames]);
+              return hintRows.length > 0 ? <Summary title="让导师分身更懂你" rows={hintRows} /> : null;
+            })()}
+
             <button
               type="button"
               onClick={() => router.push('/dashboard/profile')}
@@ -1267,12 +1644,15 @@ export function RegisterWizard({
                 className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white text-center"
                 style={{ background: C.orange }}
               >
-                查看我的档案
+                修改档案资料
               </Link>
             </div>
           </div>
         )}
       </main>
+
+      {/* 编辑档案的三个页面（基本信息 / 方向与地点 / 保存成功）底部统一灰蓝页脚，与对话记录等页一致 */}
+      {isEdit && <HomeFooter lang="zh" />}
 
       {/* 自定义年月选择弹层：清除 / 取消 / 确认 */}
       {monthSheet && (
@@ -1449,8 +1829,8 @@ function Summary({ title, rows }: { title: string; rows: [string, string][] }) {
       </h3>
       <dl className="space-y-1.5">
         {rows.map(([k, v]) => (
-          <div key={k} className="flex gap-3 text-[13px] leading-relaxed">
-            <dt className="shrink-0 whitespace-nowrap" style={{ color: '#9C8E7C', width: 88 }}>
+          <div key={k} className="flex gap-4 text-[13px] leading-relaxed">
+            <dt className="shrink-0 whitespace-nowrap" style={{ color: '#9C8E7C', width: 108 }}>
               {k}
             </dt>
             <dd className="flex-1" style={{ color: '#2C3E5C' }}>

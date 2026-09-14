@@ -10,10 +10,18 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { registerProfileSchema, toUserProfileData } from '@/lib/register-v2';
+import { MENTOR_PREFERENCE_OPTIONS } from '@/lib/register-options';
+import { containsSensitiveWord } from '@/lib/sensitive-words';
 
 // 更新档案的校验 schema — 覆盖所有字段
 const updateProfileSchema = z.object({
-  nickname: z.string().max(30).optional(),
+  nickname: z
+    .string()
+    .optional()
+    .refine(
+      (v) => v == null || v === '' || Buffer.byteLength(v, 'utf8') <= 24,
+      { message: '昵称最多 24 字节（中文约 8 字）' }
+    ),
   age: z.number().int().min(0).max(150).optional(),
   status: z.string().max(20).optional(),
   city: z.string().max(100).optional(),
@@ -29,10 +37,18 @@ const updateProfileSchema = z.object({
   goals: z.string().max(500).optional(),
   infoChannels: z.array(z.string()).optional(),
   careerSpending: z.string().max(500).optional(),
-  careerAnxiety: z.string().max(1000).optional(),
+  careerAnxiety: z.string().max(100).optional().nullable(),
   jobChangeStatus: z.string().max(500).optional(),
-  helpPriority: z.array(z.string()).optional(),
-  mentorPreference: z.array(z.string()).optional(),
+  helpPriority: z.array(z.string().max(20)).max(1).optional().nullable(),
+  mentorPreference: z
+    .array(z.string().max(20))
+    .max(11)
+    .optional()
+    .nullable()
+    .refine(
+      (arr) => !arr || arr.every((v) => MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)),
+      { message: '想深聊的人包含无效选项' }
+    ),
   mentorHelpAreas: z.array(z.string()).optional(),
   productInterest: z.string().max(100).optional(),
   productTrigger: z.array(z.string()).optional(),
@@ -124,6 +140,43 @@ export async function PUT(request: NextRequest) {
           savedNonEmpty.push(key);
         }
       }
+    }
+
+    // 昵称敏感词校验（对最终生效值拦截，命中词只进服务端日志，不回显）
+    const finalNickname = data.nickname;
+    if (typeof finalNickname === 'string' && finalNickname.trim() && containsSensitiveWord(finalNickname)) {
+      console.warn('[sensitive] profile nickname blocked, userId =', session.user.id, 'length =', finalNickname.length);
+      return NextResponse.json(
+        { error: '昵称含违规内容，请修改后再保存', field: 'nickname' },
+        { status: 400 }
+      );
+    }
+
+    // 学校名称敏感词校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
+    const finalSchool = data.school;
+    if (typeof finalSchool === 'string' && finalSchool.trim() && containsSensitiveWord(finalSchool)) {
+      console.warn('[sensitive] profile school blocked, userId =', session.user.id, 'length =', finalSchool.length);
+      return NextResponse.json(
+        { error: '学校名称含违规内容，请修改后再保存', field: 'school' },
+        { status: 400 }
+      );
+    }
+
+    // “让导师分身更懂你”选填区文本敏感词校验（焦虑自述 + 帮助方面“其他”原文）
+    const finalAnxiety = d.careerAnxiety;
+    if (typeof finalAnxiety === 'string' && finalAnxiety.trim() && containsSensitiveWord(finalAnxiety)) {
+      console.warn('[sensitive] profile careerAnxiety blocked, userId =', session.user.id);
+      return NextResponse.json(
+        { error: '内容含违规词，请修改后再保存', field: 'careerAnxiety' },
+        { status: 400 }
+      );
+    }
+    if (Array.isArray(d.helpPriority) && d.helpPriority.some((v) => v.trim() && containsSensitiveWord(v))) {
+      console.warn('[sensitive] profile helpPriority blocked, userId =', session.user.id);
+      return NextResponse.json(
+        { error: '内容含违规词，请修改后再保存', field: 'helpPriority' },
+        { status: 400 }
+      );
     }
 
     // 记录变更历史（upsert 之前查询现有档案快照）
