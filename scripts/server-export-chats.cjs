@@ -8,7 +8,7 @@
  *   DAYS=N          只导出最近 N 天（不设则导出全部）
  *   ONLY_MENTOR=id  只导出某一位导师（如 lydia）
  *
- * 输出：/app/data/export/latest/{mentorId}.md，每位真实导师一个文件，自动排除 ai-guide（榨职机）
+ * 输出：/app/data/export/latest/{mentorId}.md，每位导师一个文件
  * 只读数据库，不修改任何业务数据。
  */
 const fs = require('fs');
@@ -32,9 +32,6 @@ const MENTOR_NAMES = {
   grace: 'Grace Li（临床研究经理）',
   tony: 'Tony Ma（运营总监）',
 };
-
-// 排除的导师：榨职机是问卷访谈 agent，不是导师分身，默认不导出
-const EXCLUDE = new Set(['ai-guide']);
 
 const OUT_DIR = '/app/data/export/latest';
 
@@ -139,10 +136,9 @@ async function main() {
     orderBy: { createdAt: 'desc' },
   });
 
-  // 按导师分组并排除 ai-guide
+  // 按导师分组
   const groups = {};
   for (const s of sessions) {
-    if (EXCLUDE.has(s.mentorId)) continue;
     if (s.messages.length === 0) continue;
     (groups[s.mentorId] = groups[s.mentorId] || []).push(s);
   }

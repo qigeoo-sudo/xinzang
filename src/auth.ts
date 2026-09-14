@@ -198,7 +198,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         '/search', // 导师关键词搜索结果页（公开）
         '/logout',
         '/forgot-password',
-        '/chat', // AI 职导对话页公开，聊天组件自行检查登录
         '/mentors', // 导师列表和详情页公开，聊天组件自行检查登录
         '/payment/mock', // Mock 支付页面 (开发环境)
         '/api/auth',

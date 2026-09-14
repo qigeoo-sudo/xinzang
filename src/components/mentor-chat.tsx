@@ -4,10 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import { mentors, type Mentor } from '@/lib/mentors';
-import { MessageWithChoices } from '@/components/chat-options';
+import { type Mentor } from '@/lib/mentors';
 import { CollapsibleText } from '@/components/collapsible-text';
-import { stripMentorTags, type MentorInfo } from '@/lib/mentor-links';
 
 interface ChatMessage {
   id?: string;
@@ -39,142 +37,8 @@ function pickMentorGreeting(name: string): string {
   return tpl.replaceAll('{name}', name);
 }
 
-/** 导师推荐卡片 — 点击直接进入该导师聊天 */
-function MentorCard({ mentor }: { mentor: MentorInfo }) {
-  return (
-    <Link
-      href={`/mentors/${mentor.id}`}
-      className="flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors group"
-    >
-      <div className="flex-shrink-0">
-        {mentor.avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={mentor.avatar}
-            alt={mentor.name}
-            className="w-10 h-10 rounded-full object-cover"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent to-accent-light flex items-center justify-center">
-            <span className="text-white text-sm font-bold">
-              {mentor.name.charAt(0)}
-            </span>
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-brand-900">{mentor.name}</p>
-        <p className="text-xs text-slate-500 truncate">
-          {mentor.title} · {mentor.company}
-        </p>
-        <p className="text-xs text-slate-400 truncate mt-0.5">{mentor.tagline}</p>
-      </div>
-      <span className="text-xs text-brand-500 group-hover:text-brand-600 flex-shrink-0">
-        去聊聊 →
-      </span>
-    </Link>
-  );
-}
-
 // localStorage 键名 — 按用户+导师区分，确保对话记录隔离
 const getStorageKey = (userId: string, mentorId: string, type: string) => `chat-${type}-${userId}-${mentorId}`;
-
-// AI 职导专用键生成器（按用户隔离）
-const getAiGuideKeys = (userId: string) => ({
-  messages: `ai-guide-messages-${userId}`,
-  limitTs: `ai-guide-limit-timestamp-${userId}`,
-  sessionId: `ai-guide-session-id-${userId}`,
-  completed: `ai-guide-completed-${userId}`,
-  version: `ai-guide-version-${userId}`,
-});
-
-// AI 职导 localStorage 数据版本 — 版本不匹配时清空旧数据重新开始
-const AI_GUIDE_VERSION = 'v2-student-only';
-
-// 24小时毫秒数
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-// --- 需求4: 问卷完成消息动态生成辅助函数 ---
-
-// 安全解析 JSON 数组字符串
-function parseJsonArraySafe(str: string | null | undefined): string[] {
-  if (!str) return [];
-  try {
-    const arr = JSON.parse(str);
-    return Array.isArray(arr) ? arr : [];
-  } catch {
-    return [];
-  }
-}
-
-// 通过名称查找导师（支持部分匹配）
-function findMentorByName(name: string) {
-  return mentors.find(
-    (m) =>
-      m.id !== 'ai-guide' &&
-      !m.comingSoon &&
-      (m.name === name ||
-        m.name.startsWith(name) ||
-        name.startsWith(m.name.split(' ')[0]))
-  );
-}
-
-// 截断到指定长度
-function truncateText(text: string, maxLen: number): string {
-  return text.length <= maxLen ? text : text.slice(0, maxLen);
-}
-
-// 根据档案数据动态生成问卷完成消息
-function generateCompletionMessage(profile: {
-  careerAnxiety?: string | null;
-  helpPriority?: string | null;
-  recommendedMentors?: string | null;
-}): string {
-  // 确定用户的主要困惑
-  let concern = '';
-  if (profile.careerAnxiety) {
-    concern = profile.careerAnxiety;
-  } else {
-    const priorities = parseJsonArraySafe(profile.helpPriority);
-    if (priorities.length > 0) {
-      concern = priorities[0];
-    }
-  }
-
-  // 解析推荐导师
-  const recommendedNames = parseJsonArraySafe(profile.recommendedMentors);
-
-  // 构建导师信息（名称 + 简介不超过25字）
-  const mentorInfos: { name: string; shortDesc: string }[] = [];
-  for (const name of recommendedNames) {
-    const mentor = findMentorByName(name);
-    if (mentor) {
-      mentorInfos.push({
-        name: mentor.name,
-        shortDesc: truncateText(mentor.tagline, 25),
-      });
-    }
-  }
-
-  let message = '祝贺！我们完成了交流访谈。';
-  if (concern) {
-    message += `根据目前我收集的信息，你主要的困惑是${concern}。`;
-  } else {
-    message += '根据目前我收集的信息，目前我还不清楚你主要的困惑。';
-  }
-
-  if (mentorInfos.length > 0) {
-    const names = mentorInfos.map((m) => m.name);
-    if (names.length === 1) {
-      message += `结合各方面信息，我向你推荐${names[0]}导师分身。`;
-    } else {
-      message += `结合各方面信息，我向你推荐${names.slice(0, -1).join('、')}以及${names[names.length - 1]}导师分身。`;
-    }
-    message += '\n\n' + mentorInfos.map((m) => `${m.name}：${m.shortDesc}`).join('\n');
-  }
-
-  return message;
-}
 
 export function MentorChat({ mentor }: MentorChatProps) {
   const { data: session, status } = useSession();
@@ -189,8 +53,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [dailyLimitReached, setDailyLimitReached] = useState(false);
-  const [questionnaireCompleted, setQuestionnaireCompleted] = useState(false);
   const [needSubscription, setNeedSubscription] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [usageUsed, setUsageUsed] = useState<number>(0);
@@ -200,11 +62,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [usageDailyLimit, setUsageDailyLimit] = useState<number | null>(null);
   // 加购轮次余额（永久有效，会员/非会员通用，0 = 无加购）
   const [usageCredits, setUsageCredits] = useState(0);
-  const [profileData, setProfileData] = useState<{
-    careerAnxiety?: string | null;
-    helpPriority?: string | null;
-    recommendedMentors?: string | null;
-  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -218,7 +75,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     scrollToBottom();
   }, [messages]);
 
-  // 初始化：检查 localStorage 状态，支持所有导师的断点续传
+  // 初始化：读取用量 + 支持导师对话断点续传
   useEffect(() => {
     if (initialized) return;
     if (status === 'loading') return;
@@ -233,88 +90,23 @@ export function MentorChat({ mentor }: MentorChatProps) {
     fetch('/api/chat/usage')
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
-        if (data) {
-          if (mentor.id === 'ai-guide') {
-            setUsageUsed(data.aiGuide?.used ?? 0);
-            setUsageLimit(data.aiGuide?.limit ?? 35);
-          } else {
-            setUsageUsed(data.mentor?.used ?? 0);
-            setUsageLimit(data.mentor?.limit ?? null);
-            setUsageDailyUsed(data.mentor?.dailyUsed ?? null);
-            setUsageDailyLimit(data.mentor?.dailyLimit ?? null);
-            setUsageCredits(data.mentor?.creditsBalance ?? 0);
-          }
+        if (data?.mentor) {
+          setUsageUsed(data.mentor.used ?? 0);
+          setUsageLimit(data.mentor.limit ?? null);
+          setUsageDailyUsed(data.mentor.dailyUsed ?? null);
+          setUsageDailyLimit(data.mentor.dailyLimit ?? null);
+          setUsageCredits(data.mentor.creditsBalance ?? 0);
         }
       })
       .catch(() => {});
 
     const userId = session.user.id;
-    const isAiGuide = mentor.id === 'ai-guide';
-    // 获取存储键（AI 职导用专用键，其他导师用通用键 — 均按用户隔离）
-    const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
-    const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
-    const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
-    const limitKey = isAiGuide ? aiKeys!.limitTs : null;
-    const completedKey = isAiGuide ? aiKeys!.completed : null;
+    const msgKey = getStorageKey(userId, mentor.id, 'messages');
+    const sidKey = getStorageKey(userId, mentor.id, 'session-id');
 
     try {
       const savedMessages = localStorage.getItem(msgKey);
       const savedSessionId = localStorage.getItem(sidKey);
-
-      // AI 职导专属：版本检查 — 旧版数据（含在校/在职/待业选择题）需清空重来
-      if (isAiGuide && aiKeys) {
-        const savedVersion = localStorage.getItem(aiKeys.version);
-        if (savedVersion !== AI_GUIDE_VERSION) {
-          // 版本不匹配 — 清空所有旧数据，从头开始
-          localStorage.removeItem(msgKey);
-          localStorage.removeItem(sidKey);
-          if (limitKey) localStorage.removeItem(limitKey);
-          if (completedKey) localStorage.removeItem(completedKey);
-          localStorage.setItem(aiKeys.version, AI_GUIDE_VERSION);
-          // 不恢复旧对话，直接走 loadFromDatabase → 欢迎消息流程
-          loadFromDatabase();
-          return;
-        }
-      }
-
-      // AI 职导专属：检查每日限额
-      if (isAiGuide && limitKey) {
-        const limitTimestamp = localStorage.getItem(limitKey);
-        const completed = completedKey ? localStorage.getItem(completedKey) === 'true' : false;
-
-        if (limitTimestamp) {
-          const limitTime = parseInt(limitTimestamp, 10);
-          const elapsed = Date.now() - limitTime;
-
-          if (elapsed >= ONE_DAY_MS) {
-            // 24小时已过 — 清零并重启问卷
-            localStorage.removeItem(msgKey);
-            localStorage.removeItem(sidKey);
-            localStorage.removeItem(limitKey);
-            if (completedKey) localStorage.removeItem(completedKey);
-            setMessages([]);
-            setSessionId(null);
-            setDailyLimitReached(false);
-            setQuestionnaireCompleted(false);
-            setInitialized(true);
-            return;
-          } else {
-            // 24小时未过 — 仍处于限额状态
-            setDailyLimitReached(true);
-            setError('在我这里，一天最多发送35条消息，明天再来吧。');
-            if (savedMessages) {
-              const parsed = JSON.parse(savedMessages) as ChatMessage[];
-              setMessages(parsed);
-            }
-            if (savedSessionId) {
-              setSessionId(savedSessionId);
-            }
-            setQuestionnaireCompleted(completed);
-            setInitialized(true);
-            return;
-          }
-        }
-      }
 
       // 有保存的消息 — 从 localStorage 恢复
       if (savedMessages) {
@@ -324,65 +116,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           if (savedSessionId) {
             setSessionId(savedSessionId);
           }
-          if (isAiGuide) {
-            // AI 职导：不信任 localStorage 的 completed 标记
-            // 先用 localStorage 值作为临时显示，然后异步向数据库验证
-            const localCompleted = completedKey ? localStorage.getItem(completedKey) === 'true' : false;
-            setQuestionnaireCompleted(localCompleted);
-            setInitialized(true);
-
-            // 异步验证：数据库是权威源
-            if (localCompleted) {
-              fetch('/api/user/profile')
-                .then((res) => (res.ok ? res.json() : null))
-                .then((data) => {
-                  const profile = data?.profile;
-                  const dbCompleted =
-                    profile?.profileSource === 'ai_extracted' ||
-                    (profile?.nickname != null && profile.nickname.length > 0);
-                  if (!dbCompleted) {
-                    // 数据库说未完成 — 清除 localStorage 的 completed 标记，回到问卷模式
-                    if (completedKey) localStorage.removeItem(completedKey);
-                    setQuestionnaireCompleted(false);
-                    // 清空消息，让欢迎语 useEffect 重新设置问卷模式的开场
-                    setMessages([]);
-                    window.dispatchEvent(new CustomEvent('questionnaireNotCompleted'));
-                  } else {
-                    // 数据库确认已完成 — 同步档案数据 + 从数据库加载完整聊天记录
-                    setProfileData(profile);
-                    fetch(`/api/chat/sessions/latest?mentorId=${mentor.id}`)
-                      .then((res) => (res.ok ? res.json() : null))
-                      .then((data) => {
-                        if (data?.session && data?.messages?.length > 0) {
-                          const dbMessages: ChatMessage[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string }) => ({
-                            id: m.id,
-                            role: m.role as 'user' | 'assistant',
-                            content: m.content,
-                            createdAt: m.createdAt,
-                          }));
-                          setMessages(dbMessages);
-                          setSessionId(data.session.id);
-                          if (session?.user?.id) {
-                            const userId = session.user.id;
-                            const isAi = mentor.id === 'ai-guide';
-                            const aiKeys = isAi ? getAiGuideKeys(userId) : null;
-                            const msgKey = isAi ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
-                            const sidKey = isAi ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
-                            localStorage.setItem(msgKey, JSON.stringify(dbMessages));
-                            localStorage.setItem(sidKey, data.session.id);
-                          }
-                        }
-                      })
-                      .catch(() => {});
-                  }
-                })
-                .catch(() => {
-                  // 网络错误 — 信任 localStorage 作为 fallback
-                });
-            }
-          } else {
-            setInitialized(true);
-          }
+          setInitialized(true);
           return;
         }
       }
@@ -396,44 +130,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   }, [mentor.id, status, initialized, session?.user?.id]);
 
   // 从数据库加载最近的导师会话（断点续传的数据库回退）
-  // 同时检查用户档案 — 数据库为权威源
   const loadFromDatabase = async () => {
-    // AI 职导：先检查数据库档案，确定问卷完成状态（数据库为权威源）
-    if (mentor.id === 'ai-guide' && session?.user?.id) {
-      try {
-        const profileRes = await fetch('/api/user/profile');
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          // 判断访谈是否已完成：profileSource 为 ai_extracted 或 nickname 有值
-          // 不能仅检查 profile 是否存在，因为注册时会创建空档案
-          const profile = profileData?.profile;
-          const interviewCompleted =
-            profile?.profileSource === 'ai_extracted' ||
-            (profile?.nickname != null && profile.nickname.length > 0);
-
-          if (interviewCompleted) {
-            // 访谈已完成 — 进入轻量模式
-            setQuestionnaireCompleted(true);
-            // 存储档案数据用于生成动态欢迎消息
-            setProfileData(profile);
-            // 同步 localStorage
-            try {
-              localStorage.setItem(`ai-guide-completed-${session.user.id}`, 'true');
-            } catch { /* ignore */ }
-            // 通知导航栏锁定
-            window.dispatchEvent(new CustomEvent('questionnaireCompleted'));
-          }
-        }
-      } catch {
-        // 数据库检查失败 — 回退到 localStorage
-        const isCompleted = localStorage.getItem(`ai-guide-completed-${session.user.id}`) === 'true';
-        if (isCompleted) {
-          setQuestionnaireCompleted(true);
-        }
-      }
-    }
-
-    // 没有档案或非 AI 职导 — 尝试加载历史对话
     try {
       const res = await fetch(`/api/chat/sessions/latest?mentorId=${mentor.id}`);
       if (res.ok) {
@@ -451,12 +148,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
           // 同步到 localStorage（按用户隔离）
           if (session?.user?.id) {
             const userId = session.user.id;
-            const isAiGuide = mentor.id === 'ai-guide';
-            const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
-            const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
-            const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
-            localStorage.setItem(msgKey, JSON.stringify(dbMessages));
-            localStorage.setItem(sidKey, data.session.id);
+            localStorage.setItem(getStorageKey(userId, mentor.id, 'messages'), JSON.stringify(dbMessages));
+            localStorage.setItem(getStorageKey(userId, mentor.id, 'session-id'), data.session.id);
           }
 
           setInitialized(true);
@@ -471,66 +164,27 @@ export function MentorChat({ mentor }: MentorChatProps) {
   };
 
   // 初始欢迎消息 — 初始化完成且无保存数据时显示
-  // questionnaireCompleted 状态已在初始化阶段从数据库确定，此处同步使用
   useEffect(() => {
     if (!initialized) return;
     // 已有消息（从 localStorage 或数据库恢复）— 不显示欢迎语
     if (messages.length > 0) return;
-    // 限额状态下不显示欢迎语
-    if (dailyLimitReached) return;
 
-    if (mentor.id === 'ai-guide') {
-      if (questionnaireCompleted) {
-        // 轻量模式：档案已建立 — 显示简短消息
-        setMessages([
-          {
-            role: 'assistant',
-            content: '你的个人档案已经建立，可以随时去个人档案查看和更新。有什么想聊的，随时说。',
-          },
-        ]);
-      } else {
-        // 问卷模式：首次访谈 — AI 主动问 A1
-        setMessages([
-          {
-            role: 'assistant',
-            content: `我是一台AI榨职机，本机喜欢榨出人类的成长经历、能力特长、性格取向、职业偏好，从而帮助导师们的分身，找出最适合你的工作图景。\n目前本机主要为高校学生提供榨汁服务，今后会压榨到更多群体，敬请期待。`,
-          },
-          {
-            role: 'assistant',
-            content: `在开始压榨前，本机想先说明：这里所有对话内容，都会脱敏后记录在后台数据库，数据绝对不会外泄。你也可以随时去个人档案，修改或清空所有数据。`,
-          },
-          {
-            role: 'assistant',
-            content: `本机打算先了解一下你。你可以选择不回答，跳到下一题，或者索性离开，但本机会把你挂在中断点，等你回来，继续我们伟大的压榨工程。那么，没什么问题的话，本机开始榨了。先榨一下你叫什么，可以真姓实名，也可以用昵称。`,
-          },
-        ]);
-      }
-    } else {
-      setMessages([
-        {
-          role: 'assistant',
-          content: pickMentorGreeting(mentor.name),
-        },
-      ]);
-    }
-  }, [mentor.id, mentor.name, initialized, dailyLimitReached, questionnaireCompleted, profileData]);
+    setMessages([
+      {
+        role: 'assistant',
+        content: pickMentorGreeting(mentor.name),
+      },
+    ]);
+  }, [mentor.id, mentor.name, initialized, messages.length]);
 
   // 保存消息到 localStorage — 按用户+导师隔离
   const saveMessages = (msgs: ChatMessage[], sid: string | null) => {
     if (!session?.user?.id) return;
     try {
       const userId = session.user.id;
-      const isAiGuide = mentor.id === 'ai-guide';
-      const aiKeys = isAiGuide ? getAiGuideKeys(userId) : null;
-      const msgKey = isAiGuide ? aiKeys!.messages : getStorageKey(userId, mentor.id, 'messages');
-      const sidKey = isAiGuide ? aiKeys!.sessionId : getStorageKey(userId, mentor.id, 'session-id');
-      localStorage.setItem(msgKey, JSON.stringify(msgs));
+      localStorage.setItem(getStorageKey(userId, mentor.id, 'messages'), JSON.stringify(msgs));
       if (sid) {
-        localStorage.setItem(sidKey, sid);
-      }
-      // AI 职导：同时保存版本标签
-      if (isAiGuide && aiKeys) {
-        localStorage.setItem(aiKeys.version, AI_GUIDE_VERSION);
+        localStorage.setItem(getStorageKey(userId, mentor.id, 'session-id'), sid);
       }
     } catch {
       // localStorage 不可用时静默失败
@@ -539,7 +193,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
   const handleSend = async (text?: string) => {
     const messageText = text || input.trim();
-    if (!messageText || loading || dailyLimitReached || sendingRef.current) return;
+    if (!messageText || loading || sendingRef.current) return;
     sendingRef.current = true;
 
     // 未登录提示
@@ -564,8 +218,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     setLoading(true);
 
     try {
-      // P0-3: 客户端只发送当前消息，不再发送 messages 数组
-      // 服务端从数据库构建对话历史，防止伪造
+      // 客户端只发送当前消息，服务端从数据库构建对话历史，防止伪造
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -584,15 +237,13 @@ export function MentorChat({ mentor }: MentorChatProps) {
           // needRelogin: JWT 中的用户在数据库中不存在（数据库重置等），需要重新登录
           if (data.needRelogin) {
             // 清除本地存储的旧 session 数据
-            try {
-              if (session?.user?.id) {
-                const aiKeys = getAiGuideKeys(session.user.id);
-                localStorage.removeItem(aiKeys.messages);
-                localStorage.removeItem(aiKeys.sessionId);
-                localStorage.removeItem(aiKeys.completed);
-                localStorage.removeItem(aiKeys.version);
-              }
-            } catch { /* ignore */ }
+            if (session?.user?.id) {
+              try {
+                const userId = session.user.id;
+                localStorage.removeItem(getStorageKey(userId, mentor.id, 'messages'));
+                localStorage.removeItem(getStorageKey(userId, mentor.id, 'session-id'));
+              } catch { /* ignore */ }
+            }
             // 跳转到登录页
             router.push(`/login?callbackUrl=${pathname}`);
             return;
@@ -600,41 +251,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
           setShowAuthPrompt(true);
           setMessages(messages);
           setInput(messageText);
-          return;
-        }
-        // 每日限额达到
-        if (data.dailyLimitReached) {
-          setError(data.error || '在我这里，一天最多发送35条消息，明天再来吧。');
-          setDailyLimitReached(true);
-          setMessages(messages);
-          setInput(messageText);
-          // 保存限额时间戳（按用户隔离）
-          if (mentor.id === 'ai-guide' && session?.user?.id) {
-            try {
-              const aiKeys = getAiGuideKeys(session.user.id);
-              localStorage.setItem(aiKeys.limitTs, String(Date.now()));
-              saveMessages(messages, sessionId);
-            } catch {
-              // ignore
-            }
-          }
-          return;
-        }
-        // 消息条数超限
-        if (data.error && data.error.includes('一天最多发送35条消息')) {
-          setError(data.error);
-          setDailyLimitReached(true);
-          setMessages(messages);
-          setInput(messageText);
-          if (mentor.id === 'ai-guide' && session?.user?.id) {
-            try {
-              const aiKeys = getAiGuideKeys(session.user.id);
-              localStorage.setItem(aiKeys.limitTs, String(Date.now()));
-              saveMessages(messages, sessionId);
-            } catch {
-              // ignore
-            }
-          }
           return;
         }
         if (data.needUpgrade) {
@@ -663,73 +279,12 @@ export function MentorChat({ mentor }: MentorChatProps) {
         return;
       }
 
-      // 检测问卷完成 — 后端通过状态机检测，返回 questionnaireCompleted 标志
-      const cleanReply = data.reply;
-      const completed = data.questionnaireCompleted === true;
-      const shouldRedirectHome = data.redirectHome === true;
-
       // 添加 AI 回复
-      const finalMessages = [...newMessages, { role: 'assistant' as const, content: cleanReply }];
+      const finalMessages = [...newMessages, { role: 'assistant' as const, content: data.reply }];
       setMessages(finalMessages);
 
-      // 保存到 localStorage — 所有导师都保存
+      // 保存到 localStorage
       saveMessages(finalMessages, data.sessionId || sessionId);
-
-      // Q4 连续15次不匹配：2秒后返回首页
-      if (shouldRedirectHome) {
-        setTimeout(() => {
-          router.push('/');
-        }, 2000);
-        return;
-      }
-
-      // 如果问卷完成，触发事件
-      if (completed && !questionnaireCompleted) {
-        setQuestionnaireCompleted(true);
-        if (mentor.id === 'ai-guide' && session?.user?.id) {
-          try {
-            const aiKeys = getAiGuideKeys(session.user.id);
-            localStorage.setItem(aiKeys.completed, 'true');
-          } catch {
-            // ignore
-          }
-          // 自动触发档案提取 — 三步走第三步
-          // 等待档案提取完成 + 至少 1.5 秒延迟（让用户读完 AI 最后回复）
-          const extractPromise = fetch('/api/profile/extract', { method: 'POST' })
-            .then((res) => (res.ok ? res.json() : null))
-            .catch(() => null);
-          const minDelay = new Promise((resolve) => setTimeout(resolve, 1500));
-
-          Promise.all([extractPromise, minDelay]).then(([extractData]) => {
-            if (extractData?.success && extractData.profile) {
-              setProfileData(extractData.profile);
-            }
-
-            try {
-              const aiKeys = getAiGuideKeys(session.user.id);
-              // 保留历史聊天记录，只追加一条简短的档案通知
-              const updatedMessages: ChatMessage[] = [
-                ...finalMessages,
-                {
-                  role: 'assistant',
-                  content: '你的个人档案已经建立，可以随时去个人档案查看和更新。',
-                },
-              ];
-              setMessages(updatedMessages);
-              saveMessages(updatedMessages, null);
-              // 清除旧的 sessionId，开始新的轻量模式会话
-              setSessionId(null);
-              localStorage.removeItem(aiKeys.sessionId);
-            } catch {
-              // ignore
-            }
-          });
-        }
-        // 延迟触发事件，让 UI 先更新
-        setTimeout(() => {
-          window.dispatchEvent(new CustomEvent('questionnaireCompleted'));
-        }, 500);
-      }
 
       // 更新 sessionId — 如果 API 返回了新的 sessionId（可能因为旧 sessionId 过期），则更新
       if (data.sessionId && data.sessionId !== sessionId) {
@@ -738,10 +293,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       }
 
       // 更新用量计数
-      if (mentor.id === 'ai-guide' && data.dailyMessageCount !== undefined) {
-        setUsageUsed(data.dailyMessageCount);
-        setUsageLimit(data.dailyMessageLimit ?? 35);
-      } else if (mentor.id !== 'ai-guide' && data.mentorUsed !== undefined) {
+      if (data.mentorUsed !== undefined) {
         setUsageUsed(data.mentorUsed);
         setUsageLimit(data.mentorLimit ?? null);
         if (data.mentorDailyUsed !== undefined) {
@@ -749,7 +301,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           setUsageDailyLimit(data.mentorDailyLimit ?? null);
         }
       }
-      if (mentor.id !== 'ai-guide' && data.creditsBalance !== undefined) {
+      if (data.creditsBalance !== undefined) {
         setUsageCredits(data.creditsBalance);
       }
     } catch {
@@ -773,37 +325,6 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
   // 登录引导
   if (showAuthPrompt || status === 'unauthenticated') {
-    // AI 职导的未登录提示 — 包含登录和注册链接
-    if (mentor.id === 'ai-guide') {
-      return (
-        <div className="card text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-50 flex items-center justify-center">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3482a2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
-            </svg>
-          </div>
-          <p className="text-sm text-brand-900 mb-1">你好呀。本机想说的是：</p>
-          <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-            先登录，才能榨。要没号，先注册。
-          </p>
-          <div className="flex gap-2 justify-center">
-            <button
-              onClick={() => router.push(`/login?callbackUrl=${pathname}`)}
-              className="btn-primary"
-            >
-              登录
-            </button>
-            <button
-              onClick={() => router.push(`/register-v2?callbackUrl=${pathname}`)}
-              className="btn-secondary"
-            >
-              注册
-            </button>
-          </div>
-        </div>
-      );
-    }
-    // 其他导师的未登录提示
     return (
       <div className="card text-center py-8">
         <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center">
@@ -833,7 +354,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     );
   }
 
-  // 等待初始化 — 所有导师在加载时显示
+  // 等待初始化
   if (!initialized) {
     return (
       <div className="flex justify-center py-8">
@@ -850,12 +371,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     <div className="flex flex-col min-h-[400px] w-full">
       {/* 消息列表 */}
       <div className="flex-1 space-y-4 pb-4 w-full">
-        {messages.map((msg, i) => {
-          // 判断是否为最后一条 AI 消息（只有最后一条的选项可交互）
-          const isLastAssistant =
-            msg.role === 'assistant' &&
-            !messages.slice(i + 1).some((m) => m.role === 'assistant');
-          return (
+        {messages.map((msg, i) => (
           <div
             key={i}
             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -888,51 +404,10 @@ export function MentorChat({ mentor }: MentorChatProps) {
                   : 'bg-white border border-slate-100 text-brand-900 rounded-bl-md'
               }`}
             >
-              {msg.role === 'assistant' ? (
-                msg.content.includes('[CHOICE') ? (
-                  <MessageWithChoices
-                    content={msg.content}
-                    onSelect={(value) => handleSend(value)}
-                    disabled={loading || dailyLimitReached || !isLastAssistant}
-                    enableMentorLinks={mentor.id === 'ai-guide'}
-                  />
-                ) : (() => {
-                  const { cleanText, mentors: recommendedMentors } = mentor.id === 'ai-guide'
-                    ? stripMentorTags(msg.content)
-                    : { cleanText: msg.content, mentors: [] };
-                  const showProfileBtn = mentor.id === 'ai-guide' && msg.content.includes('个人档案已经建立');
-                  return (
-                    <>
-                      <CollapsibleText content={cleanText} isUser={false} />
-                      {showProfileBtn && (
-                        <Link
-                          href="/dashboard/profile"
-                          className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs text-brand-900 transition-colors"
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                          </svg>
-                          我的档案
-                        </Link>
-                      )}
-                      {recommendedMentors.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {recommendedMentors.map((m) => (
-                            <MentorCard key={m.id} mentor={m} />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  );
-                })()
-              ) : (
-                <CollapsibleText content={msg.content} isUser={true} />
-              )}
+              <CollapsibleText content={msg.content} isUser={msg.role === 'user'} />
             </div>
           </div>
-          );
-        })}
+        ))}
 
         {/* 加载指示器 */}
         {loading && (
@@ -1010,13 +485,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       {/* 用量计数显示 */}
       {initialized && session?.user && (
         <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted">
-          {mentor.id === 'ai-guide' ? (
-            <span>
-              今日已用 <span className="font-medium text-brand-600">{usageUsed}</span>
-              {' / '}
-              <span className="font-medium">{usageLimit}</span> 次
-            </span>
-          ) : usageLimit !== null ? (
+          {usageLimit !== null ? (
             <span className="flex items-center gap-2 flex-wrap justify-center">
               <span>
                 导师分身对话 <span className="font-medium text-accent">{usageUsed}</span>
@@ -1062,8 +531,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
-        {/* 次数用完 — 会员/加榨包引导（仅导师分身，有加榨包余额时不显示） */}
-        {mentor.id !== 'ai-guide' && usageLimit !== null && usageUsed >= usageLimit && usageCredits === 0 && (
+        {/* 次数用完 — 会员/加榨包引导（有加榨包余额时不显示） */}
+        {usageLimit !== null && usageUsed >= usageLimit && usageCredits === 0 && (
           <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
             次数用完，开通
             <Link
@@ -1081,20 +550,16 @@ export function MentorChat({ mentor }: MentorChatProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={
-              dailyLimitReached
-                ? '今日消息已达上限...'
-                : `告诉 ${mentor.name}...`
-            }
+            placeholder={`告诉 ${mentor.name}...`}
             rows={1}
             maxLength={4000}
-            disabled={loading || dailyLimitReached}
+            disabled={loading}
             className="input-field flex-1 resize-none max-h-32 w-full"
             style={{ minHeight: '44px' }}
           />
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim() || loading || dailyLimitReached}
+            disabled={!input.trim() || loading}
             className="btn-primary !py-2.5 !px-4 flex-shrink-0"
           >
             {loading ? (

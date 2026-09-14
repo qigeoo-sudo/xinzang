@@ -391,7 +391,6 @@ async function main() {
         mentorName: mentor.name,
         mentorProfilePublic: mentor.publicProfile || mentor.tagline,
         userProfileConfirmed: '暂无',
-        userProfileInferred: '',
         assessmentContext: '',
         conversationSummary: '',
         currentTime: new Date().toISOString(),

@@ -80,7 +80,6 @@ const prisma = loadPrisma();
 
 // ---------- 导师 ID → 可读名称 ----------
 const MENTOR_NAMES: Record<string, string> = {
-  'ai-guide': '榨职机（AI职导）',
   'lydia': 'Lydia Chen（HRVP）',
   'winnie': 'Winnie Ni（HR/心理咨询）',
   'tina': 'Tina Zhang（HR负责人）',

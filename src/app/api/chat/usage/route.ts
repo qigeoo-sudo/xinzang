@@ -2,9 +2,7 @@
  * 对话用量查询 API
  * GET /api/chat/usage
  *
- * 返回：
- * - 导师分身对话：已用次数 / 套餐上限（按当前订阅周期）
- * - AI 职导对话：今日已用次数 / 50
+ * 返回导师分身对话：已用次数 / 套餐上限（按当前订阅周期）+ 24 小时滚动窗口用量
  */
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
@@ -12,7 +10,6 @@ import { prisma } from '@/lib/prisma';
 import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const DAILY_MESSAGE_LIMIT = 35;
 
 export async function GET() {
   try {
@@ -67,7 +64,7 @@ export async function GET() {
         mentorLimit = getMentorQuota(subscription.plan);
         mentorDailyLimit = getMentorDailyQuota(subscription.plan);
 
-        // 统计当前订阅周期内所有导师分身的用户消息数
+        // 统计当前订阅周期内的用户消息数
         if (mentorLimit !== null) {
           mentorUsed = await prisma.chatMessage.count({
             where: {
@@ -75,13 +72,12 @@ export async function GET() {
               createdAt: { gte: subscription.startDate },
               chatSession: {
                 userId,
-                mentorId: { not: 'ai-guide' },
               },
             },
           });
         }
 
-        // 统计 24 小时滚动窗口内所有导师分身的用户消息数（每日防蒸馏上限）
+        // 统计 24 小时滚动窗口内的用户消息数（每日防蒸馏上限）
         if (mentorDailyLimit !== null) {
           mentorDailyUsed = await prisma.chatMessage.count({
             where: {
@@ -89,7 +85,6 @@ export async function GET() {
               createdAt: { gt: twentyFourHoursAgo },
               chatSession: {
                 userId,
-                mentorId: { not: 'ai-guide' },
               },
             },
           });
@@ -101,18 +96,6 @@ export async function GET() {
       mentorLimit = freeTrialLimit;
     }
 
-    // AI 职导：统计24小时内的用户消息数
-    const aiGuideUsed = await prisma.chatMessage.count({
-      where: {
-        role: 'user',
-        createdAt: { gt: twentyFourHoursAgo },
-        chatSession: {
-          userId,
-          mentorId: 'ai-guide',
-        },
-      },
-    });
-
     return NextResponse.json({
       mentor: {
         used: mentorUsed,
@@ -120,10 +103,6 @@ export async function GET() {
         dailyUsed: mentorDailyUsed,
         dailyLimit: mentorDailyLimit, // null = 无每日限制（非会员/免费试用）
         creditsBalance, // 加购轮次余额（永久有效）
-      },
-      aiGuide: {
-        used: aiGuideUsed,
-        limit: DAILY_MESSAGE_LIMIT,
       },
     });
   } catch (error) {

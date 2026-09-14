@@ -52,7 +52,7 @@ export default async function DashboardPage() {
 
   // 统计数据
   const totalChats = chatSessions.length;
-  const mentorChats = chatSessions.filter((s) => s.mentorId !== 'ai-guide').length;
+  const totalMessages = chatSessions.reduce((sum, s) => sum + s.messageCount, 0);
   const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
   const freeTrialRemaining = Math.max(0, freeTrialLimit - (user?.freeTrialUsed || 0));
 
@@ -79,7 +79,7 @@ export default async function DashboardPage() {
       id: 3,
       title: '和行业导师对话',
       desc: '选择一位行业导师深入交流',
-      completed: mentorChats > 0,
+      completed: totalChats > 0,
       date: null,
     },
   ];
@@ -106,8 +106,8 @@ export default async function DashboardPage() {
             <p className="text-xs text-slate-400 mt-1">对话次数</p>
           </div>
           <div className="card text-center py-4">
-            <p className="text-3xl font-bold text-sage-500">{mentorChats}</p>
-            <p className="text-xs text-slate-400 mt-1">导师对话</p>
+            <p className="text-3xl font-bold text-sage-500">{totalMessages}</p>
+            <p className="text-xs text-slate-400 mt-1">对话消息</p>
           </div>
         </div>
 

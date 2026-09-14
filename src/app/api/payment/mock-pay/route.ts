@@ -53,13 +53,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '无权操作此订单' }, { status: 403 });
     }
 
-    if (!order) {
-      return NextResponse.json(
-        { error: '订单不存在' },
-        { status: 404 }
-      );
-    }
-
     if (order.status === 'PAID') {
       return NextResponse.json({ message: '订单已支付', order });
     }

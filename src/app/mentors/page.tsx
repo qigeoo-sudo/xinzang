@@ -6,8 +6,8 @@ import { HomeFooter } from '@/components/home/home-footer';
 import { mentors, getAllIndustries } from '@/lib/mentors';
 
 export default function MentorsPage() {
-  // 排除 AI 职导，展示所有行业导师（含未解锁）
-  const industryMentors = mentors.filter((m) => m.id !== 'ai-guide');
+  // 展示所有行业导师（含未解锁）
+  const industryMentors = mentors.filter((m) => !m.comingSoon);
   const industries = getAllIndustries().filter((i) => i !== '通用');
 
   return (

@@ -8,7 +8,7 @@
  * - 公开路由无需登录即可访问
  *
  * 安全路由保护规则:
- * - /dashboard, /profile, /chat, /payment, /settings → 需要登录
+ * - /dashboard, /profile, /payment, /settings → 需要登录
  * - /mentors/[id] (付费导师) → 需要登录 + 会员验证 (在页面层处理)
  * - /api/user/*, /api/chat/sessions, /api/orders/* → 需要登录
  */

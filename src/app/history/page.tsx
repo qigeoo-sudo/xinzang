@@ -55,9 +55,12 @@ export default async function HistoryPage() {
           <div className="space-y-3">
             {chatSessions.map((session) => {
               const mentor = mentorMap.get(session.mentorId);
-              const isRetired = session.mentorId === 'ai-guide';
-              const cardInner = (
-                <>
+              return (
+                <Link
+                  key={session.id}
+                  href={`/mentors/${session.mentorId}`}
+                  className="card card-hover flex items-center gap-4"
+                >
                   {/* 导师头像 */}
                   <div className="flex-shrink-0">
                     {mentor?.avatar ? (
@@ -83,7 +86,6 @@ export default async function HistoryPage() {
                     </p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       {mentor?.name || session.mentorId} · {session.messageCount} 条消息
-                      {isRetired && ' · 已停用'}
                     </p>
                   </div>
 
@@ -102,21 +104,6 @@ export default async function HistoryPage() {
                       })}
                     </p>
                   </div>
-                </>
-              );
-
-              // 旧版榨职机问卷已停用：历史记录保留可查，但不可再进入继续问答
-              return isRetired ? (
-                <div key={session.id} className="card flex items-center gap-4 opacity-70 cursor-default">
-                  {cardInner}
-                </div>
-              ) : (
-                <Link
-                  key={session.id}
-                  href={`/mentors/${session.mentorId}`}
-                  className="card card-hover flex items-center gap-4"
-                >
-                  {cardInner}
                 </Link>
               );
             })}

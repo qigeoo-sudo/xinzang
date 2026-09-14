@@ -39,7 +39,6 @@ const USER_VISIBLE_SCOPES = new Set([
 /** 聊天上下文（由 route 注入，用于总调度变量） */
 export interface MentorChatContext {
   userProfileConfirmed: string;
-  userProfileInferred?: string;
   assessmentContext?: string;
   conversationSummary?: string;
   currentTime: string;
@@ -129,7 +128,6 @@ export async function buildMentorSystemPrompt(
     mentorName: mentor.name,
     mentorProfilePublic: mentor.publicProfile || mentor.tagline,
     userProfileConfirmed: ctx.userProfileConfirmed || PLACEHOLDER_NONE,
-    userProfileInferred: ctx.userProfileInferred || PLACEHOLDER_NONE,
     assessmentContext: ctx.assessmentContext || PLACEHOLDER_NONE,
     conversationSummary: ctx.conversationSummary || PLACEHOLDER_NONE,
     currentTime: ctx.currentTime,

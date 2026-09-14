@@ -1,14 +1,14 @@
-﻿<#
+<#
 .SYNOPSIS
     一键从生产服务器（火山引擎 aihr.top）下载用户与导师分身的聊天记录，按导师分 Markdown 文件。
 
 .DESCRIPTION
-    自动完成：上传/更新服务器端导出脚本 -> 在生产容器内只读导出（自动排除榨职机 ai-guide）
+    自动完成：上传/更新服务器端导出脚本 -> 在生产容器内只读导出
     -> 下载到本地 outbox/chats-时间戳/ 目录。需要本机已配置好对生产服务器的 SSH 密钥。
 
 .EXAMPLE
     .\scripts\download-chats.ps1
-    下载全部历史记录（不含 ai-guide），按 lydia.md / winnie.md / tina.md 分文件
+    下载全部历史记录，按 lydia.md / winnie.md / tina.md 分文件
 
 .EXAMPLE
     .\scripts\download-chats.ps1 -Days 7
@@ -48,7 +48,7 @@ if ($LASTEXITCODE -ne 0) { throw "上传脚本失败" }
 & ssh @sshOpts "${User}@${Server}" "chown 1001:1001 $RemoteSh && chmod 644 $RemoteSh"
 if ($LASTEXITCODE -ne 0) { throw "设置脚本权限失败" }
 
-Write-Host "==> [2/4] 在生产容器内导出（只读，排除 ai-guide）..." -ForegroundColor Cyan
+Write-Host "==> [2/4] 在生产容器内导出（只读）..." -ForegroundColor Cyan
 $envArgs = @("-e", "DATABASE_URL=file:/app/data/prod.db")
 if ($Days -gt 0)   { $envArgs += @("-e", "DAYS=$Days") }
 if ($Mentor -ne "") { $envArgs += @("-e", "ONLY_MENTOR=$Mentor") }

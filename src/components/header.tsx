@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -11,7 +11,7 @@ import { useLanguage } from '@/components/language-context';
 const navLabels = {
   zh: {
     home: '首页',
-    aiGuide: '职业测试',
+    assessment: '职业测试',
     mentors: '行业导师',
     dashboard: '成长追踪',
     myProfile: '我的档案',
@@ -24,7 +24,7 @@ const navLabels = {
   },
   en: {
     home: 'Home',
-    aiGuide: 'Assessment',
+    assessment: 'Assessment',
     mentors: 'Mentors',
     dashboard: 'Growth',
     myProfile: 'My Profile',
@@ -42,10 +42,6 @@ const navLabels = {
  * 移动端: 第一行 Logo + Career Companion + 功能按钮；第二行 5 个功能入口
  * 桌面端: Logo + 导航链接 + 功能按钮（单行）
  * 功能按钮三态: 未登录=注册/登录；非会员=订阅/退出；会员=升级/退出
- *
- * 在 AI 职导对话页面：
- * - 问卷进行中：导航栏随页面滚动（不锁定）
- * - 问卷完成后：导航栏锁定在顶部（sticky），方便用户切换页面
  */
 function HeaderInner() {
   const { data: session, status } = useSession();
@@ -53,7 +49,6 @@ function HeaderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { lang, mounted } = useLanguage();
-  const [locked, setLocked] = useState(false);
   const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
 
   const handleLogout = async () => {
@@ -61,7 +56,7 @@ function HeaderInner() {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith('chat-') || key.startsWith('ai-guide-'))) {
+        if (key && key.startsWith('chat-')) {
           keysToRemove.push(key);
         }
       }
@@ -73,52 +68,6 @@ function HeaderInner() {
       window.location.href = '/';
     }
   };
-
-  // 监听问卷完成事件 & 检查 localStorage 中的完成状态
-  useEffect(() => {
-    // 非对话页面 — 导航栏始终 sticky
-    if (pathname !== '/chat') {
-      setLocked(true);
-      return;
-    }
-
-    // 对话页面：未登录时不锁定
-    if (status !== 'authenticated' || !session?.user?.id) {
-      setLocked(false);
-      return;
-    }
-
-    // 对话页面：检查问卷是否完成 — 完成后才锁定
-    try {
-      const uid = session.user.id;
-      const completed = localStorage.getItem(`ai-guide-completed-${uid}`) === 'true';
-      const limitTimestamp = localStorage.getItem(`ai-guide-limit-timestamp-${uid}`);
-      
-      if (limitTimestamp) {
-        const elapsed = Date.now() - parseInt(limitTimestamp, 10);
-        if (elapsed < 24 * 60 * 60 * 1000 && completed) {
-          setLocked(true);
-        } else {
-          setLocked(false);
-        }
-      } else if (completed) {
-        setLocked(true);
-      } else {
-        setLocked(false);
-      }
-    } catch {
-      setLocked(false);
-    }
-
-    const handleCompleted = () => setLocked(true);
-    const handleNotCompleted = () => setLocked(false);
-    window.addEventListener('questionnaireCompleted', handleCompleted);
-    window.addEventListener('questionnaireNotCompleted', handleNotCompleted);
-    return () => {
-      window.removeEventListener('questionnaireCompleted', handleCompleted);
-      window.removeEventListener('questionnaireNotCompleted', handleNotCompleted);
-    };
-  }, [pathname, status, session?.user?.id]);
 
   const tr = mounted ? navLabels[lang] : navLabels.zh;
 
@@ -135,7 +84,7 @@ function HeaderInner() {
     },
     {
       href: '/assessment',
-      label: tr.aiGuide,
+      label: tr.assessment,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -201,11 +150,8 @@ function HeaderInner() {
     return matchNavHref(pathname) === href;
   };
 
-  // 聊天页面：locked 时用 fixed（悬浮在视口顶部，不占文档流）
-  // 其他页面：locked 时用 sticky（占文档流，不遮挡内容）
-  const lockedClass = pathname === '/chat'
-    ? 'fixed top-0 left-0 right-0 z-50'
-    : 'sticky top-0 z-50';
+  // 导航栏固定在顶部（占文档流，不遮挡内容）
+  const lockedClass = 'sticky top-0 z-50';
 
   // 功能按钮（三态）：未登录=注册/登录；非会员=订阅/退出；会员=升级/退出
   // compact=true 用于手机端第一行

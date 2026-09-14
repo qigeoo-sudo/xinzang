@@ -291,7 +291,6 @@ async function main() {
         mentorName: mentor.name,
         mentorProfilePublic: mentor.publicProfile || mentor.tagline,
         userProfileConfirmed: PLACEHOLDER_NONE,
-        userProfileInferred: PLACEHOLDER_NONE,
         assessmentContext: PLACEHOLDER_NONE,
         conversationSummary: PLACEHOLDER_NONE,
         currentTime: new Date().toISOString(),

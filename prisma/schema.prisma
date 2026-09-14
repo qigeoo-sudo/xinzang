@@ -136,52 +136,26 @@ model VerificationCode {
 // 业务模型
 // ============================================================
 
-/// 用户档案模型 — 存储用户教育背景、专业、兴趣、目标 (PRD 6.4)
-/// 字段来源：AI 职导访谈问卷自动提取 + 用户手动编辑
+/// 用户档案模型 — register-v2 注册流程与档案编辑共用
+/// 字段来源：注册流程填写 + 用户手动编辑
 model UserProfile {
   id     String @id @default(cuid())
   userId String
 
-  // === 基本信息（AI 职导问卷收集） ===
+  // === 基本信息（register-v2 注册/档案流程收集） ===
   nickname String? // 如何称呼
-  age      Int? // 年龄
   status   String? // 在校 | 在职 | 待业
-  city     String? // 所在城市
 
   // === 教育背景 ===
-  school         String? // 学校名称
-  major          String? // 专业
-  enrollmentYear String? // 入学年份
-
-  // === 职业信息 ===
-  industry        String? // 行业
-  companyType     String? // 国企 | 民企 | 外企 | 创业公司 | 互联网 | 其他
-  jobContent      String? // 工作内容/职业
-  jobSatisfaction Int? // 工作满意度 1-5
-  gradYears       String? // 毕业年份（在职/待业）
+  school String? // 学校名称
+  major  String? // 专业
 
   // === 职业发展 ===
-  interests       String? // 兴趣方向 (JSON 数组字符串)
-  goals           String? // 职业目标
-  infoChannels    String? // 信息渠道 (JSON 数组字符串)
-  careerSpending  String? // 过去一年职业发展支出
-  careerAnxiety   String? // 职业焦虑
-  jobChangeStatus String? // 换工作/求职情况
+  careerAnxiety    String? // 职业焦虑自述
+  helpPriority     String? // 最希望获得帮助的方面 (JSON 数组字符串)
+  mentorPreference String? // 最想深聊的人群 (JSON 数组字符串)
 
-  // === 问卷排序/选择结果 ===
-  helpPriority     String? // 最需要帮助的排序结果 (JSON 数组字符串)
-  mentorPreference String? // 最想深聊的人群排序 (JSON 数组字符串)
-  mentorHelpAreas  String? // 希望导师帮助的方面 (JSON 数组字符串)
-  productInterest  String? // 对产品的第一反应
-  productTrigger   String? // 什么情况下最会打开产品 (JSON 数组字符串)
-  productConcern   String? // 最担心什么 (JSON 数组字符串)
-  willingToPay     String? // 愿意每月付多少
-
-  // === 推荐导师 ===
-  recommendedMentors String? // AI 职导推荐的导师 ID 列表 (JSON 数组字符串)
-  preferredMentors   String? // 偏好导师 ID 列表 (JSON 数组字符串)
-
-  // === 新注册流程（register-v2）收集的结构化字段 ===
+  // === register-v2 结构化字段 ===
   birthMonth      String? // 出生年月 YYYY-MM
   enrollMonth     String? // 入学年月 YYYY-MM
   expectedGrad    String? // 预计毕业（在校）
@@ -196,16 +170,6 @@ model UserProfile {
   careers         String? // 感兴趣的职业方向 (JSON 数组字符串)
   registrationCompletedAt DateTime? // 新注册流程完成时间
 
-  // === 元数据 ===
-  profileSource    String    @default("manual") // manual | ai_extracted | mixed
-  // 导师聊天中实时提取、尚未经用户确认的档案信息 (JSON 对象，键同本表字段名)
-  // 用于区分「确认 vs 推断」来源：主列 = 确认；inferredProfile = 推断
-  inferredProfile  String?
-  // 确认 vs 推断的待处理冲突 (JSON 数组字符串)
-  // 形如 [{field, confirmedValue, inferredValue, status:"pending", createdAt}]
-  profileConflicts String?
-  lastAiExtractAt  DateTime? // 最后一次 AI 提取时间
-
   // 审计字段
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -216,13 +180,13 @@ model UserProfile {
   @@index([userId])
 }
 
-/// 档案变更历史模型 — 记录用户档案的每次更新/提取/清空操作
-/// action: update | extract | clear
+/// 档案变更历史模型 — 记录用户档案的每次更新操作
+/// action: update
 /// snapshot: 操作前的档案快照 (JSON 字符串)
 model ProfileHistory {
   id        String   @id @default(cuid())
   userId    String
-  action    String // update | extract | clear
+  action    String // update
   snapshot  String? // 操作前的档案数据快照 (JSON 字符串)
   createdAt DateTime @default(now())
 
@@ -330,9 +294,6 @@ model ChatSession {
   // 滚动对话摘要 (用于长期陪伴上下文)
   summary             String?
   summaryMessageCount Int      @default(0) // 生成摘要时已覆盖的消息数
-  // 问卷状态机持久化 — 不依赖 chatHistory 推断
-  questionnaireBranch String? // STUDENT | WORKING | UNEMPLOYED
-  questionnaireStep   String? // 当前问题 ID: Q1-Q4, S1-S3, E1-E8, U1-U7, C1-C10, END
   // 审计字段
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

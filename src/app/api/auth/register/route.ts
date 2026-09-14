@@ -182,7 +182,6 @@ export async function POST(request: NextRequest) {
     const profileData = profile
       ? {
           ...toUserProfileData(profile),
-          profileSource: 'register_v2',
           registrationCompletedAt: now,
         }
       : {};

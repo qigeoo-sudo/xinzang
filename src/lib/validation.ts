@@ -31,23 +31,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, '密码不能为空'),
 });
 
-// Defense-in-depth XSS 过滤 — React 已自动转义 HTML，此函数作为额外防线
-function sanitizeText(val: string): string {
-  return val
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    .replace(/javascript:/gi, '');
-}
-
-// 用户档案更新 Schema
-export const updateProfileSchema = z.object({
-  school: z.string().max(100).transform(sanitizeText).optional(),
-  major: z.string().max(100).transform(sanitizeText).optional(),
-  enrollmentYear: z.string().max(50).transform(sanitizeText).optional(),
-  interests: z.array(z.string().max(50).transform(sanitizeText)).max(10).optional(),
-  goals: z.string().max(500).transform(sanitizeText).optional(),
-});
-
 // 聊天消息 Schema — P0-3 安全修订: 只接收单条消息，不接收 messages 数组
 export const chatMessageSchema = z.object({
   mentorId: z.string().min(1).max(50),
@@ -69,5 +52,4 @@ export const createChatSessionSchema = z.object({
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChatMessageInput = z.infer<typeof chatMessageSchema>;
