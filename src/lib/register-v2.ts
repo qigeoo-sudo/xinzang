@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { MENTOR_PREFERENCE_OPTIONS } from './register-options';
 
 // 身份内部值 → UserProfile.status 中文值
-export const IDENTITY_STATUS_MAP: Record<string, string> = {
+const IDENTITY_STATUS_MAP: Record<string, string> = {
   student: '在校',
   working: '在职',
   jobless: '待业',

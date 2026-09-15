@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { queryWxPayOrder, isMockMode } from '@/lib/wxpay';
+import { fulfillPaidOrder } from '@/lib/payment-fulfillment';
 
 export async function GET(
   request: NextRequest,
@@ -57,12 +58,22 @@ export async function GET(
       // 微信已支付但回调未到达，主动更新 — 校验金额一致后才处理
       const expectedAmountFen = Math.round(Number(order.amount) * 100);
       if (wxResult.amount === expectedAmountFen) {
-        await handlePaymentSuccess(order.orderNo, wxResult.transactionId);
-        return NextResponse.json({
-          ...order,
-          status: 'PAID',
-          transactionId: wxResult.transactionId,
-        });
+        // 委托 payment-fulfillment.ts 统一履约（幂等 + 并发保护 + 接续/加购处理 + 缓存失效）
+        const result = await fulfillPaidOrder(
+          order.orderNo,
+          wxResult.transactionId || ''
+        );
+        if (result.success) {
+          return NextResponse.json({
+            ...order,
+            status: 'PAID',
+            transactionId: wxResult.transactionId,
+          });
+        }
+        console.error(
+          `Order ${order.orderNo}: fulfillPaidOrder failed`,
+          result.error
+        );
       } else {
         console.error(`Order ${order.orderNo}: amount mismatch on query (expected=${expectedAmountFen}, got=${wxResult.amount})`);
       }
@@ -78,54 +89,5 @@ export async function GET(
     paidAt: order.paidAt,
     expiredAt: order.expiredAt,
     createdAt: order.createdAt,
-  });
-}
-
-/**
- * 支付成功处理 — 创建订阅 + 更新用户会员状态
- */
-async function handlePaymentSuccess(
-  orderNo: string,
-  transactionId?: string
-): Promise<void> {
-  const order = await prisma.paymentOrder.findUnique({
-    where: { orderNo },
-  });
-
-  if (!order || order.status !== 'PENDING') return;
-
-  // 解析订单元数据获取计划信息
-  const metadata = order.metadata ? JSON.parse(order.metadata) : {};
-  const planId = metadata.planId || 'MONTHLY';
-  const durationDays = metadata.durationDays || 30;
-
-  // 交互式事务: 先检查 PENDING 状态再创建订阅 — 防止并发重复处理
-  await prisma.$transaction(async (tx) => {
-    const result = await tx.paymentOrder.updateMany({
-      where: { id: order.id, status: 'PENDING' },
-      data: {
-        status: 'PAID',
-        transactionId,
-        paidAt: new Date(),
-      },
-    });
-
-    if (result.count === 0) return;
-
-    await tx.subscription.create({
-      data: {
-        userId: order.userId,
-        plan: planId,
-        status: 'ACTIVE',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-        paymentOrderId: order.id,
-      },
-    });
-
-    await tx.user.update({
-      where: { id: order.userId },
-      data: { isPremium: true },
-    });
   });
 }

@@ -1,10 +1,11 @@
 /**
- * 支付回调通知 API
- * POST /api/payment/notify        — 微信支付回调
- * POST /api/payment/notify/alipay — 支付宝回调
+ * 微信支付回调通知 API
+ * POST /api/payment/notify — 微信支付回调
+ *
+ * 支付宝回调见 /api/payment/notify/alipay/route.ts（独立路由，避免 POST 方法冲突）
  *
  * 修复安全审计 A09-9.1: 回调必须验签
- * 修复安全审计: 回调必须校验金额一致性 + 支持支付宝回调
+ * 修复安全审计: 回调必须校验金额一致性
  *
  * 回调流程:
  * 1. 验证签名 (防止伪造)
@@ -22,10 +23,6 @@ import {
   decryptNotifyResource,
   isMockMode,
 } from '@/lib/wxpay';
-import {
-  verifyAlipayNotifySignature,
-  isAlipayMockMode,
-} from '@/lib/alipay';
 import { fulfillPaidOrder, type FulfillResult } from '@/lib/payment-fulfillment';
 
 // 支付成功后：金额一致性校验 + 统一履约（创建/接续订阅或加购轮次包）
@@ -138,54 +135,5 @@ export async function POST(request: NextRequest) {
       { code: 'FAIL', message: '内部错误' },
       { status: 500 }
     );
-  }
-}
-
-// ========== 支付宝回调 ==========
-export async function PUT(request: NextRequest) {
-  try {
-    // 支付宝回调为表单格式
-    const formData = await request.formData();
-    const params: Record<string, string> = {};
-    for (const [key, value] of formData.entries()) {
-      params[key] = String(value);
-    }
-
-    // 1. 验签
-    if (!isAlipayMockMode) {
-      const isValid = verifyAlipayNotifySignature(params);
-      if (!isValid) {
-        console.error('Alipay notify: invalid signature');
-        return new NextResponse('fail', { status: 401 });
-      }
-    }
-
-    // 2. 解析回调数据
-    const outTradeNo = params.out_trade_no;
-    const tradeNo = params.trade_no;
-    const tradeStatus = params.trade_status;
-    const totalAmount = parseFloat(params.total_amount || '0');
-
-    if (!outTradeNo || !tradeStatus) {
-      return new NextResponse('fail', { status: 400 });
-    }
-
-    // 只处理支付成功状态
-    if (tradeStatus !== 'TRADE_SUCCESS' && tradeStatus !== 'TRADE_FINISHED') {
-      return new NextResponse('success');
-    }
-
-    // 3. 处理支付成功（含金额校验）
-    // 支付宝金额为元（字符串），需转为分
-    const amountFen = Math.round(totalAmount * 100);
-    const result = await handlePaymentSuccess(outTradeNo, tradeNo, amountFen);
-    if (!result.success) {
-      return new NextResponse('fail', { status: result.status });
-    }
-
-    return new NextResponse('success');
-  } catch (error) {
-    console.error('Alipay payment notify error:', error);
-    return new NextResponse('fail', { status: 500 });
   }
 }

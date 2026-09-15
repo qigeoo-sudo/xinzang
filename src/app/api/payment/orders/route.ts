@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const actualPriceFen = creditPack
       ? calcCreditPackPriceFen(creditPack, quantity)
       : plan!.priceFen;
-    const actualPrice = Math.floor(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
+    const actualPrice = Number((actualPriceFen / 100).toFixed(2));
     const totalCredits = creditPack ? creditPack.credits * quantity : 0;
     const productName = creditPack
       ? `加榨包 ${totalCredits}轮次${quantity > 1 ? `（${quantity}包）` : ''}`

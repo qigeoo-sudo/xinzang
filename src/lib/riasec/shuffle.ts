@@ -25,26 +25,13 @@ export function sampleBalanced<T>(
 }
 
 /**
- * Fisher-Yates 洗牌 — 每次测试题目顺序随机
- * 优先使用 crypto.getRandomValues，旧环境回退 Math.random
- */
-export function shuffle<T>(input: readonly T[]): T[] {
-  const arr = input.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(random32() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-/**
  * 按维度均衡洗牌（题库 v0.3 §5.1）：
  * - 60 题全部打乱，不按维度分组
  * - 避免连续出现三道以上同一维度的题
  * 思路：各维度内部先独立洗牌，再贪心合并——每次从剩余题目中按剩余量
  * 加权随机抽一个维度（连续两题同维度时该维度本轮禁选）。
  */
-export function shuffleBalanced<T>(
+function shuffleBalanced<T>(
   input: readonly T[],
   getDim: (item: T) => string
 ): T[] {

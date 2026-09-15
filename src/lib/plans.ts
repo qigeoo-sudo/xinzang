@@ -91,7 +91,7 @@ export function getPlanById(id: string): SubscriptionPlan | undefined {
  * 加榨包（原轮次加购包）— 消耗品，不是时间订阅
  * 会员/非会员均可购买；不授予会员身份、不过期、用完再续。
  */
-export type CreditPackId = 'CREDIT_10';
+type CreditPackId = 'CREDIT_10';
 
 export interface CreditPack {
   id: CreditPackId;

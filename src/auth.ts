@@ -22,7 +22,7 @@ const credentialsSchema = z.object({
   password: z.string().min(1, '密码不能为空'),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth } = NextAuth({
   // Prisma Adapter — 为 OAuth Provider 预留，Credentials 使用 JWT
   adapter: PrismaAdapter(prisma),
 
@@ -125,7 +125,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
   callbacks: {
     // JWT 回调 — 将用户信息写入 token
-    jwt: async ({ token, user, trigger }) => {
+    jwt: async ({ token, user }) => {
       // 初次登录时，user 对象来自 authorize 返回值
       if (user) {
         token.id = user.id;
@@ -133,41 +133,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.isPremium = (user as any).isPremium;
         token.freeTrialUsed = (user as any).freeTrialUsed;
         token.passwordChangedAt = (user as any).passwordChangedAt?.getTime() || null;
-      }
-
-      // 会话更新时 (如支付成功后 update session)，从数据库重新获取最新状态
-      // 注意: 仅在 trigger === 'update' 时查询数据库，
-      // 避免在 Edge Runtime (middleware) 中调用 Prisma 导致崩溃
-      if (trigger === 'update' && token.id) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: {
-              role: true,
-              isPremium: true,
-              freeTrialUsed: true,
-              name: true,
-              passwordChangedAt: true,
-            },
-          });
-
-          // 密码已重置后旧会话失效 — 返回空对象使 JWT 丢失 id 字段，middleware 自动拒绝
-          if (dbUser?.passwordChangedAt) {
-            const dbChangedAt = dbUser.passwordChangedAt.getTime();
-            const tokenChangedAt = token.passwordChangedAt as number | null;
-            if (tokenChangedAt === null || dbChangedAt > tokenChangedAt) {
-              return {} as any;
-            }
-          }
-          if (dbUser) {
-            token.role = dbUser.role;
-            token.isPremium = dbUser.isPremium;
-            token.freeTrialUsed = dbUser.freeTrialUsed;
-            token.name = dbUser.name;
-          }
-        } catch {
-          // Edge Runtime 中 Prisma 不可用，保留 token 中的现有值
-        }
       }
 
       return token;

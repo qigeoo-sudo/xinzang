@@ -5,7 +5,7 @@
  */
 import type { AssessmentPayload } from '@/lib/register-v2';
 
-export const PENDING_ASSESSMENT_KEY = 'pending-riasec';
+const PENDING_ASSESSMENT_KEY = 'pending-riasec';
 
 export function savePendingAssessment(payload: AssessmentPayload): void {
   try {

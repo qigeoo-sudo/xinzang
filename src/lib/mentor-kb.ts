@@ -21,8 +21,6 @@ import {
   PLACEHOLDER_NONE,
 } from './prompts';
 
-export type { KnowledgeCardLike };
-
 // 生产聊天只检索已确认知识卡。
 // candidate/draft/hold_for_round2/mentor_unconfirmed 只能走隔离的内部测试链路，
 // 不能在正常聊天中交给模型“自行判断是否可用”。

@@ -797,14 +797,6 @@ export function getMentorById(id: string): Mentor | undefined {
   return mentors.find((m) => m.id === id);
 }
 
-export function getFreeMentors(): Mentor[] {
-  return mentors.filter((m) => m.isFree);
-}
-
-export function getMentorsByIndustry(industry: string): Mentor[] {
-  return mentors.filter((m) => m.industry === industry);
-}
-
 export function getAllIndustries(): string[] {
   return [...new Set(mentors.map((m) => m.industry))];
 }
@@ -814,7 +806,7 @@ export function getAllIndustries(): string[] {
  * 从导师知识库中提取关键词，计算用户查询与知识条目的匹配分数
  * Top 3 匹配结果作为上下文注入 LLM Prompt
  */
-export function searchKnowledge(
+function searchKnowledge(
   mentor: Mentor,
   query: string,
   topN: number = 3

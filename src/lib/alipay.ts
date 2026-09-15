@@ -32,17 +32,13 @@ export interface AlipayOrderResult {
   error?: string;
 }
 
-export interface AlipayNotifyData {
-  outTradeNo: string; // 业务订单号
-  tradeNo: string; // 支付宝流水号
-  tradeStatus: 'TRADE_FINISHED' | 'TRADE_SUCCESS' | 'WAIT_BUYER_PAY' | 'TRADE_CLOSED';
-  totalAmount: string; // 支付金额 (元)
-}
-
 // ========== 配置 ==========
 
 // Mock 模式必须显式开启，防止生产环境配置缺失时静默降级
-const isAlipayMockMode = process.env.MOCK_PAYMENT_ENABLED === 'true';
+// 生产环境（NODE_ENV=production）硬禁用，即使 MOCK_PAYMENT_ENABLED 误设也无效
+const isAlipayMockMode =
+  process.env.MOCK_PAYMENT_ENABLED === 'true' &&
+  process.env.NODE_ENV !== 'production';
 
 const config = {
   appId: process.env.ALIPAY_APP_ID || '',
@@ -64,17 +60,6 @@ const config = {
 // ========== 工具函数 ==========
 
 /**
- * 生成支付宝业务订单号: ALI_YYYYMMDD_随机8位
- * (与微信订单号前缀区分，便于排查)
- */
-export function generateAlipayOrderNo(): string {
-  const now = new Date();
-  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-  const random = crypto.randomBytes(4).toString('hex');
-  return `ALI_${dateStr}_${random}`;
-}
-
-/**
  * 支付宝 RSA2 (SHA256WithRSA) 签名生成
  *
  * 规则:
@@ -83,7 +68,9 @@ export function generateAlipayOrderNo(): string {
  * 3. 使用应用私钥进行 RSA-SHA256 签名，输出 base64
  */
 function generateSignature(params: Record<string, string>): string {
-  if (!config.privateKey) return '';
+  if (!config.privateKey) {
+    throw new Error('ALIPAY_PRIVATE_KEY not configured');
+  }
 
   // 过滤空值与 sign 字段，按 key 字典序排序
   const sortedKeys = Object.keys(params)
@@ -225,75 +212,6 @@ export function verifyAlipayNotifySignature(
     return verifier.verify(config.alipayPublicKey, sign, 'base64');
   } catch {
     return false;
-  }
-}
-
-/**
- * 查询支付宝订单状态 (主动查单 alipay.trade.query)
- */
-export async function queryAlipayOrder(orderNo: string): Promise<{
-  status: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
-  tradeNo?: string;
-}> {
-  if (isAlipayMockMode) {
-    // Mock 模式: 从数据库查询状态
-    return { status: 'PENDING' };
-  }
-
-  try {
-    const bizContent = JSON.stringify({
-      out_trade_no: orderNo,
-    });
-
-    const requestParams: Record<string, string> = {
-      app_id: config.appId,
-      method: 'alipay.trade.query',
-      charset: 'utf-8',
-      sign_type: 'RSA2',
-      timestamp: formatAlipayTimestamp(new Date()),
-      version: '1.0',
-      biz_content: bizContent,
-    };
-
-    const sign = generateSignature(requestParams);
-    requestParams.sign = sign;
-
-    const body = Object.entries(requestParams)
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join('&');
-
-    const response = await fetch(config.gateway, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-      },
-      body,
-    });
-
-    const data = await response.json();
-    const resp = data.alipay_trade_query_response;
-
-    if (!resp) return { status: 'PENDING' };
-
-    // 支付宝交易状态映射
-    switch (resp.trade_status) {
-      case 'TRADE_SUCCESS':
-      case 'TRADE_FINISHED':
-        return { status: 'PAID', tradeNo: resp.trade_no };
-      case 'WAIT_BUYER_PAY':
-        return { status: 'PENDING' };
-      case 'TRADE_CLOSED':
-        return { status: 'EXPIRED' };
-      default:
-        // ACQ.TRADE_NOT_EXIST 等错误归为失败
-        if (resp.code && resp.code !== '10000') {
-          return { status: 'FAILED' };
-        }
-        return { status: 'PENDING' };
-    }
-  } catch (error) {
-    console.error('Query Alipay order error:', error);
-    return { status: 'PENDING' };
   }
 }
 

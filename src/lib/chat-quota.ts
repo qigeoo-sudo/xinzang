@@ -7,7 +7,7 @@
  * - 无 API Key、AI 服务故障：没有 assistant 回复落库
  */
 
-export const NON_BILLED_MODELS = ['mentor-router', 'mentor-evidence-gate'];
+const NON_BILLED_MODELS = ['mentor-router', 'mentor-evidence-gate'];
 
 type DateFilter = { gte: Date } | { gt: Date };
 

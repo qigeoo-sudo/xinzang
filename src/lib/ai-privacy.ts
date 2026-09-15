@@ -18,10 +18,3 @@ export function redactPII(text: string): string {
       return maskedLocal + domain;
     });
 }
-
-/**
- * AI 隐私声明 — 在注册页或隐私政策中展示
- */
-export const AI_PRIVACY_NOTICE =
-  '本平台的 AI 对话功能会将您的消息内容发送至第三方 AI 服务商（如 DeepSeek）进行处理。' +
-  '请勿在对话中输入身份证号、银行卡号等敏感信息。平台已对消息中的手机号和邮箱进行脱敏处理。';
