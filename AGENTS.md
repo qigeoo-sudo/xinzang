@@ -1,6 +1,8 @@
 # AI Career Companion — 项目记忆 (AGENTS.md)
 
-> 本文件夹 `D:\xinzang` 是网站建设的主工作区（代码 + GitHub + DeepSeek）。
+> 主工作区为 `C:\Users\bingw\Documents\trae_projects\squeezer`（代码 + GitHub + DeepSeek）。
+> 注意：D 盘的 `D:\xinzang`、`D:\xinzang git traecode` 均为已废弃的旧 clone，不要再在其中改代码。
+> 导师分身内容生产区（codex/sonnet 产出的 prompt 与知识卡）在 `D:\database\mentors`，经审核后整合进主工作区。
 > 域名注册、ICP 备案、SSL 证书等辅助工作由 `C:\Users\bingw\zeroworld` 负责（火山引擎相关，此处不涉及）。
 
 ## GitHub 连接
@@ -10,7 +12,7 @@
 | 仓库地址 | `https://github.com/qigeoo-sudo/xinzang.git` |
 | 远程名 | `origin`（已配置，clone 时自带） |
 | 默认分支 | `master`（`origin/HEAD -> origin/master`，另有 `origin/main`） |
-| 最新提交 | `7fd074b`（master = main 同步） |
+| 最新提交 | 见 `git log origin/main -1`（避免文档过时，不硬编码提交号） |
 
 ### Git 推送规则
 
