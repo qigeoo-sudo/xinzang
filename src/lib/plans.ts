@@ -119,6 +119,40 @@ export function getCreditPackById(id: string): CreditPack | undefined {
   return CREDIT_PACKS.find((p) => p.id === id);
 }
 
+/** 加榨包单笔订单数量上限 */
+export const CREDIT_PACK_MAX_QTY = 99;
+
+/**
+ * 加榨包批量折扣（按整单数量）：
+ * - 1-4 个：原价
+ * - 5-9 个：9 折
+ * - 10 个及以上：8.5 折
+ */
+export function getCreditPackDiscount(qty: number): { rate: number; label: string | null } {
+  if (qty >= 10) return { rate: 0.85, label: '8.5折' };
+  if (qty >= 5) return { rate: 0.9, label: '9折' };
+  return { rate: 1, label: null };
+}
+
+/**
+ * 加榨包订单总价（单位：分）。服务端下单与前端展示必须共用此函数。
+ * 折后总价向下取整到元：
+ *   ￥19.9 × 5 × 0.9 = ￥89.55 → ￥89
+ *   ￥19.9 × 10 × 0.85 = ￥169.15 → ￥169
+ * 不足 5 个无折扣，单价为整数角，总价不会出现分。
+ */
+export function calcCreditPackPriceFen(pack: CreditPack, qty: number): number {
+  const safeQty = Math.max(1, Math.min(CREDIT_PACK_MAX_QTY, Math.trunc(qty)));
+  const { rate } = getCreditPackDiscount(safeQty);
+  const rawFen = Math.round(pack.priceFen * safeQty * rate);
+  return rate < 1 ? Math.floor(rawFen / 100) * 100 : rawFen;
+}
+
+/** 分 → 页面展示的元字符串（1990 → "19.9"，8900 → "89"） */
+export function formatPriceFen(fen: number): string {
+  return (fen / 100).toString();
+}
+
 /** 各订阅套餐对应的自然月数（升级/续费按自然月对日叠加） */
 export const PLAN_DURATION_MONTHS: Record<PlanId, number> = {
   MONTHLY: 1,

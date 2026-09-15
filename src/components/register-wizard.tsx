@@ -126,6 +126,7 @@ export interface WizardInitialValues {
   careerAnxiety?: string;
   helpPriority?: string[];
   mentorPreference?: string[];
+  contactEmail?: string; // 选填联系邮箱（独立于登录邮箱）
 }
 
 export function RegisterWizard({
@@ -151,6 +152,11 @@ export function RegisterWizard({
   const section = SECTIONS[stepIdx];
   const [done, setDone] = useState(false);
 
+  // 切换步骤时滚动到顶部
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [stepIdx]);
+
   // 第一步（账号）
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -163,12 +169,13 @@ export function RegisterWizard({
   const [sentCode, setSentCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
-  // 昵称敏感词本地预检（词库模块独立 chunk，挂载后预加载；blocked 即不允许提交）
+  // 昵称不文明用语本地预检（迷你词库独立 chunk，挂载后预加载；blocked 即不允许提交）
   const [nicknameBlocked, setNicknameBlocked] = useState(false);
-  const sensitiveModRef = useRef<{ containsSensitiveWord: (t: string) => boolean } | null>(null);
+  const sensitiveModRef = useRef<{ containsProfanity: (t: string) => boolean } | null>(null);
   const nicknameTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const anxietyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const helpOtherTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mentorPrefOtherTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [birthMonth, setBirthMonth] = useState(initial?.birthMonth ?? '');
 
   // 年月选择弹层（自定义，替代原生 month 控件）
@@ -222,6 +229,15 @@ export function RegisterWizard({
       MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)
     )
   );
+  // "想深聊的人"选了"其他"时的补充文本
+  const initialMentorPrefOther = (initial?.mentorPreference ?? []).find(
+    (v) => v && v !== '' && !MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)
+  );
+  const [mentorPrefOther, setMentorPrefOther] = useState(initialMentorPrefOther?.slice(0, 20) ?? '');
+  const [mentorPrefOtherBlocked, setMentorPrefOtherBlocked] = useState(false);
+  // 选填联系邮箱（线下活动通知用）
+  const [contactEmail, setContactEmail] = useState(initial?.contactEmail ?? '');
+  const [emailErr, setEmailErr] = useState('');
   const [showMentorHints, setShowMentorHints] = useState(
     Boolean(
       (initial?.careerAnxiety && initial.careerAnxiety.trim()) ||
@@ -229,6 +245,8 @@ export function RegisterWizard({
         initial?.mentorPreference?.some((v) => MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v))
     )
   );
+  // 选填联系邮箱卡片折叠（已有内容时默认展开）
+  const [showContactEmail, setShowContactEmail] = useState(Boolean(initial?.contactEmail && initial.contactEmail.trim()));
 
   // 年月字段值 / 写回方法映射
   const MONTH_VALUES: Record<MonthFieldKey, string> = {
@@ -246,6 +264,7 @@ export function RegisterWizard({
 
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [aiChecking, setAiChecking] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -337,16 +356,16 @@ export function RegisterWizard({
     return digits.slice(0, 11);
   };
 
-  // 挂载后预加载敏感词 chunk（失败静默，后端仍有硬校验兜底）
+  // 挂载后预加载不文明用语检查 chunk（失败静默，后端仍有硬校验兜底）
   useEffect(() => {
     let cancelled = false;
-    import('@/lib/sensitive-words')
+    import('@/lib/profanity')
       .then((m) => {
         if (cancelled) return;
         sensitiveModRef.current = m;
         // 编辑模式回填的选填区文本也补检一次
-        if (initial?.careerAnxiety?.trim()) setAnxietyBlocked(m.containsSensitiveWord(initial.careerAnxiety.trim()));
-        if (helpOther.trim()) setHelpOtherBlocked(m.containsSensitiveWord(helpOther.trim()));
+        if (initial?.careerAnxiety?.trim()) setAnxietyBlocked(m.containsProfanity(initial.careerAnxiety.trim()));
+        if (helpOther.trim()) setHelpOtherBlocked(m.containsProfanity(helpOther.trim()));
       })
       .catch(() => {});
     return () => {
@@ -364,11 +383,11 @@ export function RegisterWizard({
     if (!v) { setNicknameBlocked(false); return; }
     const mod = sensitiveModRef.current;
     if (mod) {
-      setNicknameBlocked(mod.containsSensitiveWord(v));
+      setNicknameBlocked(mod.containsProfanity(v));
     } else {
       // 模块还没加载完：加载后再判一次
-      import('@/lib/sensitive-words')
-        .then((m) => { sensitiveModRef.current = m; setNicknameBlocked(m.containsSensitiveWord(v)); })
+      import('@/lib/profanity')
+        .then((m) => { sensitiveModRef.current = m; setNicknameBlocked(m.containsProfanity(v)); })
         .catch(() => {});
     }
   };
@@ -382,16 +401,16 @@ export function RegisterWizard({
     nicknameTimerRef.current = setTimeout(() => runNicknameCheck(safe), 300);
   };
 
-  // 选填区文本框的敏感词检查（与昵称同一套词库）
+  // 选填区文本框的不文明用语检查（与昵称同一套词库）
   const runHintCheck = (value: string, setBlocked: (b: boolean) => void) => {
     const v = value.trim();
     if (!v) { setBlocked(false); return; }
     const mod = sensitiveModRef.current;
     if (mod) {
-      setBlocked(mod.containsSensitiveWord(v));
+      setBlocked(mod.containsProfanity(v));
     } else {
-      import('@/lib/sensitive-words')
-        .then((m) => { sensitiveModRef.current = m; setBlocked(m.containsSensitiveWord(v)); })
+      import('@/lib/profanity')
+        .then((m) => { sensitiveModRef.current = m; setBlocked(m.containsProfanity(v)); })
         .catch(() => {});
     }
   };
@@ -410,6 +429,14 @@ export function RegisterWizard({
     setHelpOtherBlocked(false);
     if (helpOtherTimerRef.current) clearTimeout(helpOtherTimerRef.current);
     helpOtherTimerRef.current = setTimeout(() => runHintCheck(safe, setHelpOtherBlocked), 300);
+  };
+
+  const onMentorPrefOtherChange = (value: string) => {
+    const safe = value.slice(0, 20);
+    setMentorPrefOther(safe);
+    setMentorPrefOtherBlocked(false);
+    if (mentorPrefOtherTimerRef.current) clearTimeout(mentorPrefOtherTimerRef.current);
+    mentorPrefOtherTimerRef.current = setTimeout(() => runHintCheck(safe, setMentorPrefOtherBlocked), 300);
   };
 
   // 帮助方面单选：点已选中项可取消；选固定项时清掉“其他”文本
@@ -503,7 +530,7 @@ export function RegisterWizard({
     // Mock 模式前端知道验证码，可提前拦错；生产环境以服务端校验为准
     if (sentCode !== '__sent__' && code !== sentCode) return '验证码不正确';
     if (!nickname.trim()) return '请填写姓名或昵称';
-    if (nicknameBlocked) return '昵称含违规内容，请换一个';
+    if (nicknameBlocked) return '昵称含不文明用语，请换一个';
     if (!birthMonth) return '请选择出生年月';
     if (birthMonth > monthNow(-15)) return '年龄需满 15 岁';
     return '';
@@ -513,7 +540,7 @@ export function RegisterWizard({
     // 编辑模式：姓名 / 出生年月在本步
     if (isEdit) {
       if (!nickname.trim()) return '请填写姓名或昵称';
-      if (nicknameBlocked) return '昵称含违规内容，请换一个';
+      if (nicknameBlocked) return '昵称含不文明用语，请换一个';
       if (!birthMonth) return '请选择出生年月';
       if (birthMonth > monthNow(-15)) return '年龄需满 15 岁';
     }
@@ -545,15 +572,65 @@ export function RegisterWizard({
     if (!currentProvince || !currentCity) return '请选择目前所在地（省 / 市）';
     if (careers.length === 0) return '请至少选择一个感兴趣的职业方向';
     // 选填区：填了就必须合规
-    if (anxietyBlocked) return '职业焦虑描述含违规内容，请修改后再保存';
+    if (anxietyBlocked) return '职业焦虑描述含不文明用语，请修改后再保存';
     if (helpChoice === HELP_OTHER_VALUE) {
       if (!helpOther.trim()) return '请填写“其他”方面的内容';
-      if (helpOtherBlocked) return '“其他”内容含违规词，请修改后再保存';
+      if (helpOtherBlocked) return '“其他”内容含不文明用语，请修改后再保存';
+    }
+    if (mentorPreference.includes('其他')) {
+      if (!mentorPrefOther.trim()) return '请填写想深聊的“其他”人选';
+      if (mentorPrefOtherBlocked) return '“其他”内容含不文明用语，请修改后再保存';
     }
     return '';
   };
 
-  const goNext = () => {
+  // 收集当前页文本字段供 AI 审核
+  const collectTextFields = (): Record<string, string> => {
+    const fields: Record<string, string> = {};
+    if (section === 'identity') {
+      if (nickname.trim()) fields.nickname = nickname.trim();
+    }
+    if (section === 'locations') {
+      if (school.trim()) fields.school = school.trim();
+      if (careerAnxiety.trim()) fields.careerAnxiety = careerAnxiety.trim();
+      if (helpChoice === HELP_OTHER_VALUE && helpOther.trim()) fields.helpPriorityOther = helpOther.trim();
+      if (mentorPreference.includes('其他') && mentorPrefOther.trim()) fields.mentorPrefOther = mentorPrefOther.trim();
+    }
+    return fields;
+  };
+
+  // 翻页/提交前调用 DeepSeek 审核；通过返回 true
+  const checkFieldsWithAI = async (): Promise<boolean> => {
+    const fields = collectTextFields();
+    if (Object.keys(fields).length === 0) return true;
+    setAiChecking(true);
+    try {
+      const resp = await fetch('/api/profile/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields }),
+      });
+      const data = await resp.json();
+      setAiChecking(false);
+      if (data.pass === false) {
+        // 高亮对应字段
+        const f = data.field;
+        if (f === 'nickname') setNicknameBlocked(true);
+        else if (f === 'careerAnxiety') setAnxietyBlocked(true);
+        else if (f === 'helpPriorityOther') setHelpOtherBlocked(true);
+        else if (f === 'mentorPrefOther') setMentorPrefOtherBlocked(true);
+        setError('你发送的内容可能含不合规信息，请重新组织一下句子再发吧');
+        errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+    } catch {
+      setAiChecking(false);
+      // 网络故障时不阻断
+    }
+    return true;
+  };
+
+  const goNext = async () => {
     setError('');
     const msg =
       section === 'account' ? validateAccount() : section === 'identity' ? validateIdentity() : validateLocations();
@@ -561,6 +638,9 @@ export function RegisterWizard({
       setError(msg);
       return;
     }
+    // 翻页前 AI 审核
+    const passed = await checkFieldsWithAI();
+    if (!passed) return;
     if (stepIdx < SECTIONS.length - 1) setStepIdx(stepIdx + 1);
   };
 
@@ -610,7 +690,15 @@ export function RegisterWizard({
             : isEdit
               ? null
               : undefined,
-      mentorPreference: mentorPreference.length ? mentorPreference : isEdit ? null : undefined,
+      mentorPreference: mentorPreference.length
+        ? mentorPreference.map((v) => v === '其他' ? (mentorPrefOther.trim() || '其他') : v)
+        : isEdit ? null : undefined,
+      // 选填联系邮箱（独立于登录邮箱；编辑模式清空置 null）
+      contactEmail: contactEmail.trim()
+        ? contactEmail.trim().toLowerCase()
+        : isEdit
+          ? null
+          : undefined,
     };
   };
 
@@ -680,13 +768,21 @@ export function RegisterWizard({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('');
     const msg = validateLocations();
     if (msg) {
       setError(msg);
       return;
     }
+    // 邮箱格式校验
+    if (contactEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+      setError('联系邮箱格式不正确');
+      return;
+    }
+    // 提交前 AI 审核所有文本字段
+    const passed = await checkFieldsWithAI();
+    if (!passed) return;
     if (isEdit) void handleEditSave();
     else void handleRegister();
   };
@@ -1037,7 +1133,7 @@ export function RegisterWizard({
                             className={inputCls}
                           />
                           {nicknameBlocked && (
-                            <p className="mt-1.5 text-xs text-red-500">昵称含违规内容，请换一个</p>
+                            <p className="mt-1.5 text-xs text-red-500">昵称含不文明用语，请换一个</p>
                           )}
                         </Field>
                         <Field label="出生年月" required>
@@ -1265,10 +1361,10 @@ export function RegisterWizard({
                       </p>
                     </Field>
 
-                    {/* 让导师分身更懂你 — 选填折叠区，默认收起，不增加注册负担 */}
+                    {/* 让导师分身更懂你 — 选填折叠区，默认收起，不增加注册负担；边框加粗以突出 */}
                     <div
-                      className="rounded-[14px] border p-4"
-                      style={{ borderColor: 'rgba(123,155,94,0.35)', background: 'rgba(240,245,237,0.55)' }}
+                      className="rounded-[14px] border-2 p-4"
+                      style={{ borderColor: 'rgba(85,130,65,0.7)', background: 'rgba(240,245,237,0.55)' }}
                     >
                       <button
                         type="button"
@@ -1313,7 +1409,7 @@ export function RegisterWizard({
                               className={`${inputCls} resize-none text-[13px] leading-relaxed`}
                             />
                             {anxietyBlocked ? (
-                              <p className="text-[11px] mt-1 text-red-500">内容含违规词，请修改后再保存</p>
+                              <p className="text-[11px] mt-1 text-red-500">内容含不文明用语，请修改后再保存</p>
                             ) : (
                               <p className="text-[11px] text-right mt-1" style={{ color: '#9C8E7C' }}>
                                 {careerAnxiety.length}/100
@@ -1369,7 +1465,7 @@ export function RegisterWizard({
                                   className={`${inputCls} text-[13px]`}
                                 />
                                 {helpOtherBlocked ? (
-                                  <p className="text-[11px] mt-1 text-red-500">内容含违规词，请修改后再保存</p>
+                                  <p className="text-[11px] mt-1 text-red-500">内容含不文明用语，请修改后再保存</p>
                                 ) : (
                                   <p className="text-[11px] text-right mt-1" style={{ color: '#9C8E7C' }}>
                                     {helpOther.length}/20
@@ -1410,7 +1506,82 @@ export function RegisterWizard({
                                 );
                               })}
                             </div>
+                            {mentorPreference.includes('其他') && (
+                              <div className="mt-2">
+                                <input
+                                  value={mentorPrefOther}
+                                  onChange={(e) => onMentorPrefOtherChange(e.target.value)}
+                                  maxLength={20}
+                                  placeholder="用一句话写下你想深聊的人（20 字以内）"
+                                  className={`${inputCls} text-[13px]`}
+                                />
+                                {mentorPrefOtherBlocked ? (
+                                  <p className="text-[11px] mt-1 text-red-500">内容含不文明用语，请修改后再保存</p>
+                                ) : (
+                                  <p className="text-[11px] text-right mt-1" style={{ color: '#9C8E7C' }}>
+                                    {mentorPrefOther.length}/20
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 选填：联系邮箱（折叠卡片，淡色样式以区别于上方重要卡片） */}
+                    <div
+                      className="rounded-[14px] border p-4 mt-3"
+                      style={{ borderColor: 'rgba(123,155,94,0.35)', background: 'rgba(240,245,237,0.55)' }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowContactEmail((v) => !v)}
+                        className="w-full flex items-center justify-between text-left"
+                        aria-expanded={showContactEmail}
+                      >
+                        <span>
+                          <span className="block text-[14px] font-semibold" style={{ color: '#435B3B' }}>
+                            你的 email 地址（选填）
+                          </span>
+                          {!showContactEmail && (
+                            <span className="block text-xs mt-0.5" style={{ color: '#7A9E6E' }}>
+                              如果我们有什么线下活动，我们可以发邮件联系到你
+                            </span>
+                          )}
+                        </span>
+                        <svg
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          className="shrink-0 transition-transform duration-200"
+                          style={{ transform: showContactEmail ? 'rotate(180deg)' : 'none', color: '#7A9E6E' }}
+                        >
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                      {showContactEmail && (
+                        <div className="mt-3">
+                          <p className="text-xs mb-2" style={{ color: '#7A9E6E' }}>
+                            如果我们有什么线下活动，我们可以发邮件联系到你
+                          </p>
+                          <input
+                            type="email"
+                            value={contactEmail}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setContactEmail(v);
+                              if (!v.trim()) { setEmailErr(''); return; }
+                              if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) setEmailErr('');
+                              else setEmailErr('邮箱格式不正确');
+                            }}
+                            placeholder="you@example.com"
+                            className={inputCls}
+                          />
+                          {emailErr && (
+                            <p className="mt-1 text-xs text-red-500">{emailErr}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1450,20 +1621,21 @@ export function RegisterWizard({
                   <button
                     type="button"
                     onClick={goNext}
-                    className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white transition-all active:scale-95"
+                    disabled={aiChecking}
+                    className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-60"
                     style={{ background: C.orange }}
                   >
-                    下一步
+                    {aiChecking ? '正在审核…' : '下一步'}
                   </button>
                 ) : (
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={submitting}
+                    disabled={submitting || aiChecking}
                     className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-60"
                     style={{ background: C.orange }}
                   >
-                    {submitting ? (isEdit ? '保存中…' : '提交中…') : isEdit ? '保存修改' : '完成注册'}
+                    {aiChecking ? '正在审核…' : submitting ? (isEdit ? '保存中…' : '提交中…') : isEdit ? '保存修改' : '完成注册'}
                   </button>
                 )}
               </div>
@@ -1539,11 +1711,15 @@ export function RegisterWizard({
               const helpText = helpChoice === HELP_OTHER_VALUE ? helpOther.trim() : (helpChoice || '');
               if (helpText) hintRows.push(['希望获得的帮助', helpText]);
               const mentorNames = mentorPreference
-                .map((v) => MENTOR_PREFERENCE_OPTIONS.find((o) => o.value === v)?.label || v)
+                .map((v) => v === '其他' ? (mentorPrefOther.trim() || '其他') : (MENTOR_PREFERENCE_OPTIONS.find((o) => o.value === v)?.label || v))
                 .join('、');
               if (mentorNames) hintRows.push(['想深聊的人', mentorNames]);
               return hintRows.length > 0 ? <Summary title="让导师分身更懂你" rows={hintRows} /> : null;
             })()}
+
+            {contactEmail.trim() && (
+              <Summary title="联系邮箱" rows={[['Email', contactEmail.trim()]]} />
+            )}
 
             <button
               type="button"
@@ -1630,6 +1806,10 @@ export function RegisterWizard({
               ['目前所在地', `${currentProvince} · ${cityLabel(currentCity)}`],
               ['感兴趣的职业方向', careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean).join('、')],
             ]} />
+
+            {contactEmail.trim() && (
+              <Summary title="联系邮箱" rows={[['Email', contactEmail.trim()]]} />
+            )}
 
             <div className="flex gap-3 mt-6">
               <Link

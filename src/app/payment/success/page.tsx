@@ -113,7 +113,11 @@ export default async function PaymentSuccessPage({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted">商品名称</span>
                   <span className="text-ink">
-                    {planNames[metadata.planId] || metadata.planName || '-'}
+                    {isCreditPackOrder
+                      ? `加榨包 ${metadata.credits ?? 10}轮次${
+                          metadata.quantity > 1 ? `（${metadata.quantity}包）` : ''
+                        }`
+                      : planNames[metadata.planId] || metadata.planName || '-'}
                   </span>
                 </div>
               </div>

@@ -49,9 +49,9 @@ export const registerProfileSchema = z.object({
   curCity: shortText,
   careers: z.array(z.string().max(40)).max(30).optional().nullable(),
   // “让导师分身更懂你”选填区（复用旧问卷列：开放文本 + JSON 数组）
-  // careerAnxiety：职业焦虑自述（≤100 字，前后端敏感词校验）
+  // careerAnxiety：职业焦虑自述（≤100 字，前后端不文明用语校验）
   careerAnxiety: z.string().max(100).optional().nullable(),
-  // helpPriority：希望获得帮助的方面，单选存 0/1 元素数组；“其他”为用户原文（≤20 字，敏感词校验）
+  // helpPriority：希望获得帮助的方面，单选存 0/1 元素数组；“其他”为用户原文（≤20 字，不文明用语校验）
   helpPriority: z.array(z.string().max(20)).max(1).optional().nullable(),
   // mentorPreference：想深聊的人，多选固定名单（≤11 项）
   mentorPreference: z
@@ -63,6 +63,13 @@ export const registerProfileSchema = z.object({
       (arr) => !arr || arr.every((v) => MENTOR_PREFERENCE_OPTIONS.some((o) => o.value === v)),
       { message: '想深聊的人包含无效选项' }
     ),
+  // 选填联系邮箱（线下活动通知用，独立于 User.email 登录邮箱）
+  contactEmail: z
+    .string()
+    .email('邮箱格式不正确')
+    .optional()
+    .nullable()
+    .or(z.literal('')),
 });
 
 export type RegisterProfilePayload = z.infer<typeof registerProfileSchema>;
@@ -105,6 +112,11 @@ export function toUserProfileData(p: RegisterProfilePayload) {
   if (p.mentorPreference !== undefined) {
     data.mentorPreference =
       p.mentorPreference && p.mentorPreference.length ? JSON.stringify(p.mentorPreference) : null;
+  }
+  // 选填联系邮箱：空字符串/未传 → null；非空 → 转小写
+  if (p.contactEmail !== undefined) {
+    const ce = typeof p.contactEmail === 'string' ? p.contactEmail.trim().toLowerCase() : '';
+    data.contactEmail = ce || null;
   }
   return data;
 }

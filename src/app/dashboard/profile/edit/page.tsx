@@ -39,6 +39,7 @@ interface RawProfile {
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
+  contactEmail?: string | null;
 }
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
@@ -99,6 +100,7 @@ export default function ProfileEditPage() {
           careerAnxiety: p.careerAnxiety ?? '',
           helpPriority: parseCareers(p.helpPriority),
           mentorPreference: parseCareers(p.mentorPreference),
+          contactEmail: p.contactEmail ?? '',
         });
         setPhone(data.phone ?? '');
         setReady(true);

@@ -4,6 +4,12 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type { SubscriptionPlan, PlanId, CreditPack } from '@/lib/plans';
+import {
+  calcCreditPackPriceFen,
+  formatPriceFen,
+  getCreditPackDiscount,
+  CREDIT_PACK_MAX_QTY,
+} from '@/lib/plans';
 
 interface SubscriptionFlowProps {
   plans: SubscriptionPlan[];
@@ -39,7 +45,10 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
 
   // 弹窗状态
   const [showPayModal, setShowPayModal] = useState(false);
-  const [modalPlan, setModalPlan] = useState<{ planId: string; isRenewal: boolean } | null>(null);
+  const [modalPlan, setModalPlan] = useState<{ planId: string; isRenewal: boolean; quantity?: number } | null>(null);
+
+  // 加榨包购买数量（可一次多买，享受批量折扣）
+  const [packQty, setPackQty] = useState(1);
 
   // 轮询订单状态
   const pollOrderStatus = useCallback(
@@ -94,9 +103,9 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
     [router]
   );
 
-  // 用户点击套餐的支付按钮 — 弹出支付方式选择弹窗
-  const handlePlanClick = (planId: string, isRenewal = false) => {
-    setModalPlan({ planId, isRenewal });
+  // 用户点击套餐的支付按钮 — 弹出支付方式选择弹窗（加榨包带购买数量）
+  const handlePlanClick = (planId: string, isRenewal = false, quantity = 1) => {
+    setModalPlan({ planId, isRenewal, quantity });
     setShowPayModal(true);
   };
 
@@ -117,6 +126,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
           planId: modalPlan.planId,
           paymentMethod: method,
           isRenewal: modalPlan.isRenewal,
+          quantity: modalPlan.quantity ?? 1,
         }),
       });
 
@@ -422,9 +432,9 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
       })}
       </div>
 
-      {/* 加榨包 — 横向布局 + 虚线描边，与上方会员卡片明确区分 */}
+      {/* 加榨包 — 横向布局 + 虚线描边，与上方会员卡片明确区分；支持一次多买 */}
       {creditPacks.length > 0 && (
-        <div className="mt-7">
+        <div className="mt-7" id="credit-pack">
           <div className="flex items-center gap-3 mb-4">
             <span className="h-px flex-1 bg-rule" />
             <span className="text-xs text-muted shrink-0">不想开通会员？也可单买加榨包</span>
@@ -432,55 +442,101 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
           </div>
 
           <div className="space-y-4">
-            {creditPacks.map((pack) => (
-              <div
-                key={pack.id}
-                className="relative rounded-2xl border-2 border-dashed border-brand-300 bg-gradient-to-r from-brand-50 via-white to-white px-4 py-4 flex items-center gap-4 shadow-[0_8px_24px_-10px_rgba(212,136,26,0.4)] transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-[0_14px_30px_-12px_rgba(212,136,26,0.55)]"
-              >
-                <div className="absolute -top-2.5 left-4">
-                  <span className="tag text-xs px-2.5 py-0.5 bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-sm">
-                    加榨包
-                  </span>
-                </div>
-
-                {/* 图标 — 票券造型 */}
-                <div className="w-11 h-11 rounded-xl bg-brand-100/80 border border-brand-200 flex items-center justify-center shrink-0">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M4 9a2 2 0 012-2h12a2 2 0 012 2 2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V9z"
-                      stroke="#B37015"
-                      strokeWidth="1.7"
-                      strokeLinejoin="round"
-                    />
-                    <path d="M14 8.5v7" stroke="#D4881A" strokeWidth="1.5" strokeDasharray="2 2.5" strokeLinecap="round" />
-                    <circle cx="9" cy="12" r="1.1" fill="#D4881A" />
-                  </svg>
-                </div>
-
-                {/* 文案 */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-brand-900 text-sm">{pack.name}</h3>
-                  <p className="text-xs text-muted mt-0.5">{pack.description}</p>
-                  {pack.features.map((feature, i) => (
-                    <p key={i} className="text-xs text-brand-700/80 mt-0.5">{feature}</p>
-                  ))}
-                </div>
-
-                {/* 价格 + 按钮 */}
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <div className="flex items-baseline gap-0.5">
-                    <span className="text-xs text-brand-600">￥</span>
-                    <span className="text-xl font-bold text-brand-600">{pack.price}</span>
+            {creditPacks.map((pack) => {
+              const totalPriceFen = calcCreditPackPriceFen(pack, packQty);
+              const discount = getCreditPackDiscount(packQty);
+              const totalRounds = pack.credits * packQty;
+              return (
+                <div
+                  key={pack.id}
+                  className="relative rounded-2xl border-2 border-dashed border-brand-300 bg-gradient-to-r from-brand-50 via-white to-white px-4 py-4 shadow-[0_8px_24px_-10px_rgba(212,136,26,0.4)]"
+                >
+                  <div className="absolute -top-2.5 left-4">
+                    <span className="tag text-xs px-2.5 py-0.5 bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-sm">
+                      加榨包
+                    </span>
                   </div>
-                  <button
-                    onClick={() => handlePlanClick(pack.id, false)}
-                    className="px-4 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white shadow-sm hover:bg-brand-600 transition-all active:scale-95"
-                  >
-                    购买
-                  </button>
+
+                  <div className="flex items-center gap-4">
+                    {/* 图标 — 票券造型 */}
+                    <div className="w-11 h-11 rounded-xl bg-brand-100/80 border border-brand-200 flex items-center justify-center shrink-0">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M4 9a2 2 0 012-2h12a2 2 0 012 2 2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V9z"
+                          stroke="#B37015"
+                          strokeWidth="1.7"
+                          strokeLinejoin="round"
+                        />
+                        <path d="M14 8.5v7" stroke="#D4881A" strokeWidth="1.5" strokeDasharray="2 2.5" strokeLinecap="round" />
+                        <circle cx="9" cy="12" r="1.1" fill="#D4881A" />
+                      </svg>
+                    </div>
+
+                    {/* 文案 */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-brand-900 text-sm">
+                        {pack.credits}轮次/包
+                        <span className="ml-2 text-xs font-normal text-brand-600">一次购买，永不过期</span>
+                      </h3>
+                      <p className="text-xs text-muted mt-0.5">
+                        ￥{pack.price}/包 · 一次买5个9折（￥89）· 买10个8.5折（￥169）
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 数量选择 + 总价 + 支付 */}
+                  <div className="mt-3.5 flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-xs text-muted">购买数量</span>
+                      <div className="flex items-center rounded-lg border border-brand-300 overflow-hidden">
+                        <button
+                          type="button"
+                          aria-label="减少数量"
+                          disabled={packQty <= 1}
+                          onClick={() => setPackQty((q) => Math.max(1, q - 1))}
+                          className="w-8 h-8 text-lg leading-none text-brand-700 hover:bg-brand-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
+                        >
+                          −
+                        </button>
+                        <span className="w-10 text-center text-sm font-semibold text-ink select-none">
+                          {packQty}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="增加数量"
+                          disabled={packQty >= CREDIT_PACK_MAX_QTY}
+                          onClick={() => setPackQty((q) => Math.min(CREDIT_PACK_MAX_QTY, q + 1))}
+                          className="w-8 h-8 text-lg leading-none text-brand-700 hover:bg-brand-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-xs text-muted">共 {totalRounds} 轮次</span>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-baseline gap-1.5">
+                        {discount.label && (
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-brand-500 text-white font-medium">
+                            {discount.label}
+                          </span>
+                        )}
+                        <span className="text-xs text-brand-600">合计 ￥</span>
+                        <span className="text-xl font-bold text-brand-600">
+                          {formatPriceFen(totalPriceFen)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handlePlanClick(pack.id, false, packQty)}
+                        className="px-4 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white shadow-sm hover:bg-brand-600 transition-all active:scale-95"
+                      >
+                        立即支付
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

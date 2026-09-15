@@ -78,12 +78,9 @@ export function formatKnowledgeCards(cards: KnowledgeCardLike[]): string {
   if (cards.length === 0) {
     return '（本轮无检索到的知识卡）';
   }
-  const blocks = cards.map((c, i) => {
+  const blocks = cards.map((c) => {
     const lines: string[] = [];
-    lines.push(
-      `【卡${i + 1}】${c.cardId} | ${c.domain} | status:${c.status} | confidence:${c.confidence}` +
-        (c.validFrom ? ` | valid_from:${c.validFrom}` : '')
-    );
+    lines.push(`[领域: ${c.domain}]`);
     lines.push(`标题: ${c.title}`);
     lines.push(`观点: ${c.coreView}`);
     if (c.reasoning) lines.push(`理由: ${c.reasoning}`);

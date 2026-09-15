@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { registerProfileSchema, toUserProfileData } from '@/lib/register-v2';
-import { containsSensitiveWord } from '@/lib/sensitive-words';
+import { containsProfanity } from '@/lib/profanity';
 
 export async function GET() {
   const session = await auth();
@@ -67,36 +67,36 @@ export async function PUT(request: NextRequest) {
     const d = parsed.data;
     const data = toUserProfileData(d);
 
-    // 昵称敏感词校验（命中词只进服务端日志，不回显）
-    if (typeof d.nickname === 'string' && d.nickname.trim() && containsSensitiveWord(d.nickname)) {
-      console.warn('[sensitive] profile nickname blocked, userId =', session.user.id, 'length =', d.nickname.length);
+    // 昵称不文明用语校验（迷你手工词库，命中词只进服务端日志，不回显）
+    if (typeof d.nickname === 'string' && d.nickname.trim() && containsProfanity(d.nickname)) {
+      console.warn('[profanity] profile nickname blocked, userId =', session.user.id, 'length =', d.nickname.length);
       return NextResponse.json(
-        { error: '昵称含违规内容，请修改后再保存', field: 'nickname' },
+        { error: '昵称含不文明用语，请修改后再保存', field: 'nickname' },
         { status: 400 }
       );
     }
 
-    // 学校名称敏感词校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
-    if (typeof d.school === 'string' && d.school.trim() && containsSensitiveWord(d.school)) {
-      console.warn('[sensitive] profile school blocked, userId =', session.user.id, 'length =', d.school.length);
+    // 学校名称不文明用语校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
+    if (typeof d.school === 'string' && d.school.trim() && containsProfanity(d.school)) {
+      console.warn('[profanity] profile school blocked, userId =', session.user.id, 'length =', d.school.length);
       return NextResponse.json(
-        { error: '学校名称含违规内容，请修改后再保存', field: 'school' },
+        { error: '学校名称含不文明用语，请修改后再保存', field: 'school' },
         { status: 400 }
       );
     }
 
-    // “让导师分身更懂你”选填区文本敏感词校验（焦虑自述 + 帮助方面“其他”原文）
-    if (typeof d.careerAnxiety === 'string' && d.careerAnxiety.trim() && containsSensitiveWord(d.careerAnxiety)) {
-      console.warn('[sensitive] profile careerAnxiety blocked, userId =', session.user.id);
+    // “让导师分身更懂你”选填区文本不文明用语校验（焦虑自述 + 帮助方面“其他”原文）
+    if (typeof d.careerAnxiety === 'string' && d.careerAnxiety.trim() && containsProfanity(d.careerAnxiety)) {
+      console.warn('[profanity] profile careerAnxiety blocked, userId =', session.user.id);
       return NextResponse.json(
-        { error: '内容含违规词，请修改后再保存', field: 'careerAnxiety' },
+        { error: '内容含不文明用语，请修改后再保存', field: 'careerAnxiety' },
         { status: 400 }
       );
     }
-    if (Array.isArray(d.helpPriority) && d.helpPriority.some((v) => v.trim() && containsSensitiveWord(v))) {
-      console.warn('[sensitive] profile helpPriority blocked, userId =', session.user.id);
+    if (Array.isArray(d.helpPriority) && d.helpPriority.some((v) => v.trim() && containsProfanity(v))) {
+      console.warn('[profanity] profile helpPriority blocked, userId =', session.user.id);
       return NextResponse.json(
-        { error: '内容含违规词，请修改后再保存', field: 'helpPriority' },
+        { error: '内容含不文明用语，请修改后再保存', field: 'helpPriority' },
         { status: 400 }
       );
     }

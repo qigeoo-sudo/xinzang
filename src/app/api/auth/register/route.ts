@@ -20,7 +20,7 @@ import {
   toUserProfileData,
   toAssessmentCreate,
 } from '@/lib/register-v2';
-import { containsSensitiveWord } from '@/lib/sensitive-words';
+import { containsProfanity } from '@/lib/profanity';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -33,6 +33,7 @@ const registerSchema = z.object({
     .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, '密码必须包含字母和数字'),
   code: z.string().optional(),
   // register-v2 三步注册的档案与职业兴趣测评（均可选，兼容旧注册页）
+  // contactEmail 已在 registerProfileSchema 内（独立于 User.email 登录邮箱）
   profile: registerProfileSchema.optional(),
   assessment: assessmentSchema.optional(),
 });
@@ -71,36 +72,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3.5 昵称敏感词校验（早期拦截，不消耗验证码；命中词只进服务端日志）
-    if (profile?.nickname && containsSensitiveWord(profile.nickname)) {
-      console.warn('[sensitive] register nickname blocked, length =', profile.nickname.length);
+    // 3.5 昵称不文明用语校验（早期拦截，不消耗验证码；命中词只进服务端日志）
+    if (profile?.nickname && containsProfanity(profile.nickname)) {
+      console.warn('[profanity] register nickname blocked, length =', profile.nickname.length);
       return NextResponse.json(
-        { error: '昵称含违规内容，请修改后再提交', field: 'nickname' },
+        { error: '昵称含不文明用语，请修改后再提交', field: 'nickname' },
         { status: 400 }
       );
     }
 
-    // 学校名称敏感词校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
-    if (profile?.school && containsSensitiveWord(profile.school)) {
-      console.warn('[sensitive] register school blocked, length =', profile.school.length);
+    // 学校名称不文明用语校验（学校不在名单里时保留用户输入，此处做硬校验兜底）
+    if (profile?.school && containsProfanity(profile.school)) {
+      console.warn('[profanity] register school blocked, length =', profile.school.length);
       return NextResponse.json(
-        { error: '学校名称含违规内容，请修改后再提交', field: 'school' },
+        { error: '学校名称含不文明用语，请修改后再提交', field: 'school' },
         { status: 400 }
       );
     }
 
-    // “让导师分身更懂你”选填区文本敏感词校验（焦虑自述 + 帮助方面“其他”原文）
-    if (profile?.careerAnxiety && containsSensitiveWord(profile.careerAnxiety)) {
-      console.warn('[sensitive] register careerAnxiety blocked, length =', profile.careerAnxiety.length);
+    // “让导师分身更懂你”选填区文本不文明用语校验（焦虑自述 + 帮助方面“其他”原文）
+    if (profile?.careerAnxiety && containsProfanity(profile.careerAnxiety)) {
+      console.warn('[profanity] register careerAnxiety blocked, length =', profile.careerAnxiety.length);
       return NextResponse.json(
-        { error: '内容含违规词，请修改后再提交', field: 'careerAnxiety' },
+        { error: '内容含不文明用语，请修改后再提交', field: 'careerAnxiety' },
         { status: 400 }
       );
     }
-    if (profile?.helpPriority?.some((v) => v && containsSensitiveWord(v))) {
-      console.warn('[sensitive] register helpPriority blocked');
+    if (profile?.helpPriority?.some((v) => v && containsProfanity(v))) {
+      console.warn('[profanity] register helpPriority blocked');
       return NextResponse.json(
-        { error: '内容含违规词，请修改后再提交', field: 'helpPriority' },
+        { error: '内容含不文明用语，请修改后再提交', field: 'helpPriority' },
         { status: 400 }
       );
     }
@@ -178,6 +179,8 @@ export async function POST(request: NextRequest) {
     });
 
     // 8. 创建用户 + 用户档案（register-v2 携带档案与测评时一并落库）
+    // 选填联系邮箱在 registerProfileSchema 内，由 toUserProfileData 映射到 UserProfile.contactEmail
+    // （独立于 User.email 登录邮箱；将来启用 email 注册时，可引导用户在档案页升级 contactEmail）
     const now = new Date();
     const profileData = profile
       ? {
@@ -201,7 +204,6 @@ export async function POST(request: NextRequest) {
 
     if (method === 'phone') {
       userData.phone = target;
-      userData.email = null;
       userData.name = `用户${target.slice(-4)}`;
     } else {
       userData.email = target.toLowerCase();

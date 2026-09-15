@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
+import { billedMessageWhere } from '@/lib/chat-quota';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -36,11 +37,10 @@ export async function GET() {
 
     const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
 
-    // 加购轮次余额（永久有效，会员/非会员通用）
-    const creditsBalance = Math.max(
-      0,
-      (user?.mentorCredits ?? 0) - (user?.mentorCreditsConsumed ?? 0)
-    );
+    // 加购轮次：总额（历次购买累计，不过期）/ 已用 / 余额
+    const creditsTotal = user?.mentorCredits ?? 0;
+    const creditsUsed = user?.mentorCreditsConsumed ?? 0;
+    const creditsBalance = Math.max(0, creditsTotal - creditsUsed);
 
     let mentorUsed = 0;
     let mentorLimit: number | null = null;
@@ -64,29 +64,17 @@ export async function GET() {
         mentorLimit = getMentorQuota(subscription.plan);
         mentorDailyLimit = getMentorDailyQuota(subscription.plan);
 
-        // 统计当前订阅周期内的用户消息数
+        // 统计当前订阅周期内的有效计费轮次（成功的 AI 回复；冷回复不计）
         if (mentorLimit !== null) {
           mentorUsed = await prisma.chatMessage.count({
-            where: {
-              role: 'user',
-              createdAt: { gte: subscription.startDate },
-              chatSession: {
-                userId,
-              },
-            },
+            where: billedMessageWhere(userId, { gte: subscription.startDate }),
           });
         }
 
-        // 统计 24 小时滚动窗口内的用户消息数（每日防蒸馏上限）
+        // 统计 24 小时滚动窗口内的有效计费轮次（每日防蒸馏上限）
         if (mentorDailyLimit !== null) {
           mentorDailyUsed = await prisma.chatMessage.count({
-            where: {
-              role: 'user',
-              createdAt: { gt: twentyFourHoursAgo },
-              chatSession: {
-                userId,
-              },
-            },
+            where: billedMessageWhere(userId, { gt: twentyFourHoursAgo }),
           });
         }
       }
@@ -102,7 +90,9 @@ export async function GET() {
         limit: mentorLimit, // null = 无限
         dailyUsed: mentorDailyUsed,
         dailyLimit: mentorDailyLimit, // null = 无每日限制（非会员/免费试用）
-        creditsBalance, // 加购轮次余额（永久有效）
+        creditsUsed, // 加榨包已用轮次
+        creditsTotal, // 加榨包累计购买轮次
+        creditsBalance, // 加榨包余额（兼容旧字段）
       },
     });
   } catch (error) {

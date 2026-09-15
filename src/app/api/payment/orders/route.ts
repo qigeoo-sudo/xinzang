@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
-import { getPlanById, getCreditPackById } from '@/lib/plans';
+import { getPlanById, getCreditPackById, calcCreditPackPriceFen, CREDIT_PACK_MAX_QTY } from '@/lib/plans';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
 import { createAlipayOrder } from '@/lib/alipay';
 import { z } from 'zod';
@@ -25,6 +25,8 @@ const createOrderSchema = z.object({
   planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_10']),
   paymentMethod: z.enum(['wechat', 'alipay']).default('wechat'),
   isRenewal: z.boolean().default(false),
+  // 加榨包可一次购买多个（批量折扣）；会员套餐恒为 1
+  quantity: z.number().int().min(1).max(CREDIT_PACK_MAX_QTY).default(1),
 });
 
 /**
@@ -65,6 +67,9 @@ export async function POST(request: NextRequest) {
     const creditPack = getCreditPackById(planId);
     const plan = creditPack ? undefined : getPlanById(planId);
 
+    // 数量只对加榨包生效；会员套餐恒为 1，忽略客户端传值
+    const quantity = creditPack ? parsed.data.quantity : 1;
+
     if (!creditPack && !plan) {
       return NextResponse.json(
         { error: '无效的商品' },
@@ -103,10 +108,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 5. 价格（恒价，无折扣）与订单描述
-    const actualPriceFen = creditPack ? creditPack.priceFen : plan!.priceFen;
+    // 5. 价格 — 加榨包按数量与批量折扣服务端重算（不信任客户端价格）
+    const actualPriceFen = creditPack
+      ? calcCreditPackPriceFen(creditPack, quantity)
+      : plan!.priceFen;
     const actualPrice = Math.floor(actualPriceFen / 100) + (actualPriceFen % 100) / 100;
-    const productName = creditPack ? creditPack.name : plan!.name;
+    const totalCredits = creditPack ? creditPack.credits * quantity : 0;
+    const productName = creditPack
+      ? `加榨包 ${totalCredits}轮次${quantity > 1 ? `（${quantity}包）` : ''}`
+      : plan!.name;
     const paymentType = creditPack ? 'CREDIT_PACK' : 'SUBSCRIPTION';
 
     // 6. 创建业务订单号
@@ -149,8 +159,10 @@ export async function POST(request: NextRequest) {
           creditPack
             ? {
                 planId: creditPack.id,
-                planName: creditPack.name,
-                credits: creditPack.credits,
+                planName: productName,
+                credits: totalCredits,
+                quantity,
+                unitCredits: creditPack.credits,
                 mockPayment: payResult.mock || false,
               }
             : {

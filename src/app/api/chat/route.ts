@@ -22,7 +22,18 @@ import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } f
 import { proxyFetch } from '@/lib/proxy-fetch';
 import { fetchWithRetry } from '@/lib/ai-retry';
 import { redactPII } from '@/lib/ai-privacy';
-import { containsSensitiveWord } from '@/lib/sensitive-words';
+import { billedMessageWhere } from '@/lib/chat-quota';
+import {
+  parseCrossConsent,
+  extractConsentMarker,
+  stripConsentMarkers,
+  buildRosterLine,
+  buildAwarenessLine,
+  buildCrossMentorRules,
+  buildPendingHint,
+  buildGrantedHistoryBlock,
+  type CrossConsentState,
+} from '@/lib/cross-mentor';
 import {
   CAREER_OPTIONS,
   MAJOR_OPTIONS,
@@ -545,6 +556,10 @@ export async function POST(request: NextRequest) {
     }
 
     const isPremium = dbUser.isPremium;
+
+    // 聊天内容不再做本地词库过滤：词库式子串匹配误伤率过高。
+    // 安全网为 DeepSeek 模型自身策略、领域门禁（mentor-router）与导师 persona 约束。
+
     const freeTrialUsed = dbUser.freeTrialUsed;
     const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
     // 加购轮次余额（永久有效）：会员周期配额/免费试用耗尽后兜底
@@ -596,16 +611,10 @@ export async function POST(request: NextRequest) {
         mentorDailyQuotaLimit = getMentorDailyQuota(subscription.plan);
 
         if (mentorQuotaLimit !== null || mentorDailyQuotaLimit !== null) {
-          // 周期内总用量
+          // 周期内总用量（只计成功 AI 回复，冷回复不占轮次）
           if (mentorQuotaLimit !== null) {
             mentorUsedCount = await prisma.chatMessage.count({
-              where: {
-                role: 'user',
-                createdAt: { gte: subscription.startDate },
-                chatSession: {
-                  userId: session.user.id,
-                },
-              },
+              where: billedMessageWhere(session.user.id, { gte: subscription.startDate }),
             });
           }
 
@@ -613,13 +622,7 @@ export async function POST(request: NextRequest) {
           if (mentorDailyQuotaLimit !== null) {
             const twentyFourHoursAgo = new Date(Date.now() - ONE_DAY_MS);
             mentorDailyUsedCount = await prisma.chatMessage.count({
-              where: {
-                role: 'user',
-                createdAt: { gte: twentyFourHoursAgo },
-                chatSession: {
-                  userId: session.user.id,
-                },
-              },
+              where: billedMessageWhere(session.user.id, { gte: twentyFourHoursAgo }),
             });
           }
 
@@ -680,13 +683,16 @@ export async function POST(request: NextRequest) {
     const model = process.env.AI_MODEL || 'deepseek-chat';
     // 9. 获取或创建聊天会话
     let chatSessionId = sessionId;
+    let crossConsentRaw: string | null = null;
     if (chatSessionId) {
       const existingSession = await prisma.chatSession.findFirst({
         where: { id: chatSessionId, userId: session.user.id },
-        select: { id: true },
+        select: { id: true, crossConsent: true },
       });
       if (!existingSession) {
         chatSessionId = undefined;
+      } else {
+        crossConsentRaw = existingSession.crossConsent;
       }
     }
     if (!chatSessionId) {
@@ -722,15 +728,6 @@ export async function POST(request: NextRequest) {
 
     // 11. 从数据库构建对话上下文
     const contextMessages = await buildContextFromDB(chatSessionId);
-
-    // 敏感词检查 — 命中直接返回提醒，不调用 AI
-    if (containsSensitiveWord(message)) {
-      console.log(`[SENSITIVE] 敏感内容检测: mentorId=${mentorId}, length=${message.length}`);
-      return NextResponse.json({
-        reply: '你发送的内容可能包含不合规信息，请重新组织一下句子再发给我吧。',
-        sessionId: chatSessionId,
-      });
-    }
 
     // 检查 API Key 是否配置
     if (!apiKey) {
@@ -790,9 +787,8 @@ export async function POST(request: NextRequest) {
           reply: boundaryReply,
           sessionId: chatSessionId,
           degraded: false,
-          freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed,
-          mentorUsed: !isPremium && !mentor.isFree ? freeTrialUsed + 1 : undefined,
-          mentorLimit: !isPremium && !mentor.isFree ? freeTrialLimit : undefined,
+          // 系统边界冷回复不计费：不返回计数，前端保持原用量并重新核对
+          billed: false,
         });
       }
     }
@@ -856,7 +852,7 @@ export async function POST(request: NextRequest) {
         mentorRouteDecision.evidencePolicy === 'APPROVED_CARDS_REQUIRED' &&
         hitCardIds.length === 0
       ) {
-        const missingEvidenceReply = '这个问题目前不在分身已经确认的资料里，所以我现在不知道。它需要 Lydia 本人补充确认后才可能回答。';
+        const missingEvidenceReply = `这个问题目前不在${mentor.name}分身已经确认的资料里，所以我现在不知道。它需要${mentor.name}本人补充确认后才可能回答。`;
         await persistFixedMentorReply(
           chatSessionId,
           missingEvidenceReply,
@@ -866,14 +862,39 @@ export async function POST(request: NextRequest) {
           reply: missingEvidenceReply,
           sessionId: chatSessionId,
           degraded: false,
-          freeTrialRemaining: isPremium || mentor.isFree ? null : freeTrialLimit - freeTrialUsed,
-          mentorUsed: !isPremium && !mentor.isFree ? freeTrialUsed + 1 : undefined,
-          mentorLimit: !isPremium && !mentor.isFree ? freeTrialLimit : undefined,
+          // 系统边界冷回复不计费：不返回计数，前端保持原用量并重新核对
+          billed: false,
         });
       }
     } else {
       systemPrompt = PLATFORM_CONSTRAINTS_PROMPT + '\n\n' + buildSystemPrompt(mentor, message);
     }
+
+    // 11.8 跨导师分身协作：互认识 + 只知"聊过" + 授权后可调取历史
+    const otherSessions = await prisma.chatSession.findMany({
+      where: { userId: session.user.id, mentorId: { not: mentorId } },
+      select: { mentorId: true, updatedAt: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+    let crossState: CrossConsentState = parseCrossConsent(crossConsentRaw);
+    const baseSystemPrompt = systemPrompt;
+    const buildCrossSection = async (state: CrossConsentState): Promise<string> => {
+      const parts = [
+        buildCrossMentorRules(buildRosterLine(mentorId)),
+        buildAwarenessLine(otherSessions),
+      ].filter(Boolean);
+      if (state.pending) {
+        parts.push(buildPendingHint(state.pending));
+      }
+      for (const grantedId of state.granted) {
+        if (otherSessions.some((s) => s.mentorId === grantedId)) {
+          const block = await buildGrantedHistoryBlock(session.user.id, grantedId);
+          if (block) parts.push(block);
+        }
+      }
+      return parts.join('\n\n');
+    };
+    systemPrompt = baseSystemPrompt + '\n\n' + (await buildCrossSection(crossState));
 
     // 12. 调用 AI API
     let reply: string;
@@ -914,6 +935,81 @@ export async function POST(request: NextRequest) {
     reply = stripStageDirections(
       aiData.choices?.[0]?.message?.content || '抱歉，我没有理解你的问题。'
     );
+
+    // 12.5 跨导师授权标记处理（内部协议，先于精简与上屏）
+    let crossConsentChanged = false;
+    let grantedForSecondCall: string | null = null;
+    const consentMarker = extractConsentMarker(reply);
+    const otherMentorIds = new Set(otherSessions.map((s) => s.mentorId));
+    if (consentMarker) {
+      const { kind, mentorId: targetId } = consentMarker;
+      if (
+        kind === 'REQ_CONSENT' &&
+        otherMentorIds.has(targetId) &&
+        !crossState.pending &&
+        !crossState.granted.includes(targetId)
+      ) {
+        // 分身请求授权：记录待确认，下一轮由模型判断用户是否同意
+        crossState.pending = targetId;
+        crossConsentChanged = true;
+        console.log(`[CROSS-MENTOR] consent requested: session=${chatSessionId} target=${targetId}`);
+      } else if (
+        (kind === 'GRANT_CONSENT' || kind === 'DENY_CONSENT') &&
+        crossState.pending === targetId
+      ) {
+        if (kind === 'GRANT_CONSENT') {
+          crossState.granted.push(targetId);
+          grantedForSecondCall = targetId;
+        }
+        crossState.pending = null;
+        crossConsentChanged = true;
+        console.log(`[CROSS-MENTOR] consent ${kind === 'GRANT_CONSENT' ? 'granted' : 'denied'}: session=${chatSessionId} target=${targetId}`);
+      }
+    }
+
+    // 用户同意：带历史内部参考二次生成，使分身当轮就能基于记录内容回答
+    if (grantedForSecondCall) {
+      try {
+        const grantedSystemPrompt = baseSystemPrompt + '\n\n' + (await buildCrossSection(crossState));
+        const secondResp = await fetchWithRetry(`${apiUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: grantedSystemPrompt },
+              ...contextMessages.map((m) => ({
+                role: m.role,
+                content: m.role === 'user' ? redactPII(m.content) : m.content,
+              })),
+            ],
+            temperature: 0.6,
+            max_tokens: 800,
+          }),
+        });
+        if (secondResp.ok) {
+          const secondData = await secondResp.json();
+          const secondReply = stripStageDirections(
+            secondData.choices?.[0]?.message?.content || '',
+          );
+          if (secondReply) {
+            reply = secondReply;
+            aiData = secondData;
+          }
+        } else {
+          console.error('[CROSS-MENTOR] second call failed:', secondResp.status);
+        }
+      } catch (e) {
+        // 二次生成失败时保留首次回复（已表达"这就去看"），不阻断主流程
+        console.error('[CROSS-MENTOR] second call error:', e);
+      }
+    }
+
+    // 无论哪条分支，内部标记一律不得上屏或入库
+    reply = stripConsentMarkers(reply);
 
     // 两轮生成兜底：前三轮回复超200字时，让模型自己精简（不截断）
     if (reply.length > 200) {
@@ -978,7 +1074,10 @@ export async function POST(request: NextRequest) {
       }),
       prisma.chatSession.update({
         where: { id: chatSessionId },
-        data: { messageCount: { increment: 2 } },
+        data: {
+          messageCount: { increment: 2 },
+          ...(crossConsentChanged ? { crossConsent: JSON.stringify(crossState) } : {}),
+        },
       }),
       ...quotaDecrement,
     ]);
@@ -993,7 +1092,7 @@ export async function POST(request: NextRequest) {
     let respMentorDailyUsed: number | undefined;
     let respMentorDailyLimit: number | null | undefined;
     if (consumeCredit) {
-      // 本轮走加购池：订阅/试用计数不变，前端主要看 creditsBalance
+      // 本轮走加榨池：周期/每日/试用池计数都不动（分子停在触顶值，绝不超过分母）
       if (isPremium) {
         respMentorUsed = mentorUsedCount;
         respMentorLimit = mentorQuotaLimit;
@@ -1017,13 +1116,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 加购余额（本轮消耗后）
-    const respCreditsBalance = Math.max(0, creditBalance - (consumeCredit ? 1 : 0));
+    // 加榨包：余额（本轮消耗后）/ 已用 / 累计购买
+    const respCreditsTotal = dbUser.mentorCredits || 0;
+    const respCreditsUsed = (dbUser.mentorCreditsConsumed || 0) + (consumeCredit ? 1 : 0);
+    const respCreditsBalance = Math.max(0, respCreditsTotal - respCreditsUsed);
 
     return NextResponse.json({
       reply: finalReply,
       sessionId: chatSessionId,
       degraded: false,
+      billed: true,
       freeTrialRemaining:
         !isPremium && !mentor.isFree && !consumeCredit
           ? freeTrialLimit - freeTrialUsed - 1
@@ -1033,6 +1135,8 @@ export async function POST(request: NextRequest) {
       mentorDailyUsed: respMentorDailyUsed,
       mentorDailyLimit: respMentorDailyLimit,
       creditsBalance: respCreditsBalance,
+      creditsUsed: respCreditsUsed,
+      creditsTotal: respCreditsTotal,
     });
     } finally {
       processingSessions.delete(chatSessionId);

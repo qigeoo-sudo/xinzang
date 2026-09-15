@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -49,6 +49,11 @@ export function AssessmentFlow() {
   const [guestDialog, setGuestDialog] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 切换阶段或题目时滚动到顶部
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [stage, idx]);
+
   const answeredCount = Object.keys(answers).length;
   const allAnswered = answeredCount === order.length;
 
@@ -90,7 +95,8 @@ export function AssessmentFlow() {
     setAnswers((prev) => ({ ...prev, [q.id]: value }));
     if (idx < order.length - 1) {
       if (advanceTimer.current) clearTimeout(advanceTimer.current);
-      advanceTimer.current = setTimeout(() => setIdx((i) => i + 1), 220);
+      // 短暂延迟让用户看到选中反馈，然后立即切到下一题（无选中状态）
+      advanceTimer.current = setTimeout(() => setIdx((i) => i + 1), 120);
     }
   };
 
@@ -388,24 +394,15 @@ export function AssessmentFlow() {
             {/* 储存区 */}
             {saved ? (
               <div className="mt-4 rounded-2xl border border-sage-400/30 bg-sage-50 p-6 text-center">
-                <p className="text-base font-bold text-sage-700">测试结果已存到你的档案</p>
-                <p className="mt-1.5 text-xs text-muted">
-                  以后可以在“成长追踪 → 我的档案”里查看和重测。
+                <Link
+                  href="/dashboard/profile"
+                  className="block w-full rounded-xl bg-sage-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-sage-600 active:scale-[.98]"
+                >
+                  查看我的档案
+                </Link>
+                <p className="mt-3 text-xs text-muted">
+                  导师分身推荐也在那里
                 </p>
-                <div className="mt-5 flex justify-center gap-3">
-                  <Link
-                    href="/dashboard/profile"
-                    className="rounded-xl bg-sage-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-sage-600 active:scale-[.98]"
-                  >
-                    查看我的档案
-                  </Link>
-                  <Link
-                    href="/"
-                    className="rounded-xl border border-rule bg-white px-6 py-3 text-sm font-medium text-muted transition-all hover:bg-bg"
-                  >
-                    返回首页
-                  </Link>
-                </div>
               </div>
             ) : (
               <div className="mt-4 rounded-2xl border border-rule/40 bg-white/85 p-6">

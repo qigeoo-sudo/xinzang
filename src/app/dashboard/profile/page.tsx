@@ -47,6 +47,7 @@ interface ProfileData {
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
+  contactEmail?: string | null;
 }
 
 // GET /api/user/profile 返回的测评（scores 已在服务端 parse）
@@ -194,6 +195,9 @@ export default function ProfilePage() {
             </Link>
           </div>
         )}
+
+        {/* 推荐导师 */}
+        <RecommendedMentors profile={initialProfile} />
       </div>
 
       <HomeFooter lang="zh" />
@@ -262,6 +266,9 @@ function ProfileSections({ profile, phone }: { profile: ProfileData | null; phon
       {hintRows.length > 0 && (
         <InfoCard title="让导师分身更懂你" rows={hintRows} className="md:col-span-2" />
       )}
+      {p?.contactEmail?.trim() && (
+        <InfoCard title="联系邮箱" rows={[['Email', p.contactEmail.trim()]]} className="md:col-span-2" />
+      )}
     </div>
   );
 }
@@ -278,6 +285,115 @@ function InfoCard({ title, rows, className = '' }: { title: string; rows: [strin
           </div>
         ))}
       </dl>
+    </div>
+  );
+}
+
+// ============================================================
+// 推荐导师：根据档案资料和职业兴趣，用关键词匹配已上线导师
+// ============================================================
+
+function RecommendedMentors({ profile }: { profile: ProfileData | null }) {
+  const [mentors, setMentors] = useState<{ id: string; name: string; title: string; avatar: string; tagline: string }[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // 生成推荐理由
+  const reason = (() => {
+    if (!profile) return '';
+    const parts: string[] = [];
+    // 身份
+    const statusMap: Record<string, string> = { student: '在校生', working: '在职', jobless: '待业中' };
+    const status = statusMap[profile.status || ''] || '';
+    if (status) parts.push(`你目前是${status}，`);
+
+    // 职业方向
+    const careers = parseJsonArray(profile.careers);
+    if (careers.length > 0) {
+      const careerMap: Record<string, string> = {};
+      CAREER_OPTIONS.forEach((o) => { careerMap[o.value] = o.label; });
+      const labels = careers.map((c) => careerMap[c] || c).filter(Boolean);
+      if (labels.length > 0) parts.push(`对${labels.join('、')}方向感兴趣，`);
+    }
+
+    // 求职目标
+    const goalMap: Record<string, string> = {
+      change_job: '想换份工作', improve_skills: '想提高技能', find_job: '想找份工作',
+    };
+    if (profile.workGoal && goalMap[profile.workGoal]) {
+      parts.push(`${goalMap[profile.workGoal]}。`);
+    }
+
+    // 焦虑
+    if (profile.careerAnxiety?.trim()) {
+      parts.push(`当前困惑：${profile.careerAnxiety.trim()}。`);
+    }
+
+    if (parts.length === 0) return '';
+    return parts.join('') + '根据你的情况，为你找到以下导师分身，快去聊聊吧。';
+  })();
+
+  useEffect(() => {
+    if (!profile) return;
+    // 从档案字段拼搜索关键词
+    const careers = parseJsonArray(profile.careers).join(' ');
+    const helpPriority = parseJsonArray(profile.helpPriority).join(' ');
+    const mentorPref = parseJsonArray(profile.mentorPreference).join(' ');
+    const query = [careers, helpPriority, mentorPref, profile.workGoal, profile.careerAnxiety]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    if (!query) {
+      setLoaded(true);
+      return;
+    }
+    fetch(`/api/search/mentors?q=${encodeURIComponent(query)}`)
+      .then((r) => r.json())
+      .then((data: { hits: { id: string; name: string; title: string; avatar: string; tagline: string }[] }) => {
+        setMentors(data.hits.slice(0, 2));
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, [profile]);
+
+  if (!loaded) return null;
+
+  return (
+    <div className="card mb-4">
+      <h2 className="mb-3 border-b border-rule/40 pb-2 text-sm font-semibold text-ink">推荐导师</h2>
+      {mentors.length > 0 ? (
+        <>
+          {reason && (
+            <p className="mb-3 text-xs leading-relaxed text-muted">{reason}</p>
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {mentors.map((m) => (
+              <Link
+                key={m.id}
+                href={`/mentors/${m.id}`}
+                className="flex items-center gap-3 rounded-xl border border-rule/50 bg-white/60 p-3 transition-all hover:border-brand-300 hover:bg-brand-50/30"
+              >
+                {m.avatar && (
+                  <img src={m.avatar} alt={m.name} className="h-10 w-10 rounded-full object-cover" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink truncate">{m.name}</p>
+                  <p className="text-xs text-muted truncate">{m.title}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted mb-3">暂没找到合适导师，可去行业导师页面自行挑选</p>
+          <Link
+            href="/mentors"
+            className="inline-flex items-center rounded-[10px] bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-600"
+          >
+            去行业导师 →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

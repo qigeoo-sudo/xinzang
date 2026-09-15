@@ -27,7 +27,7 @@ export default async function SearchPage({
         <div className="mb-5">
           <h1 className="mb-2 text-xl font-bold text-ink">搜索导师分身</h1>
           <p className="text-sm leading-relaxed text-muted">
-            输入关键词，从已上线导师分身的知识卡、标签和介绍里，找匹配度最高的前 5 位
+            输入关键词，找出匹配度前五的已上线导师分身
           </p>
         </div>
 
@@ -61,7 +61,7 @@ export default async function SearchPage({
         {q && hits.length > 0 && (
           <>
             <p className="mb-4 text-sm text-muted">
-              「<span className="font-semibold text-ink">{q}</span>」
+              "<span className="font-semibold text-ink">{q}</span>"
               匹配度最高的 {hits.length} 位导师分身
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -69,7 +69,6 @@ export default async function SearchPage({
                 <MentorCard
                   key={hit.mentor.id}
                   mentor={hit.mentor}
-                  reasons={hit.reasons}
                 />
               ))}
             </div>
@@ -85,7 +84,7 @@ export default async function SearchPage({
               </svg>
             </div>
             <p className="mb-1.5 text-sm font-semibold text-ink">
-              没有找到与「{q}」直接匹配的导师分身
+              没有找到与"{q}"直接匹配的导师分身
             </p>
             <p className="mx-auto mb-6 max-w-sm text-xs leading-6 text-muted">
               我们不想硬凑一位给你。不妨先去全部导师分身那边转一转，看看谁跟你的方向更有缘，或者换个更具体的关键词再搜一次。

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -40,11 +40,24 @@ function pickMentorGreeting(name: string): string {
 // localStorage 键名 — 按用户+导师区分，确保对话记录隔离
 const getStorageKey = (userId: string, mentorId: string, type: string) => `chat-${type}-${userId}-${mentorId}`;
 
+// 单个用量池：标签 已用 / 额度
+function UsageFrac({ label, used, limit }: { label: string; used: number; limit: number }) {
+  return (
+    <span>
+      {label} <span className="font-medium text-accent">{used}</span>
+      {' / '}
+      <span className="font-medium text-accent">{limit}</span>
+    </span>
+  );
+}
+
 export function MentorChat({ mentor }: MentorChatProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
+  // 购买加榨包直接定位到页面底部的加榨包卡片
+  const creditPackHref = `${subHref}#credit-pack`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -53,6 +66,26 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+
+  // 持久化输入内容到 sessionStorage（返回聊天页时恢复）
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    // session 首次可用时从 sessionStorage 恢复未发送的草稿
+    if (!input) {
+      const saved = sessionStorage.getItem(`chat-input-${userId}-${mentor.id}`);
+      if (saved) setInput(saved);
+    }
+  }, [session?.user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (userId && input) {
+      sessionStorage.setItem(`chat-input-${userId}-${mentor.id}`, input);
+    } else if (userId) {
+      sessionStorage.removeItem(`chat-input-${userId}-${mentor.id}`);
+    }
+  }, [input, session?.user?.id, mentor.id]);
   const [needSubscription, setNeedSubscription] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [usageUsed, setUsageUsed] = useState<number>(0);
@@ -60,8 +93,28 @@ export function MentorChat({ mentor }: MentorChatProps) {
   // 会员导师分身：24 小时滚动窗口内已用/上限（仅会员有值）
   const [usageDailyUsed, setUsageDailyUsed] = useState<number | null>(null);
   const [usageDailyLimit, setUsageDailyLimit] = useState<number | null>(null);
-  // 加购轮次余额（永久有效，会员/非会员通用，0 = 无加购）
-  const [usageCredits, setUsageCredits] = useState(0);
+  // 加榨包：余额 / 已用 / 累计购买（独立第三池，分子永不超过分母）
+  const [usageCredits, setUsageCredits] = useState(0); // 余额
+  const [usageCreditsUsed, setUsageCreditsUsed] = useState(0);
+  const [usageCreditsTotal, setUsageCreditsTotal] = useState(0);
+
+  // 从服务端重新拉取用量（冷回复不计费后用于核对，保证数字与后端口径一致）
+  const refreshUsage = useCallback(() => {
+    fetch('/api/chat/usage')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.mentor) {
+          setUsageUsed(data.mentor.used ?? 0);
+          setUsageLimit(data.mentor.limit ?? null);
+          setUsageDailyUsed(data.mentor.dailyUsed ?? null);
+          setUsageDailyLimit(data.mentor.dailyLimit ?? null);
+          setUsageCredits(data.mentor.creditsBalance ?? 0);
+          setUsageCreditsUsed(data.mentor.creditsUsed ?? 0);
+          setUsageCreditsTotal(data.mentor.creditsTotal ?? 0);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -87,18 +140,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
     }
 
     // 获取当前用量数据
-    fetch('/api/chat/usage')
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.mentor) {
-          setUsageUsed(data.mentor.used ?? 0);
-          setUsageLimit(data.mentor.limit ?? null);
-          setUsageDailyUsed(data.mentor.dailyUsed ?? null);
-          setUsageDailyLimit(data.mentor.dailyLimit ?? null);
-          setUsageCredits(data.mentor.creditsBalance ?? 0);
-        }
-      })
-      .catch(() => {});
+    refreshUsage();
 
     const userId = session.user.id;
     const msgKey = getStorageKey(userId, mentor.id, 'messages');
@@ -206,6 +248,8 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
     setError('');
     setInput('');
+    const uid = session?.user?.id;
+    if (uid) sessionStorage.removeItem(`chat-input-${uid}-${mentor.id}`);
     setNeedSubscription(false);
 
     // 添加用户消息到 UI
@@ -283,26 +327,40 @@ export function MentorChat({ mentor }: MentorChatProps) {
       const finalMessages = [...newMessages, { role: 'assistant' as const, content: data.reply }];
       setMessages(finalMessages);
 
-      // 保存到 localStorage
-      saveMessages(finalMessages, data.sessionId || sessionId);
-
-      // 更新 sessionId — 如果 API 返回了新的 sessionId（可能因为旧 sessionId 过期），则更新
       if (data.sessionId && data.sessionId !== sessionId) {
         setSessionId(data.sessionId);
-        saveMessages(finalMessages, data.sessionId);
       }
 
-      // 更新用量计数
-      if (data.mentorUsed !== undefined) {
-        setUsageUsed(data.mentorUsed);
-        setUsageLimit(data.mentorLimit ?? null);
-        if (data.mentorDailyUsed !== undefined) {
-          setUsageDailyUsed(data.mentorDailyUsed);
-          setUsageDailyLimit(data.mentorDailyLimit ?? null);
+      // 冷回复（系统边界拦截）不计费：只在当前视图显示，不写入本地缓存，
+      // 用量数字完全以服务端重拉为准，避免本地误 +1
+      if (data.billed === false) {
+        try {
+          if (session?.user?.id && data.sessionId) {
+            localStorage.setItem(
+              getStorageKey(session.user.id, mentor.id, 'session-id'),
+              data.sessionId,
+            );
+          }
+        } catch { /* ignore */ }
+        refreshUsage();
+      } else {
+        // 保存到 localStorage
+        saveMessages(finalMessages, data.sessionId || sessionId);
+
+        // 更新用量计数（响应已按统一口径返回）
+        if (data.mentorUsed !== undefined) {
+          setUsageUsed(data.mentorUsed);
+          setUsageLimit(data.mentorLimit ?? null);
+          if (data.mentorDailyUsed !== undefined) {
+            setUsageDailyUsed(data.mentorDailyUsed);
+            setUsageDailyLimit(data.mentorDailyLimit ?? null);
+          }
         }
-      }
-      if (data.creditsBalance !== undefined) {
-        setUsageCredits(data.creditsBalance);
+        if (data.creditsBalance !== undefined) {
+          setUsageCredits(data.creditsBalance);
+        }
+        if (data.creditsUsed !== undefined) setUsageCreditsUsed(data.creditsUsed);
+        if (data.creditsTotal !== undefined) setUsageCreditsTotal(data.creditsTotal);
       }
     } catch {
       setError('网络错误，请稍后再试');
@@ -482,58 +540,43 @@ export function MentorChat({ mentor }: MentorChatProps) {
         </div>
       )}
 
-      {/* 用量计数显示 */}
+      {/* 用量计数显示：周期 / 每日 / 加榨包 三个独立池子，分子永不超过各自分母 */}
       {initialized && session?.user && (
         <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted">
           {usageLimit !== null ? (
             <span className="flex items-center gap-2 flex-wrap justify-center">
-              <span>
-                导师分身对话 <span className="font-medium text-accent">{usageUsed}</span>
-                {' / '}
-                <span className="font-medium text-accent">{usageLimit}</span>
-              </span>
+              <UsageFrac
+                label={usageDailyLimit !== null ? '本期' : '免费试用'}
+                used={usageUsed}
+                limit={usageLimit}
+              />
               {usageDailyLimit !== null && usageDailyUsed !== null && (
                 <>
                   <span className="text-slate-300">·</span>
-                  <span>
-                    今日 <span className="font-medium text-accent">{usageDailyUsed}</span>
-                    {' / '}
-                    <span className="font-medium text-accent">{usageDailyLimit}</span>
-                  </span>
+                  <UsageFrac label="今日" used={usageDailyUsed} limit={usageDailyLimit} />
                 </>
               )}
-              {usageCredits > 0 && (
+              {usageCreditsTotal > 0 && (
                 <>
                   <span className="text-slate-300">·</span>
-                  <span>
-                    +<span className="font-medium text-slate-600">{usageCredits}</span>
-                  </span>
+                  <UsageFrac label="加榨包" used={usageCreditsUsed} limit={usageCreditsTotal} />
                 </>
               )}
             </span>
           ) : (
-            <span className="flex items-center gap-2">
-              <span className="text-success font-medium">
-                无限次对话
-              </span>
-              {usageCredits > 0 && (
-                <>
-                  <span className="text-slate-300">·</span>
-                  <span>
-                    +<span className="font-medium text-slate-600">{usageCredits}</span>
-                  </span>
-                </>
-              )}
-            </span>
+            <span className="text-success font-medium">无限次对话</span>
           )}
         </div>
       )}
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
-        {/* 次数用完 — 会员/加榨包引导（有加榨包余额时不显示） */}
-        {usageLimit !== null && usageUsed >= usageLimit && usageCredits === 0 && (
-          <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600">
+        {/* 次数用完 — 总轮次或今日轮次触顶且无加榨余额时，引导开通会员/加榨包 */}
+        {usageLimit !== null && usageCredits === 0 && (
+          usageUsed >= usageLimit ||
+          (usageDailyLimit !== null && usageDailyUsed !== null && usageDailyUsed >= usageDailyLimit)
+        ) && (
+          <div className="flex items-center justify-center gap-1 mb-2 text-xs text-slate-600 flex-wrap">
             次数用完，开通
             <Link
               href={subHref}
@@ -541,7 +584,14 @@ export function MentorChat({ mentor }: MentorChatProps) {
             >
               会员
             </Link>
-            或购买加榨包可继续交谈。
+            或
+            <Link
+              href={creditPackHref}
+              className="text-accent font-semibold underline underline-offset-2 hover:text-accent-dark"
+            >
+              购买加榨包
+            </Link>
+            可继续交谈
           </div>
         )}
         <div className="flex gap-2 items-end">

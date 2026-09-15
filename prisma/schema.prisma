@@ -169,6 +169,7 @@ model UserProfile {
   curCity         String? // 目前所在地-市
   careers         String? // 感兴趣的职业方向 (JSON 数组字符串)
   registrationCompletedAt DateTime? // 新注册流程完成时间
+  contactEmail String? // 选填联系邮箱（线下活动通知用，独立于登录邮箱）
 
   // 审计字段
   createdAt DateTime @default(now())
@@ -294,6 +295,8 @@ model ChatSession {
   // 滚动对话摘要 (用于长期陪伴上下文)
   summary             String?
   summaryMessageCount Int      @default(0) // 生成摘要时已覆盖的消息数
+  // 跨导师分身查看授权状态：JSON {"pending":"winnie","granted":["tina"]}，授权仅限当前会话
+  crossConsent        String?
   // 审计字段
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

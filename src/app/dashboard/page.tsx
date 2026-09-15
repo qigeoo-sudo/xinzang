@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   }
 
   // 从数据库获取用户数据和聊天历史
-  const [user, chatSessions, subscription] = await Promise.all([
+  const [user, chatSessions, subscription, userProfile] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -48,6 +48,10 @@ export default async function DashboardPage() {
         endDate: true,
       },
     }),
+    prisma.userProfile.findUnique({
+      where: { userId: session.user.id },
+      select: { careers: true },
+    }),
   ]);
 
   // 统计数据
@@ -60,6 +64,12 @@ export default async function DashboardPage() {
   const mentorMap = new Map(mentors.map((m) => [m.id, m.name]));
 
   // 成长里程碑
+  const careerCount = (() => {
+    try {
+      const arr = JSON.parse(userProfile?.careers ?? '[]');
+      return Array.isArray(arr) ? arr.length : 0;
+    } catch { return 0; }
+  })();
   const milestones = [
     {
       id: 1,
@@ -71,8 +81,8 @@ export default async function DashboardPage() {
     {
       id: 2,
       title: '探索 3 个职业方向',
-      desc: 'AI产品经理、HR、数据分析',
-      completed: false,
+      desc: '在档案中选择 3 个以上感兴趣的职业方向',
+      completed: careerCount >= 3,
       date: null,
     },
     {

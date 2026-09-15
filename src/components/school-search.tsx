@@ -9,7 +9,7 @@
  *  - 候选按相似度排序（前缀优先 + 名字短的优先）
  *  - 候选末尾固定"不在名单里"选项，点击后直接采用当前输入值
  *  - 不在名单里的输入值原样保留（blur 不强制改"其他"），但离开输入框时
- *    做与昵称一致的敏感词检查，命中则红字提示
+ *    做与昵称一致的不文明用语检查，命中则红字提示
  *  - 选中后回填到父组件
  *
  * 词库模块独立 chunk，挂载后预加载；输入 2 字以下不触发搜索。
@@ -42,9 +42,9 @@ export function SchoolSearch({
   const [highlightIdx, setHighlightIdx] = useState(-1);
   // 词库模块（动态 import）
   const modRef = useRef<typeof import('@/lib/universities') | null>(null);
-  // 敏感词模块（动态 import，与昵称共用同一套词库）
-  const sensitiveRef = useRef<typeof import('@/lib/sensitive-words') | null>(null);
-  // 学校名称敏感词命中（blur 时检查，命中显示红字提示）
+  // 不文明用语模块（动态 import，与昵称共用同一套迷你词库）
+  const sensitiveRef = useRef<typeof import('@/lib/profanity') | null>(null);
+  // 学校名称不文明用语命中（blur 时检查，命中显示红字提示）
   const [blocked, setBlocked] = useState(false);
   // debounce timer
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,7 +70,7 @@ export function SchoolSearch({
           if (!cancelled) modRef.current = m;
         })
         .catch(() => {});
-      import('@/lib/sensitive-words')
+      import('@/lib/profanity')
         .then((m) => {
           if (!cancelled) sensitiveRef.current = m;
         })
@@ -129,7 +129,7 @@ export function SchoolSearch({
     setHighlightIdx(-1);
   };
 
-  // 离开字段时：不在名单里也保留用户输入的学校名称，仅做敏感词检查
+  // 离开字段时：不在名单里也保留用户输入的学校名称，仅做不文明用语检查
   // （与昵称同一套词库和判定；服务端保存接口另有硬校验兜底）
   const handleBlur = () => {
     if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
@@ -138,11 +138,11 @@ export function SchoolSearch({
       if (!v) {
         setBlocked(false); // 空值交给表单必填校验
       } else if (sensitiveRef.current) {
-        setBlocked(sensitiveRef.current.containsSensitiveWord(v));
+        setBlocked(sensitiveRef.current.containsProfanity(v));
       } else {
         // 模块还没加载完：加载后再判一次
-        import('@/lib/sensitive-words')
-          .then((m) => { sensitiveRef.current = m; setBlocked(m.containsSensitiveWord(v)); })
+        import('@/lib/profanity')
+          .then((m) => { sensitiveRef.current = m; setBlocked(m.containsProfanity(v)); })
           .catch(() => {});
       }
       setOpen(false);
@@ -230,7 +230,7 @@ export function SchoolSearch({
         </div>
       )}
       {blocked && (
-        <p className="mt-1.5 text-xs text-red-500">学校名称含违规内容，请修改</p>
+        <p className="mt-1.5 text-xs text-red-500">学校名称含不文明用语，请修改</p>
       )}
     </div>
   );
