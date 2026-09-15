@@ -9,6 +9,8 @@ import { PrismaClient } from '../generated/prisma';
 import { getMentorById } from './mentors';
 import { KnowledgeCardLike, tokenizeQuery, scoreCard, formatKnowledgeCards } from './kb-scoring';
 import { assembleSystemPrompt, PLACEHOLDER_NONE } from './prompts';
+import { getGlobalSystemPolicy, getMentorPersonaPrompt } from './mentor-content';
+import { getRetrievableClasses } from './kb-governance';
 import { proxyFetch } from './proxy-fetch';
 
 export interface EvalQuestion {
@@ -18,28 +20,25 @@ export interface EvalQuestion {
   expected_behavior: string;
 }
 
-const RETRIEVABLE_STATUSES = [
-  'candidate',
-  'draft',
-  'hold_for_round2',
-  'mentor_unconfirmed',
-  'approved',
-  'published',
-];
-
 async function retrieveCards(
   prisma: PrismaClient,
   mentorId: string,
   query: string,
   topN = 4
 ): Promise<KnowledgeCardLike[]> {
-  const cards = await prisma.mentorKnowledgeCard.findMany({
-    where: { mentorId, status: { in: RETRIEVABLE_STATUSES } },
+  // Prisma 以 String 存储枚举字面量，SQL where 已按治理白名单过滤，边界处收窄类型
+  const cards = (await prisma.mentorKnowledgeCard.findMany({
+    where: {
+      mentorId,
+      knowledgeClass: { in: getRetrievableClasses() },
+      disclosureMode: { not: 'none' },
+    },
     select: {
       cardId: true,
       mentorId: true,
       domain: true,
       title: true,
+      caseText: true,
       coreView: true,
       reasoning: true,
       applicableTo: true,
@@ -47,16 +46,20 @@ async function retrieveCards(
       prerequisites: true,
       exceptions: true,
       risks: true,
-      source: true,
-      confidence: true,
-      status: true,
-      publicationScope: true,
+      knowledgeClass: true,
+      disclosureMode: true,
       validFrom: true,
       reviewAfter: true,
+      version: true,
     },
-  });
+  })) as KnowledgeCardLike[];
   const tokens = tokenizeQuery(query);
   return cards
+    .filter((c) => {
+      if (!c.validFrom) return true;
+      const ts = new Date(c.validFrom).getTime();
+      return !(Number.isFinite(ts) && ts > Date.now());
+    })
     .map((card) => ({ card, score: scoreCard(card, tokens) }))
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -221,6 +224,7 @@ export async function runEvalBatch(opts: {
       const hitCardIds = cards.map((c) => c.cardId);
 
       const systemPrompt = assembleSystemPrompt({
+        globalPolicy: getGlobalSystemPolicy(),
         mentorName: mentor.name,
         mentorProfilePublic: mentor.publicProfile || mentor.tagline,
         userProfileConfirmed: PLACEHOLDER_NONE,
@@ -228,7 +232,7 @@ export async function runEvalBatch(opts: {
         conversationSummary: PLACEHOLDER_NONE,
         currentTime: new Date().toISOString(),
         retrievedCardsText: formatKnowledgeCards(cards),
-        persona: mentor.personalityPrompt,
+        persona: getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
         testMode,
       });
 

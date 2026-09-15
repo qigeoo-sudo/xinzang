@@ -27,8 +27,8 @@ export interface Mentor {
   tags: string[];
   price: number; // 0 = 免费
   isFree: boolean;
-  // 人格配置
-  personalityPrompt: string;
+  // 人格配置（六位规范导师留空：从 content/knowledge-governance/prompts/*.md 加载）
+  personalityPrompt?: string;
   // 知识库
   knowledgeEntries: KnowledgeEntry[];
   // 知识来源: 是否使用数据库知识卡 (MentorKnowledgeCard) 替代静态 knowledgeEntries
@@ -258,7 +258,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     years: 15,
     tagline: 'HR从业者 / 心理咨询师 · 关注组织里真实的人与工作中的感受',
     tags: ['HR视角', 'HRBP', '求职面试', '组织沟通', '职业探索', '工作心理支持'],
-    price: 49,
+    price: 59,
     isFree: false,
     personalityPrompt: `你是依据Winnie本人授权访谈及经确认材料构建的Winnie AI导师分身。你主要帮助年轻人探索职业、准备求职、理解HR与组织关系，并提供非临床的工作心理支持。你是AI分身，不冒充正在实时接待用户的Winnie本人。
 
@@ -366,7 +366,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     years: '>25',
     tagline: '精品咨询公司HR负责人 · 长期在咨询行业 · 从招聘到Staffing到综合HR',
     tags: ['咨询行业', '招聘', 'Staffing', '职业探索', '求职面试', '晋升与反馈', '职业转型'],
-    price: 49,
+    price: 59,
     isFree: false,
     personalityPrompt: `你是依据 Tina 本人访谈和后续确认材料构建的 Tina AI 职业导师分身。你主要陪伴正在探索职业方向、准备咨询行业求职、理解招聘方判断、适应职业转型、争取晋升或学习如何接收反馈的年轻人。
 
@@ -461,6 +461,87 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
       '面试官到底在看候选人什么？',
       '职业规划要越早开始越好吗？',
       'AI 会取代咨询和 HR 的工作吗？',
+    ],
+  },
+  {
+    id: 'freya',
+    name: 'Freya Gao',
+    avatar: '/avatars/freya-gao.svg',
+    title: '产业投资经理',
+    company: '医疗器械产业基金',
+    companyType: '投资',
+    industry: '医疗器械/投资',
+    years: 7,
+    tagline: '医疗器械产业投资经理 · 四大审计出身 · 陪你看清行业真实日常与财务能力迁移',
+    tags: ['医疗器械', '产业投资', '审计', '四大', '财务转型', '一级市场'],
+    price: 59,
+    isFree: false,
+    // 人格 Prompt 由 content/knowledge-governance/prompts/freya_system_prompt.md 加载（v0.3）
+    personalityPrompt: '',
+    knowledgeEntries: [],
+    usesDbKnowledge: true,
+    expertiseDomains: ['医疗器械', '产业投资', '一级市场', '风险投资', '审计', '四大', '会计', '企业财务', '企业投融资', '孵化器', '尽职调查', '行业研究', '职业转型', '实习与校招', '财务基本功', '职业探索', '职业发展'],
+    publicProfile:
+      'Freya Gao｜医疗器械产业投资基金投资经理。公开职业经历（经授权）：会计专业本硕，2019年毕业后进入四大从事审计，后转向医疗器械领域的产业投资与孵化，日常工作包括行业研究、初创企业尽调与交易执行。主要服务对医疗器械、产业投资、审计和财务转型感兴趣的学生与职场早期用户。',
+    suggestedQuestions: [
+      '会计或审计背景，怎么往产业投资转？',
+      '医疗器械投资的真实日常是什么样的？',
+      '第一份工作选审计还是企业财务？',
+      '实习不多，怎么判断一个行业适不适合自己？',
+    ],
+  },
+  {
+    id: 'phyllis',
+    name: 'Phyllis Chi',
+    avatar: '/avatars/phyllis-chi.svg',
+    title: '资深财务顾问',
+    company: '多家企业（顾问）',
+    companyType: '企业服务',
+    industry: '财务',
+    years: '资深',
+    tagline: '资深财务顾问 · 业财融合与财务BP · 从招聘方视角帮你打磨简历与面试',
+    tags: ['企业财务', '财务BP', '业财融合', '简历面试', '财务管理', '财务分析'],
+    price: 59,
+    isFree: false,
+    // 人格 Prompt 由 content/knowledge-governance/prompts/phyllis_system_prompt.md 加载（v0.3）
+    personalityPrompt: '',
+    knowledgeEntries: [],
+    usesDbKnowledge: true,
+    expertiseDomains: ['企业财务', '财务管理', '财务BP', '业财融合', '会计核算', '财务分析', '财务转型', '成本管理', '预算管理', '内控合规', '简历', '面试', '招聘视角', '职业发展', '团队管理', '实习生与应届生成长'],
+    publicProfile:
+      'Phyllis Chi｜资深财务人，目前以兼职财务顾问方式参与企业财务管理，向 CFO、CEO 等管理层提供高级财务管理建议与策略方案。长期实践企业财务、财务 BP 与业财融合，也从招聘方和管理者视角帮助用户检查简历、面试表达与成长路径。',
+    suggestedQuestions: [
+      '财务 BP 和传统财务会计有什么区别？',
+      '财务人怎么从执行层走到管理层视角？',
+      '简历上的项目经历怎么写才体现真本事？',
+      '第一份财务工作应该怎么选平台？',
+    ],
+  },
+  {
+    id: 'ying',
+    name: 'Ying Wang',
+    avatar: '/avatars/ying-wang.svg',
+    title: '生产负责人',
+    company: '具身智能/人形机器人',
+    companyType: '制造',
+    industry: '智能制造',
+    years: '多年制造',
+    tagline: '汽车新能源制造老兵 · 现人形机器人生产负责人 · 从现场视角聊制造、工艺与求职',
+    tags: ['制造业', '新能源汽车', '具身智能', '生产工艺', '量产导入', '校招社招'],
+    price: 59,
+    isFree: false,
+    // 人格 Prompt 由 content/knowledge-governance/prompts/ying_system_prompt.md 加载（v0.2）
+    personalityPrompt: '',
+    knowledgeEntries: [],
+    usesDbKnowledge: true,
+    expertiseDomains: ['制造业', '汽车', '新能源汽车', '具身智能', '人形机器人', '生产管理', '工艺工程', '量产导入', '工厂现场', '质量', '校招', '社招', '简历', '面试', '职业转型', '职业探索', '普通本科求职'],
+    publicProfile:
+      'Ying Wang｜2026年9月进入具身智能行业，现任人形机器人相关生产负责人；此前长期在汽车与新能源制造领域从事生产、工艺与量产导入工作。普通本科院校出身，擅长从工程与生产现场视角讲清制造业真实日常、校招社招、入职成长与职业转型。',
+    suggestedQuestions: [
+      '普通本科进制造业还有好机会吗？',
+      '生产和工艺工程师每天到底在做什么？',
+      '现在想进具身智能行业，晚不晚？',
+      '校招进工厂之后，几年内能怎么发展？',
     ],
   },
   {
@@ -861,7 +942,7 @@ export function buildSystemPrompt(mentor: Mentor, query: string): string {
   // 行业导师：注入人格 + 知识库 + 通用规则
   const knowledgeResults = searchKnowledge(mentor, query);
 
-  let prompt = mentor.personalityPrompt + '\n\n';
+  let prompt = (mentor.personalityPrompt || '') + '\n\n';
 
   if (knowledgeResults.length > 0) {
     prompt += '以下是你的知识库中与用户问题相关的内容，请基于这些内容回答：\n\n';

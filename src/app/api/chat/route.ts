@@ -17,6 +17,7 @@ import { chatMessageSchema } from '@/lib/validation';
 import { getMentorById, buildSystemPrompt } from '@/lib/mentors';
 import { buildMentorSystemPrompt, type MentorChatContext } from '@/lib/mentor-kb';
 import { PLATFORM_CONSTRAINTS_PROMPT, PLACEHOLDER_NONE } from '@/lib/prompts';
+import { getGlobalSystemPolicy, getMentorPersonaPrompt } from '@/lib/mentor-content';
 import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
 import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } from '@/lib/member-cache';
 import { proxyFetch } from '@/lib/proxy-fetch';
@@ -867,7 +868,12 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      systemPrompt = PLATFORM_CONSTRAINTS_PROMPT + '\n\n' + buildSystemPrompt(mentor, message);
+      systemPrompt = [
+        getGlobalSystemPolicy(),
+        PLATFORM_CONSTRAINTS_PROMPT,
+        getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
+        buildSystemPrompt(mentor, message),
+      ].join('\n\n');
     }
 
     // 11.8 跨导师分身协作：互认识 + 只知"聊过" + 授权后可调取历史

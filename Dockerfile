@@ -24,12 +24,10 @@ RUN npx prisma generate
 RUN npx prisma db push --skip-generate
 RUN npm run build
 
-# 生成生产数据库（含 schema + 知识卡 seed）
+# 生成生产数据库（含 schema + 六位规范导师 339 张知识卡 seed）
 RUN mkdir -p /app/data \
  && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-mentor-kb.ts \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-winnie-kb.ts \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-tina-kb.ts
+ && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-knowledge-cards.ts
 
 # ===== Stage 3: runner =====
 FROM node:20-alpine AS runner
@@ -59,6 +57,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # public 静态资源（头像等）— standalone 不会自动包含
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# 导师治理资产（运行时只读：全局 policy + 六位导师 persona prompt md）
+# cards/*.jsonl 仅构建期 seed 使用，不进运行镜像（避免内部来源/置信度等元数据随镜像分发）
+COPY --from=builder --chown=nextjs:nodejs \
+  /app/content/knowledge-governance/GLOBAL_MENTOR_SYSTEM_POLICY.md \
+  /app/content/knowledge-governance/prompts \
+  ./content/knowledge-governance/
 
 # Prisma 引擎二进制文件 — standalone 构建可能未包含
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma

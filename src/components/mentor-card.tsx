@@ -39,9 +39,15 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2">
           <h3 className="text-sm font-semibold text-ink">{mentor.name}</h3>
-          {mentor.years !== undefined && mentor.years !== 0 && (
-            <span className="text-xs text-muted">{mentor.years}年经验</span>
-          )}
+          {typeof mentor.years === 'number'
+            ? mentor.years !== 0 && (
+                <span className="text-xs text-muted">{mentor.years}年经验</span>
+              )
+            : mentor.years
+              ? /^[>0-9]/.test(mentor.years)
+                ? <span className="text-xs text-muted">{mentor.years}年经验</span>
+                : <span className="text-xs text-muted">{mentor.years}</span>
+              : null}
           {isLocked && (
             <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

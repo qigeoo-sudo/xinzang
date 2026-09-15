@@ -5,20 +5,24 @@ const nextConfig = {
   images: {
     remotePatterns: [],
   },
-  // Prisma + bcryptjs 需要外部化处理，不能被 Next.js 打包
-  serverComponentsExternalPackages: [
-    '@prisma/client',
-    '@auth/prisma-adapter',
-    'bcryptjs',
-    'undici',
-  ],
-  // 确保 Prisma 引擎二进制文件被包含在 standalone 构建中
-  outputFileTracingIncludes: {
-    '/': [
-      './node_modules/.prisma/**/*',
-      './node_modules/@prisma/**/*',
-      './src/generated/prisma/**/*',
+  // Next 14.2：外部包与文件追踪配置位于 experimental 下（Next 15 才提升为顶层键）
+  experimental: {
+    // Prisma + bcryptjs 需要外部化处理，不能被 Next.js 打包
+    serverComponentsExternalPackages: [
+      '@prisma/client',
+      '@auth/prisma-adapter',
+      'bcryptjs',
+      'undici',
     ],
+    // 确保 Prisma 引擎二进制文件、导师治理资产（content/ 下 md/jsonl）被包含在 standalone 构建中
+    outputFileTracingIncludes: {
+      '/': [
+        './node_modules/.prisma/**/*',
+        './node_modules/@prisma/**/*',
+        './src/generated/prisma/**/*',
+        './content/**/*',
+      ],
+    },
   },
   // 安全响应头配置 — 修复安全审计报告 A05
   async headers() {

@@ -55,7 +55,15 @@ export default async function MentorDetailPage({
               </div>
               <p className="text-xs text-muted mb-1">
                 {mentor.title} . {mentor.company}
-                {mentor.years !== undefined ? ` . ${mentor.years}年经验` : ''}
+                {typeof mentor.years === 'number'
+                  ? mentor.years !== 0
+                    ? ` . ${mentor.years}年经验`
+                    : ''
+                  : mentor.years
+                    ? /^[>0-9]/.test(mentor.years)
+                      ? ` . ${mentor.years}年经验`
+                      : ` . ${mentor.years}`
+                    : ''}
               </p>
               <p className="text-sm text-ink/80 mb-2">{mentor.tagline}</p>
               <div className="flex flex-wrap gap-1">

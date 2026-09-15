@@ -1,16 +1,18 @@
 /**
- * 导师关键词搜索（首页第三张卡片）
+ * 导师关键词搜索（首页第三张卡片 / 档案页推荐导师共用）
  *
  * 候选范围：已上线（!comingSoon）的行业导师。
- * 只在人工提炼的短文本上匹配：知识卡标题/领域、静态条目关键词/分类、
- * 标签/行业、姓名头衔、常见问题、一句话介绍。
- * 不扫知识卡正文（coreView）、条目正文（content）和长简介，
- * 避免双字组合在长文里误命中；查询中的高频通用词先停用过滤。
- * 按匹配度取前 5，无命中不虚构结果，由页面引导去导师列表。
+ * 知识卡只在 title 与 applicableTo 两个短文本字段上匹配；
+ * 不扫 coreView / reasoning / caseText 等长文，避免双字组合误命中。
+ * 卡池门槛与聊天检索一致：knowledgeClass=external_approved（
+ * MENTOR_INTERNAL_TEST=true 时额外放行 external_pending），
+ * disclosureMode != none，validFrom 已生效。
+ * 查询中的高频通用词先停用过滤，按匹配度取前 5；无命中不虚构结果。
  */
 import { prisma } from './prisma';
 import { mentors, type Mentor } from './mentors';
 import { tokenizeQuery } from './kb-scoring';
+import { getRetrievableClasses } from './kb-governance';
 
 /** 卡片渲染所需的公开字段（不带 personalityPrompt 等内部配置） */
 export interface MentorCardData {
@@ -119,18 +121,18 @@ export async function searchMentors(rawQuery: string): Promise<MentorSearchHit[]
   const tokens = tokenizeQuery(query).filter(isEffectiveToken);
   if (tokens.length === 0) return [];
 
-  // 一次性取回全部候选导师的公开知识卡（approved/published + 公开范围）
-  // 口径与导师对话检索 mentor-kb.ts 的 RETRIEVABLE_STATUSES 保持一致
+  // 一次性取回全部候选导师的公开知识卡
+  // 口径与导师对话检索 mentor-kb.ts 保持一致：权限过滤发生在 SQL where
   const cards = await prisma.mentorKnowledgeCard.findMany({
     where: {
       mentorId: { in: candidates.map((m) => m.id) },
-      status: { in: ['approved', 'published'] },
-      publicationScope: { in: ['public_generalized', 'public_exact'] },
+      knowledgeClass: { in: getRetrievableClasses() },
+      disclosureMode: { not: 'none' },
     },
     select: {
       mentorId: true,
-      domain: true,
       title: true,
+      applicableTo: true,
       validFrom: true,
     },
   });
@@ -164,12 +166,12 @@ export async function searchMentors(rawQuery: string): Promise<MentorSearchHit[]
       matched.forEach((t) => covered.add(t));
     };
 
-    // 1. 数据库知识卡：权重 10
+    // 1. 数据库知识卡：权重 10（只匹配 title + applicableTo 短文本）
     const dbCards = cardsByMentor.get(mentor.id) || [];
     let dbHit = false;
     for (const c of dbCards) {
       const matched = countMatchedTokens(
-        `${c.title}\n${c.domain}`,
+        `${c.title}\n${c.applicableTo || ''}`,
         tokens
       );
       if (matched.size > 0) {

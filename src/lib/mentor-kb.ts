@@ -1,12 +1,16 @@
 /**
- * 导师知识库检索 + 三层 System Prompt 组装（数据库知识卡版本）
+ * 导师知识库检索 + System Prompt 组装（knowledge-governance 1.1 版）
  *
- * 三层架构：
- * 1. 平台硬约束 Prompt（prompts.ts，全局最高优先级）
- * 2. 导师人格 Prompt（mentor.personalityPrompt）
- * 3. 专业知识总调度 Prompt（prompts.ts，注入变量）
+ * 四层架构（handoff §4）：
+ * 1. 全体导师共同 System Policy（content/.../GLOBAL_MENTOR_SYSTEM_POLICY.md）
+ * 2. 平台运行规则（prompts.ts，路由/证据门禁等代码侧规则）
+ * 3. 单导师人格 Prompt（content/.../prompts/<mentorId>_system_prompt.md）
+ * 4. 经权限与披露过滤的知识 + 会话编排（ORCHESTRATOR_TEMPLATE）
  *
- * 知识卡与风格 Prompt 分开管理；审核稿、访谈工作底稿、评测题不进入知识卡检索。
+ * 权限矩阵（过滤发生在 SQL where，先于检索/排序）：
+ * - 普通生产：只检索 knowledgeClass=external_approved
+ * - MENTOR_INTERNAL_TEST=true（仅 staging/内测）：额外放行 external_pending
+ * - internal_pending / internal_approved 在任何环境都不进入用户检索
  */
 import { prisma } from './prisma';
 import type { Mentor } from './mentors';
@@ -20,19 +24,8 @@ import {
   assembleSystemPrompt,
   PLACEHOLDER_NONE,
 } from './prompts';
-
-// 生产聊天只检索已确认知识卡。
-// candidate/draft/hold_for_round2/mentor_unconfirmed 只能走隔离的内部测试链路，
-// 不能在正常聊天中交给模型“自行判断是否可用”。
-const RETRIEVABLE_STATUSES = [
-  'approved',
-  'published',
-];
-
-const USER_VISIBLE_SCOPES = new Set([
-  'public_exact',
-  'public_generalized',
-]);
+import { getGlobalSystemPolicy, getMentorPersonaPrompt } from './mentor-content';
+import { getRetrievableClasses } from './kb-governance';
 
 /** 聊天上下文（由 route 注入，用于总调度变量） */
 export interface MentorChatContext {
@@ -45,43 +38,37 @@ export interface MentorChatContext {
   allowedScope?: string;
 }
 
-function isUserPublishableCard(card: KnowledgeCardLike): boolean {
-  const compatCard = card as KnowledgeCardLike & {
-    publicationScope?: string | null;
-    validFrom?: Date | string | null;
-  };
-  const scope = compatCard.publicationScope;
-
-  // 兼容旧卡：历史 approved/published 卡若尚未填 publicationScope，
-  // 不在本次无 Schema 迁移中强制拦截；但已明确标为内部或排除的必须拦截。
-  if (scope && !USER_VISIBLE_SCOPES.has(scope)) return false;
-
-  if (compatCard.validFrom) {
-    const validFrom = new Date(compatCard.validFrom).getTime();
-    if (Number.isFinite(validFrom) && validFrom > Date.now()) return false;
+/** validFrom 未到生效时间的卡不参与检索 */
+function isEffective(card: { validFrom?: string | null }): boolean {
+  if (card.validFrom) {
+    const ts = new Date(card.validFrom).getTime();
+    if (Number.isFinite(ts) && ts > Date.now()) return false;
   }
-
   return true;
 }
 
 /**
- * 关键词检索数据库知识卡，按分数降序取 Top N
+ * 关键词检索数据库知识卡，按分数降序取 Top N。
+ * 权限过滤在 SQL 层完成，不把无权卡读进内存。
  */
 export async function searchKnowledgeCards(
   mentorId: string,
   query: string,
-  topN: number = 4
+  topN: number = 4,
 ): Promise<KnowledgeCardLike[]> {
-  const cards = await prisma.mentorKnowledgeCard.findMany({
+  // Prisma 以 String 存储枚举字面量，SQL where 已按治理白名单过滤，边界处收窄类型
+  const cards = (await prisma.mentorKnowledgeCard.findMany({
     where: {
       mentorId,
-      status: { in: RETRIEVABLE_STATUSES },
+      knowledgeClass: { in: getRetrievableClasses() },
+      disclosureMode: { not: 'none' },
     },
     select: {
       cardId: true,
       mentorId: true,
       domain: true,
       title: true,
+      caseText: true,
       coreView: true,
       reasoning: true,
       applicableTo: true,
@@ -89,19 +76,18 @@ export async function searchKnowledgeCards(
       prerequisites: true,
       exceptions: true,
       risks: true,
-      source: true,
-      confidence: true,
-      status: true,
-      publicationScope: true,
+      knowledgeClass: true,
+      disclosureMode: true,
       validFrom: true,
       reviewAfter: true,
+      version: true,
     },
-  });
+  })) as KnowledgeCardLike[];
 
   const tokens = tokenizeQuery(query);
 
   return cards
-    .filter(isUserPublishableCard)
+    .filter(isEffective)
     .map((card) => ({ card, score: scoreCard(card, tokens) }))
     .filter((s) => s.score > 0)
     .sort((a, b) => b.score - a.score)
@@ -110,8 +96,7 @@ export async function searchKnowledgeCards(
 }
 
 /**
- * 构建导师分身三层 System Prompt（数据库知识卡版本）
- * 返回最终 prompt 与命中的 card_id 列表（用于命中记录）
+ * 构建导师分身 System Prompt（四层），返回最终 prompt 与命中 cardId（仅审计用）。
  */
 export async function buildMentorSystemPrompt(
   mentor: Mentor,
@@ -123,6 +108,7 @@ export async function buildMentorSystemPrompt(
   const cardsText = formatKnowledgeCards(cards);
 
   const systemPrompt = assembleSystemPrompt({
+    globalPolicy: getGlobalSystemPolicy(),
     mentorName: mentor.name,
     mentorProfilePublic: mentor.publicProfile || mentor.tagline,
     userProfileConfirmed: ctx.userProfileConfirmed || PLACEHOLDER_NONE,
@@ -133,7 +119,7 @@ export async function buildMentorSystemPrompt(
     evidencePolicy: ctx.evidencePolicy,
     allowedScope: ctx.allowedScope,
     retrievedCardsText: cardsText,
-    persona: mentor.personalityPrompt,
+    persona: getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
   });
 
   return { systemPrompt, hitCardIds };
