@@ -1819,13 +1819,15 @@ export function RegisterWizard({
               >
                 先回首页
               </Link>
-              <Link
-                href="/dashboard/profile"
+              <button
+                type="button"
+                // 整页跳转：自动登录刚完成时，Link 的客户端预取可能拿到旧的「跳登录」缓存
+                onClick={() => { window.location.href = '/dashboard/profile'; }}
                 className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white text-center"
                 style={{ background: C.orange }}
               >
                 修改档案资料
-              </Link>
+              </button>
             </div>
           </div>
         )}
