@@ -44,10 +44,10 @@ export interface WxPayNotifyData {
 // ========== 配置 ==========
 
 // Mock 模式必须显式开启，防止生产环境配置缺失时静默降级
-// 生产环境（NODE_ENV=production）硬禁用，即使 MOCK_PAYMENT_ENABLED 误设也无效
+// 生产构建默认硬禁用；仅 CloudBase staging（DEPLOY_ENV=staging）可显式开启
 const isMockMode =
   process.env.MOCK_PAYMENT_ENABLED === 'true' &&
-  process.env.NODE_ENV !== 'production';
+  (process.env.NODE_ENV !== 'production' || process.env.DEPLOY_ENV === 'staging');
 
 const config = {
   appId: process.env.WXPAY_APP_ID || '',
