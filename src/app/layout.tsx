@@ -1,6 +1,12 @@
 import type { Metadata, Viewport } from 'next';
 import { Providers } from '@/components/providers';
 import { ServiceWorkerRegister } from '@/components/sw-register';
+// 杂志风标题字体（思源宋体）与刊头小字（DM Mono），fontsource 自托管，构建不依赖外网
+import '@fontsource/noto-serif-sc/600.css';
+import '@fontsource/noto-serif-sc/700.css';
+import '@fontsource/noto-serif-sc/900.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -24,6 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // 与页头渐变顶端同色，状态栏 → 导航 → 页头颜色连成一条
   themeColor: '#FDF5EC',
   width: 'device-width',
   initialScale: 1,

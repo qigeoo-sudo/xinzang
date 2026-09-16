@@ -8,8 +8,8 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // 2026 新首页设计系统（home-sample-2）：暖米底 + 藏青墨 + 橙/金/鼠尾草绿 + 珊瑚红
-        bg: { DEFAULT: '#F2E6D8', dark: '#E8D9C4' },
+        // 2026 新首页设计系统 3.0「黏土汽水」：与 logo 同源——杏红奶油底 + 藏青 + 珊瑚橙 + 鼠尾草 + 暖金
+        bg: { DEFAULT: '#F9E9DF', dark: '#F1DCCE', cream: '#FFF9F2', deep: '#F1DCCE' },
         ink: '#2C3E5C',
         muted: '#5A6B7E',
         rule: '#D1D5DB',
@@ -98,11 +98,14 @@ const config: Config = {
           'sans-serif',
         ],
         serif: [
-          'Noto Serif SC',
+          '"Noto Serif SC"',
           'Georgia',
           'serif',
         ],
-        mono: ['DMMono', 'JetBrains Mono', 'monospace'],
+        mono: ['"DM Mono"', 'JetBrains Mono', 'monospace'],
+      },
+      letterSpacing: {
+        masthead: '0.22em',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',
@@ -111,8 +114,18 @@ const config: Config = {
         'breathe': 'breatheFirst 3s ease-in-out 1 forwards, breatheLoop 3s ease-in-out infinite',
         'hero-decor': 'heroDecorFadeIn 5s ease-in 3s forwards',
         'card-in': 'cardIn .5s ease-out both',
+        'rise': 'rise .7s cubic-bezier(.22,.61,.36,1) both',
+        'float': 'float 4.5s ease-in-out infinite',
       },
       keyframes: {
+        rise: {
+          '0%': { opacity: '0', transform: 'translateY(18px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0) rotate(4deg)' },
+          '50%': { transform: 'translateY(-10px) rotate(4deg)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },

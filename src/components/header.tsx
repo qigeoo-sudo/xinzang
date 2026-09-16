@@ -28,8 +28,8 @@ const navLabels = {
     mentors: 'Mentors',
     dashboard: 'Growth',
     myProfile: 'My Profile',
-    login: 'Log In',
-    register: 'Sign Up',
+    login: 'log in',
+    register: 'sign up',
     subscribe: 'Subscribe',
     renew: 'Upgrade',
     logout: 'Logout',
@@ -156,7 +156,7 @@ function HeaderInner() {
   // 功能按钮（三态）：未登录=注册/登录；非会员=订阅/退出；会员=升级/退出
   // compact=true 用于手机端第一行
   const renderActions = (compact: boolean) => {
-    const box = compact ? 'px-2.5 py-1 text-xs gap-1' : 'px-3 py-1.5 text-sm gap-1.5';
+    const box = compact ? 'px-2.5 py-1 text-xs gap-1 rounded-[10px]' : 'px-3 py-1.5 text-sm gap-1.5 rounded-[10px]';
     const iconPx = compact ? 14 : 16;
 
     const crownIcon = (
@@ -169,7 +169,7 @@ function HeaderInner() {
     const logoutButton = (
       <button
         onClick={handleLogout}
-        className={`flex items-center rounded-xl border border-slate-300 bg-white font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-100 ${box}`}
+        className={`flex items-center border border-ink/20 bg-bg-cream font-medium text-ink/70 transition-all hover:border-ink/45 hover:text-ink ${box}`}
       >
         <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -192,8 +192,8 @@ function HeaderInner() {
             href={subHref}
             className={
               isPremiumUser
-                ? `flex items-center rounded-xl border border-sage-300 bg-sage-50 font-medium text-sage-700 shadow-sm transition-all hover:bg-sage-100 ${box}`
-                : `flex items-center rounded-xl bg-brand-500 font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 ${box}`
+                ? `flex items-center border border-sage-600/30 bg-sage-50 font-medium text-sage-700 transition-all hover:bg-sage-100 ${box}`
+                : `clay flex items-center justify-center font-semibold text-ink transition-all active:scale-95 ${compact ? 'bg-[#FFF9F2] hover:bg-white' : 'bg-brand-500 hover:bg-brand-400'} ${box}`
             }
           >
             {crownIcon}
@@ -208,7 +208,7 @@ function HeaderInner() {
       <>
         <Link
           href="/register-v2"
-          className={`flex items-center rounded-xl bg-brand-500 font-medium text-white shadow-sm transition-all hover:bg-brand-600 active:scale-95 ${box}`}
+          className={`flex items-center justify-center border border-sage-400 bg-sage-400 font-semibold text-white transition-all hover:border-sage-500 hover:bg-sage-500 ${compact ? 'min-w-[78px]' : 'min-w-[92px]'} ${box}`}
         >
           <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -220,7 +220,7 @@ function HeaderInner() {
         </Link>
         <Link
           href="/login"
-          className={`flex items-center rounded-xl border border-slate-300 bg-white font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-100 ${box}`}
+          className={`flex items-center justify-center border border-ink/20 bg-bg-cream font-medium text-ink/70 transition-all hover:border-ink/45 hover:text-ink ${compact ? 'min-w-[78px]' : 'min-w-[92px]'} ${box}`}
         >
           <svg width={iconPx} height={iconPx} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -235,19 +235,19 @@ function HeaderInner() {
 
   return (
     <>
-      {/* 移动端导航 — 第一行 Logo+名称+功能按钮，第二行 5 个功能入口 */}
+      {/* 移动端导航 — 第一行（窄行）Logo+名称+功能按钮，第二行（宽行）5 个功能入口 */}
       <nav className={`glass-nav z-50 md:hidden ${lockedClass}`}>
-        <div className="flex h-12 items-center justify-between gap-2 px-3">
+        <div className="nav-extend flex h-12 items-center justify-between gap-2 px-3">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <Image
               src="/icons/icon-1024.png"
               alt="榨职机 Career Companion"
-              width={28}
-              height={28}
+              width={32}
+              height={32}
               priority
-              className="h-7 w-7 rounded-lg shadow-sm"
+              className="h-8 w-8"
             />
-            <span className="truncate text-xs font-semibold text-brand-900">
+            <span className="truncate font-serif text-[13px] font-bold text-ink">
               Career Companion
             </span>
           </Link>
@@ -255,13 +255,14 @@ function HeaderInner() {
             {renderActions(true)}
           </div>
         </div>
-        <div className="flex items-center justify-around border-t border-rule/50 px-1">
+        {/* 宽行：奶油玻璃底，遮挡渐变延续段 */}
+        <div className="flex items-center justify-around border-t border-ink/10 px-1">
           {navItems.map((item) => (
             <Link
               key={item.href + item.label}
               href={item.href}
               className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
-                isActive(item.href) ? 'text-brand-500' : 'text-slate-400'
+                isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
               }`}
             >
               {item.icon}
@@ -279,29 +280,27 @@ function HeaderInner() {
             <Image
               src="/icons/icon-1024.png"
               alt="榨职机 Career Companion"
-              width={36}
-              height={36}
+              width={40}
+              height={40}
               priority
-              className="w-9 h-9 rounded-xl shadow-sm"
+              className="h-10 w-10"
             />
             <div className="hidden sm:flex flex-col leading-none">
-              <span className="font-semibold text-sm text-brand-900">Career Companion</span>
-              <span className="text-[9px] font-medium text-sage-600 mt-0.5">
+              <span className="font-serif text-sm font-bold text-ink">Career Companion</span>
+              <span className="mt-1 font-mono text-[8px] font-medium uppercase tracking-[0.14em] text-ink/45">
                 Navigate Around Any Singularity, Shape Your Future
               </span>
             </div>
           </Link>
 
-          {/* 导航链接 */}
+          {/* 导航链接：平时灰，悬停/选中变鼠尾草绿 */}
           <div className="flex items-center gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.href + item.label}
                 href={item.href}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition-all ${
-                  isActive(item.href)
-                    ? 'bg-brand-50 text-brand-600'
-                    : 'text-slate-400 hover:text-brand-500'
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                  isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
                 }`}
               >
                 {item.icon}

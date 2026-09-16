@@ -1,9 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useLanguage } from '@/components/language-context';
 import { LanguageToggle } from '@/components/language-toggle';
 import { EntranceCards } from '@/components/home/entrance-cards';
 import { FeatureCards } from '@/components/home/feature-cards';
+import { MentorPreview } from '@/components/home/mentor-preview';
 import { HomeFooter } from '@/components/home/home-footer';
 
 const copy = {
@@ -28,51 +30,83 @@ export function HomeContent() {
 
   return (
     <main className="flex-1">
-      <LanguageToggle />
+      {/* 封面：渐变页头直接接壤导航栏 + 榨汁机图腾破框探出 */}
+      <section className="relative">
+        {/* 语言切换：白色圆形气泡，页头右上角（移动端位于"我的档案"入口下方） */}
+        <div className="absolute right-4 top-3.5 z-20 md:right-8 md:top-5">
+          <LanguageToggle />
+        </div>
 
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 to-bg px-5 pb-10 pt-14 text-center">
-        {/* 径向光晕 */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              'radial-gradient(ellipse at 25% 25%, rgba(245,166,35,.06) 0, transparent 50%), radial-gradient(ellipse at 75% 75%, rgba(122,158,110,.06) 0, transparent 50%)',
-          }}
-          aria-hidden
-        />
-        {/* 椭圆装饰 */}
-        <svg
-          className="pointer-events-none absolute left-1/2 top-0 h-[280px] w-[280px] -translate-x-1/2 opacity-[.12]"
-          viewBox="0 0 280 280"
-          aria-hidden
-        >
-          <g transform="translate(140,140)" opacity=".5">
-            <ellipse cx="0" cy="0" rx="120" ry="60" fill="none" stroke="#F5A623" strokeWidth="1" />
-            <ellipse cx="0" cy="0" rx="80" ry="40" fill="none" stroke="#7A9E6E" strokeWidth=".8" />
-            <ellipse cx="0" cy="0" rx="40" ry="20" fill="none" stroke="#F8C741" strokeWidth=".6" />
-          </g>
-        </svg>
-
-        <h1 className="relative font-serif text-[clamp(26px,6.5vw,40px)] font-black leading-[1.3] tracking-[-0.02em] text-ink">
-          {tr.sloganA}
-          <span className="bg-gradient-to-br from-brand-500 to-gold-400 bg-clip-text text-transparent">
-            {tr.sloganAccent}
+        {/* 渐变底层（装饰可裁切，图腾不裁切） */}
+        <div className="cover-gradient absolute inset-0 overflow-hidden rounded-b-[36px]">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-4 -top-8 hidden select-none font-serif text-[240px] font-bold leading-none text-white/[0.13] md:block"
+          >
+            榨
           </span>
-          {tr.sloganB}
-        </h1>
-        <p className="relative mt-3 text-sm text-muted">{tr.sub}</p>
+          <span aria-hidden className="absolute left-[8%] top-[16%] text-lg text-white/85">✦</span>
+          <span aria-hidden className="absolute bottom-[34%] left-[42%] text-base text-white/70">✦</span>
+          <span aria-hidden className="absolute right-[34%] top-[12%] text-[10px] text-white/60">✦</span>
+        </div>
+
+        {/* 内容层 */}
+        <div className="relative mx-auto max-w-[840px] px-5 pb-8 pt-12 md:pb-12 md:pt-16">
+          <div className="flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between md:gap-10">
+            <div className="max-w-[560px]">
+              <span
+                className="block h-[3px] w-10 rounded-full bg-white/90"
+                aria-hidden
+              />
+              <h1 className="mt-6 font-serif text-[clamp(32px,8.5vw,54px)] font-bold leading-[1.22] tracking-[-0.02em] text-[#FFF9F2]">
+                {tr.sloganA}
+                <span className="mx-1 inline-block rounded-[10px] bg-[#FFF9F2] px-2.5 leading-tight text-ink">
+                  {tr.sloganAccent}
+                </span>
+                {tr.sloganB}
+              </h1>
+              <p className="mt-5 max-w-[360px] text-sm leading-relaxed text-white/85 md:text-[15px]">
+                {tr.sub}
+              </p>
+            </div>
+
+            {/* 图腾：榨汁机，破框探出到杏红底上。白框=蒙版容器，logo 铺满并放大，溢出部分被裁掉；
+                最底枚金币用原图抠出的完整贴片叠在框外，还原"垂出白框"的原设计 */}
+            <div className="animate-float relative z-10 -mb-[56px] shrink-0 self-center md:-mb-[80px] md:self-end md:pr-4">
+              <div className="h-[170px] w-[170px] overflow-hidden rounded-[34px] shadow-[0_16px_40px_rgba(44,62,92,0.28)] ring-[3px] ring-white/70 md:h-[240px] md:w-[240px] md:rounded-[48px]">
+                <Image
+                  src="/icons/icon-block-1024.png"
+                  alt="榨职机"
+                  width={220}
+                  height={220}
+                  priority
+                  className="h-full w-full scale-[1.18] object-cover"
+                />
+              </div>
+              <Image
+                src="/icons/icon-coin.png"
+                alt=""
+                width={134}
+                height={100}
+                aria-hidden
+                priority
+                className="absolute left-[34.4%] top-[98%] w-[10.6%] drop-shadow-[0_4px_8px_rgba(44,62,92,0.22)]"
+              />
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* 三张入口卡 */}
-      <div className="-mt-2 bg-bg">
-        <EntranceCards lang={uiLang} />
-      </div>
+      {/* 本期目录 */}
+      <EntranceCards lang={uiLang} />
 
-      {/* 为什么选择榨职机 */}
+      {/* 本期导师 */}
+      <MentorPreview lang={uiLang} />
+
+      {/* 立场与事实 */}
       <FeatureCards lang={uiLang} />
 
-      {/* 页脚（首页提供 PWA 安装入口） */}
+      {/* 版权页（首页提供 PWA 安装入口） */}
       <HomeFooter lang={uiLang} showInstall />
     </main>
   );
