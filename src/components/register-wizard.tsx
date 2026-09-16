@@ -18,6 +18,8 @@ import { CustomSelect } from '@/components/custom-select';
 import { SchoolSearch } from '@/components/school-search';
 import { AssessmentSummary } from '@/components/assessment/assessment-summary';
 import { HomeFooter } from '@/components/home/home-footer';
+import { Header } from '@/components/header';
+import { RecommendedMentors } from '@/components/recommended-mentors';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
@@ -823,11 +825,18 @@ export function RegisterWizard({
         ['出生年月', fmtMonth(birthMonth)],
       ];
 
+  // 注册成功页：用户已登录，显示完整导航栏（含首页/职业测试/订阅/退出）
+  const showFullNav = done && !isEdit;
+
   return (
     <div
       className="min-h-screen flex flex-col"
       style={{ background: `linear-gradient(180deg, ${C.heroFrom} 0%, ${C.bg} 360px)` }}
     >
+      {showFullNav ? (
+        <Header />
+      ) : (
+      <>
       {/* 顶栏：对齐新首页 banner；编辑模式左侧带返回入口 */}
       <header className="sticky top-0 z-40 bg-white/75 backdrop-blur-md border-b border-white/60">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center gap-3">
@@ -872,6 +881,8 @@ export function RegisterWizard({
           )}
         </div>
       </header>
+      </>
+      )}
 
       <main className="flex-1 w-full max-w-md mx-auto px-4 pt-8 pb-16">
         {!done ? (
@@ -1810,6 +1821,19 @@ export function RegisterWizard({
             {contactEmail.trim() && (
               <Summary title="联系邮箱" rows={[['Email', contactEmail.trim()]]} />
             )}
+
+            {/* 推荐导师：根据刚填的档案即时匹配 */}
+            <RecommendedMentors
+              profile={{
+                status: identity || null,
+                careers: JSON.stringify(careers),
+                careerAnxiety: careerAnxiety || null,
+                helpPriority: JSON.stringify(helpChoice ? [helpChoice] : []),
+                mentorPreference: JSON.stringify(mentorPreference),
+                workGoal: workGoal || null,
+              }}
+              showAssessmentHint={!savedAssessment}
+            />
 
             <div className="flex gap-3 mt-6">
               <Link

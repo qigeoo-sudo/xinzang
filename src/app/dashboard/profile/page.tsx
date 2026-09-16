@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
 import { HomeFooter } from '@/components/home/home-footer';
 import { AssessmentSummary } from '@/components/assessment/assessment-summary';
+import { RecommendedMentors } from '@/components/recommended-mentors';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
@@ -86,6 +87,9 @@ export default function ProfilePage() {
   const [initialProfile, setInitialProfile] = useState<ProfileData | null>(null);
   const [assessment, setAssessment] = useState<AssessmentView | null>(null);
   const [phone, setPhone] = useState('');
+  // 清空全部数据流程：b1 第一次确认 → b2 再次确认 → 执行
+  const [clearStep, setClearStep] = useState<'none' | 'b1' | 'b2'>('none');
+  const [clearError, setClearError] = useState('');
 
   // 加载用户档案 + 测评结果
   useEffect(() => {
@@ -121,6 +125,44 @@ export default function ProfilePage() {
     }
   }, [status, router]);
 
+  // 清空全部数据（聊天记录 + 档案 + 测评 + 本地缓存），成功后返回首页
+  const handleClearAll = async () => {
+    try {
+      const res = await fetch('/api/profile/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setClearStep('none');
+        setClearError(data.error || '清空失败，请稍后再试');
+        return;
+      }
+      // 清除聊天相关本地缓存，避免旧对话被前端恢复
+      try {
+        const lsKeys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('chat-')) lsKeys.push(key);
+        }
+        lsKeys.forEach((key) => localStorage.removeItem(key));
+        const ssKeys: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith('chat-input-')) ssKeys.push(key);
+        }
+        ssKeys.forEach((key) => sessionStorage.removeItem(key));
+      } catch {
+        // 本地缓存清理失败不影响清空结果
+      }
+      router.push('/');
+      router.refresh();
+    } catch {
+      setClearStep('none');
+      setClearError('网络错误，请稍后再试');
+    }
+  };
+
   if (status === 'loading' || !profileLoaded) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -137,13 +179,26 @@ export default function ProfilePage() {
       <Header />
 
       <div className="page-container flex-1">
-        {/* 标题 */}
-        <div className="mb-5">
-          <h1 className="text-xl font-bold text-ink">我的档案</h1>
-          <p className="text-sm text-muted mt-1">
-            注册资料、测试结果、对话记录都在这儿。
-          </p>
+        {/* 标题 + 清空入口 */}
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-ink">我的档案</h1>
+            <p className="text-sm text-muted mt-1">
+              注册资料、测试结果、对话记录都在这儿。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setClearError('');
+              setClearStep('b1');
+            }}
+            className="shrink-0 rounded-[10px] border border-danger/60 px-3 py-1.5 text-xs font-semibold text-danger transition-all hover:bg-danger/5 active:scale-[.97]"
+          >
+            清空
+          </button>
         </div>
+        {clearError && <p className="-mt-3 mb-4 text-xs text-danger">{clearError}</p>}
 
         {/* 主操作：改资料 / 看对话记录 */}
         <div className="flex flex-wrap gap-3 mb-6">
@@ -197,7 +252,63 @@ export default function ProfilePage() {
         )}
 
         {/* 推荐导师 */}
-        <RecommendedMentors profile={initialProfile} />
+        <RecommendedMentors profile={initialProfile} showAssessmentHint={!assessment} />
+
+        {/* 清空 — 第一次确认 */}
+        {clearStep === 'b1' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="mb-2 text-base font-semibold text-ink">确认清空</h3>
+              <p className="mb-4 text-sm leading-relaxed text-muted">
+                此操作不可撤销，它会清空所有你的聊天记录，所有和职业有关的数据库信息，导师分身将不再记得你。
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setClearStep('none')}
+                  className="flex-1 rounded-[10px] border border-rule bg-white py-2.5 text-sm font-semibold text-ink transition-all hover:bg-sand-25"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClearStep('b2')}
+                  className="flex-1 rounded-[10px] bg-danger py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                >
+                  确认清空
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 清空 — 再次确认 */}
+        {clearStep === 'b2' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+              <h3 className="mb-2 text-base font-semibold text-ink">再次确认</h3>
+              <p className="mb-4 text-sm leading-relaxed text-muted">
+                慎重起见，请再次确认。
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setClearStep('none')}
+                  className="flex-1 rounded-[10px] border border-rule bg-white py-2.5 text-sm font-semibold text-ink transition-all hover:bg-sand-25"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="flex-1 rounded-[10px] bg-danger py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                >
+                  确认清空
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <HomeFooter lang="zh" />
@@ -289,111 +400,4 @@ function InfoCard({ title, rows, className = '' }: { title: string; rows: [strin
   );
 }
 
-// ============================================================
-// 推荐导师：根据档案资料和职业兴趣，用关键词匹配已上线导师
-// ============================================================
 
-function RecommendedMentors({ profile }: { profile: ProfileData | null }) {
-  const [mentors, setMentors] = useState<{ id: string; name: string; title: string; avatar: string; tagline: string }[]>([]);
-  const [loaded, setLoaded] = useState(false);
-
-  // 生成推荐理由
-  const reason = (() => {
-    if (!profile) return '';
-    const parts: string[] = [];
-    // 身份
-    const statusMap: Record<string, string> = { student: '在校生', working: '在职', jobless: '待业中' };
-    const status = statusMap[profile.status || ''] || '';
-    if (status) parts.push(`你目前是${status}，`);
-
-    // 职业方向
-    const careers = parseJsonArray(profile.careers);
-    if (careers.length > 0) {
-      const careerMap: Record<string, string> = {};
-      CAREER_OPTIONS.forEach((o) => { careerMap[o.value] = o.label; });
-      const labels = careers.map((c) => careerMap[c] || c).filter(Boolean);
-      if (labels.length > 0) parts.push(`对${labels.join('、')}方向感兴趣，`);
-    }
-
-    // 求职目标
-    const goalMap: Record<string, string> = {
-      change_job: '想换份工作', improve_skills: '想提高技能', find_job: '想找份工作',
-    };
-    if (profile.workGoal && goalMap[profile.workGoal]) {
-      parts.push(`${goalMap[profile.workGoal]}。`);
-    }
-
-    // 焦虑
-    if (profile.careerAnxiety?.trim()) {
-      parts.push(`当前困惑：${profile.careerAnxiety.trim()}。`);
-    }
-
-    if (parts.length === 0) return '';
-    return parts.join('') + '根据你的情况，为你找到以下导师分身，快去聊聊吧。';
-  })();
-
-  useEffect(() => {
-    if (!profile) return;
-    // 从档案字段拼搜索关键词
-    const careers = parseJsonArray(profile.careers).join(' ');
-    const helpPriority = parseJsonArray(profile.helpPriority).join(' ');
-    const mentorPref = parseJsonArray(profile.mentorPreference).join(' ');
-    const query = [careers, helpPriority, mentorPref, profile.workGoal, profile.careerAnxiety]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    if (!query) {
-      setLoaded(true);
-      return;
-    }
-    fetch(`/api/search/mentors?q=${encodeURIComponent(query)}`)
-      .then((r) => r.json())
-      .then((data: { hits: { id: string; name: string; title: string; avatar: string; tagline: string }[] }) => {
-        setMentors(data.hits.slice(0, 2));
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, [profile]);
-
-  if (!loaded) return null;
-
-  return (
-    <div className="card mb-4">
-      <h2 className="mb-3 border-b border-rule/40 pb-2 text-sm font-semibold text-ink">推荐导师</h2>
-      {mentors.length > 0 ? (
-        <>
-          {reason && (
-            <p className="mb-3 text-xs leading-relaxed text-muted">{reason}</p>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {mentors.map((m) => (
-              <Link
-                key={m.id}
-                href={`/mentors/${m.id}`}
-                className="flex items-center gap-3 rounded-xl border border-rule/50 bg-white/60 p-3 transition-all hover:border-brand-300 hover:bg-brand-50/30"
-              >
-                {m.avatar && (
-                  <img src={m.avatar} alt={m.name} className="h-10 w-10 rounded-full object-cover" />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink truncate">{m.name}</p>
-                  <p className="text-xs text-muted truncate">{m.title}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      ) : (
-        <div className="text-center py-4">
-          <p className="text-sm text-muted mb-3">暂没找到合适导师，可去行业导师页面自行挑选</p>
-          <Link
-            href="/mentors"
-            className="inline-flex items-center rounded-[10px] bg-brand-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-brand-600"
-          >
-            去行业导师 →
-          </Link>
-        </div>
-      )}
-    </div>
-  );
-}

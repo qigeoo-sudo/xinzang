@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { mentors } from '@/lib/mentors';
 import { HomeFooter } from '@/components/home/home-footer';
+import { RecommendedMentors } from '@/components/recommended-mentors';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   }
 
   // 从数据库获取用户数据和聊天历史
-  const [user, chatSessions, subscription, userProfile] = await Promise.all([
+  const [user, chatSessions, subscription, userProfile, assessment] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.user.id },
       select: {
@@ -50,7 +51,19 @@ export default async function DashboardPage() {
     }),
     prisma.userProfile.findUnique({
       where: { userId: session.user.id },
-      select: { careers: true, careerAnxiety: true, helpPriority: true, registrationCompletedAt: true },
+      select: {
+        careers: true,
+        careerAnxiety: true,
+        helpPriority: true,
+        mentorPreference: true,
+        workGoal: true,
+        status: true,
+        registrationCompletedAt: true,
+      },
+    }),
+    prisma.interestAssessment.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true },
     }),
   ]);
 
@@ -223,6 +236,19 @@ export default async function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* 推荐导师 */}
+        <RecommendedMentors
+          profile={{
+            status: userProfile?.status ?? null,
+            careers: userProfile?.careers ?? null,
+            careerAnxiety: userProfile?.careerAnxiety ?? null,
+            helpPriority: userProfile?.helpPriority ?? null,
+            mentorPreference: userProfile?.mentorPreference ?? null,
+            workGoal: userProfile?.workGoal ?? null,
+          }}
+          showAssessmentHint={!assessment}
+        />
       </div>
 
       <HomeFooter lang="zh" />
