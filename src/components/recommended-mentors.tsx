@@ -31,6 +31,22 @@ function parseJsonArray(str: string | null | undefined): string[] {
   }
 }
 
+// 档案/注册向导里存的是英文 value，导师库 tags/头衔是中文，
+// 搜索前必须把 value 映射成中文 label，否则关键词几乎匹配不到导师。
+const CAREER_LABELS: Record<string, string> = Object.fromEntries(
+  CAREER_OPTIONS.map((o) => [o.value, o.label])
+);
+const WORK_GOAL_LABELS: Record<string, string> = Object.fromEntries(
+  [...WORK_GOAL_WORKING, ...WORK_GOAL_JOBLESS].map((o) => [o.value, o.label])
+);
+
+// mentorPreference 里的纯社交关系对“职业方向匹配”没有区分度，不进搜索词
+const NON_PROFESSIONAL_PREFS = new Set(['家人', '好友', '朋友', '同学', '其他']);
+
+function toLabel(values: string[], map: Record<string, string>): string[] {
+  return values.map((v) => map[v] || v);
+}
+
 /**
  * 推荐导师：根据档案关键词匹配已上线导师。
  * 由调用方传入档案字段；未做测评时可显示引导提示。
@@ -91,14 +107,22 @@ export function RecommendedMentors({
 
   useEffect(() => {
     if (!profile) return;
-    const careers = parseJsonArray(profile.careers).join(' ');
-    const helpPriority = parseJsonArray(profile.helpPriority).join(' ');
-    const mentorPref = parseJsonArray(profile.mentorPreference).join(' ');
+
+    // 关键：value 要先转成中文 label 再拿去匹配中文导师库
+    const careers = toLabel(parseJsonArray(profile.careers), CAREER_LABELS);
+    const helpPriority = parseJsonArray(profile.helpPriority);
+    const mentorPref = parseJsonArray(profile.mentorPreference).filter(
+      (v) => v && !NON_PROFESSIONAL_PREFS.has(v)
+    );
+    const workGoal = profile.workGoal
+      ? [WORK_GOAL_LABELS[profile.workGoal] || profile.workGoal]
+      : [];
+
     const query = [
-      careers,
-      helpPriority,
-      mentorPref,
-      profile.workGoal,
+      ...careers,
+      ...helpPriority,
+      ...mentorPref,
+      ...workGoal,
       profile.careerAnxiety,
     ]
       .filter(Boolean)
@@ -110,13 +134,33 @@ export function RecommendedMentors({
       return;
     }
 
-    fetch(`/api/search/mentors?q=${encodeURIComponent(query)}`)
-      .then((r) => r.json())
-      .then((data: { hits: MentorHit[] }) => {
-        setMentors((data.hits ?? []).slice(0, 2));
-        setLoaded(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    fetch(`/api/search/mentors?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+      .then(async (r) => {
+        // 未登录会被中间件重定向到登录页（返回 HTML），不能当 JSON 解析
+        if (!r.ok || (r.headers.get('content-type') || '').includes('text/html')) {
+          throw new Error('unavailable');
+        }
+        return r.json();
       })
-      .catch(() => setLoaded(true));
+      .then((data: { hits?: MentorHit[] }) => {
+        setMentors((data.hits ?? []).slice(0, 2));
+      })
+      .catch(() => {
+        // 网络/鉴权/超时失败：保持空导师列表，但模块仍展示（含测评提示与去挑选入口）
+        setMentors([]);
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        setLoaded(true);
+      });
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [profile]);
 
   if (!loaded) return null;
