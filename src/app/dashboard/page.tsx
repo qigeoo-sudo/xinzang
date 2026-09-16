@@ -50,7 +50,7 @@ export default async function DashboardPage() {
     }),
     prisma.userProfile.findUnique({
       where: { userId: session.user.id },
-      select: { careers: true },
+      select: { careers: true, careerAnxiety: true, helpPriority: true, registrationCompletedAt: true },
     }),
   ]);
 
@@ -70,13 +70,26 @@ export default async function DashboardPage() {
       return Array.isArray(arr) ? arr.length : 0;
     } catch { return 0; }
   })();
+  // 职业画像完成判定：填了职业焦虑自述 或 求助方向
+  const profileComplete =
+    !!(userProfile?.careerAnxiety && userProfile.careerAnxiety.trim()) ||
+    (() => {
+      try {
+        const arr = JSON.parse(userProfile?.helpPriority ?? '[]');
+        return Array.isArray(arr) && arr.length > 0;
+      } catch { return false; }
+    })();
+  const profileCompletedAt = userProfile?.registrationCompletedAt
+    ? new Date(userProfile.registrationCompletedAt).toLocaleDateString('zh-CN')
+    : null;
+
   const milestones = [
     {
       id: 1,
       title: '完成职业画像',
       desc: '兴趣、性格、技能评估完成',
-      completed: totalChats > 0,
-      date: totalChats > 0 ? new Date(user?.createdAt || Date.now()).toLocaleDateString('zh-CN') : null,
+      completed: profileComplete,
+      date: profileComplete ? profileCompletedAt : null,
     },
     {
       id: 2,

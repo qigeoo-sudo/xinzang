@@ -479,7 +479,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
                         <span className="ml-2 text-xs font-normal text-brand-600">一次购买，永不过期</span>
                       </h3>
                       <p className="text-xs text-muted mt-0.5">
-                        ￥{pack.price}/包 · 一次买5个9折（￥89）· 买10个8.5折（￥169）
+                        ￥{pack.price}/包 · 一次买5个9折 · 买10个及以上8.5折
                       </p>
                     </div>
                   </div>

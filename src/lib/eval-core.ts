@@ -227,6 +227,7 @@ export async function runEvalBatch(opts: {
         globalPolicy: getGlobalSystemPolicy(),
         mentorName: mentor.name,
         mentorProfilePublic: mentor.publicProfile || mentor.tagline,
+        genderPronoun: mentor.gender === 'male' ? '他' : '她',
         userProfileConfirmed: PLACEHOLDER_NONE,
         assessmentContext: PLACEHOLDER_NONE,
         conversationSummary: PLACEHOLDER_NONE,

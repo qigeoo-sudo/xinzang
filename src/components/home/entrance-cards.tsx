@@ -54,7 +54,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
 
   return (
     <div className="mx-auto grid max-w-[840px] grid-cols-1 gap-4 px-4 pb-10 md:grid-cols-2 md:px-5 md:pb-12">
-      {/* 卡 1：职业兴趣测试 */}
+      {/* 卡 1：关键词匹配导师 */}
       <div className="animate-card-in rounded-[20px] border border-brand-500/15 bg-gradient-to-br from-brand-50 to-beige p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(44,62,92,0.08)] active:scale-[.99] md:p-7">
         <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[14px] bg-brand-500">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
@@ -65,15 +65,29 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </svg>
         </div>
         <h2 className="mb-5 font-serif text-[17px] font-bold leading-relaxed text-ink md:text-xl">
-          <Quote text={t.quote1} />
+          <Quote text={t.quote3} />
         </h2>
-        <Link
-          href="/assessment"
-          className="inline-flex items-center gap-1.5 rounded-[10px] bg-brand-500 px-[18px] py-2.5 text-[13px] font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.97]"
-        >
-          {t.action1}
-          <span aria-hidden>→</span>
-        </Link>
+        <div className="flex w-full items-stretch overflow-hidden rounded-[10px] border-2 border-coral-300 bg-coral-50 transition-all focus-within:border-brand-500 md:max-w-md">
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') goSearch();
+            }}
+            className="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-coral-800 outline-none placeholder:font-normal placeholder:text-coral-300"
+            placeholder={t.placeholder}
+            aria-label={t.placeholder}
+          />
+          <button
+            type="button"
+            onClick={goSearch}
+            className="flex shrink-0 items-center justify-center bg-brand-500 px-3.5 text-base font-bold text-white transition-all hover:bg-brand-600 active:scale-95"
+            aria-label="search"
+          >
+            →
+          </button>
+        </div>
       </div>
 
       {/* 卡 2：所有导师分身 */}
@@ -101,7 +115,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
         </Link>
       </div>
 
-      {/* 卡 3：关键词匹配导师 */}
+      {/* 卡 3：职业兴趣测试 */}
       <div
         className="animate-card-in rounded-[20px] border border-gold-400/15 bg-gradient-to-br from-gold-50 to-gold-100 p-6 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(44,62,92,0.08)] active:scale-[.99] md:col-span-2 md:p-7"
         style={{ animationDelay: '.2s' }}
@@ -115,29 +129,15 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </svg>
         </div>
         <h2 className="mb-5 font-serif text-[17px] font-bold leading-relaxed text-ink md:text-xl">
-          <Quote text={t.quote3} />
+          <Quote text={t.quote1} />
         </h2>
-        <div className="flex w-full items-stretch overflow-hidden rounded-[10px] border-2 border-coral-300 bg-coral-50 transition-all focus-within:border-gold-400 md:max-w-md">
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') goSearch();
-            }}
-            className="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 text-[13px] font-medium text-coral-800 outline-none placeholder:font-normal placeholder:text-coral-300"
-            placeholder={t.placeholder}
-            aria-label={t.placeholder}
-          />
-          <button
-            type="button"
-            onClick={goSearch}
-            className="flex shrink-0 items-center justify-center bg-gold-400 px-3.5 text-base font-bold text-white transition-all hover:bg-gold-600 active:scale-95"
-            aria-label="search"
-          >
-            →
-          </button>
-        </div>
+        <Link
+          href="/assessment"
+          className="inline-flex items-center gap-1.5 rounded-[10px] bg-gold-400 px-[18px] py-2.5 text-[13px] font-semibold text-white transition-all hover:bg-gold-600 active:scale-[.97]"
+        >
+          {t.action1}
+          <span aria-hidden>→</span>
+        </Link>
       </div>
     </div>
   );

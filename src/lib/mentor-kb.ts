@@ -111,6 +111,7 @@ export async function buildMentorSystemPrompt(
     globalPolicy: getGlobalSystemPolicy(),
     mentorName: mentor.name,
     mentorProfilePublic: mentor.publicProfile || mentor.tagline,
+    genderPronoun: mentor.gender === 'male' ? '他' : '她',
     userProfileConfirmed: ctx.userProfileConfirmed || PLACEHOLDER_NONE,
     assessmentContext: ctx.assessmentContext || PLACEHOLDER_NONE,
     conversationSummary: ctx.conversationSummary || PLACEHOLDER_NONE,

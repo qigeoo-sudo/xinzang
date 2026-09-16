@@ -133,7 +133,7 @@ async function routeMentorRequest(
 - HR、招聘、简历、面试、求职、职业探索、职业选择、薪酬沟通、反馈、绩效、冲突、组织和人才问题，通常是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。
 - Lydia 的个人履历、职位、年份、数字、真实案例、任职公司或产品的具体事实，以及超出一般职业框架的咨询/医疗器械行业事实，是 MENTOR_ANSWER + APPROVED_CARDS_REQUIRED。
 - 医疗器械注册分类、注册证、申报路径、法规策略、质量结论、研发原理、工程设计、性能参数、材料、算法、制造、临床试验、适应症、治疗和医学判断，是 OUT_OF_DOMAIN + SPECIALIST_REQUIRED。即使问题中出现 Lydia 任职公司或公司产品，也不改变这个结果。
-- 任何领域（数学、建筑、编程、文学、外语等）只要与用户的求职、职业选择、职业发展相关，是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。导师会坦诚说明这不是她的专业，然后用职业咨询视角解读。
+- 任何领域（数学、建筑、编程、文学、外语等）只要与用户的求职、职业选择、职业发展相关，是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。导师会坦诚说明这不是本人的专业，然后用职业咨询视角解读。
 - 与职业完全无关的纯学术解题、技术教学或创作任务，是 OUT_OF_DOMAIN + NONE。`
     : '';
 
