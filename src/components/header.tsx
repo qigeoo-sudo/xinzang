@@ -253,7 +253,7 @@ function HeaderInner() {
     <>
       {/* 移动端导航 — 第一行（窄行）Logo+名称+功能按钮，第二行（宽行）5 个功能入口 */}
       <nav className={`glass-nav z-50 md:hidden ${lockedClass}`}>
-        <div className="nav-extend flex h-12 items-center justify-between gap-2 px-3">
+        <div className="nav-extend flex min-h-12 items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)]">
           <Link href="/" className="flex min-w-0 items-center gap-2">
             <Image
               src="/icons/icon-1024.png"

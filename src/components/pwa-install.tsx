@@ -66,10 +66,16 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [guideOpen, setGuideOpen] = useState(false);
   // 挂载后再输出环境相关 UI，避免 SSR 水合不一致
   const [mounted, setMounted] = useState(false);
+  // 已安装（standalone 运行 或 收到 appinstalled）：隐藏入口，
+  // 用户删除桌面图标后再用浏览器打开即恢复显示
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    if (isStandaloneMode()) return;
+    if (isStandaloneMode()) {
+      setInstalled(true);
+      return;
+    }
 
     const ua = window.navigator.userAgent || '';
     // iPadOS 13+ 会把自己伪装成 Mac，用 maxTouchPoints 兜底识别
@@ -88,6 +94,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       setInstallEnv('prompt');
     };
     const onInstalled = () => {
+      setInstalled(true);
       setInstallEnv('unknown');
       setGuideOpen(false);
       setDeferred(null);
@@ -106,6 +113,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       await deferred.prompt();
       const choice = await deferred.userChoice;
       if (choice.outcome === 'accepted') {
+        setInstalled(true);
         setInstallEnv('unknown');
       }
       setDeferred(null);
@@ -115,7 +123,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     setGuideOpen(true);
   };
 
-  if (!mounted) return null;
+  if (!mounted || installed) return null;
 
   const t = copy[lang];
   const isWeChat = installEnv === 'ios-wechat';

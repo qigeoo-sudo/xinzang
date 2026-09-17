@@ -22,7 +22,8 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    // 透明状态栏：让导航橙色行延伸到状态栏下方（iOS standalone）
+    statusBarStyle: 'black-translucent',
     title: 'AI 职业导师',
   },
   formatDetection: {
@@ -31,8 +32,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // 与页头渐变顶端同色，状态栏 → 导航 → 页头颜色连成一条
-  themeColor: '#FDF5EC',
+  // 与导航按钮行橙色渐变顶端同色，状态栏 → 导航 → 页头颜色连成一条
+  themeColor: '#F8B357',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
