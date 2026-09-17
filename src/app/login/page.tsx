@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
+import { PageHero, GoldFlakes, PaperCredits } from '@/components/page-shell';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -48,19 +49,21 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      <GoldFlakes />
 
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
+      <PageHero
+        eyebrow="Welcome Back"
+        title="欢迎回来"
+        subtitle="登录继续你的职业探索之旅。"
+        watermark="登"
+      />
+
+      <main className="relative z-10 flex flex-1 justify-center px-4 py-10 md:py-14">
         <div className="w-full max-w-sm">
-          {/* 标题 */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-ink mb-2">欢迎回来</h1>
-            <p className="text-sm text-muted">登录继续你的职业探索之旅</p>
-          </div>
-
-          {/* 表单卡片 */}
-          <form onSubmit={handleSubmit} className="card space-y-4">
+          {/* 表单卡片：暖白信纸落在奶油底上 */}
+          <form onSubmit={handleSubmit} className="letter-paper space-y-4 rounded-[20px] p-6">
             {/* 错误提示 */}
             {error && (
               <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-lg animate-fade-in">
@@ -131,7 +134,9 @@ function LoginForm() {
             </Link>
           </p>
         </div>
-      </div>
+      </main>
+
+      <PaperCredits lang="zh" />
     </div>
   );
 }

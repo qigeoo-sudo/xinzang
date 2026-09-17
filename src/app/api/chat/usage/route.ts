@@ -90,9 +90,9 @@ export async function GET() {
         limit: mentorLimit, // null = 无限
         dailyUsed: mentorDailyUsed,
         dailyLimit: mentorDailyLimit, // null = 无每日限制（非会员/免费试用）
-        creditsUsed, // 加榨包已用轮次
-        creditsTotal, // 加榨包累计购买轮次
-        creditsBalance, // 加榨包余额（兼容旧字段）
+        creditsUsed, // 多榨卡已用轮次
+        creditsTotal, // 多榨卡累计购买轮次
+        creditsBalance, // 多榨卡余额（兼容旧字段）
       },
     });
   } catch (error) {

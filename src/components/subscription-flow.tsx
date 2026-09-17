@@ -9,7 +9,18 @@ import {
   formatPriceFen,
   getCreditPackDiscount,
   CREDIT_PACK_MAX_QTY,
+  CREDIT_PACK_MAX_BALANCE,
+  YEARLY_RENEWAL_CAP_DAYS,
 } from '@/lib/plans';
+
+import { PaperCredits, GoldFlakes } from '@/components/page-shell';
+
+/** 当前生效订阅（卡内显示到期时间/剩余天数） */
+export interface ActiveSubscriptionInfo {
+  plan: PlanId;
+  endDate: string; // ISO 日期字符串
+  daysRemaining: number;
+}
 
 interface SubscriptionFlowProps {
   plans: SubscriptionPlan[];
@@ -17,6 +28,11 @@ interface SubscriptionFlowProps {
   currentPlanId?: PlanId;
   isPremium?: boolean;
   from?: string;
+  activeSubscription?: ActiveSubscriptionInfo | null;
+  freeTrialRemaining?: number;
+  freeTrialLimit?: number;
+  /** 多榨卡当前持有轮次余额（累计购买 − 累计消耗） */
+  creditBalance?: number;
 }
 
 type PayState = 'idle' | 'creating' | 'paying' | 'polling' | 'success' | 'error';
@@ -31,7 +47,17 @@ const planRank: Record<PlanId, number> = {
   YEARLY: 3,
 };
 
-export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium, from }: SubscriptionFlowProps) {
+export function SubscriptionFlow({
+  plans,
+  creditPacks,
+  currentPlanId,
+  isPremium,
+  from,
+  activeSubscription = null,
+  freeTrialRemaining = 0,
+  freeTrialLimit = 3,
+  creditBalance = 0,
+}: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
 
@@ -47,7 +73,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
   const [showPayModal, setShowPayModal] = useState(false);
   const [modalPlan, setModalPlan] = useState<{ planId: string; isRenewal: boolean; quantity?: number } | null>(null);
 
-  // 加榨包购买数量（可一次多买，享受批量折扣）
+  // 多榨卡购买数量（可一次多买，享受批量折扣）
   const [packQty, setPackQty] = useState(1);
 
   // 轮询订单状态
@@ -103,8 +129,13 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
     [router]
   );
 
-  // 用户点击套餐的支付按钮 — 弹出支付方式选择弹窗（加榨包带购买数量）
+  // 用户点击套餐的支付按钮 — 弹出支付方式选择弹窗（多榨卡带购买数量）
   const handlePlanClick = (planId: string, isRenewal = false, quantity = 1) => {
+    // 年卡续满冻结：点击不起任何作用（按钮本身也已 disabled，双保险）
+    if (isRenewal && planId === 'YEARLY' && yearlyRenewalFull) return;
+    // 多榨卡持有上限冻结：余额 + 本次轮次 > 2970 时拦截（双保险）
+    const pack = creditPacks.find((p) => p.id === planId);
+    if (pack && creditBalance + pack.credits * quantity > CREDIT_PACK_MAX_BALANCE) return;
     setModalPlan({ planId, isRenewal, quantity });
     setShowPayModal(true);
   };
@@ -217,15 +248,16 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
     return !!isPremium && currentPlanId === 'YEARLY' && planId === 'YEARLY';
   };
 
-  // 判断某个方案是否是当前方案
-  const isCurrentPlan = (planId: PlanId): boolean => {
-    return !!isPremium && currentPlanId === planId && !isRenewalPlan(planId);
-  };
+  // 年卡已续满：来自年卡的剩余天数 > 1460 天（4 年），续费入口冻结
+  const yearlyRenewalFull =
+    !!activeSubscription &&
+    activeSubscription.plan === 'YEARLY' &&
+    activeSubscription.daysRemaining > YEARLY_RENEWAL_CAP_DAYS;
 
   // === 渲染: 支付成功 ===
   if (payState === 'success') {
     return (
-      <div className="card text-center py-8 animate-fade-in">
+      <div className="letter-paper rounded-[20px] text-center py-8 animate-fade-in">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/10 flex items-center justify-center">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
             <path d="M5 13l4 4L19 7" stroke="#5B8C5A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
@@ -240,7 +272,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
   // === 渲染: 支付中/轮询 ===
   if (payState === 'paying' || payState === 'polling') {
     return (
-      <div className="card text-center py-8 animate-fade-in">
+      <div className="letter-paper rounded-[20px] text-center py-8 animate-fade-in">
         <div className="w-16 h-16 mx-auto mb-4 relative">
           <div className="absolute inset-0 rounded-full border-4 border-beige" />
           <div className="absolute inset-0 rounded-full border-4 border-accent border-t-transparent animate-spin" />
@@ -285,7 +317,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
   // === 渲染: 错误 ===
   if (payState === 'error') {
     return (
-      <div className="card text-center py-8 animate-fade-in">
+      <div className="letter-paper rounded-[20px] text-center py-8 animate-fade-in">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-danger/10 flex items-center justify-center">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
             <path d="M6 6l12 12M6 18L18 6" stroke="#C0654A" strokeWidth="3" strokeLinecap="round" />
@@ -309,136 +341,175 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
         </div>
       )}
 
-      {/* 已是会员时的提示 */}
-      {isPremium && currentPlanId && (
-        <div className="bg-accent/10 text-accent text-sm px-4 py-3 rounded-lg text-center">
-          {currentPlanId === 'YEARLY'
-            ? '你当前是年度会员，到期后可按原价续费一年'
-            : currentPlanId === 'MONTHLY'
-              ? '你当前是月度会员，可选择更高级别方案升级，剩余时长自动接续'
-              : '你当前是季度会员，可升级年度会员，剩余时长自动接续'}
-        </div>
-      )}
-
-      <div className="space-y-5">
-        {plans.map((plan) => {
-        const disabled = isPlanDisabled(plan.id);
-        const current = isCurrentPlan(plan.id);
-        const renewal = isRenewalPlan(plan.id);
-        const isYearly = plan.id === 'YEARLY';
-        const yearlyOn = isYearly && !disabled;
-
+      {/* 当前生效中的会员卡 — 占顶部主位，卡内直接显示到期时间/剩余天数 */}
+      {activeSubscription && (() => {
+        const activePlan = plans.find((p) => p.id === activeSubscription.plan);
+        if (!activePlan) return null;
+        const isBlack = activePlan.id === 'YEARLY';
+        const cardClass =
+          activePlan.id === 'MONTHLY' ? 'card-gold'
+          : activePlan.id === 'QUARTERLY' ? 'card-sage'
+          : 'card-black';
         return (
-          <div
-            key={plan.id}
-            className={`relative rounded-2xl p-5 ${
-              yearlyOn
-                ? 'bg-gradient-to-br from-[#4088A8] via-[#34728F] to-[#22566B] text-white shadow-lg ring-2 ring-[#7FB07F]/70'
-                : `card ${plan.popular && !disabled ? 'border-accent border-2' : ''}`
-            } ${disabled ? 'opacity-50 grayscale' : ''}`}
-            style={plan.id === 'MONTHLY' && !disabled ? { borderColor: '#cbd5e1' } : undefined}
-          >
-            {yearlyOn ? (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                <span className="tag text-xs px-3 py-0.5 bg-[#7FB07F] text-white">
-                  尊享
-                </span>
-              </div>
-            ) : plan.popular && !disabled ? (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                <span className="tag text-xs px-3 py-0.5 bg-accent text-white">
-                  推荐
-                </span>
-              </div>
-            ) : null}
+          <div className={`relative w-full max-w-[335px] mx-auto rounded-[20px] ${cardClass} aspect-[1.586/1] flex flex-col p-3.5 md:p-4 mb-7`}>
+            {/* 生效中：中央顶部绿色底座 */}
+            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 tag text-xs px-3 py-0.5 bg-success text-white whitespace-nowrap">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              生效中
+            </span>
 
-            {current && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                <span className="tag text-xs px-3 py-0.5 bg-success text-white">
-                  当前方案
-                </span>
-              </div>
-            )}
-
-            {renewal && (
-              <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                <span className="tag text-xs px-3 py-0.5 bg-accent text-white">
-                  续费
-                </span>
-              </div>
-            )}
-
-            <div className="flex items-baseline justify-between mb-2">
-              <h3 className={`font-semibold ${yearlyOn ? 'text-white' : 'text-ink'}`}>{plan.name}</h3>
-              <div className="flex items-baseline gap-0.5">
-                <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>￥</span>
-                <span className={`text-2xl font-bold ${yearlyOn ? 'text-white' : 'text-accent'}`}>
-                  {plan.price}
-                </span>
-                <span className={`text-xs ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>{plan.period}</span>
+            <div className="flex items-start justify-between">
+              <p className={`font-mono text-[10px] font-medium uppercase tracking-masthead ${isBlack ? 'text-foil' : 'text-foil-light'}`}>
+                {activePlan.id}
+              </p>
+              <div className="text-right">
+                <p className={`font-serif text-[18px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
+                  {activePlan.name}
+                </p>
+                <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{activePlan.description}</p>
               </div>
             </div>
 
-            <p className={`text-xs mb-3 ${yearlyOn ? 'text-[#EBE3D8]' : 'text-muted'}`}>{plan.description}</p>
+            <div className="mt-1 flex items-baseline gap-0.5">
+              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>￥</span>
+              <span className={`text-[28px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
+                {activePlan.price}
+              </span>
+              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>{activePlan.period}</span>
+            </div>
 
-            <ul className="space-y-1.5 mb-4">
-              {plan.features.map((feature, i) => (
-                <li
-                  key={i}
-                  className={`flex items-center gap-2 text-sm ${yearlyOn ? 'text-[#EBE3D8]' : 'text-ink'}`}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M5 13l4 4L19 7"
-                      stroke={yearlyOn ? '#7FB07F' : '#5B7C5A'}
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
+            <ul className="mt-1.5 space-y-0">
+              {activePlan.features.map((feature, i) => (
+                <li key={i} className={`flex items-center gap-1.5 text-[11px] leading-snug ${isBlack ? 'text-foil/85' : 'text-white/85'}`}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                    <path d="M5 13l4 4L19 7" stroke={isBlack ? '#F5D785' : '#FFFFFF'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   {feature}
                 </li>
               ))}
             </ul>
 
-            {current ? (
-              <div className="w-full py-2.5 rounded-lg text-sm font-medium text-center bg-beige text-muted">
-                当前方案
-              </div>
-            ) : disabled ? (
-              <div className="w-full py-2.5 rounded-lg text-sm font-medium text-center bg-slate-100 text-slate-400 cursor-not-allowed">
-                不可降级
-              </div>
-            ) : (
-              <button
-                onClick={() => handlePlanClick(plan.id, renewal)}
-                className={`w-full py-2.5 rounded-lg text-sm font-medium transition-all active:scale-95 ${
-                  yearlyOn
-                    ? 'bg-white text-[#22566B] hover:bg-[#EBE3D8] font-semibold'
-                    : plan.popular
-                      ? 'bg-accent text-white hover:bg-accent-bright'
-                      : 'bg-beige text-accent border border-accent hover:bg-sand'
-                }`}
-              >
-                {renewal
-                  ? `续费 ￥${plan.price}`
-                  : isPremium
-                    ? `升级到 ￥${plan.price}`
-                    : `支付 ￥${plan.price}`}
-              </button>
+            <div className={`mt-auto pt-1 text-right text-[10px] ${isBlack ? 'text-foil/75' : 'text-white/75'}`}>
+              {new Date(activeSubscription.endDate).toLocaleDateString('zh-CN')} 到期 · 剩余 {activeSubscription.daysRemaining} 天
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 生效卡与其他方案之间：首页同款全小写英文标语（字号随屏宽自适应、单行） */}
+      {activeSubscription && (
+        <p className="masthead-label mb-7 text-white/80">
+          navigate around any singularity, shape your future
+        </p>
+      )}
+
+      {/* 非会员：免费试用剩余次数 — 低调一行小字 */}
+      {!isPremium && (
+        <p className="text-center text-xs text-muted mb-4">
+          当前为非会员用户 · 剩余免费试用导师分身次数 {freeTrialRemaining} / {freeTrialLimit} 次
+        </p>
+      )}
+
+      <div className="space-y-5">
+        {plans
+          // 当前方案卡已置顶为"生效中"；年卡续费入口保留
+          .filter((plan) => plan.id !== currentPlanId || isRenewalPlan(plan.id))
+          .map((plan) => {
+        const disabled = isPlanDisabled(plan.id);
+        const renewal = isRenewalPlan(plan.id);
+
+        // 信用卡色系：月度=金 / 季度=鼠尾草绿 / 年度=黑
+        const cardClass =
+          plan.id === 'MONTHLY' ? 'card-gold'
+          : plan.id === 'QUARTERLY' ? 'card-sage'
+          : 'card-black';
+
+        const isBlack = plan.id === 'YEARLY';
+
+        return (
+          <div
+            key={plan.id}
+            className={`relative w-full max-w-[335px] mx-auto rounded-[20px] ${cardClass} aspect-[1.586/1] flex flex-col p-3.5 md:p-4 ${disabled ? 'opacity-50 grayscale' : ''}`}
+          >
+            {/* 角标区：年卡续费入口 — 正常=绿色"续费"；剩余 >1460 天=橙色"续满"冻结 */}
+            {renewal && (
+              <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 tag text-xs px-3 py-0.5 text-white whitespace-nowrap ${yearlyRenewalFull ? 'bg-brand-500' : 'bg-accent'}`}>
+                {yearlyRenewalFull ? '续满' : '续费'}
+              </span>
             )}
+
+            {/* 顶行：masthead + 方案名 */}
+            <div className="flex items-start justify-between">
+              <p className={`font-mono text-[10px] font-medium uppercase tracking-masthead ${isBlack ? 'text-foil' : 'text-foil-light'}`}>
+                {plan.id}
+              </p>
+              <div className="text-right">
+                <p className={`font-serif text-[18px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
+                  {plan.name.replace('会员', '')}
+                </p>
+                <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{plan.description}</p>
+              </div>
+            </div>
+
+            {/* 价格 — 紧接顶行，不留空隙 */}
+            <div className="mt-1 flex items-baseline gap-0.5">
+              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>￥</span>
+              <span className={`text-[28px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
+                {plan.price}
+              </span>
+              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>{plan.period}</span>
+            </div>
+
+            {/* features 列表 — 单列紧凑排列；年卡 5 条也能放下，空白由底部 mt-auto 吸收 */}
+            <ul className="mt-1.5 space-y-0">
+              {plan.features.map((feature, i) => (
+                <li key={i} className={`flex items-center gap-1.5 text-[11px] leading-snug ${isBlack ? 'text-foil/85' : 'text-white/85'}`}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                    <path d="M5 13l4 4L19 7" stroke={isBlack ? '#F5D785' : '#FFFFFF'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  {feature}
+                </li>
+              ))}
+            </ul>
+
+            {/* 底部操作区 — 沉底，吸收剩余空间，不影响 features 行距 */}
+            <div className="mt-auto pt-1 flex items-end justify-end">
+              {disabled ? (
+                <span className={`text-[10px] font-semibold uppercase tracking-masthead ${isBlack ? 'text-foil/40' : 'text-white/40'}`}>不可降级</span>
+              ) : renewal && yearlyRenewalFull ? (
+                <button
+                  type="button"
+                  disabled
+                  aria-disabled
+                  className="cursor-not-allowed rounded-md bg-foil/40 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-masthead text-black/60"
+                >
+                  续满 ￥{plan.price}
+                </button>
+              ) : (
+                <button
+                  onClick={() => handlePlanClick(plan.id, renewal)}
+                  className={`rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-masthead transition-all active:scale-95 ${
+                    isBlack
+                      ? 'bg-foil text-black hover:bg-white'
+                      : 'bg-white/95 text-brand-700 hover:bg-white'
+                  }`}
+                >
+                  {renewal ? `续费 ￥${plan.price}` : isPremium ? `升级到 ￥${plan.price}` : `支付 ￥${plan.price}`}
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
       </div>
 
-      {/* 加榨包 — 横向布局 + 虚线描边，与上方会员卡片明确区分；支持一次多买 */}
+      {/* 多榨卡 — 银灰缩小卡，区别于三张彩色会员信用卡 */}
       {creditPacks.length > 0 && (
         <div className="mt-7" id="credit-pack">
           <div className="flex items-center gap-3 mb-4">
-            <span className="h-px flex-1 bg-rule" />
-            <span className="text-xs text-muted shrink-0">不想开通会员？也可单买加榨包</span>
-            <span className="h-px flex-1 bg-rule" />
+            <span className="h-px flex-1 bg-white/15" />
+            <span className="text-xs text-white/60 shrink-0">不想成为会员，也可以买次数</span>
+            <span className="h-px flex-1 bg-white/15" />
           </div>
 
           <div className="space-y-4">
@@ -446,91 +517,94 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
               const totalPriceFen = calcCreditPackPriceFen(pack, packQty);
               const discount = getCreditPackDiscount(packQty);
               const totalRounds = pack.credits * packQty;
+              // 还能再买多少包：(2970 − 当前余额) / 每包轮次，向下取整
+              const maxBuyable = Math.max(
+                0,
+                Math.floor((CREDIT_PACK_MAX_BALANCE - creditBalance) / pack.credits)
+              );
+              // 当前数量下购买后是否超过 2970 轮持有上限
+              const packOverflow = creditBalance + totalRounds > CREDIT_PACK_MAX_BALANCE;
               return (
                 <div
                   key={pack.id}
-                  className="relative rounded-2xl border-2 border-dashed border-brand-300 bg-gradient-to-r from-brand-50 via-white to-white px-4 py-4 shadow-[0_8px_24px_-10px_rgba(212,136,26,0.4)]"
+                  className="relative w-full max-w-[335px] mx-auto rounded-[20px] card-platinum px-4 py-3.5"
                 >
-                  <div className="absolute -top-2.5 left-4">
-                    <span className="tag text-xs px-2.5 py-0.5 bg-gradient-to-r from-brand-400 to-brand-600 text-white shadow-sm">
-                      加榨包
+                  {/* 榨干：当前选择会突破 2970 轮持有时显示红标 */}
+                  {packOverflow && (
+                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 tag text-xs px-3 py-0.5 bg-coral-600 text-white whitespace-nowrap">
+                      榨干
                     </span>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {/* 图标 — 票券造型 */}
-                    <div className="w-11 h-11 rounded-xl bg-brand-100/80 border border-brand-200 flex items-center justify-center shrink-0">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <path
-                          d="M4 9a2 2 0 012-2h12a2 2 0 012 2 2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4V9z"
-                          stroke="#B37015"
-                          strokeWidth="1.7"
-                          strokeLinejoin="round"
-                        />
-                        <path d="M14 8.5v7" stroke="#D4881A" strokeWidth="1.5" strokeDasharray="2 2.5" strokeLinecap="round" />
-                        <circle cx="9" cy="12" r="1.1" fill="#D4881A" />
-                      </svg>
-                    </div>
-
-                    {/* 文案 */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-brand-900 text-sm">
-                        {pack.credits}轮次/包
-                        <span className="ml-2 text-xs font-normal text-brand-600">一次购买，永不过期</span>
-                      </h3>
-                      <p className="text-xs text-muted mt-0.5">
-                        ￥{pack.price}/包 · 一次买5个9折 · 买10个及以上8.5折
+                  )}
+                  <div className="flex items-center gap-3">
+                    {/* 左：数量选择 */}
+                    <div className="shrink-0">
+                      <p className="font-serif text-[17px] font-bold text-ink leading-tight">多榨卡</p>
+                      <p className="text-[10px] text-ink/60 mt-0.5">
+                        {pack.credits}轮次/包 · 永不过期
                       </p>
-                    </div>
-                  </div>
-
-                  {/* 数量选择 + 总价 + 支付 */}
-                  <div className="mt-3.5 flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-xs text-muted">购买数量</span>
-                      <div className="flex items-center rounded-lg border border-brand-300 overflow-hidden">
-                        <button
-                          type="button"
-                          aria-label="减少数量"
-                          disabled={packQty <= 1}
-                          onClick={() => setPackQty((q) => Math.max(1, q - 1))}
-                          className="w-8 h-8 text-lg leading-none text-brand-700 hover:bg-brand-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
-                        >
-                          −
-                        </button>
-                        <span className="w-10 text-center text-sm font-semibold text-ink select-none">
-                          {packQty}
-                        </span>
-                        <button
-                          type="button"
-                          aria-label="增加数量"
-                          disabled={packQty >= CREDIT_PACK_MAX_QTY}
-                          onClick={() => setPackQty((q) => Math.min(CREDIT_PACK_MAX_QTY, q + 1))}
-                          className="w-8 h-8 text-lg leading-none text-brand-700 hover:bg-brand-100 disabled:text-slate-300 disabled:hover:bg-transparent transition-colors"
-                        >
-                          +
-                        </button>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <span className="text-[10px] text-ink/70">数量</span>
+                        <div className="flex items-center rounded-md border border-ink/20 overflow-hidden">
+                          <button
+                            type="button"
+                            aria-label="减少数量"
+                            disabled={packQty <= 1}
+                            onClick={() => setPackQty((q) => Math.max(1, q - 1))}
+                            className="w-6 h-6 text-sm leading-none text-ink hover:bg-ink/10 disabled:text-ink/30 disabled:hover:bg-transparent transition-colors"
+                          >
+                            −
+                          </button>
+                          <span className="w-7 text-center text-xs font-semibold text-ink select-none">
+                            {packQty}
+                          </span>
+                          <button
+                            type="button"
+                            aria-label="增加数量"
+                            disabled={packQty >= CREDIT_PACK_MAX_QTY || packQty >= maxBuyable}
+                            onClick={() => setPackQty((q) => Math.min(CREDIT_PACK_MAX_QTY, maxBuyable, q + 1))}
+                            className="w-6 h-6 text-sm leading-none text-ink hover:bg-ink/10 disabled:text-ink/30 disabled:hover:bg-transparent transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted">共 {totalRounds} 轮次</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-baseline gap-1.5">
+                    {/* 分隔线 */}
+                    <div className="h-14 w-px bg-ink/15 shrink-0" />
+
+                    {/* 右：总价 + 支付 */}
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="text-[10px] text-ink/60 leading-none mb-1">
+                        买5个9折 · 10个及以上8.5折
+                      </p>
+                      <div className="flex items-baseline justify-end gap-1.5">
                         {discount.label && (
-                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-brand-500 text-white font-medium">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-500 text-white font-medium">
                             {discount.label}
                           </span>
                         )}
-                        <span className="text-xs text-brand-600">合计 ￥</span>
-                        <span className="text-xl font-bold text-brand-600">
+                        <span className="text-[11px] text-ink/70">￥</span>
+                        <span className="text-xl font-bold text-ink leading-none">
                           {formatPriceFen(totalPriceFen)}
                         </span>
                       </div>
+                      <p className={`text-[9px] mt-1 ${packOverflow ? 'text-coral-600 font-semibold' : 'text-ink/50'}`}>
+                        {packOverflow
+                          ? '榨过上限了，请消耗点再来'
+                          : `共 ${totalRounds} 轮次`}
+                      </p>
                       <button
+                        type="button"
+                        disabled={packOverflow}
                         onClick={() => handlePlanClick(pack.id, false, packQty)}
-                        className="px-4 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white shadow-sm hover:bg-brand-600 transition-all active:scale-95"
+                        className={`mt-1.5 rounded-md px-3 py-1.5 text-[10px] font-semibold uppercase tracking-masthead transition-all ${
+                          packOverflow
+                            ? 'bg-ink/15 text-ink/35 cursor-not-allowed'
+                            : 'bg-ink text-white hover:bg-brand-700 active:scale-95'
+                        }`}
                       >
-                        立即支付
+                        支付
                       </button>
                     </div>
                   </div>
@@ -548,9 +622,11 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
           onClick={() => setShowPayModal(false)}
         >
           <div
-            className="bg-white rounded-2xl px-6 pt-7 pb-5 mx-4 max-w-[320px] w-full shadow-2xl"
+            className="relative overflow-hidden bg-bg cream-foil rounded-2xl px-6 pt-7 pb-2 mx-4 max-w-[320px] w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
+            <GoldFlakes count={1} stars={1} />
+            <div className="relative z-10">
             <p className="text-center text-[15px] font-medium text-ink mb-5">
               选择支付方式
             </p>
@@ -560,7 +636,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
               <button
                 type="button"
                 onClick={() => handlePay('wechat')}
-                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#07C160] bg-[#07C160]/5 transition-all active:scale-95"
+                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#07C160] bg-[#E7FAF1] transition-all active:scale-95"
               >
                 <div className="w-8 h-8 rounded-lg bg-[#07C160] flex items-center justify-center flex-shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
@@ -577,7 +653,7 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
               <button
                 type="button"
                 onClick={() => handlePay('alipay')}
-                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#1677FF] bg-[#1677FF]/5 transition-all active:scale-95"
+                className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#1677FF] bg-[#E9F2FF] transition-all active:scale-95"
               >
                 <div className="w-8 h-8 rounded-lg bg-[#1677FF] flex items-center justify-center flex-shrink-0">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff" aria-hidden="true">
@@ -601,6 +677,9 @@ export function SubscriptionFlow({ plans, creditPacks, currentPlanId, isPremium,
                 取消支付
               </button>
             </div>
+            </div>
+
+            <PaperCredits compact />
           </div>
         </div>
       )}

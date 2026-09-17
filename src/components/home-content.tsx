@@ -5,7 +5,6 @@ import { useLanguage } from '@/components/language-context';
 import { LanguageToggle } from '@/components/language-toggle';
 import { EntranceCards } from '@/components/home/entrance-cards';
 import { FeatureCards } from '@/components/home/feature-cards';
-import { MentorPreview } from '@/components/home/mentor-preview';
 import { HomeFooter } from '@/components/home/home-footer';
 
 const copy = {
@@ -31,7 +30,7 @@ export function HomeContent() {
   return (
     <main className="flex-1">
       {/* 封面：渐变页头直接接壤导航栏 + 榨汁机图腾破框探出 */}
-      <section className="relative">
+      <section className="relative z-10">
         {/* 语言切换：白色圆形气泡，页头右上角（移动端位于"我的档案"入口下方） */}
         <div className="absolute right-4 top-3.5 z-20 md:right-8 md:top-5">
           <LanguageToggle />
@@ -97,17 +96,57 @@ export function HomeContent() {
         </div>
       </section>
 
-      {/* 本期目录 */}
-      <EntranceCards lang={uiLang} />
+      {/* 机身灰蓝展台：向上吃掉页头 36px 圆角高度（页头 z-10 压在上层），
+          金属卡 / 信纸 / 金币都压在这层丝绒上 */}
+      <div className="home-backdrop relative z-0 -mt-[36px] overflow-hidden">
+        {/* 金币点缀（2枚）+ 四芒星光：全页 4 颗 */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          <Image
+            src="/icons/icon-coin.png"
+            alt=""
+            width={32}
+            height={24}
+            className="coin-debris"
+            style={{ left: '3%', top: '5%', transform: 'rotate(-10deg)' }}
+          />
+          <Image
+            src="/icons/icon-coin.png"
+            alt=""
+            width={28}
+            height={21}
+            className="coin-debris"
+            style={{ right: '3%', top: '60%', transform: 'rotate(14deg)' }}
+          />
+          <span className="star-spark absolute" style={{ left: '9.5%', top: '3.5%', fontSize: 12 }}>
+            ✦
+          </span>
+          <span className="star-spark absolute" style={{ right: '22%', top: '18%', fontSize: 13 }}>
+            ✦
+          </span>
+          <span className="star-spark absolute" style={{ left: '9%', top: '46.5%', fontSize: 10 }}>
+            ✦
+          </span>
+          <span className="star-spark absolute" style={{ right: '8.5%', top: '58%', fontSize: 12 }}>
+            ✦
+          </span>
+        </div>
 
-      {/* 本期导师 */}
-      <MentorPreview lang={uiLang} />
+        <div className="relative z-10">
+          {/* 页头标语（pt 含灰蓝上移的 36px 补偿） */}
+          <p className="masthead-label text-center pt-[68px] pb-4 text-white/80">
+            navigate around any singularity, shape your future
+          </p>
 
-      {/* 立场与事实 */}
-      <FeatureCards lang={uiLang} />
+          {/* 三张金属信用卡入口 */}
+          <EntranceCards lang={uiLang} />
 
-      {/* 版权页（首页提供 PWA 安装入口） */}
-      <HomeFooter lang={uiLang} showInstall />
+          {/* Offer letter：机构抬头 + 正文 + 又及广告 + 三张卖点卡 + 签名 */}
+          <FeatureCards lang={uiLang} />
+
+          {/* 黑卡压底（首页提供 PWA 安装入口） */}
+          <HomeFooter lang={uiLang} showInstall />
+        </div>
+      </div>
     </main>
   );
 }

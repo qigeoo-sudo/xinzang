@@ -26,6 +26,8 @@ const copy = {
     install: '安装到手机',
     title: '安装到手机主屏幕',
     close: '知道了',
+    desktopHint:
+      '请用手机浏览器打开本页面后再点此按钮；在手机上会出现系统安装弹窗或添加到主屏幕的指引。',
     wechat:
       '微信内无法直接安装：请点右上角「···」，选择「在 Safari 中打开」，再按下面步骤操作。',
     steps: [
@@ -38,6 +40,8 @@ const copy = {
     install: 'Install App',
     title: 'Add to Home Screen',
     close: 'Got it',
+    desktopHint:
+      'Please open this page on your phone browser and tap this button again — you will see a system install prompt or an "Add to Home Screen" guide.',
     wechat:
       'Installation is not available inside WeChat. Tap「···」in the top-right corner, choose「Open in Safari」, then follow the steps below.',
     steps: [
@@ -111,10 +115,11 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     setGuideOpen(true);
   };
 
-  if (!mounted || installEnv === 'unknown') return null;
+  if (!mounted) return null;
 
   const t = copy[lang];
   const isWeChat = installEnv === 'ios-wechat';
+  const isDesktop = installEnv === 'unknown';
 
   return (
     <>
@@ -134,9 +139,12 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
           strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M12 3v12" />
-          <path d="M7 8l5-5 5 5" />
-          <path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
+          {/* 充电宝外壳 */}
+          <rect x="6" y="2" width="12" height="20" rx="2" />
+          {/* 顶部 USB 接口 */}
+          <path d="M10 2V0.5h4V2" />
+          {/* 中间闪电（充电指示） */}
+          <path d="M14 8 L10 13 L12 13 L11 16 L15 11 L12 11 Z" fill="currentColor" stroke="none" />
         </svg>
         {t.install}
       </button>
@@ -176,6 +184,11 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
               </button>
             </div>
 
+            {isDesktop && (
+              <div className="mb-4 rounded-xl bg-brand-500/10 px-4 py-3 text-xs leading-5 text-brand-700">
+                {t.desktopHint}
+              </div>
+            )}
             {isWeChat && (
               <div className="mb-4 rounded-xl bg-accent/10 px-4 py-3 text-xs leading-5 text-accent">
                 {t.wechat}

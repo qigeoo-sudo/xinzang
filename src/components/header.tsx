@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useLanguage } from '@/components/language-context';
+import { juiceBurst } from '@/components/juice-splash';
 
 // 双语导航标签
 const navLabels = {
@@ -70,6 +71,21 @@ function HeaderInner() {
   };
 
   const tr = mounted ? navLabels[lang] : navLabels.zh;
+
+  // 点击导航：果汁从图标处喷涌（团块淹没图标、液滩挂壁落入杏红区）
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const icon = e.currentTarget.querySelector('svg');
+    const rect = (icon ?? e.currentTarget).getBoundingClientRect();
+    const navBottom = e.currentTarget.getBoundingClientRect().bottom + 2;
+    juiceBurst(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+      Math.max(rect.width, 16),
+      Math.max(rect.height, 16),
+      navBottom,
+      href === '/',
+    );
+  };
 
   const navItems = [
     {
@@ -180,7 +196,9 @@ function HeaderInner() {
       </button>
     );
 
-    if (status === 'loading') {
+    // update() 刷新会话期间 status 会短暂变 loading，但旧 session 仍在，
+    // 继续显示用户操作区，避免右上角闪"加载中..."
+    if (status === 'loading' && !session?.user) {
       return <span className={`text-slate-400 ${box}`}>{tr.loading}</span>;
     }
 
@@ -190,11 +208,7 @@ function HeaderInner() {
         <>
           <Link
             href={subHref}
-            className={
-              isPremiumUser
-                ? `flex items-center border border-sage-600/30 bg-sage-50 font-medium text-sage-700 transition-all hover:bg-sage-100 ${box}`
-                : `clay flex items-center justify-center font-semibold text-ink transition-all active:scale-95 ${compact ? 'bg-[#FFF9F2] hover:bg-white' : 'bg-brand-500 hover:bg-brand-400'} ${box}`
-            }
+            className={`flex items-center justify-center border border-sage-400 bg-sage-400 font-semibold text-white transition-all hover:border-sage-500 hover:bg-sage-500 active:scale-95 ${box}`}
           >
             {crownIcon}
             {isPremiumUser ? tr.renew : tr.subscribe}
@@ -261,7 +275,8 @@ function HeaderInner() {
             <Link
               key={item.href + item.label}
               href={item.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
+              onClick={(e) => handleNavClick(e, item.href)}
+              className={`relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
                 isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
               }`}
             >
@@ -287,8 +302,8 @@ function HeaderInner() {
             />
             <div className="hidden sm:flex flex-col leading-none">
               <span className="font-serif text-sm font-bold text-ink">Career Companion</span>
-              <span className="mt-1 font-mono text-[8px] font-medium uppercase tracking-[0.14em] text-ink/45">
-                Navigate Around Any Singularity, Shape Your Future
+              <span className="mt-1 font-mono text-[8px] font-medium tracking-[0.14em] text-ink/45">
+                navigate around any singularity, shape your future
               </span>
             </div>
           </Link>
@@ -299,12 +314,13 @@ function HeaderInner() {
               <Link
                 key={item.href + item.label}
                 href={item.href}
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                onClick={(e) => handleNavClick(e, item.href)}
+                className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
                   isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
-                }`}
-              >
-                {item.icon}
-                <span className="hidden lg:inline">{item.label}</span>
+              }`}
+            >
+              {item.icon}
+              <span className="hidden lg:inline">{item.label}</span>
               </Link>
             ))}
           </div>

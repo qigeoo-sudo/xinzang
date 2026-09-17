@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="335" height="211" viewBox="0 0 335 211" preserveAspectRatio="none">
+  <defs>
+    <!-- 顶部彩虹条：橙 → 珊瑚 → 鼠尾草 → 深墨蓝 -->
+    <linearGradient id="rainbow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#F6A44C"/>
+      <stop offset="0.38" stop-color="#EC6070"/>
+      <stop offset="0.72" stop-color="#7A9E6E"/>
+      <stop offset="1" stop-color="#2C3E5C"/>
+    </linearGradient>
+    <!-- 深底渐变 -->
+    <linearGradient id="dark" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0" stop-color="#2a2f3c"/>
+      <stop offset="0.5" stop-color="#1a1f2c"/>
+      <stop offset="1" stop-color="#0d1018"/>
+    </linearGradient>
+    <!-- 金色斜光（叠加在深底上） -->
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5D785" stop-opacity="0.18"/>
+      <stop offset="0.4" stop-color="#F5D785" stop-opacity="0"/>
+      <stop offset="0.6" stop-color="#F5D785" stop-opacity="0"/>
+      <stop offset="1" stop-color="#F5D785" stop-opacity="0.10"/>
+    </linearGradient>
+  </defs>
+  <!-- 深底 -->
+  <rect width="335" height="211" fill="url(#dark)"/>
+  <!-- 金光斜光 -->
+  <rect width="335" height="211" fill="url(#gold)"/>
+  <!-- 顶部彩虹条（6px） -->
+  <rect width="335" height="6" fill="url(#rainbow)"/>
+</svg>

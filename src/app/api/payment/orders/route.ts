@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
-import { getPlanById, getCreditPackById, calcCreditPackPriceFen, CREDIT_PACK_MAX_QTY } from '@/lib/plans';
+import { getPlanById, getCreditPackById, calcCreditPackPriceFen, CREDIT_PACK_MAX_QTY, YEARLY_RENEWAL_CAP_DAYS, CREDIT_PACK_MAX_BALANCE } from '@/lib/plans';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
 import { createAlipayOrder } from '@/lib/alipay';
 import { z } from 'zod';
@@ -25,7 +25,7 @@ const createOrderSchema = z.object({
   planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_10']),
   paymentMethod: z.enum(['wechat', 'alipay']).default('wechat'),
   isRenewal: z.boolean().default(false),
-  // 加榨包可一次购买多个（批量折扣）；会员套餐恒为 1
+  // 多榨卡可一次购买多个（批量折扣）；会员套餐恒为 1
   quantity: z.number().int().min(1).max(CREDIT_PACK_MAX_QTY).default(1),
 });
 
@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
 
     const { planId, paymentMethod } = parsed.data;
 
-    // 3. 识别商品：轮次加购包 或 会员订阅
+    // 3. 识别商品：多榨卡 或 会员订阅
     const creditPack = getCreditPackById(planId);
     const plan = creditPack ? undefined : getPlanById(planId);
 
-    // 数量只对加榨包生效；会员套餐恒为 1，忽略客户端传值
+    // 数量只对多榨卡生效；会员套餐恒为 1，忽略客户端传值
     const quantity = creditPack ? parsed.data.quantity : 1;
 
     if (!creditPack && !plan) {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. 会员订阅：校验升级/续费等级（加购包任何人可重复购买）
+    // 4. 会员订阅：校验升级/续费等级（多榨卡任何人可重复购买）
     let existingSub: Awaited<ReturnType<typeof prisma.subscription.findFirst>> = null;
     if (plan) {
       existingSub = await prisma.subscription.findFirst({
@@ -105,17 +105,49 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+
+        // 年卡续费上限：来自年卡的剩余天数 > 1460 天（4 年）时不可再续；
+        // 正好 1460 天仍可续一年（续后 1825 天），之后需等消耗回落
+        if (isSamePlanRenewal && plan.id === 'YEARLY') {
+          const daysRemaining = Math.ceil(
+            (existingSub.endDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+          );
+          if (daysRemaining > YEARLY_RENEWAL_CAP_DAYS) {
+            return NextResponse.json(
+              { error: '年卡剩余时长已超过 4 年，暂无法续费，待剩余天数回落至 1460 天内可再续' },
+              { status: 400 }
+            );
+          }
+        }
       }
     }
 
-    // 5. 价格 — 加榨包按数量与批量折扣服务端重算（不信任客户端价格）
+    // 多榨卡持有上限：当前余额 + 本次轮次 > 2970 时拒绝下单
+    if (creditPack) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { mentorCredits: true, mentorCreditsConsumed: true },
+      });
+      const creditBalance = Math.max(
+        0,
+        (dbUser?.mentorCredits ?? 0) - (dbUser?.mentorCreditsConsumed ?? 0)
+      );
+      if (creditBalance + creditPack.credits * quantity > CREDIT_PACK_MAX_BALANCE) {
+        return NextResponse.json(
+          { error: `多榨卡持有轮次已达 ${CREDIT_PACK_MAX_BALANCE} 轮上限，消耗后可再购买` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 5. 价格 — 多榨卡按数量与批量折扣服务端重算（不信任客户端价格）
     const actualPriceFen = creditPack
       ? calcCreditPackPriceFen(creditPack, quantity)
       : plan!.priceFen;
     const actualPrice = Number((actualPriceFen / 100).toFixed(2));
     const totalCredits = creditPack ? creditPack.credits * quantity : 0;
     const productName = creditPack
-      ? `加榨包 ${totalCredits}轮次${quantity > 1 ? `（${quantity}包）` : ''}`
+      ? `多榨卡 ${totalCredits}轮次${quantity > 1 ? `（${quantity}包）` : ''}`
       : plan!.name;
     const paymentType = creditPack ? 'CREDIT_PACK' : 'SUBSCRIPTION';
 

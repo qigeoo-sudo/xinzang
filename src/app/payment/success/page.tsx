@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
+import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 import { PaymentSuccessActions } from '@/components/payment-success-actions';
 
 export default async function PaymentSuccessPage({
@@ -48,17 +49,18 @@ export default async function PaymentSuccessPage({
     MONTHLY: '月度会员',
     QUARTERLY: '季度会员',
     YEARLY: '年度会员',
-    CREDIT_10: '加榨包 10轮次',
+    CREDIT_10: '多榨卡 10轮次',
   };
 
   const metadata = order?.metadata ? JSON.parse(order.metadata) : {};
   const isCreditPackOrder = order?.paymentType === 'CREDIT_PACK';
 
   return (
-    <div className="min-h-screen flex flex-col bg-beige">
+    <div className="relative min-h-screen flex flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      <GoldFlakes />
 
-      <div className="flex-1 flex items-center justify-center px-4 py-8">
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
           {/* 成功图标 */}
           <div className="text-center mb-6 animate-slide-up">
@@ -75,13 +77,13 @@ export default async function PaymentSuccessPage({
             </div>
             <h1 className="text-xl font-bold text-ink mb-2">支付成功</h1>
             <p className="text-sm text-muted">
-              {isCreditPackOrder ? '加榨包已到账，可继续与导师分身对话' : '会员已激活，享受全部权益'}
+              {isCreditPackOrder ? '多榨卡已到账，可继续与导师分身对话' : '会员已激活，享受全部权益'}
             </p>
           </div>
 
           {/* 订单信息 */}
           {order && (
-            <div className="card mb-4">
+            <div className="letter-paper rounded-[20px] mb-4 p-5">
               <h2 className="text-sm font-semibold text-ink mb-3">订单信息</h2>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -114,7 +116,7 @@ export default async function PaymentSuccessPage({
                   <span className="text-muted">商品名称</span>
                   <span className="text-ink">
                     {isCreditPackOrder
-                      ? `加榨包 ${metadata.credits ?? 10}轮次${
+                      ? `多榨卡 ${metadata.credits ?? 10}轮次${
                           metadata.quantity > 1 ? `（${metadata.quantity}包）` : ''
                         }`
                       : planNames[metadata.planId] || metadata.planName || '-'}
@@ -126,7 +128,7 @@ export default async function PaymentSuccessPage({
 
           {/* 会员信息 */}
           {subscription && (
-            <div className="card mb-4 bg-accent/5 border-accent/30">
+            <div className="letter-paper rounded-[20px] mb-4 p-5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -161,9 +163,11 @@ export default async function PaymentSuccessPage({
           )}
 
           {/* 操作按钮 */}
-          <PaymentSuccessActions from={searchParams.from} />
+          <PaymentSuccessActions />
         </div>
       </div>
+
+      <PaperCredits lang="zh" />
     </div>
   );
 }

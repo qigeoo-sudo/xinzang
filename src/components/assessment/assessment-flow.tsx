@@ -139,10 +139,10 @@ export function AssessmentFlow() {
   };
 
   return (
-    <main className="flex-1 bg-bg">
+    <main className="relative z-10 flex-1">
       <div className="mx-auto w-full max-w-2xl px-4 py-8 md:py-12">
         {stage === 'intro1' && (
-          <section className="rounded-2xl border border-rule/40 bg-white/85 p-6 shadow-sm md:p-8">
+          <section className="letter-paper rounded-2xl p-6 md:p-8">
             <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11px] font-medium text-brand-700">
               霍兰德 RIASEC · 30 题试用版
             </span>
@@ -182,7 +182,7 @@ export function AssessmentFlow() {
         )}
 
         {stage === 'intro2' && (
-          <section className="rounded-2xl border border-rule/40 bg-white/85 p-6 shadow-sm md:p-8">
+          <section className="letter-paper rounded-2xl p-6 md:p-8">
             <h1 className="font-serif text-2xl font-black text-ink md:text-3xl">怎么作答</h1>
             <p className="mt-3 text-sm leading-7 text-muted">
               每道题描述一种工作活动，暂时不考虑会不会、要学多久，只看你有多想做，从下面五档心情中选一个：
@@ -252,7 +252,7 @@ export function AssessmentFlow() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-rule/40 bg-white/85 p-6 shadow-sm md:p-8">
+            <div className="letter-paper rounded-2xl p-6 md:p-8">
               <p className="font-serif text-lg font-bold leading-8 text-ink md:text-xl">
                 我愿意/喜欢做这样的事：
               </p>
@@ -328,7 +328,7 @@ export function AssessmentFlow() {
 
         {stage === 'result' && result && payload && (
           <section>
-            <div className="rounded-2xl border border-rule/40 bg-white/85 p-6 shadow-sm md:p-8">
+            <div className="letter-paper rounded-2xl p-6 md:p-8">
               <h1 className="font-serif text-2xl font-black text-ink md:text-3xl">
                 你的兴趣画像
               </h1>
@@ -405,7 +405,7 @@ export function AssessmentFlow() {
                 </p>
               </div>
             ) : (
-              <div className="mt-4 rounded-2xl border border-rule/40 bg-white/85 p-6">
+              <div className="letter-paper mt-4 rounded-2xl p-6">
                 {saveError && (
                   <p className="mb-3 rounded-lg bg-coral-50 px-3 py-2 text-xs text-coral-700">
                     {saveError}

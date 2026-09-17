@@ -13,8 +13,8 @@ export function KnowledgePanel({ entries }: { entries: KnowledgeEntry[] }) {
     : entries.slice(0, COLLAPSED_COUNT);
 
   return (
-    <div className="mb-6">
-      <h2 className="text-sm font-semibold text-ink mb-3">
+    <div>
+      <h2 className="mb-3 font-serif text-[16px] font-bold text-ink">
         导师知识领域
       </h2>
       <div className="space-y-3">

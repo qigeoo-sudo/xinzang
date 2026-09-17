@@ -3,7 +3,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { mentors } from '@/lib/mentors';
-import { HomeFooter } from '@/components/home/home-footer';
+import { PaperCredits, GoldFlakes } from '@/components/page-shell';
 import Link from 'next/link';
 
 export default async function HistoryPage() {
@@ -30,10 +30,11 @@ export default async function HistoryPage() {
   const mentorMap = new Map(mentors.map((m) => [m.id, { name: m.name, avatar: m.avatar }]));
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      <GoldFlakes />
 
-      <div className="page-container flex-1">
+      <div className="page-container relative z-10 flex-1">
         {/* 页面标题 */}
         <div className="mb-6">
           <h1 className="text-xl font-bold text-brand-900">对话记录</h1>
@@ -111,7 +112,7 @@ export default async function HistoryPage() {
         )}
       </div>
 
-      <HomeFooter lang="zh" />
+      <PaperCredits lang="zh" />
     </div>
   );
 }

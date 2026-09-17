@@ -54,9 +54,12 @@ function toLabel(values: string[], map: Record<string, string>): string[] {
 export function RecommendedMentors({
   profile,
   showAssessmentHint = false,
+  surface = 'card',
 }: {
   profile: RecommendedMentorsProfile | null;
   showAssessmentHint?: boolean;
+  /** card=旧版毛玻璃白卡（浅底页面）；paper=暖白信纸（深展台页面） */
+  surface?: 'card' | 'paper';
 }) {
   const [mentors, setMentors] = useState<MentorHit[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -166,7 +169,7 @@ export function RecommendedMentors({
   if (!loaded) return null;
 
   return (
-    <div className="card mb-4">
+    <div className={surface === 'paper' ? 'letter-paper mb-4 rounded-[20px] p-5 md:p-6' : 'card mb-4'}>
       <h2 className="mb-3 border-b border-rule/40 pb-2 text-sm font-semibold text-ink">
         推荐导师
       </h2>

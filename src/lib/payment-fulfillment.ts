@@ -4,7 +4,7 @@
  * 两种商品：
  * 1. SUBSCRIPTION 会员订阅 — 立即生效；已有有效订阅时，到期日按自然月对日接续
  *    （月卡 10/14 到期，当天升级季卡 → 到期日变为次年 1/14，权益立即升级）
- * 2. CREDIT_PACK 轮次加购包 — 不建订阅、不改会员身份，仅增加导师分身轮次余额
+ * 2. CREDIT_PACK 多榨卡 — 不建订阅、不改会员身份，仅增加导师分身轮次余额
  */
 import { prisma } from '@/lib/prisma';
 import { invalidateMemberCache } from '@/lib/member-cache';
@@ -54,7 +54,7 @@ export async function fulfillPaidOrder(
       }
 
       if (order.paymentType === 'CREDIT_PACK') {
-        // 轮次加购包：余额累加，永久有效
+        // 多榨卡：余额累加，永久有效
         const pack = getCreditPackById(metadata.planId);
         const credits = metadata.credits ?? pack?.credits ?? 0;
         if (!credits || credits <= 0) {

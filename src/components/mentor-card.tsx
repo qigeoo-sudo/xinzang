@@ -14,11 +14,13 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
   return (
     <Link
       href={isLocked ? '#' : `/mentors/${mentor.id}`}
-      className={`card flex gap-4 ${isLocked ? 'cursor-not-allowed opacity-60' : 'card-hover'}`}
+      className={`letter-paper relative flex gap-4 rounded-[18px] p-4 transition-transform duration-300 ${
+        isLocked ? 'cursor-not-allowed' : 'hover:-translate-y-0.5'
+      }`}
       onClick={isLocked ? (e) => e.preventDefault() : undefined}
     >
       {/* 头像 */}
-      <div className="relative flex-shrink-0">
+      <div className="flex-shrink-0">
         {mentor.avatar ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -49,13 +51,7 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
                 : <span className="text-xs text-muted">{mentor.years}</span>
               : null}
           {isLocked && (
-            <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-400">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              等待上线
-            </span>
+            <span className="ml-auto text-xs text-slate-400">等待上线</span>
           )}
         </div>
         <p className="mb-1 text-xs text-muted">
@@ -87,6 +83,16 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
           </div>
         )}
       </div>
+
+      {/* 未解锁：卡片右下角上一把锁（同色系深沙金，比暖白信纸深一档） */}
+      {isLocked && (
+        <span className="absolute bottom-2.5 right-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-[#D9C4A0] text-[#5C4A2E] shadow-[0_2px_6px_rgba(92,74,46,0.25)] ring-1 ring-white/60">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </span>
+      )}
     </Link>
   );
 }

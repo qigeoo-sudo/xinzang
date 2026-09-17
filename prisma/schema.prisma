@@ -40,7 +40,7 @@ model User {
   // 会员与试用状态 (服务端管理 — 修复安全审计 A01-1.2)
   isPremium         Boolean   @default(false)
   freeTrialUsed     Int       @default(0)
-  // 导师分身轮次加购包（消耗品，不过期）：累计购买 / 累计消耗，余额=二者之差
+  // 多榨卡（消耗品，不过期）：累计购买 / 累计消耗，余额=二者之差
   mentorCredits           Int @default(0)
   mentorCreditsConsumed   Int @default(0)
   // 审计字段

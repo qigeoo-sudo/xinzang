@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/header';
+import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 
 function MockPaymentContent() {
   const searchParams = useSearchParams();
@@ -84,13 +85,14 @@ function MockPaymentContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-beige">
+    <div className="relative min-h-screen flex flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      <GoldFlakes />
 
-      <div className="flex-1 flex items-center justify-center px-4">
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm">
-          {/* 模拟支付界面 */}
-          <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
+          {/* 模拟支付界面 — 暖白信纸 */}
+          <div className="letter-paper rounded-[20px] overflow-hidden">
             {/* 顶部 */}
             <div className="text-white px-6 py-4 text-center" style={{ backgroundColor: brandColor }}>
               <p className="text-sm">{brandLabel} (模拟)</p>
@@ -175,6 +177,8 @@ function MockPaymentContent() {
           </p>
         </div>
       </div>
+
+      <PaperCredits lang="zh" />
     </div>
   );
 }

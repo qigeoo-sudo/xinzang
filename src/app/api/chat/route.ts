@@ -1098,7 +1098,7 @@ export async function POST(request: NextRequest) {
     let respMentorDailyUsed: number | undefined;
     let respMentorDailyLimit: number | null | undefined;
     if (consumeCredit) {
-      // 本轮走加榨池：周期/每日/试用池计数都不动（分子停在触顶值，绝不超过分母）
+      // 本轮走多榨卡池：周期/每日/试用池计数都不动（分子停在触顶值，绝不超过分母）
       if (isPremium) {
         respMentorUsed = mentorUsedCount;
         respMentorLimit = mentorQuotaLimit;
@@ -1122,7 +1122,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 加榨包：余额（本轮消耗后）/ 已用 / 累计购买
+    // 多榨卡：余额（本轮消耗后）/ 已用 / 累计购买
     const respCreditsTotal = dbUser.mentorCredits || 0;
     const respCreditsUsed = (dbUser.mentorCreditsConsumed || 0) + (consumeCredit ? 1 : 0);
     const respCreditsBalance = Math.max(0, respCreditsTotal - respCreditsUsed);

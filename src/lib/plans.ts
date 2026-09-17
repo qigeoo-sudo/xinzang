@@ -72,7 +72,6 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       '（最高）17轮次/天',
       '全部上线导师分身解锁',
       '优先体验新功能',
-      '优先开放新导师分身',
       '优先参与线下各种活动',
     ],
     popular: false,
@@ -88,7 +87,7 @@ export function getPlanById(id: string): SubscriptionPlan | undefined {
 }
 
 /**
- * 加榨包（原轮次加购包）— 消耗品，不是时间订阅
+ * 多榨卡 — 消耗品，不是时间订阅
  * 会员/非会员均可购买；不授予会员身份、不过期、用完再续。
  */
 type CreditPackId = 'CREDIT_10';
@@ -110,7 +109,7 @@ export const CREDIT_PACKS: CreditPack[] = [
     price: 19.9,
     priceFen: 1990,
     credits: 10,
-    description: '额度加购，以备不时之需',
+    description: '多榨几轮，以备不时之需',
     features: ['10个轮次，用完再续'],
   },
 ];
@@ -119,11 +118,17 @@ export function getCreditPackById(id: string): CreditPack | undefined {
   return CREDIT_PACKS.find((p) => p.id === id);
 }
 
-/** 加榨包单笔订单数量上限 */
+/** 多榨卡单笔订单数量上限 */
 export const CREDIT_PACK_MAX_QTY = 99;
 
 /**
- * 加榨包批量折扣（按整单数量）：
+ * 多榨卡余额累计上限（轮次）：当前持有余额 + 本次购买轮次 ≤ 2970（297 包）。
+ * 超过即"榨干"：支付按钮失活，卡顶红标提示，消耗回落后自动恢复。
+ */
+export const CREDIT_PACK_MAX_BALANCE = 2970;
+
+/**
+ * 多榨卡批量折扣（按整单数量）：
  * - 1-4 个：原价
  * - 5-9 个：9 折
  * - 10 个及以上：8.5 折
@@ -135,22 +140,22 @@ export function getCreditPackDiscount(qty: number): { rate: number; label: strin
 }
 
 /**
- * 加榨包订单总价（单位：分）。服务端下单与前端展示必须共用此函数。
- * 折后总价向下取整到元：
- *   ￥19.9 × 5 × 0.9 = ￥89.55 → ￥89
- *   ￥19.9 × 10 × 0.85 = ￥169.15 → ￥169
- * 不足 5 个无折扣，单价为整数角，总价不会出现分。
+ * 多榨卡订单总价（单位：分）。服务端下单与前端展示必须共用此函数。
+ * 折后总价向下取整到角（1 位小数）：
+ *   ￥19.9 × 5 × 0.9 = ￥89.55 → ￥89.5（8950 分）
+ *   ￥19.9 × 10 × 0.85 = ￥169.15 → ￥169.1（16910 分）
+ * 无折扣时单价本身为整数角，取整不改变结果。
  */
 export function calcCreditPackPriceFen(pack: CreditPack, qty: number): number {
   const safeQty = Math.max(1, Math.min(CREDIT_PACK_MAX_QTY, Math.trunc(qty)));
   const { rate } = getCreditPackDiscount(safeQty);
   const rawFen = Math.round(pack.priceFen * safeQty * rate);
-  return rate < 1 ? Math.floor(rawFen / 100) * 100 : rawFen;
+  return rate < 1 ? Math.floor(rawFen / 10) * 10 : rawFen;
 }
 
-/** 分 → 页面展示的元字符串（1990 → "19.9"，8900 → "89"） */
+/** 分 → 页面展示的元字符串，固定保留 1 位小数（1990 → "19.9"，8900 → "89.0"） */
 export function formatPriceFen(fen: number): string {
-  return (fen / 100).toString();
+  return (fen / 100).toFixed(1);
 }
 
 /** 各订阅套餐对应的自然月数（升级/续费按自然月对日叠加） */
@@ -159,6 +164,12 @@ export const PLAN_DURATION_MONTHS: Record<PlanId, number> = {
   QUARTERLY: 3,
   YEARLY: 12,
 };
+
+/**
+ * 年卡续费上限（天）：来自年卡的剩余天数 ≤ 1460（365×4）时才可再续一年。
+ * 正好剩 1460 天可续（续后 1825 天）；超过 1460 天必须等消耗回落至 ≤1460 天。
+ */
+export const YEARLY_RENEWAL_CAP_DAYS = 365 * 4;
 
 /**
  * 自然月对日加法：10/14 + 3 个月 → 次年 1/14。

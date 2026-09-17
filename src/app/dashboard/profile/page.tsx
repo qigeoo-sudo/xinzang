@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
-import { HomeFooter } from '@/components/home/home-footer';
+import { PaperCredits, GoldFlakes, PageHero } from '@/components/page-shell';
 import { AssessmentSummary } from '@/components/assessment/assessment-summary';
 import { RecommendedMentors } from '@/components/recommended-mentors';
 import {
@@ -175,32 +175,21 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col ${getTemplateBg(initialProfile?.status)}`}>
+    <div className={`relative min-h-screen flex flex-col cream-foil overflow-hidden ${getTemplateBg(initialProfile?.status)}`}>
       <Header />
+      <GoldFlakes />
 
-      <div className="page-container flex-1">
-        {/* 标题 + 清空入口 */}
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-ink">我的档案</h1>
-            <p className="text-sm text-muted mt-1">
-              注册资料、测试结果、对话记录都在这儿。
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setClearError('');
-              setClearStep('b1');
-            }}
-            className="shrink-0 rounded-[10px] border border-danger/60 px-3 py-1.5 text-xs font-semibold text-danger transition-all hover:bg-danger/5 active:scale-[.97]"
-          >
-            清空
-          </button>
-        </div>
-        {clearError && <p className="-mt-3 mb-4 text-xs text-danger">{clearError}</p>}
+      <PageHero
+        eyebrow="MY PROFILE"
+        title="我的档案"
+        subtitle="注册资料、测试结果、对话记录都在这儿。"
+        watermark="档"
+      />
 
-        {/* 主操作：改资料 / 看对话记录 */}
+      <div className="relative z-10 page-container flex-1">
+        {clearError && <p className="mb-4 text-xs text-danger">{clearError}</p>}
+
+        {/* 主操作：改资料 / 看对话记录 / 清空 */}
         <div className="flex flex-wrap gap-3 mb-6">
           <Link
             href="/dashboard/profile/edit"
@@ -214,7 +203,7 @@ export default function ProfilePage() {
           </Link>
           <Link
             href="/history"
-            className="inline-flex items-center gap-1.5 rounded-[10px] border border-rule bg-white px-4 py-2.5 text-sm font-semibold text-ink transition-all hover:bg-sand-25 active:scale-[.98]"
+            className="inline-flex items-center gap-1.5 rounded-[10px] bg-sage-400 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-sage-500 active:scale-[.98]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -223,6 +212,16 @@ export default function ProfilePage() {
             </svg>
             对话记录
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setClearError('');
+              setClearStep('b1');
+            }}
+            className="inline-flex items-center gap-1.5 rounded-[10px] bg-sand-500 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-sand-600 active:scale-[.98]"
+          >
+            清空
+          </button>
         </div>
 
         {/* 注册档案聚合：账号 / 状态教育 / 方向地点 */}
@@ -230,14 +229,14 @@ export default function ProfilePage() {
 
         {/* 职业兴趣测试结果 */}
         {assessment ? (
-          <div className="card mb-4">
+          <div className="letter-paper rounded-[20px] mb-4 p-5 md:p-6">
             <AssessmentSummary assessment={assessment} takenAtLabel={fmtTakenAt(assessment.takenAt)} />
             <Link href="/assessment" className="text-sm font-semibold text-sage-700 hover:underline">
               重新测一次（新结果会覆盖旧结果）→
             </Link>
           </div>
         ) : (
-          <div className="card mb-4 flex flex-col items-start gap-2 border-dashed">
+          <div className="letter-paper rounded-[20px] mb-4 p-5 md:p-6 flex flex-col items-start gap-2">
             <h2 className="text-sm font-semibold text-ink">职业兴趣测试</h2>
             <p className="text-sm text-muted">
               还没有测试结果。测一测霍兰德六维兴趣代码，结果会存进这份档案，也能帮导师更快懂你。
@@ -311,7 +310,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <HomeFooter lang="zh" />
+      <PaperCredits lang="zh" />
     </div>
   );
 }
@@ -386,7 +385,7 @@ function ProfileSections({ profile, phone }: { profile: ProfileData | null; phon
 
 function InfoCard({ title, rows, className = '' }: { title: string; rows: [string, string][]; className?: string }) {
   return (
-    <div className={`card ${className}`}>
+    <div className={`letter-paper rounded-[20px] p-5 md:p-6 ${className}`}>
       <h2 className="mb-3 border-b border-rule/40 pb-2 text-sm font-semibold text-ink">{title}</h2>
       <dl className="space-y-2">
         {rows.map(([k, v]) => (

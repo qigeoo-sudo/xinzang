@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 /**
- * 渲染纸片上的引用语：
+ * 渲染卡面引用语：
  * - 中文：按 \n 拆为两行，第二行缩进一个汉字宽度（1em）
  * - 英文：单行直接输出
  */
@@ -43,8 +43,10 @@ const copy = {
 };
 
 /**
- * 首页三个入口 = 三张待投入榨汁机的纸（logo 顶部那张简历纸的延伸）。
- * 微微旋转、错落铺开；hover 时回正，像你伸手把它抚平、准备投进去。
+ * 首页三个入口 = 三张信用卡（杏金 / 鼠尾草绿 / 珊瑚）。
+ * 2.5D 金属浮雕：多段渐变模拟反光带，inset 高光模拟烫金凸起，
+ * 功能区做成"开窗"凹槽（card-cutout）——像信用卡签名条下的白底区。
+ * 微微旋转、错落铺开；hover 时回正 + 上浮 4px，像被你拈起来端详。
  */
 export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
   const router = useRouter();
@@ -57,34 +59,23 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
     router.push(`/search?q=${encodeURIComponent(q)}`);
   };
 
-  const paperClass =
-    'group clay-soft block animate-rise rounded-[14px] bg-[#FFFDF8] p-5 md:p-6';
-  // 旋转放在外层 wrapper：rise 动画的 fill-mode 会锁 transform，与旋转同层会互相覆盖
-  const tilt = (deg: string, offset: string) =>
-    `transition-transform duration-300 hover:rotate-0 ${deg} ${offset}`;
+  // 彩卡静止水平放置，无初始旋转、无 hover 动效
 
   return (
-    <section className="mx-auto max-w-[840px] px-5 pb-16 pt-16 md:pb-20 md:pt-24">
-      {/* 目录标签行（短线，右侧让位给探出的榨汁机图腾） */}
-      <div className="mb-8 flex items-center gap-3 md:mb-10">
-        <span className="masthead-label">CONTENTS</span>
-        <span className="h-px w-16 bg-ink/15" aria-hidden />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-        {/* 纸片 1：搜索（原纸片 3 内容） */}
-        <div className={tilt('-rotate-[1.5deg]', 'md:mt-5')}>
+    <section className="mx-auto max-w-[840px] px-5 pb-4 pt-4">
+      <div className="grid grid-cols-1 justify-items-center gap-5 md:grid-cols-[repeat(3,minmax(0,335px))] md:justify-center">
+        {/* 卡 1：搜索（杏金） */}
+        <div className="w-full max-w-[335px] md:mt-5">
           <div
-            style={{ animationDelay: '.05s' }}
-            className={paperClass}
+            className="card-metal card-gold flex aspect-[1.586/1] flex-col p-4 md:p-5"
           >
-            <span className="font-mono text-[10px] font-medium uppercase tracking-masthead text-brand-600">
+            <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
               01&nbsp;&nbsp;Search
             </span>
-            <h2 className="mt-4 font-serif text-[17px] font-bold leading-[1.65] text-ink">
+            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
               <Quote text={t.quote3} />
             </h2>
-            <div className="mt-5 border-t border-dashed border-ink/15 pt-4">
+            <div className="card-cutout mt-auto px-3 py-2.5">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -111,20 +102,19 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </div>
         </div>
 
-        {/* 纸片 2：导师 */}
-        <div className={tilt('rotate-[1deg]', '')}>
+        {/* 卡 2：导师（鼠尾草绿） */}
+        <div className="w-full max-w-[335px]">
           <Link
             href="/mentors"
-            style={{ animationDelay: '.12s' }}
-            className={paperClass}
+            className="card-metal card-sage group block flex aspect-[1.586/1] flex-col p-4 md:p-5"
           >
-            <span className="font-mono text-[10px] font-medium uppercase tracking-masthead text-brand-600">
-              02&nbsp;&nbsp;Mentors
+            <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
+              02&nbsp;&nbsp;MENTOR AVATAR<span style={{ textTransform: 'lowercase' }}>s</span>
             </span>
-            <h2 className="mt-4 font-serif text-[17px] font-bold leading-[1.65] text-ink">
+            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
               <Quote text={t.quote2} />
             </h2>
-            <div className="mt-5 border-t border-dashed border-ink/15 pt-4">
+            <div className="card-cutout mt-auto px-3 py-2.5">
               <span className="inline-flex items-center border-b-2 border-brand-500 pb-0.5 text-[13px] font-bold text-ink transition-colors group-hover:border-ink">
                 {t.action2}
                 <span aria-hidden className="ml-1.5 transition-transform group-hover:translate-x-1">→</span>
@@ -133,20 +123,19 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
           </Link>
         </div>
 
-        {/* 纸片 3：测评（原纸片 1 内容） */}
-        <div className={tilt('-rotate-[0.75deg]', 'md:mt-8')}>
+        {/* 卡 3：测评（珊瑚） */}
+        <div className="w-full max-w-[335px] md:mt-8">
           <Link
             href="/assessment"
-            style={{ animationDelay: '.19s' }}
-            className={paperClass}
+            className="card-metal card-coral group block flex aspect-[1.586/1] flex-col p-4 md:p-5"
           >
-            <span className="font-mono text-[10px] font-medium uppercase tracking-masthead text-brand-600">
-              03&nbsp;&nbsp;Assessment
+            <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
+              03&nbsp;&nbsp;CAREER INTEREST TEST
             </span>
-            <h2 className="mt-4 font-serif text-[17px] font-bold leading-[1.65] text-ink">
+            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
               <Quote text={t.quote1} />
             </h2>
-            <div className="mt-5 border-t border-dashed border-ink/15 pt-4">
+            <div className="card-cutout mt-auto px-3 py-2.5">
               <span className="inline-flex items-center border-b-2 border-brand-500 pb-0.5 text-[13px] font-bold text-ink transition-colors group-hover:border-ink">
                 {t.action1}
                 <span aria-hidden className="ml-1.5 transition-transform group-hover:translate-x-1">→</span>

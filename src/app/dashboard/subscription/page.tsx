@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
-import { HomeFooter } from '@/components/home/home-footer';
+import { StageCredits, GoldFlakes, PageHero } from '@/components/page-shell';
 import { SubscriptionFlow } from '@/components/subscription-flow';
 import { SUBSCRIPTION_PLANS, CREDIT_PACKS, type PlanId } from '@/lib/plans';
 
@@ -35,7 +35,12 @@ export default async function SubscriptionPage({
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { isPremium: true, freeTrialUsed: true },
+    select: {
+      isPremium: true,
+      freeTrialUsed: true,
+      mentorCredits: true,
+      mentorCreditsConsumed: true,
+    },
   });
 
   const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
@@ -59,63 +64,74 @@ export default async function SubscriptionPage({
   // 当前会员等级 (用于判断哪些方案可升级)
   const currentPlanId = subscription?.plan as PlanId | undefined;
 
+  // 已购买的多榨卡累计张数（按已支付订单 metadata.quantity 求和）
+  const packOrders = await prisma.paymentOrder.findMany({
+    where: { userId: session.user.id, paymentType: 'CREDIT_PACK', status: 'PAID' },
+    select: { metadata: true },
+  });
+  const packCount = packOrders.reduce((sum, o) => {
+    try {
+      const qty = JSON.parse(o.metadata || '{}').quantity;
+      return sum + (typeof qty === 'number' && qty > 0 ? Math.trunc(qty) : 0);
+    } catch {
+      return sum;
+    }
+  }, 0);
+
+  const isPremium = !!user?.isPremium && !!subscription;
+
+  // 多榨卡当前持有余额（累计购买 − 累计消耗）
+  const creditBalance = Math.max(
+    0,
+    (user?.mentorCredits ?? 0) - (user?.mentorCreditsConsumed ?? 0)
+  );
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative min-h-screen flex flex-col home-backdrop overflow-hidden">
       <Header />
+      <GoldFlakes variant="dark" />
 
-      <div className="page-container flex-1">
-        <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-ink mb-2">
-            {user?.isPremium ? '我的会员' : '升级会员'}
-          </h1>
-          <p className="text-sm text-muted">
-            {user?.isPremium
-              ? '你正在享受会员全部权益'
-              : '解锁 AI 导师分身对话，获得完整职业指导体验。'}
+      <PageHero
+        eyebrow="MEMBERSHIP"
+        title={isPremium ? '我的会员' : '升级会员'}
+        subtitle={
+          isPremium
+            ? `你当前是${planNames[subscription!.plan] || '会员'}`
+            : '解锁 AI 导师分身对话，获得完整职业指导体验。'
+        }
+        watermark="会"
+      >
+        {isPremium && packCount > 0 && (
+          <p className="mt-2 text-[12px] text-white/70">
+            你当前已购买 {packCount} 张多榨卡
           </p>
-        </div>
+        )}
+      </PageHero>
 
-        {/* 当前状态 */}
-        <div className="card mb-6">
-          {user?.isPremium && subscription ? (
-            <div className="text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-success/10 mb-3">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                <span className="text-sm text-success font-medium">
-                  会员生效中
-                </span>
-              </div>
-              <p className="text-lg font-bold text-ink">
-                {planNames[subscription.plan] || subscription.plan}
-              </p>
-              <p className="text-sm text-muted mt-1">
-                到期时间: {subscription.endDate.toLocaleDateString('zh-CN')}
-              </p>
-              <p className="text-xs text-muted mt-1">
-                剩余 {daysRemaining} 天
-              </p>
-            </div>
-          ) : (
-            <div className="text-center">
-              <p className="text-sm text-muted">当前为非会员用户</p>
-              <p className="text-lg font-bold text-warm mt-1">
-                剩余免费试用导师分身次数: {freeTrialRemaining} / {freeTrialLimit} 次
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* 订阅方案 + 支付流程 — 已是会员也显示，用于升级 */}
+      <div className="relative z-10 mx-auto w-full max-w-[840px] px-4 pt-6 pb-4 md:px-6">
+        {/* 订阅方案 + 支付流程；当前生效卡在组件内置顶显示 */}
         <SubscriptionFlow
           plans={SUBSCRIPTION_PLANS}
           creditPacks={CREDIT_PACKS}
           currentPlanId={currentPlanId}
-          isPremium={!!user?.isPremium}
+          isPremium={isPremium}
           from={searchParams.from}
+          activeSubscription={
+            subscription
+              ? {
+                  plan: subscription.plan as PlanId,
+                  endDate: subscription.endDate.toISOString(),
+                  daysRemaining,
+                }
+              : null
+          }
+          freeTrialRemaining={freeTrialRemaining}
+          freeTrialLimit={freeTrialLimit}
+          creditBalance={creditBalance}
         />
 
         {/* 底部说明 */}
-        <p className="text-center text-xs text-muted mt-6 leading-relaxed">
+        <p className="text-center text-xs text-white/45 mt-6 leading-relaxed">
           支付即表示同意会员服务条款
           <br />
           导师分身对话次数按订阅周期计算，到期后重置
@@ -123,14 +139,14 @@ export default async function SubscriptionPage({
         <p className="text-center text-xs mt-2">
           <Link
             href="/dashboard/subscription/qa"
-            className="text-accent hover:text-accent-dark underline underline-offset-2"
+            className="text-white/70 hover:text-white underline underline-offset-2"
           >
-            购买Q&amp;A（升级规则 / 轮次计算 / 加榨包说明）
+            购买Q&amp;A（升级规则 / 轮次计算 / 多榨卡说明）
           </Link>
         </p>
       </div>
 
-      <HomeFooter lang="zh" />
+      <StageCredits lang="zh" />
     </div>
   );
 }

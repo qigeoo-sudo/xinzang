@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Providers } from '@/components/providers';
 import { ServiceWorkerRegister } from '@/components/sw-register';
+import { JuiceOverlay } from '@/components/juice-splash';
 // 杂志风标题字体（思源宋体）与刊头小字（DM Mono），fontsource 自托管，构建不依赖外网
 import '@fontsource/noto-serif-sc/600.css';
 import '@fontsource/noto-serif-sc/700.css';
@@ -48,6 +49,8 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="min-h-screen safe-bottom overflow-x-hidden">
         <Providers>{children}</Providers>
+        {/* 全局果汁飞溅层：只挂载一次，页面切换不卸载，动画可跨页面播完 */}
+        <JuiceOverlay />
         <ServiceWorkerRegister />
       </body>
     </html>

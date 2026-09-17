@@ -17,9 +17,9 @@ import { signIn } from 'next-auth/react';
 import { CustomSelect } from '@/components/custom-select';
 import { SchoolSearch } from '@/components/school-search';
 import { AssessmentSummary } from '@/components/assessment/assessment-summary';
-import { HomeFooter } from '@/components/home/home-footer';
 import { Header } from '@/components/header';
 import { RecommendedMentors } from '@/components/recommended-mentors';
+import { PaperCredits, GoldFlakes } from '@/components/page-shell';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
@@ -69,14 +69,14 @@ const C = {
   orangeDark: '#D4881A',
   yellow: '#F8C741',
   sage: '#7D9471',
-  inputBg: '#FCF2F0',
-  inputBorder: '#E8B5B5',
+  inputBg: '#FFFFFF',
+  inputBorder: '#DCC5A3',
   cardLine: 'rgba(209,213,219,0.4)',
   danger: '#C0654A',
 };
 
 const inputCls =
-  'w-full bg-[#FCF2F0] border-2 border-[#E8B5B5] rounded-[10px] px-4 py-3 text-[15px] text-[#2C3E5C] placeholder:text-[#B6A89C] focus:outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all';
+  'w-full bg-white border-2 border-sand-300 rounded-[10px] px-4 py-3 text-[15px] text-[#2C3E5C] placeholder:text-[#B6A89C] focus:outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 transition-all';
 
 function monthNow(offsetYears = 0): string {
   const d = new Date();
@@ -830,9 +830,9 @@ export function RegisterWizard({
 
   return (
     <div
-      className="min-h-screen flex flex-col"
-      style={{ background: `linear-gradient(180deg, ${C.heroFrom} 0%, ${C.bg} 360px)` }}
+      className="relative min-h-screen flex flex-col bg-bg cream-foil overflow-hidden"
     >
+      <GoldFlakes />
       {showFullNav ? (
         <Header />
       ) : (
@@ -884,7 +884,7 @@ export function RegisterWizard({
       </>
       )}
 
-      <main className="flex-1 w-full max-w-md mx-auto px-4 pt-8 pb-16">
+      <main className="relative z-10 flex-1 w-full max-w-md mx-auto px-4 pt-8 pb-16">
         {!done ? (
           <>
             {/* 标题 */}
@@ -1176,7 +1176,7 @@ export function RegisterWizard({
                           { value: 'jobless', label: '待业' },
                         ]}
                         placeholder="请选择在校 / 在职 / 待业"
-                        className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                        className="!bg-white !border-sand-300 rounded-[10px]"
                       />
                     </Field>
 
@@ -1203,7 +1203,7 @@ export function RegisterWizard({
                             onChange={setMajor}
                             options={MAJOR_OPTIONS}
                             placeholder="请选择专业分类"
-                            className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                            className="!bg-white !border-sand-300 rounded-[10px]"
                           />
                         </Field>
                         <Field label="毕业日期" required>
@@ -1224,7 +1224,7 @@ export function RegisterWizard({
                             onChange={setWorkGoal}
                             options={workGoalOptions}
                             placeholder="请选择你最近的打算："
-                            className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                            className="!bg-white !border-sand-300 rounded-[10px]"
                           />
                         </Field>
                         <Field label="入学年月" required>
@@ -1248,7 +1248,7 @@ export function RegisterWizard({
                             onChange={setMajor}
                             options={MAJOR_OPTIONS}
                             placeholder="请选择专业分类"
-                            className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                            className="!bg-white !border-sand-300 rounded-[10px]"
                           />
                         </Field>
                         <Field label="毕业日期" required>
@@ -1262,7 +1262,7 @@ export function RegisterWizard({
                           <label className="block text-sm font-semibold mb-1.5" style={{ color: '#2C3E5C' }}>
                             工作经验
                           </label>
-                          <div className="rounded-[10px] p-3 flex flex-col gap-3" style={{ border: '1px solid #E8B5B5', background: '#FCF2F0' }}>
+                          <div className="rounded-[10px] p-3 flex flex-col gap-3" style={{ border: '1px solid #E8B5B5', background: '#FFFFFF' }}>
                             <div className="flex items-center gap-3">
                               <span className="text-sm flex-shrink-0 w-9" style={{ color: '#2C3E5C' }}>全职</span>
                               <div className="flex-1 min-w-0">
@@ -1272,7 +1272,7 @@ export function RegisterWizard({
                                   options={WORK_EXP_DURATION_OPTIONS}
                                   placeholder="请选择工作时长"
                                   clearable
-                                  className="!bg-white !border-[#E8B5B5] rounded-[10px]"
+                                  className="!bg-white !border-sand-300 rounded-[10px]"
                                 />
                               </div>
                             </div>
@@ -1285,7 +1285,7 @@ export function RegisterWizard({
                                   options={WORK_EXP_DURATION_OPTIONS}
                                   placeholder="请选择工作时长"
                                   clearable
-                                  className="!bg-white !border-[#E8B5B5] rounded-[10px]"
+                                  className="!bg-white !border-sand-300 rounded-[10px]"
                                 />
                               </div>
                             </div>
@@ -1309,7 +1309,7 @@ export function RegisterWizard({
                           }}
                           options={PROVINCE_OPTIONS}
                           placeholder="选择省份"
-                          className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                          className="!bg-white !border-sand-300 rounded-[10px]"
                         />
                         <CustomSelect
                           value={workCity}
@@ -1317,7 +1317,7 @@ export function RegisterWizard({
                           options={cityOptions}
                           placeholder={workProvince ? '选择城市' : '请先选省份'}
                           disabled={workCityDisabled}
-                          className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                          className="!bg-white !border-sand-300 rounded-[10px]"
                         />
                       </div>
                     </Field>
@@ -1332,7 +1332,7 @@ export function RegisterWizard({
                           }}
                           options={PROVINCE_OPTIONS}
                           placeholder="选择省份"
-                          className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                          className="!bg-white !border-sand-300 rounded-[10px]"
                         />
                         <CustomSelect
                           value={currentCity}
@@ -1340,7 +1340,7 @@ export function RegisterWizard({
                           options={currentCityOptions}
                           placeholder={currentProvince ? '选择城市' : '请先选省份'}
                           disabled={currentCityDisabled}
-                          className="!bg-[#FCF2F0] !border-[#E8B5B5] rounded-[10px]"
+                          className="!bg-white !border-sand-300 rounded-[10px]"
                         />
                       </div>
                     </Field>
@@ -1857,8 +1857,8 @@ export function RegisterWizard({
         )}
       </main>
 
-      {/* 编辑档案的三个页面（基本信息 / 方向与地点 / 保存成功）底部统一灰蓝页脚，与对话记录等页一致 */}
-      {isEdit && <HomeFooter lang="zh" />}
+      {/* 底部版权：所有模式（注册 / 编辑 / 成功）统一浅底版权，替代旧黑卡 */}
+      <PaperCredits lang="zh" />
 
       {/* 自定义年月选择弹层：清除 / 取消 / 确认 */}
       {monthSheet && (
@@ -1872,7 +1872,7 @@ export function RegisterWizard({
           >
             <div
               className="flex items-center justify-between px-4 py-3.5 border-b"
-              style={{ borderColor: '#E8B5B5' }}
+              style={{ borderColor: '#DCC5A3' }}
             >
               <span className="text-sm font-semibold" style={{ color: C.ink }}>
                 {MONTH_FIELDS[monthSheet].title}
@@ -1936,7 +1936,7 @@ export function RegisterWizard({
 
             <div
               className="flex items-center gap-3 px-4 py-3 border-t"
-              style={{ borderColor: '#E8B5B5', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}
+              style={{ borderColor: '#DCC5A3', paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}
             >
               <button
                 type="button"
@@ -1987,7 +1987,7 @@ function MonthTrigger({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="w-full text-left bg-[#FCF2F0] border-2 border-[#E8B5B5] rounded-[10px] px-4 py-3 text-[15px] flex items-center justify-between transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20"
+      className="w-full text-left bg-white border-2 border-sand-300 rounded-[10px] px-4 py-3 text-[15px] flex items-center justify-between transition-all disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20"
       style={{ color: value ? '#2C3E5C' : '#B6A89C' }}
     >
       <span>{value ? fmtMonth(value) : placeholder}</span>

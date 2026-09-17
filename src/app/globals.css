@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Liu+Jian+Mao+Cao&family=Ma+Shan+Zheng&family=Long+Cang&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,7 +32,14 @@
 @layer components {
   /* 刊头小字：等宽、大字距、英文 */
   .masthead-label {
-    @apply font-mono text-[10px] font-medium uppercase tracking-masthead text-ink/55;
+    @apply font-mono font-medium tracking-masthead text-ink/55;
+    font-size: calc((100vw - 16px) * 0.0244);
+    white-space: nowrap;
+    width: 100vw;
+    padding: 0 8px;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    text-align: center;
   }
 
   /* 黏土汽水 3.0 工具类 */
@@ -58,6 +67,271 @@
   .nav-extend {
     background-image: linear-gradient(168deg, #F8B357 0%, #F6A44C 100%);
   }
+
+  /* === 信用卡 2.5D 金属浮雕（杏金/鼠尾草/珊瑚/黑卡） === */
+
+  /* 金属基底：柔和落地投影，无 inset 凹凸硬边（与订阅页卡面一致） */
+  .card-metal {
+    position: relative;
+    border-radius: 14px;
+    /* 柔和外投影（对齐订阅页卡面），不再使用 inset 硬高光/内阴影做凹凸边 */
+    box-shadow:
+      0 14px 30px -12px rgba(20, 32, 48, 0.55),
+      0 4px 10px -6px rgba(20, 32, 48, 0.30);
+    /* 彩卡取消 hover 上浮/回正动效：静态展示 */
+    transition: none;
+  }
+  /* 首页卡面文字压平：保留 #FFFDF2 颜色，去掉浮雕明暗双边阴影 */
+  .card-metal .text-foil-light {
+    text-shadow: none;
+  }
+
+  /* 杏金卡（01 Search）—— 暗调金属，反光减弱30% */
+  .card-gold {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.10) 100%),
+      linear-gradient(160deg, #DCAF4E 0%, #C79A3B 45%, #A37A28 70%, #DCAF4E 100%);
+  }
+
+  /* 鼠尾草绿卡（02 Mentors）—— 暗调金属，反光减弱30% */
+  .card-sage {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.21) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.08) 100%),
+      linear-gradient(160deg, #7F9C70 0%, #67885A 45%, #4C6841 70%, #7F9C70 100%);
+  }
+
+  /* 珊瑚卡（03 Assessment）—— 暗调金属，反光减弱30% */
+  .card-coral {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.10) 100%),
+      linear-gradient(160deg, #E07E52 0%, #D2623A 45%, #AC4A28 70%, #E07E52 100%);
+  }
+
+  /* 黑卡（运通百夫长：深底 + 金烫字 + 微光边框 + 顶部彩虹条）
+     彩虹条 + 深底 + 金光全部画在同一张 SVG 里，作为唯一背景图层：
+     一张图 = 一个渲染层，hover 旋转时彩虹条与卡体绝对同步 */
+  .card-black {
+    background-color: #1a1f2c;
+    background-image: url(/black-card-bg.svg);
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    color: #F5D785;
+    box-shadow:
+      inset 0 2px 0 rgba(245, 215, 133, 0.18),
+      inset 0 -2px 5px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(245, 215, 133, 0.22),
+      0 16px 36px -10px rgba(0, 0, 0, 0.55);
+  }
+  /* 年度卡无 hover 动画 */
+  .card-black:hover {
+    transform: none;
+  }
+
+  /* 首页黑卡特有：因有 overflow-hidden，外投影从 box-shadow 移到 filter:drop-shadow
+     （不被裁切，且旋转时跟随卡体）。背景继承自 .card-black（含彩虹条 SVG） */
+  .home-black-card {
+    box-shadow:
+      inset 0 2px 0 rgba(245, 215, 133, 0.18),
+      inset 0 -2px 5px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 1px rgba(245, 215, 133, 0.22);
+    filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.55));
+  }
+
+  /* 浅银灰卡（多榨卡）—— 铂金深灰 + 窄高光条，反光感明显 */
+  .card-platinum {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.60) 0%, transparent 18%, transparent 82%, rgba(255, 255, 255, 0.25) 100%),
+      linear-gradient(160deg, #C8C8D0 0%, #B0B0BA 40%, #8E8E9A 65%, #C8C8D0 100%);
+    color: #2C3E5C;
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.70),
+      inset 0 -2px 4px rgba(44, 62, 92, 0.22),
+      inset 0 0 0 1px rgba(44, 62, 92, 0.14),
+      0 14px 32px -10px rgba(44, 62, 92, 0.32);
+  }
+
+  /* 烫金字（黑卡）：暗金色，高贵沉稳 */
+  .text-foil {
+    color: #F5D785;
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.3),
+      0 -1px 0 rgba(120, 90, 30, 0.5),
+      0 0 6px rgba(245, 215, 133, 0.35);
+  }
+
+  /* 金属卡上的白亮字：近白 + 减半光晕，避免重影且保持清晰 */
+  .text-foil-light {
+    color: #FFFDF2;
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.35),
+      0 -1px 1px rgba(70, 45, 5, 0.45),
+      0 0 8px rgba(255, 255, 255, 0.2);
+  }
+
+  /* 压印浮雕（卡片标题：内凹烫金） */
+  .text-emboss {
+    text-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.5),
+      0 -1px 0 rgba(0, 0, 0, 0.18);
+  }
+
+  /* 卡面开窗凹槽（白底功能区，模拟信用卡签名条/磁条下开窗） */
+  .card-cutout {
+    background-color: rgba(255, 253, 248, 0.96);
+    box-shadow:
+      inset 0 2px 4px rgba(0, 0, 0, 0.12),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
+  }
+
+  /* 四芒星光：白色（与 logo 机身上的星光一致），深底上发光 */
+  .star-spark {
+    display: inline-block;
+    color: #FFFFFF;
+    text-shadow:
+      0 0 5px rgba(255, 255, 255, 0.85),
+      0 0 12px rgba(255, 255, 255, 0.45),
+      0 0 22px rgba(255, 240, 210, 0.3);
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+  }
+
+  /* 2.5D 卡通果汁：扁平色块 + 奶白高光，无真实投影/暗边 */
+
+  /* 挂壁液滩：顶部圆头，生长/悬挂/滑落动画在 WAAPI 里做 */
+  .juice-drip {
+    box-shadow: none;
+    transform-origin: top center;
+  }
+  .juice-drip::after {
+    content: '';
+    position: absolute;
+    top: 9%;
+    left: 50%;
+    width: 38%;
+    height: 26%;
+    border-radius: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 240, 214, 0.75);
+  }
+
+  /* 果汁主体团块：不规则圆润 blob，顶部一大条奶白高光 */
+  .juice-blob {
+    box-shadow: none;
+    will-change: transform, opacity;
+  }
+  .juice-blob::after {
+    content: '';
+    position: absolute;
+    top: 9%;
+    left: 16%;
+    width: 46%;
+    height: 22%;
+    border-radius: 50%;
+    background: rgba(255, 242, 220, 0.85);
+    transform: rotate(-14deg);
+  }
+  .juice-blob::before {
+    content: '';
+    position: absolute;
+    top: 26%;
+    right: 18%;
+    width: 14%;
+    height: 12%;
+    border-radius: 50%;
+    background: rgba(255, 242, 220, 0.6);
+  }
+  /* blob 周围卫星小圆（子元素，随主体一起缩放） */
+  .juice-sat {
+    position: absolute;
+    border-radius: 50%;
+  }
+  .juice-sat::after {
+    content: '';
+    position: absolute;
+    top: 18%;
+    left: 24%;
+    width: 32%;
+    height: 26%;
+    border-radius: 50%;
+    background: rgba(255, 240, 214, 0.7);
+  }
+
+  /* 金币背景贴片：全不透明 + 落地投影，像真金币撒在展台上 */
+  .coin-debris {
+    position: absolute;
+    pointer-events: none;
+    user-select: none;
+    filter:
+      drop-shadow(0 3px 5px rgba(7, 14, 26, 0.5))
+      drop-shadow(0 1px 2px rgba(7, 14, 26, 0.35));
+  }
+
+  /* 首页正文区灰蓝底：榨职机机身色 + 洒金纸金箔碎屑（真实 PNG 纹理平铺） */
+  .home-backdrop {
+    background-color: #1E2E3F;
+    background-image:
+      linear-gradient(180deg, rgba(40,58,78,0.4) 0%, rgba(30,46,63,0) 45%, rgba(26,40,56,0.5) 100%),
+      url('/textures/blue-gold-foil-paper.png');
+    background-repeat: repeat;
+    background-size: 1024px, 1024px;
+  }
+
+  /* 浅底页金屑纹理：与 bg-bg (#F9E9DF 浅肉粉) 并用，cream-foil 用 ::after 伪元素叠加金箔。
+     由 PowerShell + System.Drawing 处理：从首页 blue-gold-foil-paper.png 抠掉深蓝底变透明，
+     只保留金色碎屑 → cream-gold-foil.png。透明底在任何背景上都能正常显示金箔。
+     ::after 伪元素 z-index: 0，确保所有 relative z-10 的正文/卡片/版权都在金箔之上。 */
+  .cream-foil::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/textures/cream-gold-foil.png');
+    background-repeat: repeat;
+    background-size: 1024px;
+    opacity: 0.85;
+  }
+
+  /* offer 信纸：暖白纸面 + 细腻纸张噪点 + 纸厚投影 */
+  .letter-paper {
+    position: relative;
+    background-color: #FCF8EE;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+    box-shadow:
+      0 30px 70px -24px rgba(7, 14, 26, 0.65),
+      0 8px 20px -10px rgba(7, 14, 26, 0.4),
+      inset 0 0 0 1px rgba(120, 95, 45, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  /* 信纸下方衬纸：露出一圈边，增加纸张叠放的材质厚度 */
+  .letter-paper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-color: #F2EAD6;
+    transform: translate(7px, 9px);
+    z-index: -1;
+    box-shadow: 0 18px 40px -20px rgba(7, 14, 26, 0.5);
+  }
+
+  /* 狂草签名：Google Fonts 柳建毛草（Liu Jian Mao Cao）优先，
+     马善政毛笔楷书兜底，系统草书字体最后兜底；大倾斜模拟张旭狂草 */
+  .signature-hand {
+    font-family: 'Long Cang', 'Liu Jian Mao Cao', 'Ma Shan Zheng', '华文行楷', 'STXingkai', '方正舒体', 'FZShuTi', cursive;
+    font-weight: 400;
+    display: inline-block;
+    transform: rotate(-8deg);
+    letter-spacing: -0.04em;
+    text-shadow:
+      0 1px 0 rgba(0, 0, 0, 0.08),
+      1px 0 0 rgba(0, 0, 0, 0.04);
+  }
+
 }
 
 @layer components {

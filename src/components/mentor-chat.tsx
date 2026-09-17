@@ -56,7 +56,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   const router = useRouter();
   const pathname = usePathname();
   const subHref = `/dashboard/subscription?from=${encodeURIComponent(pathname)}`;
-  // 购买加榨包直接定位到页面底部的加榨包卡片
+  // 购买多榨卡直接定位到页面底部的多榨卡卡片
   const creditPackHref = `${subHref}#credit-pack`;
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -93,7 +93,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
   // 会员导师分身：24 小时滚动窗口内已用/上限（仅会员有值）
   const [usageDailyUsed, setUsageDailyUsed] = useState<number | null>(null);
   const [usageDailyLimit, setUsageDailyLimit] = useState<number | null>(null);
-  // 加榨包：余额 / 已用 / 累计购买（独立第三池，分子永不超过分母）
+  // 多榨卡：余额 / 已用 / 累计购买（独立第三池，分子永不超过分母）
   const [usageCredits, setUsageCredits] = useState(0); // 余额
   const [usageCreditsUsed, setUsageCreditsUsed] = useState(0);
   const [usageCreditsTotal, setUsageCreditsTotal] = useState(0);
@@ -540,7 +540,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
         </div>
       )}
 
-      {/* 用量计数显示：周期 / 每日 / 加榨包 三个独立池子，分子永不超过各自分母 */}
+      {/* 用量计数显示：周期 / 每日 / 多榨卡 三个独立池子，分子永不超过各自分母 */}
       {initialized && session?.user && (
         <div className="flex items-center justify-center gap-1.5 mb-2 text-xs text-muted">
           {usageLimit !== null ? (
@@ -559,7 +559,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
               {usageCreditsTotal > 0 && (
                 <>
                   <span className="text-slate-300">·</span>
-                  <UsageFrac label="加榨包" used={usageCreditsUsed} limit={usageCreditsTotal} />
+                  <UsageFrac label="多榨卡" used={usageCreditsUsed} limit={usageCreditsTotal} />
                 </>
               )}
             </span>
@@ -571,7 +571,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
 
       {/* 输入区域 */}
       <div className="border-t border-rule pt-3 safe-bottom">
-        {/* 次数用完 — 总轮次或今日轮次触顶且无加榨余额时，引导开通会员/加榨包 */}
+        {/* 次数用完 — 总轮次或今日轮次触顶且无多榨卡余额时，引导开通会员/多榨卡 */}
         {usageLimit !== null && usageCredits === 0 && (
           usageUsed >= usageLimit ||
           (usageDailyLimit !== null && usageDailyUsed !== null && usageDailyUsed >= usageDailyLimit)
@@ -589,7 +589,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
               href={creditPackHref}
               className="text-accent font-semibold underline underline-offset-2 hover:text-accent-dark"
             >
-              购买加榨包
+              购买多榨卡
             </Link>
             可继续交谈
           </div>

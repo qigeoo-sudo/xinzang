@@ -1,59 +1,109 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { MentorCard } from '@/components/mentor-card';
-import { HomeFooter } from '@/components/home/home-footer';
+import { PageHero, PaperCredits, GoldFlakes } from '@/components/page-shell';
 import { mentors, getAllIndustries } from '@/lib/mentors';
+
+const PAGE_SIZE = 10;
 
 export default function MentorsPage() {
   const [activeIndustry, setActiveIndustry] = useState<string>('全部');
+  const [currentPage, setCurrentPage] = useState(1);
   const allMentors = mentors; // 展示所有导师（含未解锁）
   const industries = ['全部', ...getAllIndustries().filter((i) => i !== '通用')];
 
-  const filtered = activeIndustry === '全部'
-    ? allMentors
-    : allMentors.filter((m) => m.industry === activeIndustry);
+  const filtered = useMemo(
+    () =>
+      activeIndustry === '全部'
+        ? allMentors
+        : allMentors.filter((m) => m.industry === activeIndustry),
+    [activeIndustry, allMentors]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // 切行业时回到第 1 页（如果当前页超出范围）
+  const safePage = Math.min(currentPage, totalPages);
+  const paged = useMemo(
+    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filtered, safePage]
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      <GoldFlakes />
 
-      <div className="page-container flex-1">
-        {/* 页面标题 */}
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-ink mb-2">行业导师 AI 分身</h1>
-          <p className="text-sm text-muted leading-relaxed">
-            导师分身的知识经验均来自真实访谈
-          </p>
+      <PageHero
+        eyebrow={<>MENTOR AVATAR<span style={{ textTransform: 'lowercase' }}>s</span></>}
+        title="行业导师 AI 分身"
+        subtitle="导师分身的知识经验均来自真实访谈"
+        watermark="师"
+      />
+
+      <main className="relative z-10 flex flex-1 flex-col px-4 py-8 md:py-12">
+        <div className="mx-auto w-full max-w-[840px]">
+          {/* 行业筛选标签 */}
+          <div className="relative z-10 mb-6 flex flex-wrap gap-2">
+            {industries.map((industry) => {
+              const active = activeIndustry === industry;
+              return (
+                <button
+                  key={industry}
+                  onClick={() => {
+                    setActiveIndustry(industry);
+                    setCurrentPage(1);
+                  }}
+                  className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                    active
+                      ? 'bg-ink text-white shadow-[0_4px_12px_-4px_rgba(44,62,92,0.45)]'
+                      : 'border border-ink/15 text-ink/70 hover:border-ink/30 hover:text-ink'
+                  }`}
+                >
+                  {industry}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 导师卡片网格 */}
+          <div className="relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {paged.map((mentor) => (
+              <MentorCard key={mentor.id} mentor={mentor} />
+            ))}
+          </div>
+
+          {/* 分页导航 */}
+          {totalPages > 1 && (
+            <div className="relative z-10 mt-8 flex items-center justify-center gap-3">
+              <button
+                type="button"
+                disabled={safePage <= 1}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rule text-sm text-ink/70 transition-all hover:border-ink/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="上一页"
+              >
+                ‹
+              </button>
+              <span className="text-xs text-muted">
+                第 <span className="font-semibold text-ink">{safePage}</span> / {totalPages} 页
+              </span>
+              <button
+                type="button"
+                disabled={safePage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rule text-sm text-ink/70 transition-all hover:border-ink/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-30"
+                aria-label="下一页"
+              >
+                ›
+              </button>
+            </div>
+          )}
         </div>
+      </main>
 
-        {/* 行业筛选标签 */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {industries.map((industry) => (
-            <button
-              key={industry}
-              onClick={() => setActiveIndustry(industry)}
-              className={`tag transition-all ${
-                activeIndustry === industry
-                  ? 'tag-accent'
-                  : 'bg-beige text-muted hover:bg-beige/70'
-              }`}
-            >
-              {industry}
-            </button>
-          ))}
-        </div>
-
-        {/* 导师卡片网格 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filtered.map((mentor) => (
-            <MentorCard key={mentor.id} mentor={mentor} />
-          ))}
-        </div>
-      </div>
-
-      <HomeFooter lang="zh" />
+      <PaperCredits lang="zh" />
     </div>
   );
 }
