@@ -198,7 +198,9 @@ function HeaderInner() {
 
     // update() 刷新会话期间 status 会短暂变 loading，但旧 session 仍在，
     // 继续显示用户操作区，避免右上角闪"加载中..."
-    if (status === 'loading' && !session?.user) {
+    // 先存布尔别名：避免解构判别联合在 && 右操作数上被 TS 错误窄化为 never
+    const hasUser = !!session?.user;
+    if (status === 'loading' && !hasUser) {
       return <span className={`text-slate-400 ${box}`}>{tr.loading}</span>;
     }
 

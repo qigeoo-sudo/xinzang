@@ -1,7 +1,7 @@
 /**
  * 知识卡检索打分与格式化（纯函数，无 Prisma / 路径别名依赖）
  *
- * 供应用代码 (src/lib/mentor-kb.ts、src/lib/eval-core.ts) 与测试脚本复用。
+ * 供应用代码 (src/lib/mentor-kb.ts、src/lib/search.ts) 与测试脚本复用。
  * 脚本用 tsx 运行，无法解析 @/ 别名，因此本文件保持零依赖、零别名。
  *
  * 安全约束（handoff 2026-09-15 §10）：
