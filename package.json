@@ -24,7 +24,7 @@
     "@fontsource/liu-jian-mao-cao": "^5.3.0",
     "@fontsource/noto-serif-sc": "^5.3.0",
     "@prisma/client": "^5.22.0",
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",
     "next": "^14.2.15",
     "next-auth": "^5.0.0-beta.25",
@@ -38,7 +38,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.19.43",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.31",
