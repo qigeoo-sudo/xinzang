@@ -66,9 +66,11 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [guideOpen, setGuideOpen] = useState(false);
   // 挂载后再输出环境相关 UI，避免 SSR 水合不一致
   const [mounted, setMounted] = useState(false);
-  // 已安装（standalone 运行 或 收到 appinstalled）：隐藏入口，
+  // 已安装（standalone 运行 或 收到 appinstalled 或 iOS 标签页内推断）：隐藏入口，
   // 用户删除桌面图标后再用浏览器打开即恢复显示
   const [installed, setInstalled] = useState(false);
+  // iOS：用户点了安装按钮后等待页面切走再回来，据此推断完成添加
+  const [awaitingReturn, setAwaitingReturn] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -108,6 +110,27 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     };
   }, []);
 
+  // iOS Safari 不触发 appinstalled 事件；用户点安装按钮后去操作「分享→添加到主屏幕」，
+  // 页面会切到后台再回来。据此推断已添加，隐藏按钮，避免再次点击弹出指引。
+  useEffect(() => {
+    if (!awaitingReturn) return;
+    const finish = () => {
+      setInstalled(true);
+      setGuideOpen(false);
+      setAwaitingReturn(false);
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'visible') finish();
+    };
+    const onPageShow = () => finish();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pageshow', onPageShow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [awaitingReturn]);
+
   const handleInstall = async () => {
     if (installEnv === 'prompt' && deferred) {
       await deferred.prompt();
@@ -121,6 +144,10 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     }
     // iOS 各浏览器都只能展示手动添加指引
     setGuideOpen(true);
+    // iOS：开始等待页面切走再回来，据此推断完成添加并隐藏按钮
+    if (installEnv === 'ios-browser' || installEnv === 'ios-wechat') {
+      setAwaitingReturn(true);
+    }
   };
 
   if (!mounted || installed) return null;
