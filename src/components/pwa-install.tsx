@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
  * PWA 安装入口（模仿 squoosh.app 的 Install 流程）
@@ -184,7 +185,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
         {t.install}
       </button>
 
-      {guideOpen && (
+      {mounted && guideOpen && createPortal(
         <div
           className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center"
           onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}
@@ -250,7 +251,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
               {t.close}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
