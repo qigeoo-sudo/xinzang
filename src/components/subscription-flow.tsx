@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import type { SubscriptionPlan, PlanId, CreditPack } from '@/lib/plans';
@@ -39,6 +39,82 @@ interface SubscriptionFlowProps {
 
 type PayState = 'idle' | 'creating' | 'paying' | 'polling' | 'success' | 'error';
 
+/**
+ * 卡面压印名（仿信用卡持卡人姓名）：绝对定位不占卡面高度。
+ * 右边缘与右上描述块右齐（同一网格列，由布局保证）；宽度统一以
+ * 年卡描述"享受最低价格，主打长期陪伴"的 9px 渲染宽度为上限（三张卡同一把尺），
+ * 从 18px 起按比例一次算到合适字号（0.5px 向下取整），下限 8px。
+ * 只监听标尺/容器，不监听自身，杜绝自触发循环。
+ */
+function EmbossedName({
+  name,
+  isBlack,
+  gaugeRef,
+}: {
+  name: string;
+  isBlack: boolean;
+  gaugeRef: RefObject<HTMLDivElement>;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [fontSize, setFontSize] = useState(18);
+
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const text = textRef.current;
+    const gauge = gaugeRef.current;
+    if (!wrap || !text || !gauge) return;
+
+    const fit = () => {
+      const max = gauge.getBoundingClientRect().width;
+      if (!max) return;
+      // 只在 18px 测一次真实宽度，再按比例一次算出目标字号（0.5px 向下取整保证不超）
+      text.style.fontSize = '18px';
+      const w18 = text.getBoundingClientRect().width;
+      let size = 18;
+      if (w18 > max) {
+        size = Math.max(8, Math.floor(((18 * max) / w18) * 2) / 2);
+      }
+      text.style.fontSize = '';
+      setFontSize(size);
+    };
+
+    const raf = requestAnimationFrame(fit);
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap);
+    ro.observe(gauge);
+    let disposed = false;
+    document.fonts?.ready
+      .then(() => {
+        if (!disposed) fit();
+      })
+      .catch(() => {});
+    window.addEventListener('resize', fit);
+
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', fit);
+    };
+  }, [name, gaugeRef]);
+
+  return (
+    <div ref={wrapRef} className="relative h-0 w-full">
+      <span
+        ref={textRef}
+        title={name}
+        style={{ fontSize }}
+        className={`absolute right-0 top-0 whitespace-nowrap font-mono font-bold leading-none ${
+          isBlack ? 'text-foil' : 'text-foil-light'
+        }`}
+      >
+        {/[\u4e00-\u9fa5]/.test(name) ? name : name.toUpperCase()}
+      </span>
+    </div>
+  );
+}
+
 /** 支付方式 */
 type PaymentMethod = 'wechat' | 'alipay';
 
@@ -63,6 +139,9 @@ export function SubscriptionFlow({
 }: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
+
+  // 生效卡：压印名的统一宽度标尺（年卡描述文字的 9px 渲染宽），三张卡共用
+  const nameGaugeRef = useRef<HTMLDivElement>(null);
 
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [payState, setPayState] = useState<PayState>('idle');
@@ -361,7 +440,7 @@ export function SubscriptionFlow({
               生效中
             </span>
 
-            <div className="flex items-start justify-between">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
               <p className={`font-mono text-[10px] font-medium uppercase tracking-masthead ${isBlack ? 'text-foil' : 'text-foil-light'}`}>
                 {activePlan.id}
               </p>
@@ -370,39 +449,41 @@ export function SubscriptionFlow({
                   {activePlan.name}
                 </p>
                 <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{activePlan.description}</p>
+                {/* 统一宽度标尺：年卡描述的 9px 单行渲染宽；invisible+h-0 只占宽不占高，
+                    三张卡的右列因此同宽，压印名一律与这把尺比较 */}
+                <div
+                  ref={nameGaugeRef}
+                  aria-hidden
+                  className="invisible h-0 overflow-hidden whitespace-nowrap text-[9px]"
+                >
+                  享受最低价格，主打长期陪伴
+                </div>
+              </div>
+
+              <div className="mt-1 flex items-baseline gap-0.5">
+                <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>￥</span>
+                <span className={`text-[28px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
+                  {activePlan.price}
+                </span>
+                <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>{activePlan.period}</span>
+              </div>
+              <div aria-hidden />
+
+              <ul className="mt-1.5 space-y-0">
+                {activePlan.features.map((feature, i) => (
+                  <li key={i} className={`flex items-center gap-1.5 text-[11px] leading-snug ${isBlack ? 'text-foil/85' : 'text-white/85'}`}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
+                      <path d="M5 13l4 4L19 7" stroke={isBlack ? '#F5D785' : '#FFFFFF'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              {/* 压印名：与第一条权益顶部齐平；右列左右边界与右上卡名/描述块一致，超宽自动缩字号 */}
+              <div className="mt-1.5">
+                {nickname && <EmbossedName name={nickname} isBlack={isBlack} gaugeRef={nameGaugeRef} />}
               </div>
             </div>
-
-            <div className="mt-1 flex items-baseline gap-0.5">
-              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>￥</span>
-              <span className={`text-[28px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
-                {activePlan.price}
-              </span>
-              <span className={`text-[11px] ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>{activePlan.period}</span>
-            </div>
-
-            <ul className="mt-1.5 space-y-0">
-              {activePlan.features.map((feature, i) => (
-                <li key={i} className={`flex items-center gap-1.5 text-[11px] leading-snug ${isBlack ? 'text-foil/85' : 'text-white/85'}`}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" className="shrink-0">
-                    <path d="M5 13l4 4L19 7" stroke={isBlack ? '#F5D785' : '#FFFFFF'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                  {feature}
-                </li>
-              ))}
-            </ul>
-
-            {/* 持卡人昵称：仿信用卡压印姓名，右对齐；英文转大写，中文原样 */}
-            {nickname && (
-              <div
-                className={`mt-1.5 truncate text-right font-mono text-[18px] font-bold ${
-                  isBlack ? 'text-foil' : 'text-foil-light'
-                }`}
-                title={nickname}
-              >
-                {/[\u4e00-\u9fa5]/.test(nickname) ? nickname : nickname.toUpperCase()}
-              </div>
-            )}
 
             <div className={`mt-auto pt-1 text-right text-[10px] ${isBlack ? 'text-foil/75' : 'text-white/75'}`}>
               {new Date(activeSubscription.endDate).toLocaleDateString('zh-CN')} 到期 · 剩余 {activeSubscription.daysRemaining} 天
