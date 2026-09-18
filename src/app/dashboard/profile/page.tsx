@@ -80,7 +80,7 @@ function getTemplateBg(status?: string | null): string {
 }
 
 export default function ProfilePage() {
-  const { status } = useSession();
+  const { status, update } = useSession();
   const router = useRouter();
 
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -118,12 +118,33 @@ export default function ProfilePage() {
     };
   }, [status]);
 
-  // 未登录重定向
+  // 未登录重定向（二次确认防误杀）：
+  // next-auth 客户端在 /api/auth/session 遇到冷启动 5xx / 网络抖动时会吞掉错误返回 null，
+  // status 会瞬时变成 unauthenticated；直连复核一次，确认真没登录才跳登录页。
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login?callbackUrl=/dashboard/profile');
-    }
-  }, [status, router]);
+    if (status !== 'unauthenticated') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/auth/session', { cache: 'no-store' });
+        if (cancelled) return;
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data?.user?.id) {
+            // 其实还登录着：纠正客户端的假阴性状态，后续加载 effect 会自动继续
+            await update();
+            return;
+          }
+        }
+        if (!cancelled) router.push('/login?callbackUrl=/dashboard/profile');
+      } catch {
+        // 复核请求本身失败（网络/冷启动）：停在加载态，绝不把用户踢去登录页
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, router, update]);
 
   // 清空全部数据（聊天记录 + 档案 + 测评 + 本地缓存），成功后返回首页
   const handleClearAll = async () => {
@@ -199,7 +220,7 @@ export default function ProfilePage() {
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
             </svg>
-            修改档案资料
+            修改档案
           </Link>
           <Link
             href="/history"

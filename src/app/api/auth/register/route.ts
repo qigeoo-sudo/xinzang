@@ -21,6 +21,7 @@ import {
   toAssessmentCreate,
 } from '@/lib/register-v2';
 import { containsProfanity } from '@/lib/profanity';
+import { readAttribution, resolveActiveChannel } from '@/lib/attribution';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -36,6 +37,20 @@ const registerSchema = z.object({
   // contactEmail 已在 registerProfileSchema 内（独立于 User.email 登录邮箱）
   profile: registerProfileSchema.optional(),
   assessment: assessmentSchema.optional(),
+  // 渠道首次触点快照（由落地页组件写入 cookie/localStorage，仅用于注册盖章）
+  attribution: z
+    .object({
+      ch: z.string().trim().min(1).max(64).optional(),
+      source: z.string().max(300).optional(),
+      medium: z.string().max(300).optional(),
+      campaign: z.string().max(300).optional(),
+      term: z.string().max(300).optional(),
+      content: z.string().max(300).optional(),
+      landing: z.string().max(300).optional(),
+      ts: z.string().max(64).optional(),
+    })
+    .passthrough()
+    .optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -208,6 +223,22 @@ export async function POST(request: NextRequest) {
     } else {
       userData.email = target.toLowerCase();
       userData.name = target.split('@')[0];
+    }
+
+    // 渠道归因盖章：首次触点锁定，仅当渠道码有效且渠道 ACTIVE 时写入。
+    // 任何归因异常都不阻断注册（按自然量落库）。
+    try {
+      const snapshot = readAttribution(request, parsed.data.attribution);
+      const channel = await resolveActiveChannel(snapshot?.ch);
+      if (snapshot && channel) {
+        userData.channelId = channel.id;
+        userData.attributionJson = JSON.stringify({ ...snapshot, ch: channel.code });
+      }
+    } catch (attrError) {
+      console.warn(
+        '[attribution] stamp skipped:',
+        attrError instanceof Error ? attrError.message : attrError,
+      );
     }
 
     const user = await prisma.user.create({

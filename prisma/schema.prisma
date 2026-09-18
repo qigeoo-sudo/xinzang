@@ -51,6 +51,10 @@ model User {
   lockUntil         DateTime?
   // 密码重置后使旧会话失效
   passwordChangedAt DateTime?
+  // 渠道归因：首次触点锁定，注册时一次性写入，之后不可更改（分成反查依据）
+  channelId       String?
+  // 首次触点快照 JSON：ch / utm_source / utm_medium / utm_campaign / utm_term / utm_content / landing / ts
+  attributionJson String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -64,9 +68,36 @@ model User {
   chatSessions      ChatSession[]
   verificationCodes VerificationCode[]
   interestAssessment InterestAssessment?
+  channel           Channel?  @relation(fields: [channelId], references: [id])
 
   @@index([email])
   @@index([phone])
+  @@index([channelId])
+}
+
+/// 渠道模型 — 渠道归因与未来分成结算
+/// 二维码/导流链接形如 https://域名/r/{code}，用户首次落地锁定，注册时盖章到 User.channelId
+model Channel {
+  id          String    @id @default(cuid())
+  // 渠道码：链接参数 /r/{code}，仅允许字母数字下划线短横线（如 xhs_lydia01）
+  code        String    @unique
+  // 渠道名称（如「小红书-Lydia 笔记 9 月」）
+  name        String
+  // 合作方/分成归属人（自由文本，结算时对账用）
+  partner     String?
+  // 分成比例（百分比整数 0-100，先占位；结算规则二期启用，不进任何用户侧逻辑）
+  shareRate   Int?
+  // ACTIVE | DISABLED：停用后旧链接落到自然量，不再新归因
+  status      String    @default("ACTIVE")
+  // 扫码后站内落地路径，默认首页
+  landingPath String?   @default("/")
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  users User[]
+
+  @@index([status])
 }
 
 /// OAuth 账户模型 — Auth.js 标准模型，用于第三方登录

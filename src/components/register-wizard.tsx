@@ -718,6 +718,15 @@ export function RegisterWizard({
           code,
           profile: buildProfilePayload(),
           assessment: pendingAssessment ?? undefined,
+          // 渠道首次触点快照（落地页写入 localStorage；服务端还会读 ch_attr cookie）
+          attribution: (() => {
+            try {
+              const raw = localStorage.getItem('ch_attr');
+              return raw ? JSON.parse(raw) : undefined;
+            } catch {
+              return undefined;
+            }
+          })(),
         }),
       });
       const data = await res.json().catch(() => ({}));

@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo, useRef, useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -46,12 +45,23 @@ export function AssessmentFlow() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [guestDialog, setGuestDialog] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 「第 i / 30 题」进度条：切题时把它定位到吸顶导航正下方
+  const progressRef = useRef<HTMLDivElement | null>(null);
 
-  // 切换阶段或题目时滚动到顶部
+  // 切换阶段滚动到顶部；答题阶段切题时定位到进度条（第 i/30 题）上方
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (stage === 'test' && progressRef.current) {
+      const nav = document.querySelector('nav.glass-nav') as HTMLElement | null;
+      const navH = nav?.offsetHeight ?? (window.innerWidth >= 768 ? 56 : 89);
+      const rect = progressRef.current.getBoundingClientRect();
+      const top = Math.max(0, window.scrollY + rect.top - navH - 8);
+      window.scrollTo({ top, behavior: 'auto' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
   }, [stage, idx]);
 
   const answeredCount = Object.keys(answers).length;
@@ -86,6 +96,7 @@ export function AssessmentFlow() {
     setIdx(0);
     setSaved(false);
     setSaveError('');
+    setRetryCount(0);
     setGuestDialog(false);
     setStage('test');
   };
@@ -101,7 +112,7 @@ export function AssessmentFlow() {
   };
 
   const handleSave = async () => {
-    if (!payload) return;
+    if (!payload || saving) return;
     setSaveError('');
 
     if (status !== 'authenticated') {
@@ -111,25 +122,57 @@ export function AssessmentFlow() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/assessment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      // 客户端会话状态过期（如 cookie 失效）时，回退到访客注册引导
-      if (res.status === 401 || res.status === 403) {
-        setGuestDialog(true);
-        return;
-      }
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || '保存失败');
+      const body = JSON.stringify(payload);
+      // 冷启动/网络抖动时首请求可能失败；服务端按 userId 幂等覆盖，重试不会产生重复数据
+      const MAX_RETRIES = 2;
+      let attempt = 0;
+      for (;;) {
+        let res: Response;
+        try {
+          res = await fetch('/api/assessment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+          });
+        } catch {
+          // 网络层失败（断网/连接重置/冷启动超时）：退避后重试
+          if (attempt < MAX_RETRIES) {
+            setRetryCount(attempt + 1);
+            await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+            attempt += 1;
+            continue;
+          }
+          throw new Error('网络不太通，结果没存上，请再点一次');
+        }
+
+        // 客户端会话状态过期（如 cookie 失效）时，回退到访客注册引导
+        if (res.status === 401 || res.status === 403) {
+          setGuestDialog(true);
+          return;
+        }
+        // 服务端瞬时错误（冷启动 5xx / 限流 429）：同样退避重试
+        if (
+          !res.ok &&
+          (res.status === 408 || res.status === 429 || res.status >= 500) &&
+          attempt < MAX_RETRIES
+        ) {
+          setRetryCount(attempt + 1);
+          await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+          attempt += 1;
+          continue;
+        }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || '保存失败');
+        }
+        break;
       }
       setSaved(true);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '保存失败，请稍后再试');
     } finally {
       setSaving(false);
+      setRetryCount(0);
     }
   };
 
@@ -237,7 +280,7 @@ export function AssessmentFlow() {
         {stage === 'test' && (
           <section>
             {/* 进度 */}
-            <div className="mb-4">
+            <div ref={progressRef} className="mb-4">
               <div className="mb-2 flex items-center justify-between text-xs text-muted">
                 <span>
                   第 {idx + 1} / {order.length} 题
@@ -266,7 +309,7 @@ export function AssessmentFlow() {
                   const selected = answers[order[idx].id] === value;
                   return (
                     <button
-                      key={label}
+                      key={`${order[idx].id}-${i}`}
                       onClick={() => choose(value)}
                       aria-pressed={selected}
                       className={`group flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-medium transition-all active:scale-[.99] ${
@@ -394,12 +437,16 @@ export function AssessmentFlow() {
             {/* 储存区 */}
             {saved ? (
               <div className="mt-4 rounded-2xl border border-sage-400/30 bg-sage-50 p-6 text-center">
-                <Link
-                  href="/dashboard/profile"
+                {/* 整页跳转：刚注册自动登录后，Link 客户端导航可能命中旧的跳登录预取缓存 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = '/dashboard/profile';
+                  }}
                   className="block w-full rounded-xl bg-sage-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-sage-600 active:scale-[.98]"
                 >
                   查看我的档案
-                </Link>
+                </button>
                 <p className="mt-3 text-xs text-muted">
                   导师分身推荐也在那里
                 </p>
@@ -417,7 +464,11 @@ export function AssessmentFlow() {
                     disabled={saving}
                     className="flex flex-1 items-center justify-center rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98] disabled:opacity-50"
                   >
-                    {saving ? '储存中…' : '储存测试结果'}
+                    {saving
+                      ? retryCount > 0
+                        ? `储存中…重试 ${retryCount}/2`
+                        : '储存中…'
+                      : '储存测试结果'}
                   </button>
                   <button
                     onClick={restart}

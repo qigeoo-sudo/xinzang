@@ -164,6 +164,7 @@ export const { handlers, auth } = NextAuth({
         '/logout',
         '/forgot-password',
         '/mentors', // 导师列表和详情页公开，聊天组件自行检查登录
+        '/r', // 渠道短链（扫码发生在登录/注册之前，匿名可达）
         '/payment/mock', // Mock 支付页面 (开发环境)
         '/api/auth',
         '/api/logout',

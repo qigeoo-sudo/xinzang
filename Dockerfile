@@ -1,4 +1,4 @@
-# Dockerfile — 腾讯云 CloudBase 部署
+# Dockerfile — 火山引擎 ECS Docker 部署
 # Next.js standalone 模式
 
 # ===== Stage 1: deps =====
@@ -11,6 +11,9 @@ COPY prisma ./prisma/
 RUN npm_config_platform=linux npm_config_arch=x64 npm_config_libc=musl npm ci
 # 显式安装 musl 版 SWC，防止 Next.js build 时找不到二进制
 RUN npm install @next/swc-linux-x64-musl --save-optional
+# 显式安装 musl 版 sharp：standalone 模式的 next/image 图片优化必须有 sharp，
+# 否则线上每张优化图片都会报 'sharp' is required to be installed in standalone mode
+RUN npm install @img/sharp-linuxmusl-x64 --save-optional
 
 # ===== Stage 2: builder =====
 FROM node:20-alpine AS builder
@@ -39,12 +42,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# --- 运行时必需的环境变量（CloudBase 控制台可覆盖） ---
-# SQLite 数据库路径 — 容器内持久化目录
+# --- 运行时必需的环境变量（服务器上通过 docker run --env-file 注入） ---
+# SQLite 数据库路径 — 容器内持久化目录（生产挂载宿主机卷 /opt/xinzang-data:/app/data）
 ENV DATABASE_URL="file:/app/data/prod.db"
-# 信任 CloudBase 代理转发的 Host 头（需确保代理层正确配置 X-Forwarded-Host）
+# 信任前置代理（Nginx 等）转发的 Host 头
 ENV AUTH_TRUST_HOST=true
-# AUTH_URL 和 AUTH_SECRET 必须在 CloudBase 控制台环境变量中设置
+# AUTH_URL 和 AUTH_SECRET 必须在宿主机 /opt/xinzang/.env 中设置
 # AUTH_URL: 外部访问地址（如 https://aihr.top）
 # AUTH_SECRET: JWT 签名密钥，未设置时启动会失败
 
@@ -94,5 +97,5 @@ USER nextjs
 EXPOSE 3000
 
 # 构建阶段已完成 db push + 知识卡 seed，直接启动 Next.js
-# （CloudBase 无持久卷，每次部署都是全新镜像，无需启动时重复 seed）
+# 生产数据通过宿主机挂载卷持久化（-v /opt/xinzang-data:/app/data）
 CMD ["node", "server.js"]

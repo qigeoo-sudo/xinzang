@@ -57,9 +57,16 @@ export function HomeContent() {
                 className="block h-[3px] w-10 rounded-full bg-white/90"
                 aria-hidden
               />
-              <h1 className="mt-6 font-serif text-[clamp(32px,8.5vw,54px)] font-bold leading-[1.22] tracking-[-0.02em] text-[#FFF9F2]">
+              <h1
+                className={`mt-6 font-serif font-bold leading-[1.22] tracking-[-0.02em] text-[#FFF9F2] ${
+                  uiLang === 'zh'
+                    ? // 中文单行铺满：随屏宽缩放，绝不换行
+                      'whitespace-nowrap text-[clamp(25px,8.2vw,54px)]'
+                    : 'text-[clamp(32px,8.5vw,54px)]'
+                }`}
+              >
                 {tr.sloganA}
-                <span className="mx-1 inline-block rounded-[10px] bg-[#FFF9F2] px-2.5 leading-tight text-ink">
+                <span className="mx-1 inline-block rounded-[10px] bg-[#FFF9F2] px-1.5 leading-tight text-ink md:px-2.5">
                   {tr.sloganAccent}
                 </span>
                 {tr.sloganB}

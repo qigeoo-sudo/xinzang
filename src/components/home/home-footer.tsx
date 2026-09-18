@@ -8,7 +8,7 @@ const copy = {
   },
   en: {
     name: 'AI Career Companion',
-    slogan: 'With you, as clarity grows.',
+    slogan: 'Crescentem te aspicere, gaudium meum',
     copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
   },
 };
@@ -45,7 +45,13 @@ export function HomeFooter({
         <p className="text-foil font-mono text-[9px] font-medium uppercase tracking-masthead">
           {t.name}
         </p>
-        <p className="text-foil font-serif text-[13px] font-bold md:text-[15px]">{t.slogan}</p>
+        <p
+          className={`text-foil font-serif font-bold ${
+            lang === 'en' ? 'text-[10.5px] leading-tight md:text-[12px]' : 'text-[13px] md:text-[15px]'
+          }`}
+        >
+          {t.slogan}
+        </p>
         <p className="text-[9px] text-white/35">{t.copyright}</p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Header } from '@/components/header';
 import { MentorCard } from '@/components/mentor-card';
 import { PageHero, PaperCredits, GoldFlakes } from '@/components/page-shell';
@@ -29,6 +29,25 @@ export default function MentorsPage() {
     () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
     [filtered, safePage]
   );
+
+  // 导师列表开头：翻页后定位到吸顶导航正下方（首次进页面不触发，保留页头）
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const firstListRun = useRef(true);
+  useEffect(() => {
+    if (firstListRun.current) {
+      firstListRun.current = false;
+      return;
+    }
+    const el = listRef.current;
+    if (!el) return;
+    const nav = document.querySelector('nav.glass-nav') as HTMLElement | null;
+    const navH = nav?.offsetHeight ?? (window.innerWidth >= 768 ? 56 : 89);
+    const rect = el.getBoundingClientRect();
+    window.scrollTo({
+      top: Math.max(0, window.scrollY + rect.top - navH - 8),
+      behavior: 'auto',
+    });
+  }, [safePage]);
 
   return (
     <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
@@ -68,7 +87,7 @@ export default function MentorsPage() {
           </div>
 
           {/* 导师卡片网格 */}
-          <div className="relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div ref={listRef} className="relative z-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {paged.map((mentor) => (
               <MentorCard key={mentor.id} mentor={mentor} />
             ))}

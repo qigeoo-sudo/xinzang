@@ -2,12 +2,15 @@ import type { Metadata, Viewport } from 'next';
 import { Providers } from '@/components/providers';
 import { ServiceWorkerRegister } from '@/components/sw-register';
 import { JuiceOverlay } from '@/components/juice-splash';
+import { AttributionCapture } from '@/components/attribution-capture';
 // 杂志风标题字体（思源宋体）与刊头小字（DM Mono），fontsource 自托管，构建不依赖外网
 import '@fontsource/noto-serif-sc/600.css';
 import '@fontsource/noto-serif-sc/700.css';
 import '@fontsource/noto-serif-sc/900.css';
 import '@fontsource/dm-mono/400.css';
 import '@fontsource/dm-mono/500.css';
+// 签名狂草（柳建毛草），自托管避免国内拉不到 Google Fonts 回退成行书
+import '@fontsource/liu-jian-mao-cao/400.css';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -50,6 +53,8 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="min-h-screen safe-bottom overflow-x-hidden">
         <Providers>{children}</Providers>
+        {/* 渠道归因：带 ch/utm 参数落地时记录首次触点（无 UI） */}
+        <AttributionCapture />
         {/* 全局果汁飞溅层：只挂载一次，页面切换不卸载，动画可跨页面播完 */}
         <JuiceOverlay />
         <ServiceWorkerRegister />

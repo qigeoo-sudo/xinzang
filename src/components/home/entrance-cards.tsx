@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -35,7 +35,7 @@ const copy = {
     quote1: '"Not sure about my career direction — give me suggestions"',
     action1: 'Take the Interest Assessment',
     quote2: '"Let me browse mentors first — I may find my direction"',
-    action2: 'See All Mentor Personas',
+    action2: 'See All Mentor Avatars',
     quote3: '"I know my direction — match me with mentors directly"',
     placeholder: 'Keywords, e.g. strategy consulting, investment',
     go: 'Search',
