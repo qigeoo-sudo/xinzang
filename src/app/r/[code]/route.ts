@@ -16,11 +16,23 @@ function safeLandingPath(path: string | null | undefined): string {
   return '/';
 }
 
+/** 容器在反向代理后 request.url 会变成 0.0.0.0:3000，跳转域名以显式配置为准 */
+function resolveBaseUrl(request: NextRequest): string {
+  const explicit =
+    process.env.PUBLIC_BASE_URL || process.env.AUTH_URL || process.env.NEXTAUTH_URL;
+  if (explicit) return explicit.replace(/\/+$/, '');
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+  if (host) return `${proto.split(',')[0].trim()}://${host.split(',')[0].trim()}`;
+  return request.nextUrl.origin;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { code: string } },
 ) {
   const code = params.code;
+  const baseUrl = resolveBaseUrl(request);
 
   let landing = '/';
   if (/^[a-zA-Z0-9_-]{1,64}$/.test(code)) {
@@ -30,7 +42,7 @@ export async function GET(
     });
     if (channel && channel.status === 'ACTIVE') {
       landing = safeLandingPath(channel.landingPath);
-      const response = NextResponse.redirect(new URL(landing, request.url));
+      const response = NextResponse.redirect(new URL(landing, baseUrl));
       response.cookies.set(ATTR_COOKIE, JSON.stringify({
         ch: code,
         landing,
@@ -46,5 +58,5 @@ export async function GET(
     }
   }
 
-  return NextResponse.redirect(new URL(landing, request.url));
+  return NextResponse.redirect(new URL(landing, baseUrl));
 }
