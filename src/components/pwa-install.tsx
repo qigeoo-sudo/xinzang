@@ -187,7 +187,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       {guideOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center"
-          onClick={() => setGuideOpen(false)}
+          onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}
           role="dialog"
           aria-modal="true"
           aria-label={t.title}
@@ -201,7 +201,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
               <h3 className="text-base font-bold text-ink">{t.title}</h3>
               <button
                 type="button"
-                onClick={() => setGuideOpen(false)}
+                onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}
                 className="flex h-7 w-7 items-center justify-center rounded-full bg-beige text-muted hover:text-ink"
                 aria-label={t.close}
               >
@@ -244,7 +244,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
 
             <button
               type="button"
-              onClick={() => setGuideOpen(false)}
+              onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}
               className="mt-6 w-full rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-600 active:scale-[.98]"
             >
               {t.close}
