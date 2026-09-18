@@ -54,9 +54,6 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
             <span className="ml-auto text-xs text-slate-400">等待上线</span>
           )}
         </div>
-        <p className="mb-1 text-xs text-muted">
-          {mentor.title} . {mentor.company}
-        </p>
         <p className="mb-2 line-clamp-1 text-xs text-ink/80">{mentor.tagline}</p>
 
         {reasons && reasons.length > 0 ? (

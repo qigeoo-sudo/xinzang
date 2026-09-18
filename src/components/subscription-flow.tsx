@@ -33,6 +33,8 @@ interface SubscriptionFlowProps {
   freeTrialLimit?: number;
   /** 多榨卡当前持有轮次余额（累计购买 − 累计消耗） */
   creditBalance?: number;
+  /** 用户昵称（印在生效卡上，仿信用卡持卡人姓名） */
+  nickname?: string;
 }
 
 type PayState = 'idle' | 'creating' | 'paying' | 'polling' | 'success' | 'error';
@@ -57,6 +59,7 @@ export function SubscriptionFlow({
   freeTrialRemaining = 0,
   freeTrialLimit = 3,
   creditBalance = 0,
+  nickname,
 }: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
@@ -388,6 +391,18 @@ export function SubscriptionFlow({
                 </li>
               ))}
             </ul>
+
+            {/* 持卡人昵称：仿信用卡压印姓名，右对齐；英文转大写，中文原样 */}
+            {nickname && (
+              <div
+                className={`mt-1.5 truncate text-right font-mono text-[18px] font-bold ${
+                  isBlack ? 'text-foil' : 'text-foil-light'
+                }`}
+                title={nickname}
+              >
+                {/[\u4e00-\u9fa5]/.test(nickname) ? nickname : nickname.toUpperCase()}
+              </div>
+            )}
 
             <div className={`mt-auto pt-1 text-right text-[10px] ${isBlack ? 'text-foil/75' : 'text-white/75'}`}>
               {new Date(activeSubscription.endDate).toLocaleDateString('zh-CN')} 到期 · 剩余 {activeSubscription.daysRemaining} 天

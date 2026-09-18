@@ -55,7 +55,7 @@ export const mentors: Mentor[] = [
     companyType: '创业',
     industry: '医疗',
     years: 25,
-    tagline: '心擎医疗HRVP · 曾在上海中唱、美罗百货、PRTM、PwC工作 · 从招聘与组织视角陪你拆解职业',
+    tagline: '心擎医疗 · 曾在PRTM、PwC工作 · 从招聘与组织视角陪你拆解职业',
     tags: ['HR视角', '职业路径', '可迁移能力', '面试', '咨询行业', '医疗器械人才'],
     price: 59,
     isFree: false,

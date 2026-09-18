@@ -68,9 +68,11 @@ export default async function MentorDetailPage({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="mb-2 text-xs text-muted">
-                  {mentor.title} · {mentor.company}
-                  {yearsText ? ` · ${yearsText}` : ''}
+                {yearsText && (
+                  <p className="mb-1.5 text-xs text-muted">{yearsText}</p>
+                )}
+                <p className="mb-2 text-sm leading-relaxed text-ink/85">
+                  {mentor.tagline}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {mentor.tags.map((tag) => (

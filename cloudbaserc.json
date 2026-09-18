@@ -1,0 +1,7 @@
+{
+  "envId": "xinzang-d2gf4m7fh420bcb46",
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "cloudrun": {
+    "name": "xinzang"
+  }
+}

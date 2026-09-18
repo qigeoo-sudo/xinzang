@@ -40,6 +40,7 @@ export default async function SubscriptionPage({
       freeTrialUsed: true,
       mentorCredits: true,
       mentorCreditsConsumed: true,
+      profile: { select: { nickname: true } },
     },
   });
 
@@ -93,7 +94,7 @@ export default async function SubscriptionPage({
 
       <PageHero
         eyebrow="MEMBERSHIP"
-        title={isPremium ? '我的会员' : '升级会员'}
+        title="欢迎加入榨职社"
         subtitle={
           isPremium
             ? `你当前是${planNames[subscription!.plan] || '会员'}`
@@ -128,6 +129,7 @@ export default async function SubscriptionPage({
           freeTrialRemaining={freeTrialRemaining}
           freeTrialLimit={freeTrialLimit}
           creditBalance={creditBalance}
+          nickname={user?.profile?.nickname || undefined}
         />
 
         {/* 底部说明 */}
