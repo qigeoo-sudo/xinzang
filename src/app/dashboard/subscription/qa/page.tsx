@@ -169,10 +169,18 @@ export default async function BuyingQaPage() {
           返回加入会员
         </Link>
 
-        <h1 className="text-2xl font-bold text-ink mb-2">购买Q&amp;A</h1>
-        <p className="text-sm text-muted mb-6">
-          会员升级、轮次计算、多榨卡消耗规则，这里都有说明。
-        </p>
+        <div className="relative">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-2 -top-6 select-none font-serif text-[130px] font-bold leading-none text-[#B0852E]/[0.08] md:text-[170px]"
+          >
+            榨
+          </span>
+          <h1 className="relative text-2xl font-bold text-ink mb-2">购买Q&amp;A</h1>
+          <p className="relative text-sm text-muted mb-6">
+            会员升级、轮次计算、多榨卡消耗规则，这里都有说明。
+          </p>
+        </div>
 
         {/* 目录 */}
         <nav className="letter-paper rounded-[20px] p-4 mb-8">

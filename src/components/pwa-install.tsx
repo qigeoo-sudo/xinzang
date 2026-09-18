@@ -1,7 +1,38 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+
+/* 步骤文案里的 inline 图标，跟随文字颜色（currentColor） */
+function ShareInline() {
+  return (
+    <svg className="ml-0.5 inline-block align-middle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3v12" /><path d="M8 7l4-4 4 4" /><path d="M9 12H5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V12h-4" />
+    </svg>
+  );
+}
+function MoreInline() {
+  return (
+    <svg className="ml-0.5 inline-block align-middle" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="6" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="18" cy="12" r="1.6" />
+    </svg>
+  );
+}
+function PlusSquareInline() {
+  return (
+    <svg className="ml-0.5 inline-block align-middle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="2" /><path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+function ChevronDownInline() {
+  return (
+    <svg className="ml-0.5 inline-block align-middle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
 
 /**
  * PWA 安装入口（模仿 squoosh.app 的 Install 流程）
@@ -32,10 +63,10 @@ const copy = {
     wechat:
       '微信内无法直接安装：请点右上角「···」，选择「在 Safari 中打开」，再按下面步骤操作。',
     steps: [
-      '点击浏览器底部工具栏的「分享」按钮（方框带向上箭头的图标）',
-      '在弹出的菜单中选择「添加到主屏幕」（加号图标）',
-      '点右上角「添加」，桌面就会出现 App 图标，以后可直接打开',
-    ],
+      <>推荐用 Safari 打开榨职机首页，底部或顶部的标签栏里找到「共享」按钮<ShareInline />点击，如没找到，点击表示更多的图标<MoreInline />，再进共享</>,
+      <>在共享面板中向下滑动选择「添加到主屏幕」<PlusSquareInline />，或看到右侧有图标<ChevronDownInline />，点开再找</>,
+      <>在新页面里，点右上角「添加」，主屏就会出现图标，以后直接从图标启动</>,
+    ] as ReactNode[],
   },
   en: {
     install: 'Install App',
@@ -46,12 +77,12 @@ const copy = {
     wechat:
       'Installation is not available inside WeChat. Tap「···」in the top-right corner, choose「Open in Safari」, then follow the steps below.',
     steps: [
-      'Tap the「Share」button in the bottom toolbar (the square with an upward arrow)',
-      'Choose「Add to Home Screen」(the plus icon) in the menu',
-      'Tap「Add」in the top-right corner — the app icon will appear on your home screen',
-    ],
+      <>Open the Squeezer homepage in Safari. Find the「Share」button in the bottom or top tab bar<ShareInline /> and tap it. If you can't find it, tap the more icon<MoreInline /> to access Share.</>,
+      <>In the Share sheet, scroll down and choose「Add to Home Screen」<PlusSquareInline />. Or look for the icon on the right<ChevronDownInline />, tap it to find it.</>,
+      <>On the new page, tap「Add」in the top-right corner. The icon will appear on your home screen — launch it directly from there.</>,
+    ] as ReactNode[],
   },
-} as const;
+};
 
 function isStandaloneMode(): boolean {
   if (typeof window === 'undefined') return false;
@@ -194,7 +225,11 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
           aria-label={t.title}
         >
           <div
-            className="w-full max-w-md animate-slide-up rounded-t-3xl bg-white p-5 pb-8 shadow-xl sm:rounded-3xl"
+            className="w-full max-w-md animate-slide-up overflow-hidden rounded-t-3xl bg-[#FCF8EE] p-5 pb-8 shadow-xl sm:rounded-3xl"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E\")",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/15 sm:hidden" />
@@ -238,7 +273,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
               <Step index={2} icon="plus">
                 {t.steps[1]}
               </Step>
-              <Step index={3} icon="check">
+              <Step index={3} icon="add-text">
                 {t.steps[2]}
               </Step>
             </ol>
@@ -264,7 +299,7 @@ function Step({
   children,
 }: {
   index: number;
-  icon: 'share' | 'plus' | 'check';
+  icon: 'share' | 'plus' | 'add-text';
   children: React.ReactNode;
 }) {
   return (
@@ -284,7 +319,7 @@ function Step({
           >
             <path d="M12 3v12" />
             <path d="M8 7l4-4 4 4" />
-            <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+            <path d="M9 12H5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V12h-4" />
           </svg>
         )}
         {icon === 'plus' && (
@@ -294,27 +329,17 @@ function Step({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        )}
-        {icon === 'check' && (
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.6"
+            strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="M5 13l4 4L19 7" />
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <path d="M12 8v8M8 12h8" />
           </svg>
+        )}
+        {icon === 'add-text' && (
+          <span className="text-[10px] font-bold">添加</span>
         )}
       </span>
       <p className="pt-0.5 text-sm leading-6 text-ink/85">
