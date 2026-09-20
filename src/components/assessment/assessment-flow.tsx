@@ -13,7 +13,7 @@ import {
   type RiasecQuestion,
 } from '@/lib/riasec/questions';
 import { sampleBalanced } from '@/lib/riasec/shuffle';
-import { scoreAnswers, type AnswerItem } from '@/lib/riasec/score';
+import { scoreAnswers, type AnswerItem, type ScoreResult } from '@/lib/riasec/score';
 import { savePendingAssessment } from '@/lib/riasec/storage';
 
 type Stage = 'intro1' | 'intro2' | 'test' | 'result';
@@ -47,6 +47,17 @@ export function AssessmentFlow() {
   const [saveError, setSaveError] = useState('');
   const [retryCount, setRetryCount] = useState(0);
   const [guestDialog, setGuestDialog] = useState(false);
+  // 解释生成：保存后调 LLM 生成兴趣代码解读
+  const [explaining, setExplaining] = useState(false);
+  const [explanation, setExplanation] = useState('');
+  const [explainJobs, setExplainJobs] = useState<
+    { jobCn: string; industry: string; entryPath: string }[]
+  >([]);
+  const [explainError, setExplainError] = useState('');
+  const [explainProgress, setExplainProgress] = useState(0);
+  // 已有测评结果（从档案加载，用于直接展示而非重新答题）
+  const [existingResult, setExistingResult] = useState<ScoreResult | null>(null);
+  const [loadingExisting, setLoadingExisting] = useState(true);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 「第 i / 30 题」进度条：切题时把它定位到吸顶导航正下方
   const progressRef = useRef<HTMLDivElement | null>(null);
@@ -64,6 +75,54 @@ export function AssessmentFlow() {
     }
   }, [stage, idx]);
 
+  // 挂载时检查是否已有测评结果：有则直接展示结果+解读，不再引导重新答题
+  // 但若用户刚点过"重新测一次"（sessionStorage 标记），则进入引导页，不加载旧结果
+  useEffect(() => {
+    let cancelled = false;
+    // 用户主动重测：跳过旧结果加载，停留在引导页
+    if (sessionStorage.getItem('assessment_retake') === '1') {
+      sessionStorage.removeItem('assessment_retake');
+      setLoadingExisting(false);
+      return;
+    }
+    fetch('/api/user/profile', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data: { assessment?: { scores?: Record<Dimension, number>; code?: string | null; explanation?: string | null; recommendedJobs?: string | null } | null }) => {
+        if (cancelled) return;
+        const a = data.assessment;
+        if (a && a.scores && a.code) {
+          setExistingResult({ scores: a.scores, code: a.code });
+          setSaved(true); // 已保存过，不再显示保存按钮
+          if (a.explanation) {
+            setExplanation(a.explanation);
+          }
+          // 加载已存的推荐探索方向
+          if (a.recommendedJobs) {
+            try {
+              const jobs = JSON.parse(a.recommendedJobs);
+              if (Array.isArray(jobs)) {
+                setExplainJobs(jobs.map((jobCn: string) => ({ jobCn, industry: '', entryPath: '' })));
+              }
+            } catch { /* ignore */ }
+          }
+          if (!a.explanation) {
+            // 老用户没有解读，自动生成一次（结果存库）
+            generateExplanation(a.code, a.scores);
+          }
+          setStage('result');
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingExisting(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 展示用的结果：当前答题算出的，或从档案加载的已有结果
+
   const answeredCount = Object.keys(answers).length;
   const allAnswered = answeredCount === order.length;
 
@@ -74,6 +133,9 @@ export function AssessmentFlow() {
       .filter((a) => typeof a.value === 'number');
     return scoreAnswers(order, items);
   }, [stage, order, answers]);
+
+  // 展示用的结果：当前答题算出的，或从档案加载的已有结果
+  const displayResult = result ?? existingResult;
 
   const payload = useMemo(() => {
     if (!result) return null;
@@ -98,7 +160,14 @@ export function AssessmentFlow() {
     setSaveError('');
     setRetryCount(0);
     setGuestDialog(false);
-    setStage('test');
+    setExplanation('');
+    setExplainJobs([]);
+    setExplainError('');
+    setExplainProgress(0);
+    setExistingResult(null);
+    // 标记用户主动重测：再次进入本页时不再自动展示旧结果
+    sessionStorage.setItem('assessment_retake', '1');
+    setStage('intro1');
   };
 
   const choose = (value: number) => {
@@ -168,6 +237,10 @@ export function AssessmentFlow() {
         break;
       }
       setSaved(true);
+      // 保存成功后，异步生成兴趣代码解读（不阻塞"查看我的档案"按钮出现）
+      if (payload) {
+        generateExplanation(payload.code, payload.scores);
+      }
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : '保存失败，请稍后再试');
     } finally {
@@ -179,6 +252,43 @@ export function AssessmentFlow() {
   const goRegisterWithResult = () => {
     if (payload) savePendingAssessment(payload);
     router.push('/register-v2');
+  };
+
+  // 调用 LLM 生成兴趣代码解读，带进度条动画
+  const generateExplanation = async (code: string, scores: Record<string, number>) => {
+    setExplaining(true);
+    setExplainError('');
+    setExplanation('');
+    setExplainJobs([]);
+    setExplainProgress(0);
+
+    // 进度条：0→85% 用定时递增模拟加载，真实完成时跳到100%
+    let progress = 0;
+    const progressTimer = setInterval(() => {
+      progress = Math.min(progress + Math.random() * 12 + 3, 88);
+      setExplainProgress(progress);
+    }, 350);
+
+    try {
+      const res = await fetch('/api/assessment/explain', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, scores }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || '解读生成失败');
+      }
+      const data = await res.json();
+      setExplanation(data.explanation || '');
+      setExplainJobs(data.jobs || []);
+    } catch (e) {
+      setExplainError(e instanceof Error ? e.message : '解读生成失败，请稍后查看档案页');
+    } finally {
+      clearInterval(progressTimer);
+      setExplainProgress(100);
+      setExplaining(false);
+    }
   };
 
   return (
@@ -369,7 +479,7 @@ export function AssessmentFlow() {
           </section>
         )}
 
-        {stage === 'result' && result && payload && (
+        {stage === 'result' && displayResult && (
           <section>
             <div className="letter-paper rounded-2xl p-6 md:p-8">
               <h1 className="font-serif text-2xl font-black text-ink md:text-3xl">
@@ -380,7 +490,7 @@ export function AssessmentFlow() {
               <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-beige/70 px-5 py-4">
                 <span className="shrink-0 text-xs text-muted">兴趣代码</span>
                 <span className="flex shrink-0 gap-1.5">
-                  {result.code.split('').map((d, i) => (
+                  {displayResult.code.split('').map((d, i) => (
                     <span
                       key={d}
                       className={`flex h-9 w-9 items-center justify-center rounded-lg text-base font-black text-white ${BAR_COLORS[i]}`}
@@ -390,7 +500,7 @@ export function AssessmentFlow() {
                   ))}
                 </span>
                 <span className="w-full text-sm font-semibold leading-6 text-ink sm:w-auto sm:shrink-0">
-                  {result.code
+                  {displayResult.code
                     .split('')
                     .map((d) => DIMENSION_META[d as Dimension].name)
                     .join(' · ')}
@@ -402,7 +512,7 @@ export function AssessmentFlow() {
                 {DIMENSIONS.slice()
                   .sort(
                     (a, b) =>
-                      result.scores[b] - result.scores[a] ||
+                      displayResult.scores[b] - displayResult.scores[a] ||
                       DIMENSIONS.indexOf(a) - DIMENSIONS.indexOf(b)
                   )
                   .map((d, rank) => (
@@ -414,12 +524,12 @@ export function AssessmentFlow() {
                             {DIMENSION_META[d].en}
                           </span>
                         </span>
-                        <span className="text-sm font-bold text-ink">{result.scores[d]}</span>
+                        <span className="text-sm font-bold text-ink">{displayResult.scores[d]}</span>
                       </div>
                       <div className="h-2.5 w-full overflow-hidden rounded-full bg-rule/40">
                         <div
                           className={`h-full rounded-full ${BAR_COLORS[rank]}`}
-                          style={{ width: `${result.scores[d]}%` }}
+                          style={{ width: `${displayResult.scores[d]}%` }}
                         />
                       </div>
                       <p className="mt-1 text-[11px] leading-5 text-muted">
@@ -429,26 +539,77 @@ export function AssessmentFlow() {
                   ))}
               </div>
 
-              <p className="mt-5 rounded-xl bg-bg/70 px-4 py-3 text-xs leading-6 text-muted">
-                分数表示你相对的兴趣强弱，不代表能力高低，也不能单独决定适合的职业；兴趣没有好坏，每种组合都对应着一大批值得探索的职业可能。
-              </p>
+              {/* 兴趣代码解读（LLM 生成）+ 推荐探索方向 */}
+              {(explaining || explanation || explainError) && (
+                <div className="mt-6 rounded-2xl border border-sage-300/60 bg-gradient-to-br from-sage-50 to-amber-50/60 p-5">
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sage-500 text-[12px]">
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                    </span>
+                    <h4 className="text-sm font-bold text-sage-800">兴趣代码解读 · 推荐方向</h4>
+                  </div>
+
+                  {explaining && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted">
+                        <span>正在为你生成职业解读…</span>
+                        <span>{Math.round(explainProgress)}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-rule/30">
+                        <div
+                          className="h-full rounded-full bg-sage-500 transition-all duration-300"
+                          style={{ width: `${explainProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {explainError && (
+                    <p className="text-xs leading-6 text-coral-700">
+                      {explainError}
+                    </p>
+                  )}
+
+                  {explanation && !explaining && (
+                    <>
+                      <p className="text-sm leading-7 text-ink/90">
+                        {explanation}
+                      </p>
+                      {explainJobs.length > 0 && (
+                        <div className="mt-4">
+                          <p className="mb-2 text-xs font-semibold text-sage-700">可能你会对以下职业感兴趣：</p>
+                          <div className="flex flex-wrap gap-2">
+                            {explainJobs.map((j) => (
+                              <span
+                                key={j.jobCn}
+                                className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-sage-800 shadow-sm ring-1 ring-sage-200"
+                                title={j.industry ? `${j.industry} · ${j.entryPath}` : ''}
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full bg-sage-400" />
+                                {j.jobCn}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 储存区 */}
             {saved ? (
               <div className="mt-4 rounded-2xl border border-sage-400/30 bg-sage-50 p-6 text-center">
-                {/* 整页跳转：刚注册自动登录后，Link 客户端导航可能命中旧的跳登录预取缓存 */}
                 <button
                   type="button"
-                  onClick={() => {
-                    window.location.href = '/dashboard/profile';
-                  }}
+                  onClick={restart}
                   className="block w-full rounded-xl bg-sage-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-sage-600 active:scale-[.98]"
                 >
-                  查看我的档案
+                  重新测一次
                 </button>
                 <p className="mt-3 text-xs text-muted">
-                  导师分身推荐也在那里
+                  新结果会覆盖旧结果
                 </p>
               </div>
             ) : (
@@ -468,7 +629,7 @@ export function AssessmentFlow() {
                       ? retryCount > 0
                         ? `储存中…重试 ${retryCount}/2`
                         : '储存中…'
-                      : '储存测试结果'}
+                      : '储存并解释结果'}
                   </button>
                   <button
                     onClick={restart}
@@ -479,6 +640,14 @@ export function AssessmentFlow() {
                 </div>
               </div>
             )}
+
+            {/* 底部声明 */}
+            <p className="mt-4 rounded-xl bg-bg/70 px-4 py-3 text-xs leading-6 text-muted">
+              分数表示你相对的兴趣强弱，不代表能力高低，也不能单独决定适合的职业；兴趣没有好坏，每种组合都对应着一大批值得探索的职业可能。
+            </p>
+            <p className="mt-3 px-4 text-[11px] leading-5 text-muted/70">
+              本测评基于 Holland RIASEC 职业兴趣框架，职业数据参考 ONET 及国内招聘信息独立整理。结果仅作为职业方向探索的参考，不构成人生选择的定论或承诺；职业发展还受能力、经验、机遇等多重因素影响，建议结合实际情况综合判断。
+            </p>
           </section>
         )}
       </div>

@@ -55,6 +55,8 @@ interface AssessmentView {
   code?: string | null;
   scores: Record<'R' | 'I' | 'A' | 'S' | 'E' | 'C', number>;
   takenAt?: string;
+  explanation?: string | null;
+  recommendedJobs?: string | null;
 }
 
 // 注册档案年月字段展示
@@ -255,13 +257,44 @@ export default function ProfilePage() {
         {/* 注册档案聚合：账号 / 状态教育 / 方向地点 */}
         <ProfileSections profile={initialProfile} phone={phone} />
 
-        {/* 职业兴趣测试结果 */}
+        {/* 职业兴趣测试结果 + 解读（合并为同一张卡片） */}
         {assessment ? (
           <div className="letter-paper rounded-[20px] mb-4 p-5 md:p-6">
             <AssessmentSummary assessment={assessment} takenAtLabel={fmtTakenAt(assessment.takenAt)} />
-            <Link href="/assessment" className="text-sm font-semibold text-sage-700 hover:underline">
-              重新测一次（新结果会覆盖旧结果）→
-            </Link>
+
+            {/* 兴趣代码解读（LLM 生成）+ 推荐探索方向 */}
+            {assessment.explanation && (
+              <div className="mt-5 rounded-2xl border border-sage-300/60 bg-gradient-to-br from-sage-50 to-amber-50/60 p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sage-500 text-[12px]">
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+                  </span>
+                  <h3 className="text-sm font-bold text-sage-800">兴趣代码解读 · 推荐方向</h3>
+                </div>
+                <p className="text-sm leading-7 text-ink/90">{assessment.explanation}</p>
+
+                {parseJsonArray(assessment.recommendedJobs).length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold text-sage-700">可能你会对以下职业感兴趣：</p>
+                    <div className="flex flex-wrap gap-2">
+                      {parseJsonArray(assessment.recommendedJobs).map((j) => (
+                        <span
+                          key={j}
+                          className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-sage-800 shadow-sm ring-1 ring-sage-200"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-sage-400" />
+                          {j}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="mt-4 text-[11px] leading-5 text-muted/70">
+                  以上解读由 AI 基于你的兴趣代码生成，仅作职业方向参考，不构成定论。
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="letter-paper rounded-[20px] mb-4 p-5 md:p-6 flex flex-col items-start gap-2">

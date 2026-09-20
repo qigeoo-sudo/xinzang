@@ -386,7 +386,7 @@ function renderUserProfile(p: {
  * 把 RIASEC 职业兴趣测评结果渲染成 {{assessment_context}} 文本。
  * 只取主码（前三维）+ 六维排序，并明确告知模型：兴趣不是能力，只能当探讨线索。
  */
-function renderAssessmentContext(assessment: { code: string | null; scores: string } | null): string {
+function renderAssessmentContext(assessment: { code: string | null; scores: string; explanation: string | null; recommendedJobs: string | null } | null): string {
   if (!assessment) return PLACEHOLDER_NONE;
   let scores: Record<string, number>;
   try {
@@ -408,12 +408,28 @@ function renderAssessmentContext(assessment: { code: string | null; scores: stri
     .join('；');
   const orderText = ranked.map((d) => `${DIMENSION_META[d].name}${scores[d]}`).join(' > ');
 
-  return [
+  const parts = [
     `霍兰德 RIASEC 兴趣测评主码: ${code}`,
     `前三维兴趣: ${topText}`,
     `六维得分排序: ${orderText}`,
     '注意：这是兴趣倾向（喜欢做什么），不是能力评估，不代表能不能做好；仅作为理解用户偏好的线索，与用户本人意愿冲突时以用户说法为准，不得据此断言"你不适合做某行"。',
-  ].join('；');
+  ];
+  // LLM 生成的兴趣代码解读（职业规划师口吻），作为更具体的参考
+  if (assessment.explanation) {
+    parts.push(`兴趣代码解读（系统生成，供参考）: ${assessment.explanation}`);
+  }
+  // 推荐探索方向（CSV 职业映射匹配的 1~3 个职业）
+  if (assessment.recommendedJobs) {
+    try {
+      const jobs = JSON.parse(assessment.recommendedJobs);
+      if (Array.isArray(jobs) && jobs.length) {
+        parts.push(`推荐探索方向: ${jobs.join('、')}`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return parts.join('；');
 }
 
 /** 滚动摘要：达到阈值后每 N 条消息刷新一次 */
@@ -839,7 +855,7 @@ export async function POST(request: NextRequest) {
       // RIASEC 职业兴趣测评（一人一份，重测覆盖；未测过为 null）
       const interestAssessment = await prisma.interestAssessment.findUnique({
         where: { userId: session.user.id },
-        select: { code: true, scores: true },
+        select: { code: true, scores: true, explanation: true, recommendedJobs: true },
       });
 
       const conversationSummary = await maybeRefreshSummary({

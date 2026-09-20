@@ -32,12 +32,12 @@ export default function MentorsPage() {
 
   // 导师列表开头：翻页后定位到吸顶导航正下方（首次进页面不触发，保留页头）
   const listRef = useRef<HTMLDivElement | null>(null);
-  const firstListRun = useRef(true);
+  const prevPage = useRef<number | null>(null);
   useEffect(() => {
-    if (firstListRun.current) {
-      firstListRun.current = false;
-      return;
-    }
+    const prev = prevPage.current;
+    prevPage.current = safePage;
+    // 初始加载（prev 为 null）或页码未变时不滚动，让页面停留在页头
+    if (prev === null || prev === safePage) return;
     const el = listRef.current;
     if (!el) return;
     const nav = document.querySelector('nav.glass-nav') as HTMLElement | null;

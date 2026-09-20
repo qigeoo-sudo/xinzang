@@ -38,6 +38,8 @@ export async function GET() {
         takenAt: assessmentRow.takenAt.toISOString(),
         scores: JSON.parse(assessmentRow.scores),
         answers: JSON.parse(assessmentRow.answers),
+        explanation: assessmentRow.explanation,
+        recommendedJobs: assessmentRow.recommendedJobs,
       };
     } catch {
       assessment = null;
