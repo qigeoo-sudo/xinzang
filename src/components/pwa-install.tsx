@@ -59,6 +59,10 @@ const copy = {
     installDesktop: '安装到桌面',
     titleMobile: '安装到手机主屏幕',
     titleDesktop: '安装到桌面',
+    installedTitle: '已安装',
+    installedDescDesktop: '安装成功！可关闭此页面，从桌面图标启动应用。',
+    installedDescMobile: '安装成功！请从主屏幕图标启动应用。',
+    gotIt: '知道了',
     close: '知道了',
     desktopHint:
       '推荐使用 Chrome 或 Edge 浏览器点击此按钮，可直接安装为桌面应用。Safari 用户可通过菜单栏「文件」→「添加到程序坞」完成安装。',
@@ -75,6 +79,10 @@ const copy = {
     installDesktop: 'Install to Desktop',
     titleMobile: 'Add to Home Screen',
     titleDesktop: 'Install to Desktop',
+    installedTitle: 'Installed',
+    installedDescDesktop: 'Installed successfully! You can close this page and launch the app from your desktop icon.',
+    installedDescMobile: 'Installed successfully! Please launch the app from your home screen icon.',
+    gotIt: 'Got it',
     close: 'Got it',
     desktopHint:
       'We recommend using Chrome or Edge to install this app directly to your desktop. Safari users can install via the menu bar: File → Add to Dock.',
@@ -102,9 +110,10 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [guideOpen, setGuideOpen] = useState(false);
   // 挂载后再输出环境相关 UI，避免 SSR 水合不一致
   const [mounted, setMounted] = useState(false);
-  // 已安装（standalone 运行 或 收到 appinstalled 或 iOS 标签页内推断）：隐藏入口，
-  // 用户删除桌面图标后再用浏览器打开即恢复显示
+  // 是否已安装（standalone 运行 或 已确认安装完成）：隐藏入口
   const [installed, setInstalled] = useState(false);
+  // 本次会话中刚完成安装：展示成功提示（桌面端 Chrome 不会自动关标签页，需明确告知用户）
+  const [justInstalled, setJustInstalled] = useState(false);
   // iOS：用户点了安装按钮后等待页面切走再回来，据此推断完成添加
   const [awaitingReturn, setAwaitingReturn] = useState(false);
   // 是否移动端：影响按钮文案（桌面「安装到桌面」/ 手机「安装到手机」）
@@ -136,7 +145,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       setInstallEnv('prompt');
     };
     const onInstalled = () => {
-      setInstalled(true);
+      setJustInstalled(true);
       setInstallEnv('unknown');
       setGuideOpen(false);
       setDeferred(null);
@@ -155,7 +164,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   useEffect(() => {
     if (!awaitingReturn) return;
     const finish = () => {
-      setInstalled(true);
+      setJustInstalled(true);
       setGuideOpen(false);
       setAwaitingReturn(false);
     };
@@ -176,7 +185,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       await deferred.prompt();
       const choice = await deferred.userChoice;
       if (choice.outcome === 'accepted') {
-        setInstalled(true);
+        setJustInstalled(true);
         setInstallEnv('unknown');
       }
       setDeferred(null);
@@ -190,12 +199,54 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     }
   };
 
-  if (!mounted || installed) return null;
+  if (!mounted) return null;
 
   const t = copy[lang];
   const isWeChat = installEnv === 'ios-wechat';
   // 桌面端：非移动端（含桌面 Chrome/Edge 的 prompt 环境、桌面 Safari/Firefox 的 unknown 环境）
   const isDesktop = !isMobile;
+
+  // 刚完成安装：展示成功提示（桌面端 Chrome 不会自动关标签页，需告知用户从桌面图标启动）
+  if (justInstalled) {
+    return (
+      <div
+        className="flex w-full items-center gap-3 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-white"
+        role="status"
+        aria-live="polite"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="shrink-0 text-emerald-300"
+          aria-hidden="true"
+        >
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-tight">{t.installedTitle}</p>
+          <p className="mt-0.5 text-xs leading-4 text-white/70">
+            {isDesktop ? t.installedDescDesktop : t.installedDescMobile}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setInstalled(true); setJustInstalled(false); }}
+          className="shrink-0 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
+          aria-label={t.gotIt}
+        >
+          {t.gotIt}
+        </button>
+      </div>
+    );
+  }
+
+  if (installed) return null;
 
   return (
     <>
