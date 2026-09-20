@@ -43,6 +43,7 @@ interface ProfileData {
   curProvince?: string | null;
   curCity?: string | null;
   careers?: string | null;
+  customCareerDirections?: string | null;
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
@@ -201,14 +202,14 @@ export default function ProfilePage() {
       <PageHero
         eyebrow="MY PROFILE"
         title="我的档案"
-        subtitle="注册资料、测试结果、对话记录都在这儿。"
+        subtitle="注册资料、测试结果、成长追踪都在这儿。"
         watermark="档"
       />
 
       <div className="relative z-10 page-container flex-1">
         {clearError && <p className="mb-4 text-xs text-danger">{clearError}</p>}
 
-        {/* 主操作：改资料 / 看对话记录 / 清空（三等分，始终一行） */}
+        {/* 主操作：改资料 / 成长追踪 / 清空（三等分，始终一行） */}
         <div className="flex gap-2 sm:gap-3 mb-6">
           <Link
             href="/dashboard/profile/edit"
@@ -221,15 +222,16 @@ export default function ProfilePage() {
             修改档案
           </Link>
           <Link
-            href="/history"
+            href="/dashboard"
             className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-[10px] bg-sage-400 px-2 sm:px-4 py-2.5 text-[13px] sm:text-sm font-semibold text-white transition-all hover:bg-sage-500 active:scale-[.98]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <path d="M12 7v5l4 2" />
+              <rect width="7" height="9" x="3" y="3" rx="1" />
+              <rect width="7" height="5" x="14" y="3" rx="1" />
+              <rect width="7" height="9" x="14" y="12" rx="1" />
+              <rect width="7" height="5" x="3" y="16" rx="1" />
             </svg>
-            对话记录
+            成长追踪
           </Link>
           <button
             type="button"

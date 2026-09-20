@@ -55,11 +55,13 @@ type InstallEnv = 'unknown' | 'prompt' | 'ios-browser' | 'ios-wechat';
 
 const copy = {
   zh: {
-    install: '安装到手机',
-    title: '安装到手机主屏幕',
+    installMobile: '安装到手机',
+    installDesktop: '安装到桌面',
+    titleMobile: '安装到手机主屏幕',
+    titleDesktop: '安装到桌面',
     close: '知道了',
     desktopHint:
-      '请用手机浏览器打开本页面后再点此按钮；在手机上会出现系统安装弹窗或添加到主屏幕的指引。',
+      '推荐使用 Chrome 或 Edge 浏览器点击此按钮，可直接安装为桌面应用。Safari 用户可通过菜单栏「文件」→「添加到程序坞」完成安装。',
     wechat:
       '微信内无法直接安装：请点右上角「···」，选择「在 Safari 中打开」，再按下面步骤操作。',
     steps: [
@@ -69,11 +71,13 @@ const copy = {
     ] as ReactNode[],
   },
   en: {
-    install: 'Install App',
-    title: 'Add to Home Screen',
+    installMobile: 'Install App',
+    installDesktop: 'Install to Desktop',
+    titleMobile: 'Add to Home Screen',
+    titleDesktop: 'Install to Desktop',
     close: 'Got it',
     desktopHint:
-      'Please open this page on your phone browser and tap this button again — you will see a system install prompt or an "Add to Home Screen" guide.',
+      'We recommend using Chrome or Edge to install this app directly to your desktop. Safari users can install via the menu bar: File → Add to Dock.',
     wechat:
       'Installation is not available inside WeChat. Tap「···」in the top-right corner, choose「Open in Safari」, then follow the steps below.',
     steps: [
@@ -103,6 +107,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [installed, setInstalled] = useState(false);
   // iOS：用户点了安装按钮后等待页面切走再回来，据此推断完成添加
   const [awaitingReturn, setAwaitingReturn] = useState(false);
+  // 是否移动端：影响按钮文案（桌面「安装到桌面」/ 手机「安装到手机」）
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -117,6 +123,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       /iPhone|iPad|iPod/i.test(ua) ||
       (/Macintosh/i.test(ua) && window.navigator.maxTouchPoints > 1);
     const isWeChat = /MicroMessenger/i.test(ua);
+    // 移动端：iOS 或 Android/其他移动设备
+    setIsMobile(isIOS || /Mobi|Android/i.test(ua));
 
     if (isIOS) {
       setInstallEnv(isWeChat ? 'ios-wechat' : 'ios-browser');
@@ -186,7 +194,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
 
   const t = copy[lang];
   const isWeChat = installEnv === 'ios-wechat';
-  const isDesktop = installEnv === 'unknown';
+  // 桌面端：非移动端（含桌面 Chrome/Edge 的 prompt 环境、桌面 Safari/Firefox 的 unknown 环境）
+  const isDesktop = !isMobile;
 
   return (
     <>
@@ -213,7 +222,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
           {/* 中间闪电（充电指示） */}
           <path d="M14 8 L10 13 L12 13 L11 16 L15 11 L12 11 Z" fill="currentColor" stroke="none" />
         </svg>
-        {t.install}
+        {isMobile ? t.installMobile : t.installDesktop}
       </button>
 
       {mounted && guideOpen && createPortal(
@@ -222,7 +231,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
           onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}
           role="dialog"
           aria-modal="true"
-          aria-label={t.title}
+          aria-label={isMobile ? t.titleMobile : t.titleDesktop}
         >
           <div
             className="w-full max-w-md animate-slide-up overflow-hidden rounded-t-3xl bg-[#FCF8EE] p-5 pb-8 shadow-xl sm:rounded-3xl"
@@ -234,7 +243,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
           >
             <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink/15 sm:hidden" />
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-bold text-ink">{t.title}</h3>
+              <h3 className="text-base font-bold text-ink">{isMobile ? t.titleMobile : t.titleDesktop}</h3>
               <button
                 type="button"
                 onClick={() => { setGuideOpen(false); setAwaitingReturn(false); }}

@@ -15,6 +15,7 @@ const navLabels = {
     assessment: '职业测试',
     mentors: '行业导师',
     dashboard: '成长追踪',
+    history: '对话记录',
     myProfile: '我的档案',
     login: '登录',
     register: '注册',
@@ -28,6 +29,7 @@ const navLabels = {
     assessment: 'Assessment',
     mentors: 'Mentors',
     dashboard: 'Growth',
+    history: 'Chat Records',
     myProfile: 'My Profile',
     login: 'log in',
     register: 'sign up',
@@ -121,14 +123,11 @@ function HeaderInner() {
       ),
     },
     {
-      href: '/dashboard',
-      label: tr.dashboard,
+      href: '/history',
+      label: tr.history,
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect width="7" height="9" x="3" y="3" rx="1" />
-          <rect width="7" height="5" x="14" y="3" rx="1" />
-          <rect width="7" height="9" x="14" y="12" rx="1" />
-          <rect width="7" height="5" x="3" y="16" rx="1" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
     },
@@ -144,7 +143,7 @@ function HeaderInner() {
     },
   ];
 
-  // 取与路径前缀匹配「最长」的导航项，避免 /dashboard/profile 同时高亮「成长追踪」
+  // 取与路径前缀匹配「最长」的导航项，避免 /dashboard/profile 同时高亮其他项
   const matchNavHref = (p: string): string | null => {
     const matched = navItems
       .filter((item) => item.href !== '/' && (p === item.href || p.startsWith(item.href + '/')))
