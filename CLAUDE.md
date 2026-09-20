@@ -14,18 +14,19 @@
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| **PRD（产品需求文档）** | `docs/PRD.md` | 产品规划、导师规划、时间线、数据库迁移方案、上线阻断项 |
-| **数据库迁移交接文档** | `docs/AICCloudBase_PG_v1.1.md` | SQLite→CloudBase PostgreSQL 详细迁移方案（ChatGPT 编写） |
+| **PRD（产品需求文档）** | `docs/PRD.md` | 产品规划、技术栈、数据库设计、部署架构、RDS MySQL 迁移计划、上公网阻断项（v3.0，2026-09-20） |
+| **数据库迁移交接文档（已 archived）** | `docs/AICCloudBase_PG_v1.1.md` | 旧 SQLite→CloudBase PostgreSQL 方案，已废弃，仅供历史参考 |
+| **安全自检报告** | `docs/安全自检报告-第一轮.md` | 2026-09-19 自检结果（0 FAIL / 37 PASS / 2 暂缓 / 8 待真机） |
 | **项目上下文** | `CLAUDE.md`（本文件） | 技术栈、目录结构、业务流程、关键注意事项 |
 
-**新会话请按顺序阅读：CLAUDE.md → docs/PRD.md → docs/AICCloudBase_PG_v1.1.md**
+**新会话请按顺序阅读：CLAUDE.md → docs/PRD.md**（AICCloudBase_PG_v1.1.md 已 archived，仅在需要查阅历史决策时阅读）
 
 ## 项目概述
 
 AI 职业伴侣平台 — 通过 AI 职导访谈 + 行业导师 AI 分身，为高校学生提供求职指导。
 
 **当前版本：在校生专用版（v2-student-only）**
-**工作截止日期：2026-12-01**
+**生产状态：已部署临时公网（aihr.top），正式域名+ICP 至少一个月后上线；待 RDS MySQL 迁移后上正式公网**
 
 ## 技术栈
 
@@ -35,7 +36,7 @@ AI 职业伴侣平台 — 通过 AI 职导访谈 + 行业导师 AI 分身，为�
 - **认证**: NextAuth.js v5 (JWT 策略，Credentials Provider)
 - **AI**: DeepSeek API (`deepseek-chat` 模型)
 - **支付**: 支付宝 + 微信支付（Mock 模式）
-- **部署**: Docker (node:20-alpine) + 腾讯云 CloudBase
+- **部署**: Docker (node:20-alpine) + 火山引擎 ECS（容器 xinzang，数据卷 /opt/xinzang-data）
 
 ## 快速启动
 
@@ -178,22 +179,27 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 - 10 月起每周案例更新（1-3 篇/导师/周，300-1000 字/篇）
 - 10 个锁定导师（`is_active = false`），后续版本推出
 
-### 数据库迁移（11月-12月）
-- SQLite → 腾讯云 CloudBase PostgreSQL
-- 导师数据从 `src/lib/mentors.ts` 迁入数据库
-- 详见 `docs/PRD.md` 第六章和 `docs/AICCloudBase_PG_v1.1.md`
+### 数据库迁移（上公网前必做）
+- SQLite → 火山引擎 RDS MySQL（用户已确认决策）
+- 导师分身保持 `mentors.ts` 静态 + `MentorKnowledgeCard` 单表（不迁旧 PRD 规划的 mentor_agents 三表设计）
+- 详见 `docs/PRD.md` 第十二章（RDS MySQL 迁移计划）
 
-### P0 阻断项（上线前必须修复）
+### P0 阻断项（上公网前必须修复）
+- ~~P0-1: 导师 Prompt 可能进入浏览器~~ **✅ 已修复**
+- ~~P0-2: 聊天接口未验证 sessionId 归属~~ **✅ 已修复**
 - ~~P0-3: 客户端只提交本轮消息，服务端加载历史~~ **✅ 已完成（2026-08-16）**
-- P0-4: 验证码不返回明文
-- P0-5: 支付正式验签
-- P0-6: Service Worker 不缓存私人页面
-- P0-7: localStorage 不保存完整聊天历史
-- P0-8: 隐私说明与功能一致
-- P0-9: 档案更新事务化 + 追加式历史
-- 详见 `docs/PRD.md` 第七章
+- P0-4: 验证码不返回明文（Mock 模式，待真实短信 Provider）
+- P0-5: 支付正式验签（微信 v3 已接入，支付宝待切换正式配置）
+- ~~P0-6: Service Worker 不缓存私人页面~~ **✅ 已修复**
+- P0-7: localStorage 不保存完整聊天历史（RDS 迁移后数据库为唯一权威）
+- P0-8: 隐私说明与功能一致（待复核）
+- ~~P0-9: 档案更新事务化 + 追加式历史~~ **✅ 已修复**
+- **P0-10: SQLite 单文件**（RDS MySQL 迁移，见 PRD 第十二章）
+- **P0-11: Mock 支付关闭**（真实支付接入后）
+- **P0-12: 8 项真机验证**（详见 PRD 第十章）
+- 详见 `docs/PRD.md` 第十一章
 
-## Docker 部署（CloudBase）
+## Docker 部署（火山引擎 ECS）
 
 - **Dockerfile**: 基于 `node:20-alpine`，多阶段构建
   - 构建阶段：安装依赖 → `prisma generate` → 创建临时 SQLite 数据库（解决 `File is not defined` 错误）→ `next build` → 生成生产数据库 `/app/data/prod.db`
@@ -217,7 +223,7 @@ Dockerfile                         # Docker 构建配置 — node:20-alpine，�
 
 - **2026-08-16 登录失败 `ERR_CONNECTION_REFUSED`**: 根因是 Docker 运行阶段缺少 `DATABASE_URL`/`AUTH_SECRET`/`AUTH_TRUST_HOST`（每个 `FROM` 阶段环境变量重置，`.dockerignore` 又排除了 `.env.local`）。登录 POST 触发 Prisma/Auth.js 崩溃，服务端把重定向地址推断为容器内部的 `localhost:3000`，手机浏览器跳转 localhost 被拒绝。修复：Dockerfile 运行阶段内置上述环境变量 + 构建时生成生产数据库。
 - **会话 Cookie 注意**: 生产环境 cookie 为 `secure: true`（仅 HTTPS 传输）。CloudBase 必须通过 HTTPS 默认域名访问，纯 HTTP 访问会导致登录后 session 丢失。
-- **SQLite 持久化限制**: CloudBase 容器无持久卷时，重新部署会重置数据库（用户数据丢失）。MVP 阶段可接受；正式方案见 PRD 数据库迁移章节（11-12月迁移到 CloudBase PostgreSQL）。
+- **SQLite 持久化（已解决）**: 生产火山引擎 ECS 通过宿主机 `/opt/xinzang-data` 绑定挂载到容器 `/app/data`，重新部署不丢数据。每日 03:30 crontab 冷备保留 14 天。RDS MySQL 迁移方案见 PRD 第十二章（上公网前必做）。
 
 ## 变更日志
 

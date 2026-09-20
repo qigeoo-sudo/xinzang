@@ -71,11 +71,48 @@ const copy = {
  * Offer letter：一张从金属卡下方铺出的正式信函。
  * 暖白纸面（.letter-paper 噪点纹理 + 衬纸 + 厚投影）浮在机身灰蓝丝绒上；
  * 机构抬头双金线 → 称呼 → 正文 → motto → 又及（广告时间）→ 三张卖点卡 → 签名。
+ * 右上角 eye 图标可折叠/展开信纸；折叠时仅留切换条，黑卡上移至原信纸上边缘。
  */
-export function FeatureCards({ lang }: { lang: 'zh' | 'en' }) {
+export function FeatureCards({
+  lang,
+  visible = true,
+  onToggle,
+}: {
+  lang: 'zh' | 'en';
+  visible?: boolean;
+  onToggle?: () => void;
+}) {
   const t = copy[lang];
   return (
-    <section className="mx-auto max-w-[840px] px-5 pt-10">
+    <section className="relative mx-auto max-w-[840px] px-5 pt-10">
+      {/* 显示/隐藏切换按钮：固定在信纸右上角 */}
+      {onToggle && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute right-5 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-ink/60 shadow-sm transition-colors hover:bg-white hover:text-ink"
+          aria-label={visible ? '隐藏信纸' : '显示信纸'}
+          title={visible ? '隐藏信纸' : '显示信纸'}
+        >
+          {visible ? (
+            // eye-open
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          ) : (
+            // eye-off
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+              <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+              <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+              <line x1="2" y1="2" x2="22" y2="22" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {visible && (
       <article className="letter-paper rounded-[16px] px-7 py-12 md:px-14 md:py-16">
         {/* 机构抬头：双金线 + 名称 */}
         <header className="text-center">
@@ -141,6 +178,7 @@ export function FeatureCards({ lang }: { lang: 'zh' | 'en' }) {
           </p>
         </footer>
       </article>
+      )}
     </section>
   );
 }

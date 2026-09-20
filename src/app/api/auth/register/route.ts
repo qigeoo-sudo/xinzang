@@ -11,6 +11,7 @@
  * - 注册成功后自动创建 UserProfile
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@/generated/prisma';
 import { prisma } from '@/lib/prisma';
 import { hashPassword, validatePasswordStrength } from '@/lib/password';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
@@ -197,33 +198,29 @@ export async function POST(request: NextRequest) {
     // 选填联系邮箱在 registerProfileSchema 内，由 toUserProfileData 映射到 UserProfile.contactEmail
     // （独立于 User.email 登录邮箱；将来启用 email 注册时，可引导用户在档案页升级 contactEmail）
     const now = new Date();
-    const profileData = profile
-      ? {
-          ...toUserProfileData(profile),
-          registrationCompletedAt: now,
-        }
-      : {};
 
-    const userData: any = {
+    // UncheckedCreateInput：直接写字段（含标量外键 channelId），同时支持嵌套 create
+    const userData: Prisma.UserUncheckedCreateInput = {
       passwordHash,
       freeTrialUsed: 0,
       emailVerified: method === 'email' ? now : null,
-      profile: { create: profileData },
+      ...(profile
+        ? {
+            profile: {
+              create: {
+                ...toUserProfileData(profile),
+                registrationCompletedAt: now,
+              },
+            },
+          }
+        : {}),
+      ...(assessment
+        ? { interestAssessment: { create: toAssessmentCreate(assessment) } }
+        : {}),
+      ...(method === 'phone'
+        ? { phone: target, name: `用户${target.slice(-4)}` }
+        : { email: target.toLowerCase(), name: target.split('@')[0] }),
     };
-
-    if (assessment) {
-      userData.interestAssessment = {
-        create: toAssessmentCreate(assessment),
-      };
-    }
-
-    if (method === 'phone') {
-      userData.phone = target;
-      userData.name = `用户${target.slice(-4)}`;
-    } else {
-      userData.email = target.toLowerCase();
-      userData.name = target.split('@')[0];
-    }
 
     // 渠道归因盖章：首次触点锁定，仅当渠道码有效且渠道 ACTIVE 时写入。
     // 任何归因异常都不阻断注册（按自然量落库）。

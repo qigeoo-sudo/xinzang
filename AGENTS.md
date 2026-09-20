@@ -49,4 +49,4 @@ npm run dev          # 启动开发服务器 (localhost:3000)
 ## 项目上下文
 
 完整技术栈、目录结构、业务流程见 `CLAUDE.md`（首次会话请先阅读）。
-数据库迁移方案见 `docs/PRD.md` 与 `docs/AICCloudBase_PG_v1.1.md`。
+数据库迁移方案见 `docs/PRD.md` 第十二章（RDS MySQL 迁移计划，上公网前必做）；`docs/AICCloudBase_PG_v1.1.md` 已 archived，仅供历史参考。

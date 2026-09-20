@@ -1,5 +1,13 @@
 # AI Career Companion：CloudBase PostgreSQL 交接与实施文档
 
+> ⚠️ **本文档已 ARCHIVED（2026-09-20）**
+>
+> 这是 v1.0 旧版，已被 `docs/AICCloudBase_PG_v1.1.md`（v1.1，同样 archived）取代。
+> 当前权威方案见 [docs/PRD.md](./docs/PRD.md) v3.0：火山引擎 RDS MySQL + ECS 部署。
+> 本文档保留作历史参考，**不再作为实施依据**。
+
+---
+
 **版本：** v1.0  
 **日期：** 2026-08-14  
 **依据：** 最新 PWA 源码包 `ai-career-companion-pwa.zip`、AI Career Companion PRD V1.0  

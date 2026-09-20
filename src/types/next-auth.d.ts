@@ -18,6 +18,7 @@ declare module 'next-auth' {
     role?: string;
     isPremium?: boolean;
     freeTrialUsed?: number;
+    passwordChangedAt?: Date | null;
   }
 }
 
@@ -27,5 +28,6 @@ declare module 'next-auth/jwt' {
     role?: string;
     isPremium?: boolean;
     freeTrialUsed?: number;
+    passwordChangedAt?: number | null;
   }
 }

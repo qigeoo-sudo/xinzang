@@ -35,6 +35,15 @@ const MIN_QUERY_LEN = 2;
 const DEFAULT_LIMIT = 20;
 
 /**
+ * 自定义简称映射（补充 universities.json 中 abbr 字段未覆盖的民间常用简称）
+ * key = 学校全称，value = 可匹配的简称列表
+ */
+const CUSTOM_ALIASES: Record<string, string[]> = {
+  华东师范大学: ['华师大'],
+  上海师范大学: ['上师大'],
+};
+
+/**
  * 搜索高校。输入 < 2 字符返回空数组（不触发搜索）。
  *
  * 排序规则：
@@ -52,8 +61,9 @@ export function searchUniversities(query: string, limit: number = DEFAULT_LIMIT)
 
   const results: UniversitySearchResult[] = [];
   for (const u of universities as University[]) {
-    // ① 简称精确匹配
-    if (u.abbr && u.abbr === q) {
+    // ① 简称精确匹配（含 json 中的 abbr 与自定义民间简称）
+    const customAliases = CUSTOM_ALIASES[u.name] || [];
+    if ((u.abbr && u.abbr === q) || customAliases.includes(q)) {
       results.push({ ...u, matchKind: 0, matchIndex: -1, nameLength: u.name.length });
       continue;
     }

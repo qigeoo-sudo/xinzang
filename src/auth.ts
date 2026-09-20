@@ -129,10 +129,10 @@ export const { handlers, auth } = NextAuth({
       // 初次登录时，user 对象来自 authorize 返回值
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
-        token.isPremium = (user as any).isPremium;
-        token.freeTrialUsed = (user as any).freeTrialUsed;
-        token.passwordChangedAt = (user as any).passwordChangedAt?.getTime() || null;
+        token.role = user.role;
+        token.isPremium = user.isPremium;
+        token.freeTrialUsed = user.freeTrialUsed;
+        token.passwordChangedAt = user.passwordChangedAt?.getTime() ?? null;
       }
 
       return token;

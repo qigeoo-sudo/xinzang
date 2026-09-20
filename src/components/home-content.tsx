@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { useLanguage } from '@/components/language-context';
 import { LanguageToggle } from '@/components/language-toggle';
@@ -26,6 +27,8 @@ export function HomeContent() {
   const { lang, mounted } = useLanguage();
   const tr = mounted ? copy[lang] : copy.zh;
   const uiLang = mounted ? lang : 'zh';
+  // 信纸显示/隐藏：隐藏时黑卡上移至原信纸上边缘位置
+  const [letterVisible, setLetterVisible] = useState(true);
 
   return (
     <main className="flex-1">
@@ -50,9 +53,11 @@ export function HomeContent() {
         </div>
 
         {/* 内容层 */}
-        <div className="relative mx-auto max-w-[840px] px-5 pb-8 pt-12 md:pb-12 md:pt-16">
-          <div className="flex flex-col items-start gap-8 md:flex-row md:items-end md:justify-between md:gap-10">
-            <div className="max-w-[560px]">
+        <div className="relative mx-auto max-w-[840px] px-5 pb-6 pt-8 md:pb-12 md:pt-12">
+          <div className="flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between md:gap-10">
+            {/* 文字列：md 以上设最小高度，确保中英文切换时页头高度一致
+                （中文 h1 最大 44px，英文收窄后更矮，用 min-h 把英文撑到与中文等高） */}
+            <div className="max-w-[560px] md:min-h-[128px]">
               <span
                 className="block h-[3px] w-10 rounded-full bg-white/90"
                 aria-hidden
@@ -61,30 +66,31 @@ export function HomeContent() {
                 className={`mt-6 font-serif font-bold leading-[1.22] tracking-[-0.02em] text-[#FFF9F2] ${
                   uiLang === 'zh'
                     ? // 中文单行铺满：随屏宽缩放，绝不换行
-                      'whitespace-nowrap text-[clamp(25px,8.2vw,54px)]'
-                    : 'text-[clamp(32px,8.5vw,54px)]'
+                      'whitespace-nowrap text-[clamp(22px,7vw,44px)]'
+                    : // 英文：横屏单行不换行，字号收窄避免折行撑高页头
+                      'text-[clamp(17px,4.2vw,28px)] md:whitespace-nowrap'
                 }`}
               >
                 {tr.sloganA}
-                <span className="mx-1 inline-block rounded-[10px] bg-[#FFF9F2] px-1.5 leading-tight text-ink md:px-2.5">
+                <span className="mx-1 inline-block rounded-[10px] bg-[#FFF9F2] px-2 leading-tight text-ink">
                   {tr.sloganAccent}
                 </span>
                 {tr.sloganB}
               </h1>
-              <p className="mt-5 max-w-[360px] text-sm leading-relaxed text-white/85 md:text-[15px]">
+              <p className="mt-5 max-w-[360px] text-[12px] leading-relaxed text-white/85 md:max-w-[520px] md:text-[13px]">
                 {tr.sub}
               </p>
             </div>
 
             {/* 图腾：榨汁机，破框探出到杏红底上。白框=蒙版容器，logo 铺满并放大，溢出部分被裁掉；
                 最底枚金币用原图抠出的完整贴片叠在框外，还原"垂出白框"的原设计 */}
-            <div className="animate-float relative z-10 -mb-[56px] shrink-0 self-center md:-mb-[80px] md:self-end md:pr-4">
-              <div className="h-[170px] w-[170px] overflow-hidden rounded-[34px] shadow-[0_16px_40px_rgba(44,62,92,0.28)] ring-[3px] ring-white/70 md:h-[240px] md:w-[240px] md:rounded-[48px]">
+            <div className="animate-float relative z-10 -mb-[56px] shrink-0 self-center md:-mb-[56px] md:self-end md:pr-4">
+              <div className="h-[120px] w-[120px] overflow-hidden rounded-[24px] shadow-[0_16px_40px_rgba(44,62,92,0.28)] ring-[3px] ring-white/70 md:h-[160px] md:w-[160px] md:rounded-[32px]">
                 <Image
                   src="/icons/icon-block-1024.png"
                   alt="榨职机"
-                  width={220}
-                  height={220}
+                  width={160}
+                  height={160}
                   priority
                   className="h-full w-full scale-[1.18] object-cover"
                 />
@@ -92,8 +98,8 @@ export function HomeContent() {
               <Image
                 src="/icons/icon-coin.png"
                 alt=""
-                width={134}
-                height={100}
+                width={90}
+                height={67}
                 aria-hidden
                 priority
                 className="absolute left-[34.4%] top-[98%] w-[10.6%] drop-shadow-[0_4px_8px_rgba(44,62,92,0.22)]"
@@ -140,7 +146,7 @@ export function HomeContent() {
 
         <div className="relative z-10">
           {/* 页头标语（pt 含灰蓝上移的 36px 补偿） */}
-          <p className="masthead-label text-center pt-[68px] pb-4 text-white/80">
+          <p className="masthead-label masthead-home text-center pt-[68px] pb-4 text-white/80">
             navigate around any singularity, shape your future
           </p>
 
@@ -148,10 +154,10 @@ export function HomeContent() {
           <EntranceCards lang={uiLang} />
 
           {/* Offer letter：机构抬头 + 正文 + 又及广告 + 三张卖点卡 + 签名 */}
-          <FeatureCards lang={uiLang} />
+          <FeatureCards lang={uiLang} visible={letterVisible} onToggle={() => setLetterVisible((v) => !v)} />
 
-          {/* 黑卡压底（首页提供 PWA 安装入口） */}
-          <HomeFooter lang={uiLang} showInstall />
+          {/* 黑卡压底（首页提供 PWA 安装入口）；信纸隐藏时取消负边距，上移至原信纸上边缘 */}
+          <HomeFooter lang={uiLang} showInstall letterOverlap={letterVisible} />
         </div>
       </div>
     </main>

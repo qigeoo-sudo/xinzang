@@ -893,7 +893,7 @@ export function RegisterWizard({
       </>
       )}
 
-      <main className="relative z-10 flex-1 w-full max-w-md mx-auto px-4 pt-8 pb-16">
+      <main className="relative z-30 flex-1 w-full max-w-md mx-auto px-4 pt-8 pb-16">
         {!done ? (
           <>
             {/* 标题 */}
@@ -1893,7 +1893,7 @@ export function RegisterWizard({
 
             <div className="overflow-y-auto px-4">
               {/* 年份横向选择 */}
-              <div className="flex gap-2 overflow-x-auto py-3" style={{ scrollbarWidth: 'none' }}>
+              <div className="year-chips-scroll flex gap-2 overflow-x-auto py-3">
                 {Array.from(
                   { length: MONTH_FIELDS[monthSheet].maxY - MONTH_FIELDS[monthSheet].minY + 1 },
                   (_, i) => MONTH_FIELDS[monthSheet].maxY - i

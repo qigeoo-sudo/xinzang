@@ -17,17 +17,25 @@ const copy = {
  * 黑卡压底（运通百夫长风格）：
  * 深底 + 金色烫字 + 微光边框，压在信笺（FeatureCards）底部，
  * 像 offer letter 最下面夹着一张高贵的黑卡。
+ * letterOverlap=true 时用负 margin 压在信纸底部；
+ * false（信纸已折叠）时取消负 margin，黑卡上移至原信纸上边缘位置。
  */
 export function HomeFooter({
   lang,
   showInstall = false,
+  letterOverlap = true,
 }: {
   lang: 'zh' | 'en';
   showInstall?: boolean;
+  letterOverlap?: boolean;
 }) {
   const t = copy[lang];
   return (
-    <footer className="relative z-10 -mt-6 px-5 pb-10 md:-mt-8">
+    <footer
+      className={`relative z-10 px-5 pb-10 ${
+        letterOverlap ? '-mt-6 md:-mt-8' : 'mt-0'
+      }`}
+    >
       <div className="mx-auto max-w-[840px]">
       {/* 黑卡宽度与三张信用卡单卡一致：md 以上 = (容器宽 - 2*gap) / 3，竖版全宽 */}
       <div

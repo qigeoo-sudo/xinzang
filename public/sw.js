@@ -7,9 +7,9 @@
  * - API 请求: 不缓存 (实时性要求)
  */
 
-const CACHE_NAME = 'ai-career-v1';
-const STATIC_CACHE = 'ai-career-static-v1';
-const PAGE_CACHE = 'ai-career-pages-v1';
+const CACHE_NAME = 'ai-career-v2';
+const STATIC_CACHE = 'ai-career-static-v2';
+const PAGE_CACHE = 'ai-career-pages-v2';
 
 // 预缓存的静态资源
 const PRECACHE_URLS = [
@@ -57,8 +57,23 @@ self.addEventListener('fetch', (event) => {
   // GET 请求
   if (request.method !== 'GET') return;
 
-  // 静态资源 — Cache First
-  if (STATIC_ASSETS.test(url.pathname) || url.pathname.startsWith('/_next/static/')) {
+  // 静态资源 — Cache First（但 /_next/static/ 下的构建产物用 Network First，避免缓存旧 chunk）
+  if (STATIC_ASSETS.test(url.pathname)) {
+    if (url.pathname.startsWith('/_next/static/')) {
+      event.respondWith(
+        caches.open(STATIC_CACHE).then(async (cache) => {
+          try {
+            const fetched = await fetch(request);
+            if (fetched.ok) cache.put(request, fetched.clone());
+            return fetched;
+          } catch {
+            const cached = await cache.match(request);
+            return cached || new Response('Network error', { status: 504 });
+          }
+        })
+      );
+      return;
+    }
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const cached = await cache.match(request);

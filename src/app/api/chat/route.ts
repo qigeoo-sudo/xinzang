@@ -55,6 +55,15 @@ const ALLOWED_API_URLS = [
 const MAX_MESSAGE_LENGTH = 4000;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+// AI 链路调试日志开关（token 用量、跨导师授权流水），默认关闭，排障时设 AI_DEBUG_LOGS=true
+const AI_DEBUG = process.env.AI_DEBUG_LOGS === 'true';
+
+// OpenAI 兼容 /chat/completions 响应中本服务实际消费的字段
+type ChatCompletionResult = {
+  choices?: { message?: { content?: string | null } | null }[];
+  usage?: { total_tokens?: number };
+};
+
 // 弹性上下文参数
 const CONTEXT_MAX_MESSAGES = 20;
 const CONTEXT_MAX_CHARS = 8000;
@@ -193,7 +202,7 @@ ${recentContext || '无'}`;
     if (!response.ok) return ROUTER_UNAVAILABLE_DECISION;
 
     const data = await response.json();
-    console.log('[MENTOR ROUTER USAGE]', data.usage || {});
+    if (AI_DEBUG) console.log('[MENTOR ROUTER USAGE]', data.usage || {});
 
     const raw = (data.choices?.[0]?.message?.content || '').trim();
     const jsonText = raw.match(/\{[\s\S]*\}/)?.[0];
@@ -777,7 +786,8 @@ export async function POST(request: NextRequest) {
               ? '这个问题我现在没法确认是否在我的专业范围内，所以先不贸然回答。你可以把它改成与职业选择、求职、组织或人才相关的问题。'
               : outOfDomainReplies[replyIndex];
 
-        console.log('[MENTOR ROUTE BLOCK]', {
+        // 边界拦截属于滥用探测信号（不含用户消息内容），生产保留为 warn 供运维观察
+        console.warn('[MENTOR ROUTE BLOCK]', {
           mentorId,
           route: mentorRouteDecision.route,
           evidencePolicy: mentorRouteDecision.evidencePolicy,
@@ -904,7 +914,7 @@ export async function POST(request: NextRequest) {
 
     // 12. 调用 AI API
     let reply: string;
-    let aiData: any = {};
+    let aiData: ChatCompletionResult = {};
     const apiMessages: { role: string; content: string }[] = [
       { role: 'system', content: systemPrompt },
       ...contextMessages.map((m) => ({
@@ -958,7 +968,9 @@ export async function POST(request: NextRequest) {
         // 分身请求授权：记录待确认，下一轮由模型判断用户是否同意
         crossState.pending = targetId;
         crossConsentChanged = true;
-        console.log(`[CROSS-MENTOR] consent requested: session=${chatSessionId} target=${targetId}`);
+        if (AI_DEBUG) {
+          console.log(`[CROSS-MENTOR] consent requested: session=${chatSessionId} target=${targetId}`);
+        }
       } else if (
         (kind === 'GRANT_CONSENT' || kind === 'DENY_CONSENT') &&
         crossState.pending === targetId
@@ -969,7 +981,9 @@ export async function POST(request: NextRequest) {
         }
         crossState.pending = null;
         crossConsentChanged = true;
-        console.log(`[CROSS-MENTOR] consent ${kind === 'GRANT_CONSENT' ? 'granted' : 'denied'}: session=${chatSessionId} target=${targetId}`);
+        if (AI_DEBUG) {
+          console.log(`[CROSS-MENTOR] consent ${kind === 'GRANT_CONSENT' ? 'granted' : 'denied'}: session=${chatSessionId} target=${targetId}`);
+        }
       }
     }
 

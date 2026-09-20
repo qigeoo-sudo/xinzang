@@ -1,7 +1,18 @@
 /**
  * 速率限制工具 — 修复安全审计 A01-1.1
- * 基于 IP 的内存速率限制 (适用于单实例部署)
- * 生产环境多实例部署建议改用 Redis (@upstash/ratelimit)
+ * 基于 IP/用户标识的内存速率限制（Map 计数）
+ *
+ * 架构决策（2026-09 安全自检）：
+ * - 当前生产为单容器 + SQLite 单文件库，不存在多实例，内存限流 100% 生效。
+ * - 注意：限流只防「频率」（每分钟突发）；每日/周期对话轮次上限走数据库
+ *   COUNT（见 chat/route.ts 配额检查），即使限流被绕过多刷请求，超额仍会被
+ *   数据库计数拦截，不会多消耗 DeepSeek 额度。
+ *
+ * 迁移触发条件（必须先升级再扩容）：
+ * - 迁移火山引擎 RDS MySQL 后若部署多个应用实例（或 K8s 水平扩容），
+ *   每个进程各持一份 Map，限流会按实例数被稀释。
+ * - 届时必须改为共享存储实现：@upstash/ratelimit（Redis）或数据库限流表，
+ *   并移除本警告。
  */
 
 interface RateLimitEntry {
@@ -11,9 +22,9 @@ interface RateLimitEntry {
 
 const rateLimitMap = new Map<string, RateLimitEntry>();
 
-// 生产环境警告：内存速率限制在多实例部署下会失效
+// 生产环境提示：内存限流仅在单实例下有效（架构决策见文件头注释）
 if (process.env.NODE_ENV === 'production') {
-  console.warn('[RateLimit] 警告: 当前使用内存速率限制，多实例部署下可能被绕过。生产环境建议配置 Redis。');
+  console.warn('[RateLimit] 内存限流生效中（单实例约束）；扩容多实例前必须先迁移 Redis/DB 限流。');
 }
 
 // 定期清理过期条目 (每5分钟)

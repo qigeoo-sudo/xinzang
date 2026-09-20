@@ -1,5 +1,20 @@
 # AI Career Companion：CloudBase PostgreSQL 交接与实施文档
 
+> ⚠️ **本文档已 ARCHIVED（2026-09-20）**
+>
+> 本文档描述的"SQLite → 腾讯云 CloudBase PostgreSQL + CloudBase 云托管"迁移路线**已废弃**。
+>
+> 当前权威方案：
+> - 数据库迁移：SQLite → **火山引擎 RDS MySQL**（上公网前必做）
+> - 部署形态：**火山引擎 ECS + Docker 容器**（已部署 aihr.top）
+> - 导师分身：保持 `MentorKnowledgeCard` 单表（不迁旧 PRD 规划的 mentor_agents 三表）
+>
+> 详见 [docs/PRD.md](./PRD.md) v3.0 第九章（部署架构）和第十二章（RDS MySQL 迁移计划）。
+>
+> 本文档保留作历史参考，**不再作为实施依据**。其中关于 Auth.js 决策、RLS 讨论、Prisma migration 工作流的部分仍有参考价值，但所有 CloudBase/PostgreSQL 特定内容均不适用。
+
+---
+
 **版本：** v1.1  
 **日期：** 2026-08-15  
 **依据：** 最新 PWA 源码包 `ai-career-companion-pwa.zip`、AI Career Companion PRD V1.0  

@@ -71,7 +71,7 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
   const selectedIndex = options.findIndex((o) => o.value === value);
 
   return (
-    <>
+    <div className="relative">
       <button
         type="button"
         disabled={disabled}
@@ -98,12 +98,15 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
 
       {open && (
         <>
+          {/* 遮罩：半透明全屏，覆盖 footer 等底部内容，点击外部关闭 */}
           <div
             className="fixed inset-0 z-50 bg-black/40"
             onClick={() => setOpen(false)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl flex flex-col" style={{ maxHeight: '60vh' }}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-rule">
+          {/* 弹层：手机=全屏底部抽屉；桌面=依附输入框的浮层，宽随输入框/最大360px，高≤320px */}
+          <div className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[60vh] flex-col rounded-t-2xl bg-white shadow-2xl md:absolute md:bottom-auto md:top-full md:left-0 md:right-0 md:mt-2 md:max-h-[320px] md:max-w-[360px] md:rounded-xl">
+            {/* 手机端标题栏 */}
+            <div className="flex items-center justify-between border-b border-rule px-4 py-3 md:hidden">
               <span className="text-sm font-medium text-ink">{placeholder}</span>
               <button
                 type="button"
@@ -113,7 +116,7 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
                 关闭
               </button>
             </div>
-            <div ref={listRef} className="overflow-y-auto flex-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+            <div ref={listRef} className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
               {options.map((opt, idx) => {
                 const isSelected = opt.value === value;
                 return (
@@ -149,7 +152,8 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
                 );
               })}
             </div>
-            <div className="px-4 py-3 border-t border-rule flex gap-3" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
+            {/* 手机端底部操作栏 */}
+            <div className="flex gap-3 border-t border-rule px-4 py-3 md:hidden" style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}>
               {clearable && value && (
                 <button
                   type="button"
@@ -170,6 +174,6 @@ export function CustomSelect({ value, onChange, options, placeholder = '请选�
           </div>
         </>
       )}
-    </>
+    </div>
   );
 }

@@ -62,7 +62,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
   // 彩卡静止水平放置，无初始旋转、无 hover 动效
 
   return (
-    <section className="mx-auto max-w-[840px] px-5 pb-4 pt-4">
+    <section className="mx-auto px-5 pb-4 pt-4">
       <div className="grid grid-cols-1 justify-items-center gap-5 md:grid-cols-[repeat(3,minmax(0,335px))] md:justify-center">
         {/* 卡 1：搜索（杏金） */}
         <div className="w-full max-w-[335px] md:mt-5">
@@ -72,7 +72,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
             <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
               01&nbsp;&nbsp;Search
             </span>
-            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
+            <h2 className="text-foil-light mt-3 font-serif text-[15px] font-bold leading-[1.55] md:text-[clamp(10px,1.7vw,18px)]">
               <Quote text={t.quote3} />
             </h2>
             <div className="card-cutout mt-auto px-3 py-2.5">
@@ -111,7 +111,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
             <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
               02&nbsp;&nbsp;MENTOR AVATAR<span style={{ textTransform: 'lowercase' }}>s</span>
             </span>
-            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
+            <h2 className="text-foil-light mt-3 font-serif text-[15px] font-bold leading-[1.55] md:text-[clamp(10px,1.7vw,18px)]">
               <Quote text={t.quote2} />
             </h2>
             <div className="card-cutout mt-auto px-3 py-2.5">
@@ -132,7 +132,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
             <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
               03&nbsp;&nbsp;CAREER INTEREST TEST
             </span>
-            <h2 className="text-foil-light mt-3 font-serif text-[18px] font-bold leading-[1.55]">
+            <h2 className="text-foil-light mt-3 font-serif text-[15px] font-bold leading-[1.55] md:text-[clamp(10px,1.7vw,18px)]">
               <Quote text={t.quote1} />
             </h2>
             <div className="card-cutout mt-auto px-3 py-2.5">
