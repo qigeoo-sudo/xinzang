@@ -28,7 +28,6 @@ interface RawProfile {
   major?: string | null;
   expectedGrad?: string | null;
   gradMonth?: string | null;
-  workGoal?: string | null;
   fullTimeExp?: string | null;
   partTimeExp?: string | null;
   workProvince?: string | null;
@@ -36,6 +35,7 @@ interface RawProfile {
   curProvince?: string | null;
   curCity?: string | null;
   careers?: string | null;
+  customCareerDirections?: string | null;
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
@@ -88,7 +88,6 @@ export default function ProfileEditPage() {
             identity === 'working' || identity === 'jobless'
               ? monthOrEmpty(p.gradMonth)
               : '',
-          workGoal: p.workGoal ?? '',
           fullTimeExp: p.fullTimeExp ?? '',
           partTimeExp: p.partTimeExp ?? '',
           workProvince: p.workProvince ?? '',
@@ -97,6 +96,7 @@ export default function ProfileEditPage() {
           curProvince: p.curProvince ?? '',
           curCity: p.curCity === '其他' ? '__other__' : p.curCity ?? '',
           careers: parseCareers(p.careers),
+          customCareerDirections: parseCareers(p.customCareerDirections),
           careerAnxiety: p.careerAnxiety ?? '',
           helpPriority: parseCareers(p.helpPriority),
           mentorPreference: parseCareers(p.mentorPreference),

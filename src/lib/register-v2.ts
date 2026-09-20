@@ -40,7 +40,6 @@ export const registerProfileSchema = z.object({
   major: shortText,
   expectedGrad: shortText,
   gradMonth: monthText,
-  workGoal: shortText,
   fullTimeExp: shortText,
   partTimeExp: shortText,
   workProvince: shortText,
@@ -48,6 +47,13 @@ export const registerProfileSchema = z.object({
   curProvince: shortText,
   curCity: shortText,
   careers: z.array(z.string().max(40)).max(30).optional().nullable(),
+  // 用户自填的职业方向（与固定枚举 careers 分开存储）
+  // 单条限制：中文 9 字 / 英文 18 字符（27 字节）；最多 10 条
+  customCareerDirections: z
+    .array(z.string().max(27))
+    .max(10)
+    .optional()
+    .nullable(),
   // “让导师分身更懂你”选填区（复用旧问卷列：开放文本 + JSON 数组）
   // careerAnxiety：职业焦虑自述（≤100 字，前后端不文明用语校验）
   careerAnxiety: z.string().max(100).optional().nullable(),
@@ -91,7 +97,6 @@ export function toUserProfileData(p: RegisterProfilePayload) {
   put('major', p.major);
   put('expectedGrad', p.expectedGrad);
   put('gradMonth', p.gradMonth);
-  put('workGoal', p.workGoal);
   put('fullTimeExp', p.fullTimeExp);
   put('partTimeExp', p.partTimeExp);
   put('workProvince', p.workProvince);
@@ -104,6 +109,11 @@ export function toUserProfileData(p: RegisterProfilePayload) {
   }
   if (p.careers !== undefined) {
     data.careers = p.careers ? JSON.stringify(p.careers) : null;
+  }
+  if (p.customCareerDirections !== undefined) {
+    data.customCareerDirections = p.customCareerDirections
+      ? JSON.stringify(p.customCareerDirections)
+      : null;
   }
   put('careerAnxiety', p.careerAnxiety);
   if (p.helpPriority !== undefined) {

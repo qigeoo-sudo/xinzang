@@ -332,6 +332,7 @@ function renderUserProfile(p: {
   curProvince?: string | null;
   curCity?: string | null;
   careers?: string | null;
+  customCareerDirections?: string | null;
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
@@ -371,6 +372,9 @@ function renderUserProfile(p: {
     .filter(Boolean)
     .join('、');
   if (careersLabel) parts.push(`感兴趣的职业方向: ${careersLabel}`);
+  // 用户自填职业方向（与固定标签分开存储）
+  const customCareers = prettyArray(p.customCareerDirections);
+  if (customCareers) parts.push(`自填职业方向: ${customCareers}`);
   // 冷启动高价值字段：焦虑 / 希望获得帮助的方面 / 想深聊的人
   if (p.careerAnxiety) parts.push(`当前最大的职业焦虑: ${p.careerAnxiety}`);
   if (p.helpPriority) parts.push(`最希望获得帮助的方面: ${prettyArray(p.helpPriority)}`);
@@ -825,6 +829,7 @@ export async function POST(request: NextRequest) {
           curProvince: true,
           curCity: true,
           careers: true,
+          customCareerDirections: true,
           careerAnxiety: true,
           helpPriority: true,
           mentorPreference: true,

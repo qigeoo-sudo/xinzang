@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { CAREER_OPTIONS, WORK_GOAL_WORKING, WORK_GOAL_JOBLESS } from '@/lib/register-options';
+import { CAREER_OPTIONS } from '@/lib/register-options';
 
 interface RecommendedMentorsProfile {
   status?: string | null;
   careers?: string | null;
+  customCareerDirections?: string | null;
   careerAnxiety?: string | null;
   helpPriority?: string | null;
   mentorPreference?: string | null;
-  workGoal?: string | null;
 }
 
 interface MentorHit {
@@ -35,9 +35,6 @@ function parseJsonArray(str: string | null | undefined): string[] {
 // 搜索前必须把 value 映射成中文 label，否则关键词几乎匹配不到导师。
 const CAREER_LABELS: Record<string, string> = Object.fromEntries(
   CAREER_OPTIONS.map((o) => [o.value, o.label])
-);
-const WORK_GOAL_LABELS: Record<string, string> = Object.fromEntries(
-  [...WORK_GOAL_WORKING, ...WORK_GOAL_JOBLESS].map((o) => [o.value, o.label])
 );
 
 // mentorPreference 里的纯社交关系对“职业方向匹配”没有区分度，不进搜索词
@@ -92,12 +89,9 @@ export function RecommendedMentors({
       if (labels.length > 0) parts.push(`对${labels.join('、')}方向感兴趣，`);
     }
 
-    if (profile.workGoal) {
-      const goalMap: Record<string, string> = {};
-      [...WORK_GOAL_WORKING, ...WORK_GOAL_JOBLESS].forEach((o) => {
-        goalMap[o.value] = o.label;
-      });
-      parts.push(`最近打算：${goalMap[profile.workGoal] || profile.workGoal}。`);
+    const customCareers = parseJsonArray(profile.customCareerDirections);
+    if (customCareers.length > 0) {
+      parts.push(`也关注${customCareers.join('、')}，`);
     }
 
     if (profile.careerAnxiety?.trim()) {
@@ -113,19 +107,17 @@ export function RecommendedMentors({
 
     // 关键：value 要先转成中文 label 再拿去匹配中文导师库
     const careers = toLabel(parseJsonArray(profile.careers), CAREER_LABELS);
+    const customCareers = parseJsonArray(profile.customCareerDirections);
     const helpPriority = parseJsonArray(profile.helpPriority);
     const mentorPref = parseJsonArray(profile.mentorPreference).filter(
       (v) => v && !NON_PROFESSIONAL_PREFS.has(v)
     );
-    const workGoal = profile.workGoal
-      ? [WORK_GOAL_LABELS[profile.workGoal] || profile.workGoal]
-      : [];
 
     const query = [
       ...careers,
+      ...customCareers,
       ...helpPriority,
       ...mentorPref,
-      ...workGoal,
       profile.careerAnxiety,
     ]
       .filter(Boolean)

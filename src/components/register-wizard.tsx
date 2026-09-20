@@ -23,8 +23,6 @@ import { PaperCredits, GoldFlakes } from '@/components/page-shell';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
-  WORK_GOAL_WORKING,
-  WORK_GOAL_JOBLESS,
   WORK_EXP_DURATION_OPTIONS,
   HELP_PRIORITY_OPTIONS,
   HELP_OTHER_VALUE,
@@ -116,7 +114,6 @@ export interface WizardInitialValues {
   major?: string;
   expectedGrad?: string;
   gradMonth?: string;
-  workGoal?: string;
   fullTimeExp?: string;
   partTimeExp?: string;
   workProvince?: string;
@@ -124,6 +121,7 @@ export interface WizardInitialValues {
   curProvince?: string;
   curCity?: string; // '其他' → '__other__'
   careers?: string[];
+  customCareerDirections?: string[]; // 用户自填职业方向
   // 让导师分身更懂你（选填；helpPriority 单选数组 0/1 项，mentorPreference 多选）
   careerAnxiety?: string;
   helpPriority?: string[];
@@ -192,7 +190,6 @@ export function RegisterWizard({
   const [school, setSchool] = useState(initial?.school ?? '');
   const [major, setMajor] = useState(initial?.major ?? '');
   const [expectedGrad, setExpectedGrad] = useState(initial?.expectedGrad ?? '');
-  const [workGoal, setWorkGoal] = useState(initial?.workGoal ?? '');
   const [gradMonth, setGradMonth] = useState(initial?.gradMonth ?? '');
   const [workExp, setWorkExp] = useState(initial?.fullTimeExp ?? '');
   const [partTimeExp, setPartTimeExp] = useState(initial?.partTimeExp ?? '');
@@ -206,6 +203,12 @@ export function RegisterWizard({
   const [currentProvince, setCurrentProvince] = useState(initial?.curProvince ?? '');
   const [currentCity, setCurrentCity] = useState(() => legacyCity(initial?.curProvince, initial?.curCity));
   const [careers, setCareers] = useState<string[]>(initial?.careers ?? []);
+  // 用户自填的职业方向（与固定标签分开存储）
+  const [customCareers, setCustomCareers] = useState<string[]>(
+    initial?.customCareerDirections ?? []
+  );
+  const [customCareerInput, setCustomCareerInput] = useState('');
+  const [customCareerErr, setCustomCareerErr] = useState('');
 
   // 让导师分身更懂你（选填，默认收起；已有内容时默认展开）
   const [careerAnxiety, setCareerAnxiety] = useState(initial?.careerAnxiety ?? '');
@@ -335,12 +338,6 @@ export function RegisterWizard({
   const workCityDisabled = workProvince ? SINGLE_CITY_PROVINCES.includes(workProvince) : true;
   const currentCityDisabled = currentProvince ? SINGLE_CITY_PROVINCES.includes(currentProvince) : true;
   const cityLabel = (v: string) => (v === '__any__' ? '均可考虑' : v === '__other__' ? '其他' : v);
-
-  // 「最近打算」选项随身份变化：在职 / 待业各一套
-  const workGoalOptions = useMemo(() => {
-    if (identity === 'jobless') return WORK_GOAL_JOBLESS;
-    return WORK_GOAL_WORKING;
-  }, [identity]);
 
   const isValidPhone = (v: string) => /^1[3-9]\d{9}$/.test(v);
 
@@ -557,14 +554,11 @@ export function RegisterWizard({
       if (expectedGrad < now) return '毕业日期不能早于当前月份';
       if (expectedGrad <= enrollMonth) return '毕业日期需要晚于入学年月';
     } else {
-      // 在职 / 待业：最近打算、入学年月、学校名称、专业分类、毕业日期必填；毕业日期需 ≤ 当前年月
-      if (!workGoal) return '请选择你最近的打算';
-      if (!enrollMonth) return '请选择入学年月';
+      // 在职 / 待业：学校名称、专业分类、毕业日期必填；毕业日期需 ≤ 当前年月
       if (!school.trim()) return '请填写学校名称';
       if (!major) return '请选择专业分类';
       if (!gradMonth) return '请选择毕业日期';
       if (gradMonth > now) return '毕业日期不能晚于当前月份';
-      if (gradMonth <= enrollMonth) return '毕业日期需要晚于入学年月';
     }
     return '';
   };
@@ -572,7 +566,7 @@ export function RegisterWizard({
   const validateLocations = () => {
     if (!workProvince || !workCity) return '请选择希望工作地点（省 / 市）';
     if (!currentProvince || !currentCity) return '请选择目前所在地（省 / 市）';
-    if (careers.length === 0) return '请至少选择一个感兴趣的职业方向';
+    if (careers.length === 0 && customCareers.length === 0) return '请至少选择一个感兴趣的职业方向';
     // 选填区：填了就必须合规
     if (anxietyBlocked) return '职业焦虑描述含不文明用语，请修改后再保存';
     if (helpChoice === HELP_OTHER_VALUE) {
@@ -665,7 +659,6 @@ export function RegisterWizard({
       major: val(major),
       expectedGrad: val(expectedGrad),
       gradMonth: val(gradMonth),
-      workGoal: val(workGoal),
       fullTimeExp: val(workExp),
       partTimeExp: val(partTimeExp),
       workProvince: val(workProvince),
@@ -673,6 +666,7 @@ export function RegisterWizard({
       curProvince: val(currentProvince),
       curCity: currentCity === '__other__' ? '其他' : val(currentCity),
       careers: careers.length ? careers : isEdit ? null : undefined,
+      customCareerDirections: customCareers.length ? customCareers : isEdit ? null : undefined,
       // 让导师分身更懂你（选填；编辑模式删空时显式置 null）
       careerAnxiety: careerAnxiety.trim()
         ? careerAnxiety.trim()
@@ -802,8 +796,42 @@ export function RegisterWizard({
     setCareers((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]));
   };
 
+  // 自定义职业方向：单条 ≤ 9 汉字 / 18 英文（27 字节）；去重；与固定标签重复则自动合并；最多 3 条
+  const CUSTOM_CAREER_MAX_BYTES = 27;
+  const CUSTOM_CAREER_MAX_COUNT = 3;
+  const customCareerFull = customCareers.length >= CUSTOM_CAREER_MAX_COUNT;
+  const addCustomCareer = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return;
+    // 数量上限兜底（UI 层已禁用按钮，此处防止回车等绕过）
+    if (customCareerFull) return;
+    if (new TextEncoder().encode(v).length > CUSTOM_CAREER_MAX_BYTES) {
+      setCustomCareerErr('最多 9 个汉字或 18 个英文字符');
+      return;
+    }
+    setCustomCareerErr('');
+    // 与固定职业标签重复 → 自动归入 careers，不入自定义
+    const matched = CAREER_OPTIONS.find(
+      (o) => o.label === v || o.value === v
+    );
+    if (matched) {
+      setCareers((prev) => (prev.includes(matched.value) ? prev : [...prev, matched.value]));
+      setCustomCareerInput('');
+      return;
+    }
+    // 自定义之间不重复
+    if (customCareers.includes(v)) {
+      setCustomCareerInput('');
+      return;
+    }
+    setCustomCareers((prev) => [...prev, v]);
+    setCustomCareerInput('');
+  };
+  const removeCustomCareer = (v: string) => {
+    setCustomCareers((prev) => prev.filter((x) => x !== v));
+  };
+
   const majorLabel = MAJOR_OPTIONS.find((o) => o.value === major)?.label;
-  const workGoalLabel = workGoalOptions.find((o) => o.value === workGoal)?.label;
   const workExpLabel = WORK_EXP_DURATION_OPTIONS.find((o) => o.value === workExp)?.label;
   const partTimeExpLabel = WORK_EXP_DURATION_OPTIONS.find((o) => o.value === partTimeExp)?.label;
   const identityLabel = identity === 'student' ? '在校' : identity === 'working' ? '在职' : identity === 'jobless' ? '待业' : '';
@@ -1175,9 +1203,6 @@ export function RegisterWizard({
                           // 切换身份后，清空不属于新身份分支的毕业日期，避免留旧值
                           if (next === 'student') setGradMonth('');
                           else setExpectedGrad('');
-                          // 切换身份后，清空不属于新身份候选集的「想法」
-                          const goalOpts = next === 'jobless' ? WORK_GOAL_JOBLESS : WORK_GOAL_WORKING;
-                          if (workGoal && !goalOpts.some((o) => o.value === workGoal)) setWorkGoal('');
                         }}
                         options={[
                           { value: 'student', label: '在校' },
@@ -1227,22 +1252,6 @@ export function RegisterWizard({
 
                     {(identity === 'working' || identity === 'jobless') && (
                       <div className="space-y-4 animate-fade-in">
-                        <Field label="最近打算" required>
-                          <CustomSelect
-                            value={workGoal}
-                            onChange={setWorkGoal}
-                            options={workGoalOptions}
-                            placeholder="请选择你最近的打算："
-                            className="!bg-white !border-sand-300 rounded-[10px]"
-                          />
-                        </Field>
-                        <Field label="入学年月" required>
-                          <MonthTrigger
-                            value={enrollMonth}
-                            placeholder="选择入学年月"
-                            onClick={() => setMonthSheet('enroll')}
-                          />
-                        </Field>
                         <Field label="学校名称" required>
                           <SchoolSearch
                             value={school}
@@ -1376,8 +1385,67 @@ export function RegisterWizard({
                           );
                         })}
                       </div>
+
+                      {/* 用户自填职业方向：与固定标签分开存储，方便统计与匹配时区分 */}
+                      {customCareers.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {customCareers.map((v) => (
+                            <span
+                              key={v}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px]"
+                              style={{
+                                background: 'rgba(176,133,46,0.12)',
+                                color: C.ink,
+                                border: '1.5px dashed #B0852E',
+                              }}
+                            >
+                              {v}
+                              <button
+                                type="button"
+                                onClick={() => removeCustomCareer(v)}
+                                className="ml-0.5 text-ink/50 hover:text-ink"
+                                aria-label={`移除 ${v}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mt-3">
+                        <input
+                          type="text"
+                          value={customCareerInput}
+                          onChange={(e) => {
+                            setCustomCareerInput(e.target.value);
+                            setCustomCareerErr('');
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addCustomCareer(customCareerInput);
+                            }
+                          }}
+                          maxLength={27}
+                          placeholder="输入其他方向（最多三个）"
+                          className={`${inputCls} flex-1 text-[13px]`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => addCustomCareer(customCareerInput)}
+                          disabled={customCareerFull}
+                          className="px-4 py-2 rounded-[10px] text-[13px] font-semibold text-white shrink-0 transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
+                          style={{ background: C.orange }}
+                        >
+                          添加
+                        </button>
+                      </div>
+                      {customCareerErr && (
+                        <p className="text-xs mt-1 text-red-500">{customCareerErr}</p>
+                      )}
                       <p className="text-xs mt-2" style={{ color: '#B4780E' }}>
-                        已选 {careers.length} 个
+                        已选 {careers.length + customCareers.length} 个
                       </p>
                     </Field>
 
@@ -1706,8 +1774,6 @@ export function RegisterWizard({
                     ]
                   : [
                       ['目前状态', identityLabel],
-                      ['最近打算', workGoalLabel || ''],
-                      ['入学年月', fmtMonth(enrollMonth)],
                       ['学校', school.trim()],
                       ['专业分类', majorLabel || ''],
                       ['毕业日期', fmtMonth(gradMonth)],
@@ -1720,7 +1786,10 @@ export function RegisterWizard({
             <Summary title="方向与地点" rows={[
               ['希望工作地点', `${workProvince} · ${cityLabel(workCity)}`],
               ['目前所在地', `${currentProvince} · ${cityLabel(currentCity)}`],
-              ['感兴趣的职业方向', careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean).join('、')],
+              ['感兴趣的职业方向', [
+                ...careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean) as string[],
+                ...customCareers,
+              ].join('、')],
             ]} />
 
             {(() => {
@@ -1810,8 +1879,6 @@ export function RegisterWizard({
                     ]
                   : [
                       ['目前状态', identityLabel],
-                      ['最近打算', workGoalLabel || ''],
-                      ['入学年月', fmtMonth(enrollMonth)],
                       ['学校', school.trim()],
                       ['专业分类', majorLabel || ''],
                       ['毕业日期', fmtMonth(gradMonth)],
@@ -1824,7 +1891,10 @@ export function RegisterWizard({
             <Summary title="方向与地点" rows={[
               ['希望工作地点', `${workProvince} · ${cityLabel(workCity)}`],
               ['目前所在地', `${currentProvince} · ${cityLabel(currentCity)}`],
-              ['感兴趣的职业方向', careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean).join('、')],
+              ['感兴趣的职业方向', [
+                ...careers.map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label).filter(Boolean) as string[],
+                ...customCareers,
+              ].join('、')],
             ]} />
 
             {contactEmail.trim() && (
@@ -1836,10 +1906,10 @@ export function RegisterWizard({
               profile={{
                 status: identity || null,
                 careers: JSON.stringify(careers),
+                customCareerDirections: JSON.stringify(customCareers),
                 careerAnxiety: careerAnxiety || null,
                 helpPriority: JSON.stringify(helpChoice ? [helpChoice] : []),
                 mentorPreference: JSON.stringify(mentorPreference),
-                workGoal: workGoal || null,
               }}
               showAssessmentHint={!savedAssessment}
             />

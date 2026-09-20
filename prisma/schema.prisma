@@ -191,14 +191,15 @@ model UserProfile {
   enrollMonth     String? // 入学年月 YYYY-MM
   expectedGrad    String? // 预计毕业（在校）
   gradMonth       String? // 毕业日期 YYYY-MM（在职/待业）
-  workGoal        String? // 最近打算
+  workGoal        String? // [已废弃] 最近打算，保留列以兼容老档案，不再写入
   fullTimeExp     String? // 全职工作时长档位
   partTimeExp     String? // 兼职工作时长档位
   workProvince    String? // 希望工作地点-省/地区
   workCity        String? // 希望工作地点-市（含 __any__ 均可考虑 / __other__ 其他 等特殊值）
   curProvince     String? // 目前所在地-省/地区
   curCity         String? // 目前所在地-市
-  careers         String? // 感兴趣的职业方向 (JSON 数组字符串)
+  careers         String? // 感兴趣的职业方向 (JSON 数组字符串，固定枚举值)
+  customCareerDirections String? // 用户自填的职业方向 (JSON 数组字符串，与固定枚举分开存储)
   registrationCompletedAt DateTime? // 新注册流程完成时间
   contactEmail String? // 选填联系邮箱（线下活动通知用，独立于登录邮箱）
 

@@ -11,8 +11,6 @@ import { RecommendedMentors } from '@/components/recommended-mentors';
 import {
   MAJOR_OPTIONS,
   CAREER_OPTIONS,
-  WORK_GOAL_WORKING,
-  WORK_GOAL_JOBLESS,
   WORK_EXP_DURATION_OPTIONS,
 } from '@/lib/register-options';
 
@@ -403,8 +401,6 @@ function ProfileSections({ profile, phone }: { profile: ProfileData | null; phon
       ]
     : [
         ['目前状态', p?.status || '—'],
-        ['最近打算', optionLabel([...WORK_GOAL_WORKING, ...WORK_GOAL_JOBLESS], p?.workGoal)],
-        ['入学年月', fmtMonthView(p?.enrollMonth)],
         ['学校', p?.school || '—'],
         ['专业分类', optionLabel(MAJOR_OPTIONS, p?.major)],
         ['毕业日期', fmtMonthView(p?.gradMonth)],
@@ -412,9 +408,10 @@ function ProfileSections({ profile, phone }: { profile: ProfileData | null; phon
         ['兼职经验', p?.partTimeExp ? optionLabel(WORK_EXP_DURATION_OPTIONS, p.partTimeExp) : '未填'],
       ];
 
-  const careerNames = parseJsonArray(p?.careers)
-    .map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label ?? v)
-    .join('、');
+  const careerNames = [
+    ...parseJsonArray(p?.careers).map((v) => CAREER_OPTIONS.find((o) => o.value === v)?.label ?? v),
+    ...parseJsonArray(p?.customCareerDirections),
+  ].join('、');
   const locationRows: [string, string][] = [
     ['希望工作地点', p?.workProvince ? `${p.workProvince}${p.workCity ? ` · ${p.workCity}` : ''}` : '—'],
     ['目前所在地', p?.curProvince ? `${p.curProvince}${p.curCity ? ` · ${p.curCity}` : ''}` : '—'],

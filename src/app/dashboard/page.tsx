@@ -56,7 +56,7 @@ export default async function DashboardPage() {
         careerAnxiety: true,
         helpPriority: true,
         mentorPreference: true,
-        workGoal: true,
+        customCareerDirections: true,
         status: true,
         registrationCompletedAt: true,
       },
@@ -238,10 +238,10 @@ export default async function DashboardPage() {
           profile={{
             status: userProfile?.status ?? null,
             careers: userProfile?.careers ?? null,
+            customCareerDirections: userProfile?.customCareerDirections ?? null,
             careerAnxiety: userProfile?.careerAnxiety ?? null,
             helpPriority: userProfile?.helpPriority ?? null,
             mentorPreference: userProfile?.mentorPreference ?? null,
-            workGoal: userProfile?.workGoal ?? null,
           }}
           showAssessmentHint={!assessment}
           surface="paper"

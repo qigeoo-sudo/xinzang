@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
           curProvince: null,
           curCity: null,
           careers: null,
+          customCareerDirections: null,
           registrationCompletedAt: null,
           contactEmail: null,
         },
