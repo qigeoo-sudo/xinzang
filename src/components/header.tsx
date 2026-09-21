@@ -304,7 +304,7 @@ function HeaderInner() {
             <div className="hidden sm:flex flex-col leading-none">
               <span className="font-serif text-sm font-bold text-ink">Career Companion</span>
               <span className="mt-1 font-mono text-[8px] font-medium tracking-[0.14em] text-ink/45">
-                navigate around any singularity, shape your future
+                &nbsp;
               </span>
             </div>
           </Link>

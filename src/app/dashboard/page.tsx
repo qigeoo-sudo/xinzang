@@ -133,7 +133,7 @@ export default async function DashboardPage() {
         watermark="长"
       />
 
-      <StageShell masthead="navigate around any singularity, shape your future">
+      <StageShell masthead=" ">
         {/* 统计卡片：两张小信纸 */}
         <div className="mb-5 grid grid-cols-2 gap-3">
           <PaperPanel className="py-5 text-center">

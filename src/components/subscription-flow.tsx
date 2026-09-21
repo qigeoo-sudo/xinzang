@@ -495,7 +495,7 @@ export function SubscriptionFlow({
       {/* 生效卡与其他方案之间：首页同款全小写英文标语（字号随屏宽自适应、单行） */}
       {activeSubscription && (
         <p className="masthead-label mb-7 text-white/80">
-          navigate around any singularity, shape your future
+          &nbsp;
         </p>
       )}
 

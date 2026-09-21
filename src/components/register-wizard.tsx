@@ -157,6 +157,11 @@ export function RegisterWizard({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [stepIdx]);
 
+  // 注册成功页：立即滚动到顶部，确保"查看兴趣代码解读"按钮第一眼可见
+  useEffect(() => {
+    if (done) window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [done]);
+
   // 第一步（账号）
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -1697,13 +1702,7 @@ export function RegisterWizard({
                     取消
                   </Link>
                 ) : (
-                  <Link
-                    href="/login"
-                    className="px-5 py-3 rounded-[10px] text-sm font-semibold"
-                    style={{ color: C.body }}
-                  >
-                    去登录
-                  </Link>
+                  <span className="px-5 py-3" />
                 )}
                 {section !== 'locations' ? (
                   <button
@@ -1862,7 +1861,19 @@ export function RegisterWizard({
               </div>
             )}
 
-            {savedAssessment && <AssessmentSummary assessment={savedAssessment} />}
+            {savedAssessment && (
+              <>
+                <AssessmentSummary assessment={savedAssessment} />
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = '/assessment'; }}
+                  className="w-full py-3 rounded-[10px] text-sm font-bold text-white mb-5"
+                  style={{ background: '#4E6B44' }}
+                >
+                  查看兴趣代码解读 →
+                </button>
+              </>
+            )}
 
             <Summary title="账号信息" rows={accountRows} />
 

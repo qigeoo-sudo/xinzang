@@ -52,10 +52,6 @@
       line-height: 1.4;
       font-size: clamp(7px, 1.0vw, 13px);
     }
-    .masthead-home::after {
-      content: ".  Illuminate the uncharted territory, Claim your horizon.";
-      display: inline;
-    }
   }
 
   /* 年份横向 chips 滚动条：电脑端显示细滚动条（鼠标可拖），触屏端隐藏（手指滑） */
@@ -75,14 +71,6 @@
   }
   .year-chips-scroll::-webkit-scrollbar-thumb:hover {
     background: #C9A96E;
-  }
-  @media (hover: none) {
-    .year-chips-scroll {
-      scrollbar-width: none;
-    }
-    .year-chips-scroll::-webkit-scrollbar {
-      display: none;
-    }
   }
 
   /* 黏土汽水 3.0 工具类 */

@@ -54,10 +54,10 @@ export function HomeContent() {
 
         {/* 内容层 */}
         <div className="relative mx-auto max-w-[840px] px-5 pb-6 pt-8 md:pb-12 md:pt-12">
-          <div className="flex flex-col items-start gap-4 md:flex-row md:items-end md:justify-between md:gap-10">
-            {/* 文字列：md 以上设最小高度，确保中英文切换时页头高度一致
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6 md:gap-10">
+            {/* 文字列：sm 以上设最小高度，确保中英文切换时页头高度一致
                 （中文 h1 最大 44px，英文收窄后更矮，用 min-h 把英文撑到与中文等高） */}
-            <div className="max-w-[560px] md:min-h-[128px]">
+            <div className="max-w-[560px] sm:min-h-[128px]">
               <span
                 className="block h-[3px] w-10 rounded-full bg-white/90"
                 aria-hidden
@@ -84,7 +84,7 @@ export function HomeContent() {
 
             {/* 图腾：榨汁机，破框探出到杏红底上。白框=蒙版容器，logo 铺满并放大，溢出部分被裁掉；
                 最底枚金币用原图抠出的完整贴片叠在框外，还原"垂出白框"的原设计 */}
-            <div className="animate-float relative z-10 -mb-[56px] shrink-0 self-center md:-mb-[56px] md:self-end md:pr-4">
+            <div className="animate-float relative z-10 -mb-[56px] shrink-0 self-center sm:-mb-[56px] sm:self-end sm:pr-4">
               <div className="h-[120px] w-[120px] overflow-hidden rounded-[24px] shadow-[0_16px_40px_rgba(44,62,92,0.28)] ring-[3px] ring-white/70 md:h-[160px] md:w-[160px] md:rounded-[32px]">
                 <Image
                   src="/icons/icon-block-1024.png"
@@ -147,7 +147,7 @@ export function HomeContent() {
         <div className="relative z-10">
           {/* 页头标语（pt 含灰蓝上移的 36px 补偿） */}
           <p className="masthead-label masthead-home text-center pt-[68px] pb-4 text-white/80">
-            navigate around any singularity, shape your future
+            &nbsp;
           </p>
 
           {/* 三张金属信用卡入口 */}

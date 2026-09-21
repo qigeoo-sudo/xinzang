@@ -131,6 +131,8 @@ export function AssessmentFlow() {
     const items: AnswerItem[] = order
       .map((q) => ({ qid: q.id, value: answers[q.id] }))
       .filter((a) => typeof a.value === 'number');
+    // 本次访问未答题（从档案加载已有结果跳到 result 阶段）：返回 null 让 displayResult fallback 到 existingResult
+    if (items.length === 0) return null;
     return scoreAnswers(order, items);
   }, [stage, order, answers]);
 

@@ -209,15 +209,23 @@ export function RecommendedMentors({
       )}
 
       {showAssessmentHint && (
-        <p className="mt-4 text-center text-xs text-muted">
-          完成职业兴趣测试，导师分身匹配更精准。
+        <div
+          className="mt-4 rounded-[14px] p-4"
+          style={{ background: 'rgba(122,158,110,0.08)', border: '1px solid rgba(122,158,110,0.25)' }}
+        >
+          <p className="text-sm font-semibold" style={{ color: '#2C3E5C' }}>
+            完成职业兴趣测试，导师分身匹配更精准
+          </p>
+          <p className="mt-1 text-xs leading-5 text-muted">
+            测一测霍兰德六维兴趣代码，结果会存进档案，帮导师更快懂你。
+          </p>
           <Link
             href="/assessment"
-            className="ml-1 font-semibold text-sage-700 underline underline-offset-2"
+            className="mt-3 inline-flex items-center rounded-[10px] bg-sage-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-sage-600"
           >
-            去测试
+            做职业兴趣测试 →
           </Link>
-        </p>
+        </div>
       )}
     </div>
   );
