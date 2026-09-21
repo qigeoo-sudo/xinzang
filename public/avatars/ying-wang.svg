@@ -1,4 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#2C3E5C"/>
-  <text x="100" y="100" dy="0.35em" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="92" fill="#F2E6D8">Y</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <clipPath id="circle">
+      <circle cx="200" cy="200" r="200"/>
+    </clipPath>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FCF6E8"/>
+      <stop offset="1" stop-color="#EFE3CC"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F3D2B0"/>
+      <stop offset="1" stop-color="#E2B68C"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B2A2A"/>
+      <stop offset="1" stop-color="#15141A"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F3A52"/>
+      <stop offset="1" stop-color="#1C2435"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8F4EC"/>
+      <stop offset="1" stop-color="#D9D2C4"/>
+    </linearGradient>
+  </defs>
+
+  <g clip-path="url(#circle)">
+    <rect width="400" height="400" fill="url(#bg)"/>
+
+    <!-- 肩膀与西装 -->
+    <path d="M 60 400 L 60 340 Q 80 290 130 270 L 170 258 L 230 258 L 270 270 Q 320 290 340 340 L 340 400 Z" fill="url(#jacket)"/>
+    <!-- 衬衫领口 -->
+    <path d="M 170 258 L 200 295 L 230 258 L 220 320 L 180 320 Z" fill="url(#shirt)"/>
+    <!-- 领带 -->
+    <path d="M 196 295 L 204 295 L 210 360 L 190 360 Z" fill="#8B2419"/>
+    <!-- 西装翻领 -->
+    <path d="M 170 258 L 200 295 L 175 320 L 155 290 Z" fill="#1C2435"/>
+    <path d="M 230 258 L 200 295 L 225 320 L 245 290 Z" fill="#1C2435"/>
+
+    <!-- 脖子 -->
+    <path d="M 178 230 L 222 230 L 218 268 L 182 268 Z" fill="url(#skin)"/>
+
+    <!-- 头部 -->
+    <ellipse cx="200" cy="180" rx="72" ry="82" fill="url(#skin)"/>
+
+    <!-- 耳朵 -->
+    <ellipse cx="130" cy="185" rx="9" ry="14" fill="url(#skin)"/>
+    <ellipse cx="270" cy="185" rx="9" ry="14" fill="url(#skin)"/>
+
+    <!-- 头发 -->
+    <path d="M 128 160 Q 130 110 175 95 Q 200 85 225 95 Q 275 110 272 160 Q 268 145 240 138 Q 215 132 200 135 Q 180 132 160 138 Q 132 145 128 160 Z" fill="url(#hair)"/>
+    <path d="M 130 170 Q 125 195 132 220 L 138 215 Q 132 195 138 175 Z" fill="url(#hair)"/>
+    <path d="M 270 170 Q 275 195 268 220 L 262 215 Q 268 195 262 175 Z" fill="url(#hair)"/>
+
+    <!-- 眉毛 -->
+    <path d="M 160 168 Q 170 164 182 168" stroke="#1F1A18" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M 218 168 Q 230 164 240 168" stroke="#1F1A18" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+    <!-- 眼睛 -->
+    <ellipse cx="172" cy="182" rx="4.5" ry="3" fill="#2A1B12"/>
+    <ellipse cx="228" cy="182" rx="4.5" ry="3" fill="#2A1B12"/>
+
+    <!-- 鼻子 -->
+    <path d="M 200 188 L 196 210 Q 200 214 204 210 Z" fill="#D9A788" opacity="0.7"/>
+    <path d="M 196 212 Q 200 214 204 212" stroke="#B88867" stroke-width="1.2" fill="none"/>
+
+    <!-- 嘴巴 -->
+    <path d="M 188 224 Q 200 230 212 224" stroke="#9C4A36" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- 外圈微暗描边 -->
+  <circle cx="200" cy="200" r="199" fill="none" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>
 </svg>
