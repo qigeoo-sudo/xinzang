@@ -19,6 +19,7 @@ function MentorDiagBar() {
       return `${tag}: a=${document.querySelectorAll('a').length} Freya=${count('Freya')} KevinYuan=${count('Kevin Yuan')}`;
     };
     const out = [
+      `ua=${navigator.userAgent.slice(-48)}`,
       `jsMentors=${sortMentorsForList().length} ready=${document.readyState}`,
       (window as unknown as { __preHTML?: string }).__preHTML || 'PRE=n/a',
       snap('T0'),
@@ -33,6 +34,23 @@ function MentorDiagBar() {
     setTimeout(() => {
       out.push(snap('T1'));
       out.push(...errs.slice(0, 3));
+      // 逐卡体检：位置/尺寸/可见性/头像加载（验证后删除）
+      const cards = Array.from(document.querySelectorAll('main a')).filter(
+        (a) => a.querySelector('img') || a.querySelector('h3')
+      );
+      cards.slice(0, 8).forEach((a, i) => {
+        const r = a.getBoundingClientRect();
+        const cs = getComputedStyle(a);
+        const img = a.querySelector('img');
+        const imgSt = img
+          ? `img:${img.naturalWidth}x${img.naturalHeight}/${img.complete}`
+          : 'noimg';
+        out.push(
+          `c${i + 1} ${(a.textContent || '').replace(/\s+/g, ' ').slice(0, 16)} ` +
+            `${Math.round(r.width)}x${Math.round(r.height)} y=${Math.round(r.top)} ` +
+            `${cs.display}/${cs.visibility}/${cs.opacity} ${imgSt}`
+        );
+      });
       setLines(out);
     }, 1500);
     return () => {
