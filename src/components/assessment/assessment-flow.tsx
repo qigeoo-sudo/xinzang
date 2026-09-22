@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -672,22 +673,22 @@ export function AssessmentFlow() {
         )}
       </div>
 
-      {/* 未登录引导注册弹窗 */}
-      {guestDialog && (
-        <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-ink/40 p-4 sm:items-center"
-          onClick={() => setGuestDialog(false)}
-        >
+      {/* 未登录引导注册弹窗：Portal 到 body，避免被页面层叠上下文压住导致底托穿透 */}
+      {guestDialog &&
+        createPortal(
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[180] flex items-end justify-center bg-ink/40 p-4 sm:items-center"
+            onClick={() => setGuestDialog(false)}
           >
-            <h2 className="font-serif text-lg font-bold text-ink">把结果带走？</h2>
-            <p className="mt-2 text-sm leading-7 text-muted">
-              储存测试结果需要先注册或登录，注册/登录完成后，你的个人档案会同时包含这次兴趣测试结果，以后还能随时查看和重测。
-            </p>
-            <div className="mt-5 flex flex-col gap-2.5">
-              <div className="flex gap-2.5">
+            <div
+              className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="font-serif text-lg font-bold text-ink">把结果带走？</h2>
+              <p className="mt-2 text-sm leading-7 text-muted">
+                储存测试结果需要先注册或登录，注册/登录完成后，你的个人档案会同时包含这次兴趣测试结果，以后还能随时查看和重测。
+              </p>
+              <div className="mt-5 flex gap-2.5">
                 <button
                   onClick={goRegisterWithResult}
                   className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
@@ -701,16 +702,10 @@ export function AssessmentFlow() {
                   登录
                 </button>
               </div>
-              <button
-                onClick={() => setGuestDialog(false)}
-                className="w-full rounded-xl border border-rule bg-white px-6 py-2.5 text-sm font-medium text-muted transition-all hover:bg-bg"
-              >
-                暂不储存
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </main>
   );
 }
