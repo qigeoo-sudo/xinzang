@@ -56,7 +56,7 @@ function MentorDiagBar() {
       if (c5) {
         out.push('c5 inlineStyle=' + (c5 as HTMLElement).style.cssText || 'c5 inlineStyle=');
         const hits: string[] = [];
-        document.styleSheets.forEach((ss) => {
+        Array.from(document.styleSheets).forEach((ss) => {
           let rules: CSSRuleList;
           try {
             rules = ss.cssRules;
