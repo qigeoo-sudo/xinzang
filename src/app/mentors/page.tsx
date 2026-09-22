@@ -8,6 +8,46 @@ import { sortMentorsForList, getAllIndustries } from '@/lib/mentors';
 
 const PAGE_SIZE = 10;
 
+// 临时诊断：排查安卓端锁定导师卡片消失（验证后删除）
+function MentorDiagBar() {
+  const [lines, setLines] = useState<string[] | null>(null);
+  useEffect(() => {
+    const snap = (tag: string) => {
+      const html = document.documentElement.innerHTML;
+      const count = (re: string) =>
+        (html.match(new RegExp(re, 'g')) || []).length;
+      return `${tag}: a=${document.querySelectorAll('a').length} Freya=${count('Freya')} KevinYuan=${count('Kevin Yuan')}`;
+    };
+    const out = [
+      `jsMentors=${sortMentorsForList().length} ready=${document.readyState}`,
+      (window as unknown as { __preHTML?: string }).__preHTML || 'PRE=n/a',
+      snap('T0'),
+    ];
+    const errs: string[] = [];
+    const onErr = (e: ErrorEvent) =>
+      errs.push('ERR:' + (e.message || '').slice(0, 90));
+    const onRej = (e: PromiseRejectionEvent) =>
+      errs.push('REJ:' + String(e.reason).slice(0, 90));
+    window.addEventListener('error', onErr);
+    window.addEventListener('unhandledrejection', onRej);
+    setTimeout(() => {
+      out.push(snap('T1'));
+      out.push(...errs.slice(0, 3));
+      setLines(out);
+    }, 1500);
+    return () => {
+      window.removeEventListener('error', onErr);
+      window.removeEventListener('unhandledrejection', onRej);
+    };
+  }, []);
+  if (!lines) return null;
+  return (
+    <div className="fixed left-2 right-2 top-2 z-[200] whitespace-pre-wrap rounded bg-black/90 p-2 text-[10px] leading-4 text-green-300">
+      {lines.join('\n')}
+    </div>
+  );
+}
+
 export default function MentorsPage() {
   const [activeIndustry, setActiveIndustry] = useState<string>('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +92,7 @@ export default function MentorsPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
+      <MentorDiagBar />
       <Header />
       <GoldFlakes />
 
@@ -93,6 +134,15 @@ export default function MentorsPage() {
               <MentorCard key={mentor.id} mentor={mentor} />
             ))}
           </div>
+
+          {/* 临时诊断：解析到此时全部卡片已在 DOM、React hydration 尚未开始，
+              记录初始 HTML 的真实卡片数（验证后删除） */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html:
+                "window.__preHTML='PRE Freya='+(document.documentElement.innerHTML.match(/Freya/g)||[]).length+' a='+document.querySelectorAll('a').length",
+            }}
+          />
 
           {/* 分页导航 */}
           {totalPages > 1 && (
