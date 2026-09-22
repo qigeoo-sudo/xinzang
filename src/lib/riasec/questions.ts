@@ -27,12 +27,12 @@ export const DIMENSION_META: Record<
   Dimension,
   { name: string; en: string; desc: string }
 > = {
-  R: { name: '实用型', en: 'Realistic', desc: '喜欢动手、使用工具和设备，在现场解决具体问题，并看到做出来的成果' },
-  I: { name: '研究型', en: 'Investigative', desc: '喜欢分析、实验、推理，弄清事情为什么会这样' },
-  A: { name: '艺术型', en: 'Artistic', desc: '喜欢创作、设计和表达，把自己的想法做出独特的样子' },
-  S: { name: '社会型', en: 'Social', desc: '喜欢教人、倾听、帮助和陪伴别人解决问题' },
-  E: { name: '企业型', en: 'Enterprising', desc: '喜欢争取机会、说服别人、组织资源，并推动事情取得结果' },
-  C: { name: '常规型', en: 'Conventional', desc: '喜欢把资料、数据和流程整理清楚，让事情准确、有序、方便查找' },
+  R: { name: '实用型', en: 'Realistic', desc: '倾向于通过动手操作解决实际问题，偏好现场工作，适合职业举例：机械工程师、飞行员、宠物医生' },
+  I: { name: '研究型', en: 'Investigative', desc: '习惯通过逻辑推导和实验验证探究规律，享受深度思考，适合职业举例：算法工程师、数据分析师、生化研究员' },
+  A: { name: '艺术型', en: 'Artistic', desc: '追求独特表达，善于打破既有框架进行原创输出，适合职业举例：建筑设计师、UX设计师、广告策划' },
+  S: { name: '社会型', en: 'Social', desc: '天然关注他人需求，擅长通过沟通建立信任并提供支持，适合职业举例：人力资源管理、培训师、职业顾问' },
+  E: { name: '企业型', en: 'Enterprising', desc: '善于识别机会并调动资源，在说服与决策中展现韧性，适合职业举例：咨询顾问、投资经理、创业者' },
+  C: { name: '常规型', en: 'Conventional', desc: '对秩序和准确性高度敏感，倾向于在明确规则内高效处理流程，适合职业举例：审计师、财务分析师、合规专员' },
 };
 
 export const QUESTIONS: RiasecQuestion[] = [

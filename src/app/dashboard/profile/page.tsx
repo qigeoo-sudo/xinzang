@@ -238,6 +238,7 @@ export default function ProfilePage() {
           <button
             type="button"
             hidden
+            style={{ display: 'none' }}
             onClick={() => {
               setClearError('');
               setClearStep('b1');

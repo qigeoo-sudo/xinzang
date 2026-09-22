@@ -1,27 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
-  <!-- Tina Zhang：深棕长发中分，灰色西装+白衬衫 -->
+  <!-- Tina Zhang：瘦长脸、高眉峰、细长眼微挑、耳坠、灰西装+白衬衫 -->
   <rect width="200" height="200" fill="#F6EDDE"/>
   <circle cx="100" cy="100" r="92" fill="#FBF5E9"/>
 
-  <!-- 后层长发（中分，垂过肩） -->
+  <!-- 后层长发（中分垂过肩） -->
   <path d="M100 36 C78 36 60 50 62 80 C63 104 60 128 56 148 C54 158 62 164 68 156 C74 148 76 134 76 120 L76 88 L86 64 C92 58 108 58 114 64 L124 88 L124 120 C124 134 126 148 132 156 C138 164 146 158 144 148 C140 128 137 104 138 80 C140 50 122 36 100 36 Z" fill="#463228"/>
   <path d="M62 80 C60 100 58 124 54 144 C58 140 62 132 63 120 C64 106 63 92 62 80 Z" fill="#5A4436" opacity=".55"/>
   <path d="M138 80 C140 100 142 124 146 144 C142 140 138 132 137 120 C136 106 137 92 138 80 Z" fill="#5A4436" opacity=".55"/>
 
   <!-- 白衬衫 -->
   <path d="M78 145 L100 155 L122 145 L116 137 L100 146 L84 137 Z" fill="#FFFFFF"/>
-  <!-- 灰色西装（含肩） -->
+  <!-- 灰色西装 -->
   <path d="M29 200 C31 170 50 152 76 145 L100 155 L124 145 C150 152 169 170 171 200 Z" fill="#5A5F63"/>
-  <!-- 翻领 -->
   <path d="M76 145 L94 168 L85 175 L70 152 Z" fill="#4B5054"/>
   <path d="M124 145 L106 168 L115 175 L130 152 Z" fill="#4B5054"/>
 
   <!-- 脖子 -->
-  <path d="M91 110 h18 v29 c0 5 -18 5 -18 0 Z" fill="#F8DDC6"/>
-  <path d="M91 110 h18 v9 c-6 5 -12 5 -18 0 Z" fill="#EFC7AC"/>
+  <path d="M91 110 h18 v29 c0 5 -18 5 -18 0 Z" fill="#F5D8BE"/>
+  <path d="M91 110 h18 v9 c-6 5 -12 5 -18 0 Z" fill="#EBC1A4"/>
 
-  <!-- 脸 -->
-  <ellipse cx="100" cy="88" rx="29" ry="33" fill="#F8DDC6"/>
+  <!-- 耳朵 + 耳坠 -->
+  <circle cx="69" cy="93" r="5.5" fill="#F5D8BE"/>
+  <circle cx="131" cy="93" r="5.5" fill="#F5D8BE"/>
+  <path d="M69 97.5 L69 101" stroke="#C9A227" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="69" cy="102.5" r="1.4" fill="#C9A227"/>
+  <path d="M131 97.5 L131 101" stroke="#C9A227" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="131" cy="102.5" r="1.4" fill="#C9A227"/>
+
+  <!-- 瘦长脸 -->
+  <ellipse cx="100" cy="88" rx="27.5" ry="34" fill="#F5D8BE"/>
 
   <!-- 前发：中分长刘海 -->
   <path d="M100 40 C82 40 68 52 68 76 C68 84 68 90 68 94 C70 84 72 74 78 66 C84 60 92 58 98 58 L100 52 L102 58 C108 58 116 60 122 66 C128 74 130 84 132 94 C132 90 132 84 132 76 C132 52 118 40 100 40 Z" fill="#463228"/>
@@ -29,19 +36,25 @@
   <path d="M131 94 C132 106 132 118 130 128 C128 134 122 132 123 124 C125 114 126 102 125 92 Z" fill="#463228"/>
   <path d="M84 48 C92 44 108 44 116 48 C107 46 92 46 84 52 Z" fill="#5A4436" opacity=".6"/>
 
-  <!-- 眉 -->
-  <path d="M81 79 q7 -4 14 -1" stroke="#3A2E26" stroke-width="2.1" fill="none" stroke-linecap="round"/>
-  <path d="M105 78 q7 -3 14 1" stroke="#3A2E26" stroke-width="2.1" fill="none" stroke-linecap="round"/>
-  <!-- 眼 -->
-  <ellipse cx="88" cy="88" rx="3.1" ry="3.9" fill="#33261E"/>
-  <ellipse cx="112" cy="88" rx="3.1" ry="3.9" fill="#33261E"/>
-  <circle cx="89.1" cy="86.7" r="1" fill="#FFFFFF" opacity=".85"/>
-  <circle cx="113.1" cy="86.7" r="1" fill="#FFFFFF" opacity=".85"/>
-  <!-- 鼻 -->
-  <path d="M100 94 q1.5 4 -2 6" stroke="#D9A98C" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <!-- 嘴 -->
-  <path d="M92 106 q8 5 16 0" stroke="#C96F5E" stroke-width="2.3" fill="none" stroke-linecap="round"/>
-  <!-- 腮红 -->
-  <ellipse cx="80" cy="99" rx="5" ry="3" fill="#F2B49A" opacity=".45"/>
-  <ellipse cx="120" cy="99" rx="5" ry="3" fill="#F2B49A" opacity=".45"/>
+  <!-- 高眉峰挑眉（折线） -->
+  <path d="M80 81 L88 75 L95.5 79" stroke="#3A2E26" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M104.5 79 L112 75 L120 81" stroke="#3A2E26" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 细长眼微挑 + 眼尾翼 -->
+  <ellipse cx="88" cy="88" rx="3.6" ry="2.7" fill="#33261E" transform="rotate(5 88 88)"/>
+  <ellipse cx="112" cy="88" rx="3.6" ry="2.7" fill="#33261E" transform="rotate(-5 112 88)"/>
+  <circle cx="89.2" cy="87.2" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <circle cx="113.2" cy="87.2" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <path d="M92.5 86.2 L95.5 84.6" stroke="#33261E" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M107.5 86.2 L104.5 84.6" stroke="#33261E" stroke-width="1.4" stroke-linecap="round"/>
+
+  <!-- 直鼻线 -->
+  <path d="M100 92.5 L99.2 101.5 Q99 103.5 97.2 104.3" stroke="#D9A98C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- 自信浅笑 -->
+  <path d="M93.5 106.5 Q100 110 106.5 106.5" stroke="#C96F5E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- 腮红（淡） -->
+  <ellipse cx="80" cy="100" rx="4.4" ry="2.5" fill="#F2B49A" opacity=".33"/>
+  <ellipse cx="120" cy="100" rx="4.4" ry="2.5" fill="#F2B49A" opacity=".33"/>
 </svg>
