@@ -13,7 +13,7 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
 
   return (
     <Link
-      href={isLocked ? '#' : `/mentors/${mentor.id}`}
+      href={isLocked ? '#locked' : `/mentors/${mentor.id}`}
       className={`letter-paper relative flex gap-4 rounded-[18px] p-4 transition-transform duration-300 ${
         isLocked ? 'cursor-not-allowed' : 'hover:-translate-y-0.5'
       }`}
