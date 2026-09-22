@@ -11,14 +11,12 @@ interface MentorCardProps {
 export function MentorCard({ mentor, reasons }: MentorCardProps) {
   const isLocked = mentor.comingSoon === true;
 
-  return (
-    <Link
-      href={isLocked ? '#locked' : `/mentors/${mentor.id}`}
-      className={`letter-paper relative flex gap-4 rounded-[18px] p-4 transition-transform duration-300 ${
-        isLocked ? 'cursor-not-allowed' : 'hover:-translate-y-0.5'
-      }`}
-      onClick={isLocked ? (e) => e.preventDefault() : undefined}
-    >
+  const cardCls = `letter-paper relative flex gap-4 rounded-[18px] p-4 transition-transform duration-300 ${
+    isLocked ? 'cursor-not-allowed' : 'hover:-translate-y-0.5'
+  }`;
+
+  const content = (
+    <>
       {/* 头像 */}
       <div className="flex-shrink-0">
         {mentor.avatar ? (
@@ -90,6 +88,23 @@ export function MentorCard({ mentor, reasons }: MentorCardProps) {
           </svg>
         </span>
       )}
+    </>
+  );
+
+  // 未解锁卡：用 div（role=button + aria-disabled）而非 <a href="#">。
+  // Edge 等浏览器内置的内容拦截器会把空锚点（href="#"）当作广告占位链接直接隐藏，
+  // div 不触发任何锚点过滤规则，外观与不可点击行为保持一致。
+  if (isLocked) {
+    return (
+      <div role="button" aria-disabled="true" tabIndex={-1} className={cardCls}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={`/mentors/${mentor.id}`} className={cardCls}>
+      {content}
     </Link>
   );
 }

@@ -8,77 +8,6 @@ import { sortMentorsForList, getAllIndustries } from '@/lib/mentors';
 
 const PAGE_SIZE = 10;
 
-// 临时诊断：排查安卓端锁定导师卡片消失（验证后删除）
-function MentorDiagBar() {
-  const [lines, setLines] = useState<string[] | null>(null);
-  useEffect(() => {
-    setTimeout(async () => {
-      const out: string[] = [];
-      // 1. Service Worker 数量（无痕环境应为 0）
-      let swN = -1;
-      try {
-        swN = (await navigator.serviceWorker.getRegistrations()).length;
-      } catch { /* ignore */ }
-      out.push(`swRegs=${swN}`);
-
-      // 2. 网格容器的真实子元素
-      const grid = document.querySelector('main .grid');
-      if (grid) {
-        out.push(`gridChildren=${grid.children.length}`);
-        Array.from(grid.children).forEach((ch, i) => {
-          const a = ch.querySelector('a') || (ch.tagName === 'A' ? ch : null);
-          const cs = getComputedStyle(ch);
-          out.push(
-            `g${i + 1} ${ch.tagName} disp=${cs.display} href=${(a as HTMLAnchorElement | null)?.getAttribute('href') ?? '-'}`
-          );
-        });
-      }
-
-      // 3. 所有含 Freya 的锚点：真身 outerHTML 头部 + 父链
-      const freyaAnchors = Array.from(document.querySelectorAll('a')).filter(
-        (a) => (a.textContent || '').includes('Freya') && a.querySelector('h3')
-      );
-      out.push(`freyaCards=${freyaAnchors.length}`);
-      freyaAnchors.slice(0, 1).forEach((a) => {
-        out.push('outerHTML=' + a.outerHTML.replace(/\s+/g, ' ').slice(0, 160));
-        const chain: string[] = [];
-        let el: HTMLElement | null = a;
-        for (let d = 0; d < 4 && el; d++) {
-          chain.push(`${el.tagName}.${(el.className || '').toString().slice(0, 24)}[${getComputedStyle(el).display}]`);
-          el = el.parentElement;
-        }
-        out.push('parents=' + chain.join(' < '));
-      });
-
-      // 4. 命中 Freya 卡且设置 display 的 CSS 规则
-      const target = freyaAnchors[0];
-      if (target) {
-        const hits: string[] = [];
-        Array.from(document.styleSheets).forEach((ss) => {
-          let rules: CSSRuleList;
-          try { rules = ss.cssRules; } catch { return; }
-          Array.from(rules).forEach((rule) => {
-            const st = rule as CSSStyleRule;
-            if (!st.selectorText || !st.style.display) return;
-            const sels = st.selectorText.split(',');
-            if (sels.some((s) => { try { return target.matches(s.trim()); } catch { return false; } })) {
-              hits.push(`${st.selectorText.slice(0, 50)}{${st.style.display}}`);
-            }
-          });
-        });
-        out.push('matchedRules=' + (hits.join(' | ').slice(0, 240) || 'none'));
-      }
-      setLines(out);
-    }, 1500);
-  }, []);
-  if (!lines) return null;
-  return (
-    <div className="fixed left-2 right-2 top-2 z-[200] max-h-[80vh] overflow-auto whitespace-pre-wrap rounded bg-black/92 p-2 text-[10px] leading-4 text-green-300">
-      {lines.join('\n')}
-    </div>
-  );
-}
-
 export default function MentorsPage() {
   const [activeIndustry, setActiveIndustry] = useState<string>('全部');
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,7 +52,6 @@ export default function MentorsPage() {
 
   return (
     <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
-      <MentorDiagBar />
       <Header />
       <GoldFlakes />
 
@@ -165,15 +93,6 @@ export default function MentorsPage() {
               <MentorCard key={mentor.id} mentor={mentor} />
             ))}
           </div>
-
-          {/* 临时诊断：解析到此时全部卡片已在 DOM、React hydration 尚未开始，
-              记录初始 HTML 的真实卡片数（验证后删除） */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html:
-                "window.__preHTML='PRE Freya='+(document.documentElement.innerHTML.match(/Freya/g)||[]).length+' a='+document.querySelectorAll('a').length",
-            }}
-          />
 
           {/* 分页导航 */}
           {totalPages > 1 && (
