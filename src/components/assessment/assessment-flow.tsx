@@ -256,6 +256,12 @@ export function AssessmentFlow() {
     router.push('/register-v2');
   };
 
+  // 已注册过的访客：同样先把结果暂存，再去登录页；登录后注册流程读回结果落库
+  const goLoginWithResult = () => {
+    if (payload) savePendingAssessment(payload);
+    router.push('/login');
+  };
+
   // 访客测评完成即暂存（双写 localStorage + sessionStorage）：
   // 即使用户没点「去注册」就切走/刷新，同标签页内注册时仍能找回结果，
   // 防 iOS Safari ITP 清掉 localStorage 导致结果丢失
@@ -642,12 +648,15 @@ export function AssessmentFlow() {
                         : '储存中…'
                       : '储存并解释结果'}
                   </button>
-                  <button
-                    onClick={restart}
-                    className="rounded-xl border border-rule bg-white px-6 py-3 text-sm font-medium text-muted transition-all hover:bg-bg"
-                  >
-                    重新测一次
-                  </button>
+                  {/* 重测入口仅对登录用户保留，访客结果页只引导储存 */}
+                  {status === 'authenticated' && (
+                    <button
+                      onClick={restart}
+                      className="rounded-xl border border-rule bg-white px-6 py-3 text-sm font-medium text-muted transition-all hover:bg-bg"
+                    >
+                      重新测一次
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -675,15 +684,23 @@ export function AssessmentFlow() {
           >
             <h2 className="font-serif text-lg font-bold text-ink">把结果带走？</h2>
             <p className="mt-2 text-sm leading-7 text-muted">
-              储存测试结果需要先注册一个账号。注册完成后，你的个人档案会同时包含这次兴趣测试结果，以后还能随时查看和重测，过程只要一分钟。
+              储存测试结果需要先注册或登录，注册/登录完成后，你的个人档案会同时包含这次兴趣测试结果，以后还能随时查看和重测。
             </p>
             <div className="mt-5 flex flex-col gap-2.5">
-              <button
-                onClick={goRegisterWithResult}
-                className="w-full rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
-              >
-                去注册并储存结果
-              </button>
+              <div className="flex gap-2.5">
+                <button
+                  onClick={goRegisterWithResult}
+                  className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
+                >
+                  注册
+                </button>
+                <button
+                  onClick={goLoginWithResult}
+                  className="flex-1 rounded-xl border border-rule bg-white px-4 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-bg active:scale-[.98]"
+                >
+                  登录
+                </button>
+              </div>
               <button
                 onClick={() => setGuestDialog(false)}
                 className="w-full rounded-xl border border-rule bg-white px-6 py-2.5 text-sm font-medium text-muted transition-all hover:bg-bg"

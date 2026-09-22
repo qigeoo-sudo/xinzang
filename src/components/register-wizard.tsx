@@ -303,6 +303,24 @@ export function RegisterWizard({
     if (error) errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [error]);
 
+  // 「该手机号/邮箱已注册，请直接登录」：末尾「登录」渲染为跳转链接
+  const renderError = () => {
+    if (!error.includes('请直接登录')) return error;
+    const at = error.indexOf('登录');
+    return (
+      <>
+        {error.slice(0, at)}
+        <Link
+          href="/login"
+          className="font-semibold text-[#C0654A] underline underline-offset-2"
+        >
+          登录
+        </Link>
+        {error.slice(at + 2)}
+      </>
+    );
+  };
+
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -1028,7 +1046,7 @@ export function RegisterWizard({
                   className="sticky top-[72px] z-30 text-sm px-4 py-3 rounded-[10px] mb-4 shadow-sm"
                   style={{ background: '#FBEDE8', color: C.danger, border: '1px solid rgba(192,101,74,0.25)' }}
                 >
-                  {error}
+                  {renderError()}
                 </div>
               )}
               {toast && section === 'account' && (
