@@ -51,6 +51,35 @@ function MentorDiagBar() {
             `${cs.display}/${cs.visibility}/${cs.opacity} ${imgSt}`
         );
       });
+      // c5 若被隐藏：找出命中它的 CSS 规则来源（验证后删除）
+      const c5 = cards[4];
+      if (c5) {
+        out.push('c5 inlineStyle=' + (c5 as HTMLElement).style.cssText || 'c5 inlineStyle=');
+        const hits: string[] = [];
+        document.styleSheets.forEach((ss) => {
+          let rules: CSSRuleList;
+          try {
+            rules = ss.cssRules;
+          } catch {
+            return;
+          }
+          Array.from(rules).forEach((rule) => {
+            const st = rule as CSSStyleRule;
+            if (!st.selectorText) return;
+            const sels = st.selectorText.split(',');
+            if (sels.some((s) => { try { return c5.matches(s.trim()); } catch { return false; } })) {
+              const display = st.style.display;
+              if (display) hits.push(`${st.selectorText.slice(0, 60)}{${display}}`);
+            }
+          });
+        });
+        out.push('matchedRules=' + (hits.join(' | ').slice(0, 220) || 'none'));
+        const p = c5.parentElement;
+        if (p) {
+          const pcs = getComputedStyle(p);
+          out.push(`grid: ${pcs.display} ${pcs.gridTemplateColumns.slice(0, 40)} childCount=${p.children.length}`);
+        }
+      }
       setLines(out);
     }, 1500);
     return () => {
