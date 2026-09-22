@@ -256,6 +256,15 @@ export function AssessmentFlow() {
     router.push('/register-v2');
   };
 
+  // 访客测评完成即暂存（双写 localStorage + sessionStorage）：
+  // 即使用户没点「去注册」就切走/刷新，同标签页内注册时仍能找回结果，
+  // 防 iOS Safari ITP 清掉 localStorage 导致结果丢失
+  useEffect(() => {
+    if (payload && status !== 'authenticated') {
+      savePendingAssessment(payload);
+    }
+  }, [payload, status]);
+
   // 调用 LLM 生成兴趣代码解读，带进度条动画
   const generateExplanation = async (code: string, scores: Record<string, number>) => {
     setExplaining(true);

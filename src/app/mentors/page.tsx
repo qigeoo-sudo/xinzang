@@ -4,14 +4,15 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { Header } from '@/components/header';
 import { MentorCard } from '@/components/mentor-card';
 import { PageHero, PaperCredits, GoldFlakes } from '@/components/page-shell';
-import { mentors, getAllIndustries } from '@/lib/mentors';
+import { sortMentorsForList, getAllIndustries } from '@/lib/mentors';
 
 const PAGE_SIZE = 10;
 
 export default function MentorsPage() {
   const [activeIndustry, setActiveIndustry] = useState<string>('全部');
   const [currentPage, setCurrentPage] = useState(1);
-  const allMentors = mentors; // 展示所有导师（含未解锁）
+  // 展示所有导师（含未解锁），按梯队+上线时间排序
+  const allMentors = sortMentorsForList();
   const industries = ['全部', ...getAllIndustries().filter((i) => i !== '通用')];
 
   const filtered = useMemo(

@@ -545,6 +545,13 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    // 未上线导师禁止对话（人格与知识库尚未就绪）
+    if (mentor.comingSoon) {
+      return NextResponse.json(
+        { error: '该导师尚未上线，敬请期待' },
+        { status: 403 }
+      );
+    }
 
     // 从缓存或数据库获取会员状态 — 10秒缓存减少数据库压力
     let dbUser = null;

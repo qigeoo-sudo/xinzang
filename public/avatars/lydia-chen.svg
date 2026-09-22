@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Lydia Chen：齐颌波波头，鼠尾草绿西装+白衬衫 -->
+  <rect width="200" height="200" fill="#F6EDDE"/>
+  <circle cx="100" cy="100" r="92" fill="#FBF5E9"/>
+
+  <!-- 后层发（齐颌内扣） -->
+  <path d="M65 88 C61 48 82 36 100 36 C118 36 139 48 135 88 C136 102 136 114 132 122 C128 129 120 128 120 119 L120 94 Z" fill="#2E2620"/>
+  <path d="M65 88 C64 102 64 114 68 122 C72 129 80 128 80 119 L80 94 Z" fill="#2E2620"/>
+
+  <!-- 白衬衫 -->
+  <path d="M78 144 L100 154 L122 144 L116 136 L100 145 L84 136 Z" fill="#FFFFFF"/>
+  <!-- 鼠尾草绿西装（含肩） -->
+  <path d="M29 200 C31 170 50 152 76 145 L100 154 L124 145 C150 152 169 170 171 200 Z" fill="#75875A"/>
+  <!-- 翻领 -->
+  <path d="M76 145 L94 167 L85 174 L70 151 Z" fill="#657650"/>
+  <path d="M124 145 L106 167 L115 174 L130 151 Z" fill="#657650"/>
+
+  <!-- 脖子 -->
+  <path d="M91 110 h18 v29 c0 5 -18 5 -18 0 Z" fill="#F8DDC6"/>
+  <path d="M91 110 h18 v9 c-6 5 -12 5 -18 0 Z" fill="#EFC7AC"/>
+
+  <!-- 脸 -->
+  <ellipse cx="100" cy="88" rx="29" ry="33" fill="#F8DDC6"/>
+
+  <!-- 前发：侧分刘海 -->
+  <path d="M69 90 C64 50 84 38 100 38 C116 38 136 50 131 90 C129 72 121 60 100 60 C90 60 82 65 77 73 C73 79 70 84 69 90 Z" fill="#2E2620"/>
+  <path d="M69 90 C67 102 67 114 70 123 C73 129 79 127 78 119 C76 110 75 98 76 90 Z" fill="#2E2620"/>
+  <path d="M131 90 C133 102 133 114 130 123 C127 129 121 127 122 119 C124 110 125 98 124 90 Z" fill="#2E2620"/>
+  <path d="M85 48 C93 42 106 42 114 47 C104 45 93 46 85 52 Z" fill="#4C3C31" opacity=".65"/>
+
+  <!-- 眉 -->
+  <path d="M81 79 q7 -4 14 -1" stroke="#3A2E26" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+  <path d="M105 78 q7 -3 14 1" stroke="#3A2E26" stroke-width="2.1" fill="none" stroke-linecap="round"/>
+  <!-- 眼 -->
+  <ellipse cx="88" cy="88" rx="3.1" ry="3.9" fill="#33261E"/>
+  <ellipse cx="112" cy="88" rx="3.1" ry="3.9" fill="#33261E"/>
+  <circle cx="89.1" cy="86.7" r="1" fill="#FFFFFF" opacity=".85"/>
+  <circle cx="113.1" cy="86.7" r="1" fill="#FFFFFF" opacity=".85"/>
+  <!-- 鼻 -->
+  <path d="M100 94 q1.5 4 -2 6" stroke="#D9A98C" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <!-- 嘴 -->
+  <path d="M92 106 q8 5 16 0" stroke="#C96F5E" stroke-width="2.3" fill="none" stroke-linecap="round"/>
+  <!-- 腮红 -->
+  <ellipse cx="80" cy="99" rx="5" ry="3" fill="#F2B49A" opacity=".45"/>
+  <ellipse cx="120" cy="99" rx="5" ry="3" fill="#F2B49A" opacity=".45"/>
+</svg>

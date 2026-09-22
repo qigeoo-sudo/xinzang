@@ -17,7 +17,7 @@ export default async function MentorDetailPage({
   params: { id: string };
 }) {
   const mentor = getMentorById(params.id);
-  if (!mentor) {
+  if (!mentor || mentor.comingSoon) {
     notFound();
   }
 

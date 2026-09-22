@@ -25,7 +25,7 @@ export const mentorPreview: MentorPreview[] = [
   {
     id: 'lydia',
     name: 'Lydia Chen',
-    avatar: '/avatars/lydia-chen.jpg',
+    avatar: '/avatars/lydia-chen.svg',
     avatar3d: '/avatars/lydia-3d.png',
     avatar2d: '/avatars/lydia-2d.png',
     title: 'HRVP',
@@ -37,7 +37,7 @@ export const mentorPreview: MentorPreview[] = [
   {
     id: 'winnie',
     name: 'Winnie Ni',
-    avatar: '/avatars/winnie-ni.jpg',
+    avatar: '/avatars/winnie-ni.svg',
     avatar3d: '/avatars/winnie-3d.png',
     avatar2d: '/avatars/winnie-2d.png',
     title: 'HR从业者 / 心理咨询师',
@@ -49,7 +49,7 @@ export const mentorPreview: MentorPreview[] = [
   {
     id: 'tina',
     name: 'Tina Zhang',
-    avatar: '/avatars/tina-zhang.jpg',
+    avatar: '/avatars/tina-zhang.svg',
     avatar3d: '/avatars/tina-3d.png',
     avatar2d: '/avatars/tina-2d.png',
     title: 'HR负责人',

@@ -499,9 +499,9 @@ export function SubscriptionFlow({
         </p>
       )}
 
-      {/* 非会员：免费试用剩余次数 — 低调一行小字 */}
+      {/* 非会员：免费试用剩余次数 — 低调一行小字（字号随屏宽自适应，单行不换行） */}
       {!isPremium && (
-        <p className="text-center text-xs text-muted mb-4">
+        <p className="mb-4 whitespace-nowrap text-center text-muted text-[clamp(9px,3.2vw,12px)]">
           当前为非会员用户 · 剩余免费试用导师分身次数 {freeTrialRemaining} / {freeTrialLimit} 次
         </p>
       )}

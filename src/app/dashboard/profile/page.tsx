@@ -211,7 +211,7 @@ export default function ProfilePage() {
       <div className="relative z-10 page-container flex-1">
         {clearError && <p className="mb-4 text-xs text-danger">{clearError}</p>}
 
-        {/* 主操作：改资料 / 成长追踪 / 清空（三等分，始终一行） */}
+        {/* 主操作：改资料 / 成长追踪（两等分，始终一行）；清空按钮已隐藏 */}
         <div className="flex gap-2 sm:gap-3 mb-6">
           <Link
             href="/dashboard/profile/edit"
@@ -237,6 +237,7 @@ export default function ProfilePage() {
           </Link>
           <button
             type="button"
+            hidden
             onClick={() => {
               setClearError('');
               setClearStep('b1');

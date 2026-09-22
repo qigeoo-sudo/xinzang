@@ -43,13 +43,18 @@ export interface Mentor {
   expertiseDomains?: string[];
   // 是否即将上线（未上线导师在列表中显示锁定状态）
   comingSoon?: boolean;
+  // 上线时间（YYYY-MM-DD，依据 git 首次收录记录）— 列表排序用：已上线导师按此升序
+  launchedAt?: string;
+  // 未上线但第一轮知识卡已具备 — 列表排序第二梯队（第三梯队为未上传知识卡的未上线导师）
+  hasFirstRoundCards?: boolean;
 }
 
 export const mentors: Mentor[] = [
   {
     id: 'lydia',
     name: 'Lydia Chen',
-    avatar: '/avatars/lydia-chen.jpg',
+    avatar: '/avatars/lydia-chen.svg',
+    launchedAt: '2026-08-13',
     title: 'HRVP',
     company: '心擎医疗',
     companyType: '创业',
@@ -252,7 +257,8 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'winnie',
     name: 'Winnie Ni',
-    avatar: '/avatars/winnie-ni.jpg',
+    avatar: '/avatars/winnie-ni.svg',
+    launchedAt: '2026-08-22',
     title: 'HR从业者 / 心理咨询师',
     company: '心擎医疗',
     companyType: '创业',
@@ -359,7 +365,8 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'tina',
     name: 'Tina Zhang',
-    avatar: '/avatars/tina-zhang.jpg',
+    avatar: '/avatars/tina-zhang.svg',
+    launchedAt: '2026-08-22',
     title: 'HR负责人',
     company: '精品战略咨询',
     companyType: '咨询',
@@ -492,6 +499,8 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
       '第一份工作选审计还是企业财务？',
       '实习不多，怎么判断一个行业适不适合自己？',
     ],
+    hasFirstRoundCards: true,
+    comingSoon: true,
   },
   {
     id: 'phyllis',
@@ -520,11 +529,33 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
       '简历上的项目经历怎么写才体现真本事？',
       '第一份财务工作应该怎么选平台？',
     ],
+    hasFirstRoundCards: true,
+    comingSoon: true,
+  },
+  {
+    id: 'freyaren',
+    name: 'Freya Ren',
+    avatar: '/avatars/freya-ren.svg',
+    title: '创始人兼CEO',
+    company: '创业公司',
+    companyType: '创业',
+    industry: 'HR/创业',
+    years: '15+',
+    tagline: '十五六年HR老兵 · 四大招聘负责人出身 · 现任创业公司创始人兼CEO',
+    tags: ['HR', '招聘', '四大', 'HRBP', '创业', '职业选择'],
+    price: 59,
+    isFree: false,
+    gender: 'female',
+    hasFirstRoundCards: true,
+    knowledgeEntries: [],
+    suggestedQuestions: [],
+    comingSoon: true,
   },
   {
     id: 'ying',
     name: 'Ying Wang',
     avatar: '/avatars/ying-wang.svg',
+    launchedAt: '2026-09-16',
     title: '生产负责人',
     company: '具身智能/人形机器人',
     companyType: '制造',
@@ -785,37 +816,22 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   },
   {
     id: 'kevin',
-    name: 'Kevin Wu',
-    avatar: '',
-    title: '全栈工程师',
-    company: '创业',
-    companyType: '创业',
-    industry: '科技',
-    years: 5,
-    tagline: '硅谷回来创业 . 技术人转型指南',
-    tags: ['程序员', '硅谷', '技术转型'],
-    price: 69,
+    name: 'Kevin Yuan',
+    avatar: '/avatars/kevin-yuan.svg',
+    title: '行业导师',
+    company: '—',
+    companyType: '—',
+    industry: '医疗',
+    years: 0,
+    tagline: '导师分身打磨中 · 敬请期待',
+    tags: ['敬请期待'],
+    price: 59,
     isFree: false,
-    gender: 'female',
-    personalityPrompt: `你是Kevin Wu，硅谷回来创业的全栈工程师，5年经验。
-说话风格：务实、技术导向但注重商业。你会说"技术只是工具，解决问题才是目的"。
-核心价值观：技术深度+商业理解、快速验证、不重复造轮子。
-第一人称。`,
-    knowledgeEntries: [
-      {
-        category: '技术转型',
-        content:
-          '从硅谷回国创业最大的文化差异是速度和执行。硅谷讲究深度思考再动手，国内讲究快速试错。技术人转型最大的挑战是从"写好代码"到"做对产品"的思维转变。',
-        keywords: ['硅谷', '创业', '技术转型', '全栈', '试错'],
-      },
-    ],
-    expertiseDomains: ['硅谷', '技术转型', '全栈', '创业', '程序员', '技术创业'],
-    suggestedQuestions: [
-      '硅谷和国内创业有什么区别？',
-      '技术人怎么转产品方向？',
-      '全栈工程师的核心能力是什么？',
-    ],
-  comingSoon: true,
+    gender: 'male',
+    hasFirstRoundCards: true,
+    knowledgeEntries: [],
+    suggestedQuestions: [],
+    comingSoon: true,
   },
   {
     id: 'grace',
@@ -886,6 +902,28 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   comingSoon: true,
   },
 ];
+
+// 导师列表排序规则：
+// 第一梯队 已上线导师 — 按上线时间（launchedAt）升序，同日保持定义顺序
+// 第二梯队 未上线但第一轮知识卡已具备（hasFirstRoundCards）
+// 第三梯队 未上线且未上传第一轮知识卡
+export function sortMentorsForList(): Mentor[] {
+  const tier = (m: Mentor): 0 | 1 | 2 =>
+    !m.comingSoon ? 0 : m.hasFirstRoundCards ? 1 : 2;
+  return [...mentors].sort((a, b) => {
+    const ta = tier(a);
+    const tb = tier(b);
+    if (ta !== tb) return ta - tb;
+    if (ta === 0) {
+      if (a.launchedAt && b.launchedAt && a.launchedAt !== b.launchedAt) {
+        return a.launchedAt < b.launchedAt ? -1 : 1;
+      }
+      if (a.launchedAt && !b.launchedAt) return -1;
+      if (!a.launchedAt && b.launchedAt) return 1;
+    }
+    return 0; // 同梯队同时间：稳定排序保持定义顺序
+  });
+}
 
 // 导师工具函数
 export function getMentorById(id: string): Mentor | undefined {
