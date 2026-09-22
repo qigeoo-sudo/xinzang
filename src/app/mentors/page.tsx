@@ -12,84 +12,68 @@ const PAGE_SIZE = 10;
 function MentorDiagBar() {
   const [lines, setLines] = useState<string[] | null>(null);
   useEffect(() => {
-    const snap = (tag: string) => {
-      const html = document.documentElement.innerHTML;
-      const count = (re: string) =>
-        (html.match(new RegExp(re, 'g')) || []).length;
-      return `${tag}: a=${document.querySelectorAll('a').length} Freya=${count('Freya')} KevinYuan=${count('Kevin Yuan')}`;
-    };
-    const out = [
-      `ua=${navigator.userAgent.slice(-48)}`,
-      `jsMentors=${sortMentorsForList().length} ready=${document.readyState}`,
-      (window as unknown as { __preHTML?: string }).__preHTML || 'PRE=n/a',
-      snap('T0'),
-    ];
-    const errs: string[] = [];
-    const onErr = (e: ErrorEvent) =>
-      errs.push('ERR:' + (e.message || '').slice(0, 90));
-    const onRej = (e: PromiseRejectionEvent) =>
-      errs.push('REJ:' + String(e.reason).slice(0, 90));
-    window.addEventListener('error', onErr);
-    window.addEventListener('unhandledrejection', onRej);
-    setTimeout(() => {
-      out.push(snap('T1'));
-      out.push(...errs.slice(0, 3));
-      // 逐卡体检：位置/尺寸/可见性/头像加载（验证后删除）
-      const cards = Array.from(document.querySelectorAll('main a')).filter(
-        (a) => a.querySelector('img') || a.querySelector('h3')
+    setTimeout(async () => {
+      const out: string[] = [];
+      // 1. Service Worker 数量（无痕环境应为 0）
+      let swN = -1;
+      try {
+        swN = (await navigator.serviceWorker.getRegistrations()).length;
+      } catch { /* ignore */ }
+      out.push(`swRegs=${swN}`);
+
+      // 2. 网格容器的真实子元素
+      const grid = document.querySelector('main .grid');
+      if (grid) {
+        out.push(`gridChildren=${grid.children.length}`);
+        Array.from(grid.children).forEach((ch, i) => {
+          const a = ch.querySelector('a') || (ch.tagName === 'A' ? ch : null);
+          const cs = getComputedStyle(ch);
+          out.push(
+            `g${i + 1} ${ch.tagName} disp=${cs.display} href=${(a as HTMLAnchorElement | null)?.getAttribute('href') ?? '-'}`
+          );
+        });
+      }
+
+      // 3. 所有含 Freya 的锚点：真身 outerHTML 头部 + 父链
+      const freyaAnchors = Array.from(document.querySelectorAll('a')).filter(
+        (a) => (a.textContent || '').includes('Freya') && a.querySelector('h3')
       );
-      cards.slice(0, 8).forEach((a, i) => {
-        const r = a.getBoundingClientRect();
-        const cs = getComputedStyle(a);
-        const img = a.querySelector('img');
-        const imgSt = img
-          ? `img:${img.naturalWidth}x${img.naturalHeight}/${img.complete}`
-          : 'noimg';
-        out.push(
-          `c${i + 1} ${(a.textContent || '').replace(/\s+/g, ' ').slice(0, 16)} ` +
-            `${Math.round(r.width)}x${Math.round(r.height)} y=${Math.round(r.top)} ` +
-            `${cs.display}/${cs.visibility}/${cs.opacity} ${imgSt}`
-        );
+      out.push(`freyaCards=${freyaAnchors.length}`);
+      freyaAnchors.slice(0, 1).forEach((a) => {
+        out.push('outerHTML=' + a.outerHTML.replace(/\s+/g, ' ').slice(0, 160));
+        const chain: string[] = [];
+        let el: HTMLElement | null = a;
+        for (let d = 0; d < 4 && el; d++) {
+          chain.push(`${el.tagName}.${(el.className || '').toString().slice(0, 24)}[${getComputedStyle(el).display}]`);
+          el = el.parentElement;
+        }
+        out.push('parents=' + chain.join(' < '));
       });
-      // c5 若被隐藏：找出命中它的 CSS 规则来源（验证后删除）
-      const c5 = cards[4];
-      if (c5) {
-        out.push('c5 inlineStyle=' + (c5 as HTMLElement).style.cssText || 'c5 inlineStyle=');
+
+      // 4. 命中 Freya 卡且设置 display 的 CSS 规则
+      const target = freyaAnchors[0];
+      if (target) {
         const hits: string[] = [];
         Array.from(document.styleSheets).forEach((ss) => {
           let rules: CSSRuleList;
-          try {
-            rules = ss.cssRules;
-          } catch {
-            return;
-          }
+          try { rules = ss.cssRules; } catch { return; }
           Array.from(rules).forEach((rule) => {
             const st = rule as CSSStyleRule;
-            if (!st.selectorText) return;
+            if (!st.selectorText || !st.style.display) return;
             const sels = st.selectorText.split(',');
-            if (sels.some((s) => { try { return c5.matches(s.trim()); } catch { return false; } })) {
-              const display = st.style.display;
-              if (display) hits.push(`${st.selectorText.slice(0, 60)}{${display}}`);
+            if (sels.some((s) => { try { return target.matches(s.trim()); } catch { return false; } })) {
+              hits.push(`${st.selectorText.slice(0, 50)}{${st.style.display}}`);
             }
           });
         });
-        out.push('matchedRules=' + (hits.join(' | ').slice(0, 220) || 'none'));
-        const p = c5.parentElement;
-        if (p) {
-          const pcs = getComputedStyle(p);
-          out.push(`grid: ${pcs.display} ${pcs.gridTemplateColumns.slice(0, 40)} childCount=${p.children.length}`);
-        }
+        out.push('matchedRules=' + (hits.join(' | ').slice(0, 240) || 'none'));
       }
       setLines(out);
     }, 1500);
-    return () => {
-      window.removeEventListener('error', onErr);
-      window.removeEventListener('unhandledrejection', onRej);
-    };
   }, []);
   if (!lines) return null;
   return (
-    <div className="fixed left-2 right-2 top-2 z-[200] whitespace-pre-wrap rounded bg-black/90 p-2 text-[10px] leading-4 text-green-300">
+    <div className="fixed left-2 right-2 top-2 z-[200] max-h-[80vh] overflow-auto whitespace-pre-wrap rounded bg-black/92 p-2 text-[10px] leading-4 text-green-300">
       {lines.join('\n')}
     </div>
   );
