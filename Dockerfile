@@ -22,15 +22,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV DATABASE_URL="file:/tmp/build.db"
+ENV DATABASE_URL="mysql://build:build@localhost:3306/build"
 RUN npx prisma generate
-RUN npx prisma db push --skip-generate
 RUN npm run build
-
-# 生成生产数据库（含 schema + 六位规范导师 339 张知识卡 seed）
-RUN mkdir -p /app/data \
- && DATABASE_URL="file:/app/data/prod.db" npx prisma db push --skip-generate \
- && DATABASE_URL="file:/app/data/prod.db" npx tsx prisma/seed-knowledge-cards.ts
 
 # ===== Stage 3: runner =====
 FROM node:20-alpine AS runner
@@ -43,8 +37,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
 # --- 运行时必需的环境变量（服务器上通过 docker run --env-file 注入） ---
-# SQLite 数据库路径 — 容器内持久化目录（生产挂载宿主机卷 /opt/xinzang-data:/app/data）
-ENV DATABASE_URL="file:/app/data/prod.db"
+# DATABASE_URL 由宿主机 /opt/xinzang/.env 注入（MySQL 连接串）
 # 信任前置代理（Nginx 等）转发的 Host 头
 ENV AUTH_TRUST_HOST=true
 # AUTH_URL 和 AUTH_SECRET 必须在宿主机 /opt/xinzang/.env 中设置
@@ -85,12 +78,8 @@ COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
 COPY --from=builder /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
 COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
 
-# 复制已初始化 schema + 知识卡的生产数据库
-RUN mkdir -p /app/data
-COPY --from=builder --chown=nextjs:nodejs /app/data ./data
-
-# 确保数据目录可写
-RUN chown -R nextjs:nodejs /app/data
+# 数据目录（保留挂载点，实际数据在 MySQL 中）
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
 
 USER nextjs
 
