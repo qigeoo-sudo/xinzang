@@ -65,7 +65,7 @@ const copy = {
     gotIt: '知道了',
     close: '知道了',
     desktopHint:
-      '推荐使用 Chrome 或 Edge 浏览器点击此按钮，可直接安装为桌面应用。Safari 用户可通过菜单栏「文件」→「添加到程序坞」完成安装。',
+      '请在 Chrome 或 Edge 地址栏右侧点击「安装」图标，或通过浏览器菜单「安装此应用为窗口应用」完成安装。',
     wechat:
       '微信内无法直接安装：请点右上角「···」，选择「在 Safari 中打开」，再按下面步骤操作。',
     steps: [
@@ -85,7 +85,7 @@ const copy = {
     gotIt: 'Got it',
     close: 'Got it',
     desktopHint:
-      'We recommend using Chrome or Edge to install this app directly to your desktop. Safari users can install via the menu bar: File → Add to Dock.',
+      'In Chrome or Edge, click the install icon in the address bar, or use the browser menu: "Install this app as a windowed app".',
     wechat:
       'Installation is not available inside WeChat. Tap「···」in the top-right corner, choose「Open in Safari」, then follow the steps below.',
     steps: [
@@ -203,7 +203,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
 
   const t = copy[lang];
   const isWeChat = installEnv === 'ios-wechat';
-  // 桌面端：非移动端（含桌面 Chrome/Edge 的 prompt 环境、桌面 Safari/Firefox 的 unknown 环境）
+  const isIOS = installEnv === 'ios-browser' || installEnv === 'ios-wechat';
   const isDesktop = !isMobile;
 
   // 刚完成安装：展示成功提示（桌面端 Chrome 不会自动关标签页，需告知用户从桌面图标启动）
@@ -328,17 +328,19 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
               </div>
             )}
 
-            <ol className="space-y-3.5">
-              <Step index={1} icon="share">
-                {t.steps[0]}
-              </Step>
-              <Step index={2} icon="plus">
-                {t.steps[1]}
-              </Step>
-              <Step index={3} icon="add-text">
-                {t.steps[2]}
-              </Step>
-            </ol>
+            {isIOS && (
+              <ol className="space-y-3.5">
+                <Step index={1} icon="share">
+                  {t.steps[0]}
+                </Step>
+                <Step index={2} icon="plus">
+                  {t.steps[1]}
+                </Step>
+                <Step index={3} icon="add-text">
+                  {t.steps[2]}
+                </Step>
+              </ol>
+            )}
 
             <button
               type="button"
