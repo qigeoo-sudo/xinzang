@@ -9,6 +9,7 @@
  * - Prisma Adapter 支持 (为未来 OAuth 登录预留)
  */
 import NextAuth from 'next-auth';
+import { NextResponse } from 'next/server';
 import Credentials from 'next-auth/providers/credentials';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@/lib/prisma';
@@ -154,6 +155,14 @@ export const { handlers, auth } = NextAuth({
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
+      // 渠道后台子域名：channel.aihr.top 根路径在内部映射到 /admin/channels
+      // 单应用 Host 路由——nginx 把该子域名流量代理到同一容器，此处按 Host 改写
+      const host = request.headers.get('host') ?? '';
+      const isChannelHost = host === 'channel.aihr.top';
+      const isChannelRoot = isChannelHost && pathname === '/';
+      // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 渠道后台）
+      const logicalPath = isChannelRoot ? '/admin/channels' : pathname;
+
       // 公开路由 — 无需登录即可访问
       const publicPaths = [
         '/',
@@ -175,10 +184,10 @@ export const { handlers, auth } = NextAuth({
         '/api/payment/mock-pay', // Mock 支付 (开发环境模拟回调)
       ];
       const isPublicPath = publicPaths.some(
-        (p) => pathname === p || pathname.startsWith(p + '/')
+        (p) => logicalPath === p || logicalPath.startsWith(p + '/')
       );
 
-      // 已登录用户访问登录页 → 重定向到首页
+      // 已登录用户访问登录页 → 重定向到当前来源根路径
       if (isLoggedIn && pathname === '/login') {
         return Response.redirect(new URL('/', request.nextUrl));
       }
@@ -186,8 +195,14 @@ export const { handlers, auth } = NextAuth({
       // 未登录用户访问受保护路由 → 显式重定向到登录页，保留 callbackUrl
       if (!isLoggedIn && !isPublicPath) {
         const loginUrl = new URL('/login', request.nextUrl.origin);
+        // callback 用原始路径：子域名场景登录后回到根路径再次触发 Host 路由
         loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
         return Response.redirect(loginUrl);
+      }
+
+      // 已登录访问渠道子域名根路径 → 内部改写渲染渠道后台（地址栏保留子域名）
+      if (isChannelRoot) {
+        return NextResponse.rewrite(new URL('/admin/channels', request.url));
       }
 
       return true;
@@ -202,6 +217,9 @@ export const { handlers, auth } = NextAuth({
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
+        // 生产环境跨子域名共享登录（channel.aihr.top）；带点前缀覆盖主域及所有子域
+        domain:
+          process.env.NODE_ENV === 'production' ? '.aihr.top' : undefined,
         secure: process.env.NODE_ENV === 'production',
       },
     },

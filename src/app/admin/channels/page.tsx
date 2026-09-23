@@ -36,6 +36,17 @@ const emptyForm = {
   note: '',
 };
 
+/**
+ * 推广短链的公开源：在渠道管理子域名(channel.aihr.top)上，短链必须指向主域；
+ * 其他环境（测试端 / 主域直接访问）沿用当前 origin。
+ */
+function getPublicOrigin(): string {
+  if (typeof window === 'undefined') return 'https://aihr.top';
+  return window.location.hostname.startsWith('channel.')
+    ? 'https://aihr.top'
+    : window.location.origin;
+}
+
 export default function AdminChannelsPage() {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +123,7 @@ export default function AdminChannelsPage() {
   }
 
   function copyLink(code: string) {
-    const url = `${window.location.origin}/r/${code}`;
+    const url = `${getPublicOrigin()}/r/${code}`;
     navigator.clipboard?.writeText(url).then(
       () => setError(''),
       () => setError('复制失败，请手动选择链接复制'),
@@ -301,7 +312,7 @@ function ChannelRow({
           <button
             onClick={() => onCopy(channel.code)}
             className="rounded-lg border border-stone-300 px-3 py-1.5 text-left"
-            title={`${typeof window !== 'undefined' ? window.location.origin : ''}/r/${channel.code}`}
+            title={`${getPublicOrigin()}/r/${channel.code}`}
           >
             复制推广链接
           </button>
