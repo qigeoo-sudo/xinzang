@@ -210,34 +210,36 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   if (justInstalled) {
     return (
       <div
-        className="flex w-full items-center gap-3 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-white"
+        className="flex w-full flex-col gap-3 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-white"
         role="status"
         aria-live="polite"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="shrink-0 text-emerald-300"
-          aria-hidden="true"
-        >
-          <path d="M20 6 9 17l-5-5" />
-        </svg>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-tight">{t.installedTitle}</p>
-          <p className="mt-0.5 text-xs leading-4 text-white/70">
-            {isDesktop ? t.installedDescDesktop : t.installedDescMobile}
-          </p>
+        <div className="flex items-start gap-3">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mt-0.5 shrink-0 text-emerald-300"
+            aria-hidden="true"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-tight">{t.installedTitle}</p>
+            <p className="mt-1 text-xs leading-5 text-white/70">
+              {isDesktop ? t.installedDescDesktop : t.installedDescMobile}
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onClick={() => { setInstalled(true); setJustInstalled(false); }}
-          className="shrink-0 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
+          className="self-end rounded-lg bg-white/15 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
           aria-label={t.gotIt}
         >
           {t.gotIt}
