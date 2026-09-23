@@ -104,6 +104,15 @@ function isStandaloneMode(): boolean {
   );
 }
 
+// beforeinstallprompt 可能在 React 挂载前就触发，用全局变量兜底缓存
+let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    globalDeferredPrompt = event as BeforeInstallPromptEvent;
+  });
+}
+
 export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [installEnv, setInstallEnv] = useState<InstallEnv>('unknown');
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
@@ -139,12 +148,21 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
       setInstallEnv(isWeChat ? 'ios-wechat' : 'ios-browser');
     }
 
+    // 兜底：beforeinstallprompt 可能在组件挂载前已触发
+    if (globalDeferredPrompt) {
+      setDeferred(globalDeferredPrompt);
+      setInstallEnv('prompt');
+    }
+
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
-      setDeferred(event as BeforeInstallPromptEvent);
+      const promptEvent = event as BeforeInstallPromptEvent;
+      globalDeferredPrompt = promptEvent;
+      setDeferred(promptEvent);
       setInstallEnv('prompt');
     };
     const onInstalled = () => {
+      globalDeferredPrompt = null;
       setJustInstalled(true);
       setInstallEnv('unknown');
       setGuideOpen(false);
@@ -181,9 +199,12 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   }, [awaitingReturn]);
 
   const handleInstall = async () => {
-    if (installEnv === 'prompt' && deferred) {
-      await deferred.prompt();
-      const choice = await deferred.userChoice;
+    // 优先调起系统安装弹窗（桌面 Chrome/Edge/Android Chrome）
+    const promptEvent = deferred || globalDeferredPrompt;
+    if (promptEvent) {
+      await promptEvent.prompt();
+      const choice = await promptEvent.userChoice;
+      globalDeferredPrompt = null;
       if (choice.outcome === 'accepted') {
         setJustInstalled(true);
         setInstallEnv('unknown');
@@ -209,6 +230,7 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   // 刚完成安装：展示成功提示（桌面端 Chrome 不会自动关标签页，需告知用户从桌面图标启动）
   if (justInstalled) {
     return (
+      <div className="translate-y-[14px]">
       <div
         className="flex w-full flex-col gap-3 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-white"
         role="status"
@@ -239,11 +261,12 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
         <button
           type="button"
           onClick={() => { setInstalled(true); setJustInstalled(false); }}
-          className="self-end rounded-lg bg-white/15 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
+          className="mx-auto rounded-lg bg-white/15 px-6 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/25"
           aria-label={t.gotIt}
         >
           {t.gotIt}
         </button>
+      </div>
       </div>
     );
   }
