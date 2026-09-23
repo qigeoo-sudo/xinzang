@@ -37,13 +37,18 @@ const emptyForm = {
 };
 
 /**
- * 推广短链的公开源：在渠道管理子域名(channel.aihr.top)上，短链必须指向主域；
- * 其他环境（测试端 / 主域直接访问）沿用当前 origin。
+ * 推广短链的公开源：
+ * - 在已配置的管理后台子域名（NEXT_PUBLIC_CHANNEL_DOMAIN）上，短链必须指向主域（NEXT_PUBLIC_MAIN_DOMAIN）
+ * - 其他环境（测试端 / 主域直接访问）沿用当前 origin
+ * 生产同时设 NEXT_PUBLIC_CHANNEL_DOMAIN=channel.aihr.top 和 NEXT_PUBLIC_MAIN_DOMAIN=https://aihr.top；
+ * 测试端不设 NEXT_PUBLIC_CHANNEL_DOMAIN → 始终返回当前 origin。
  */
 function getPublicOrigin(): string {
-  if (typeof window === 'undefined') return 'https://aihr.top';
-  return window.location.hostname.startsWith('channel.')
-    ? 'https://aihr.top'
+  const channelDomain = process.env.NEXT_PUBLIC_CHANNEL_DOMAIN;
+  const mainDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN ?? 'https://aihr.top';
+  if (typeof window === 'undefined') return mainDomain;
+  return channelDomain && window.location.hostname === channelDomain
+    ? mainDomain
     : window.location.origin;
 }
 

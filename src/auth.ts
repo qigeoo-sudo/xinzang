@@ -154,10 +154,11 @@ export const { handlers, auth } = NextAuth({
     redirect: ({ url, baseUrl }) => {
       // 默认放行同源地址
       if (url.startsWith(baseUrl)) return url;
-      // 白名单：渠道后台子域名的绝对回调地址
+      // 白名单：已配置的管理后台子域名的绝对回调地址（CHANNEL_DOMAIN）
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top；测试端不设则此分支不生效
       try {
         const u = new URL(url);
-        if (u.hostname === 'channel.aihr.top') return url;
+        if (process.env.CHANNEL_DOMAIN && u.hostname === process.env.CHANNEL_DOMAIN) return url;
       } catch {
         // 非绝对 URL，继续走相对路径处理
       }
@@ -170,10 +171,12 @@ export const { handlers, auth } = NextAuth({
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
-      // 渠道后台子域名：channel.aihr.top 根路径在内部映射到 /admin/channels
+      // 渠道后台子域名：CHANNEL_DOMAIN 根路径在内部映射到 /admin/channels
       // 单应用 Host 路由——nginx 把该子域名流量代理到同一容器，此处按 Host 改写
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top；测试端不设则 isChannelHost 恒为 false
       const host = request.headers.get('host') ?? '';
-      const isChannelHost = host === 'channel.aihr.top';
+      const channelDomain = process.env.CHANNEL_DOMAIN;
+      const isChannelHost = !!channelDomain && host === channelDomain;
       const isChannelRoot = isChannelHost && pathname === '/';
       // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 渠道后台）
       const logicalPath = isChannelRoot ? '/admin/channels' : pathname;
@@ -238,9 +241,9 @@ export const { handlers, auth } = NextAuth({
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        // 生产环境跨子域名共享登录（channel.aihr.top）；带点前缀覆盖主域及所有子域
-        domain:
-          process.env.NODE_ENV === 'production' ? '.aihr.top' : undefined,
+        // 跨子域名共享登录：生产设 COOKIE_DOMAIN=.aihr.top（带点前缀覆盖主域及所有子域）
+        // 测试端不设 COOKIE_DOMAIN → undefined，cookie 仅在当前域名生效，避免域名不匹配被浏览器拒绝
+        domain: process.env.COOKIE_DOMAIN || undefined,
         secure: process.env.NODE_ENV === 'production',
       },
     },
