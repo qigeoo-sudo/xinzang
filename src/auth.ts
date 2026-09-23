@@ -151,6 +151,21 @@ export const { handlers, auth } = NextAuth({
     },
 
     // 登录重定向控制
+    redirect: ({ url, baseUrl }) => {
+      // 默认放行同源地址
+      if (url.startsWith(baseUrl)) return url;
+      // 白名单：渠道后台子域名的绝对回调地址
+      try {
+        const u = new URL(url);
+        if (u.hostname === 'channel.aihr.top') return url;
+      } catch {
+        // 非绝对 URL，继续走相对路径处理
+      }
+      // 相对路径按 baseUrl 解析
+      if (url.startsWith('/')) return new URL(url, baseUrl).toString();
+      return baseUrl;
+    },
+
     authorized: ({ auth, request }) => {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
@@ -162,6 +177,9 @@ export const { handlers, auth } = NextAuth({
       const isChannelRoot = isChannelHost && pathname === '/';
       // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 渠道后台）
       const logicalPath = isChannelRoot ? '/admin/channels' : pathname;
+      // 请求头来源（NEXTAUTH_URL 会把 nextUrl 规范化到主域，子域场景必须按 Host 还原）
+      const proto = request.headers.get('x-forwarded-proto') ?? 'https';
+      const headerOrigin = `${proto}://${host}`;
 
       // 公开路由 — 无需登录即可访问
       const publicPaths = [
@@ -189,14 +207,17 @@ export const { handlers, auth } = NextAuth({
 
       // 已登录用户访问登录页 → 重定向到当前来源根路径
       if (isLoggedIn && pathname === '/login') {
-        return Response.redirect(new URL('/', request.nextUrl));
+        return Response.redirect(new URL('/', headerOrigin));
       }
 
-      // 未登录用户访问受保护路由 → 显式重定向到登录页，保留 callbackUrl
+      // 未登录用户访问受保护路由 → 显式重定向到登录页
       if (!isLoggedIn && !isPublicPath) {
-        const loginUrl = new URL('/login', request.nextUrl.origin);
-        // callback 用原始路径：子域名场景登录后回到根路径再次触发 Host 路由
-        loginUrl.searchParams.set('callbackUrl', pathname + request.nextUrl.search);
+        const loginUrl = new URL('/login', headerOrigin);
+        // 子域名场景 callback 用绝对地址并经 redirect 白名单放行，保证登录后留在子域
+        const callback = isChannelHost
+          ? new URL(pathname + request.nextUrl.search, headerOrigin).toString()
+          : pathname + request.nextUrl.search;
+        loginUrl.searchParams.set('callbackUrl', callback);
         return Response.redirect(loginUrl);
       }
 
