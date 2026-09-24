@@ -98,7 +98,7 @@ export function CollapsibleText({
 
       {showFullView && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-start justify-center overflow-y-auto"
+          className="fixed inset-0 z-[100] bg-black/40 flex items-start justify-center overflow-y-auto"
           onClick={() => setShowFullView(false)}
         >
           <div
