@@ -16,7 +16,7 @@
       "promptVersion": "v0.3",
       "promptFile": "prompts/freya_system_prompt.md",
       "knowledgeFile": "cards/freya_knowledge_cards.jsonl",
-      "knowledgeCardCount": 33,
+      "knowledgeCardCount": 54,
       "interviewRoundsComplete": 1,
       "interviewRoundsExpected": 2,
       "interviewComplete": false,

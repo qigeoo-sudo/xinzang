@@ -11,7 +11,7 @@
  * 行为：
  * - 全量结构/枚举/组合校验，任一非法立即失败，不写库
  * - cardId 全局唯一校验
- * - 六位导师数量必须与 CANONICAL_MENTORS 一致（33/63/48/64/67/65，共 340）
+ * - 六位导师数量必须与 CANONICAL_MENTORS 一致（54/63/48/64/67/65，共 361）
  * - 事务内按 cardId upsert；该导师不在规范集内的旧卡删除（孤儿清理）
  * - 不触碰其他导师和任何用户数据表
  */
@@ -106,16 +106,20 @@ function loadAll(): LoadedMentor[] {
 async function main() {
   const mentors = loadAll();
 
-  // 聚合断言：当前规范全部 external_approved；exact 仅 4 张且均属 lydia
+  // 聚合断言：仅允许 external_approved 和 internal_approved（且 internal 必须 disclosureMode=none）
   const all = mentors.flatMap((m) => m.cards);
-  const nonApproved = all.filter((c) => c.knowledgeClass !== 'external_approved');
-  if (nonApproved.length > 0) {
-    fail(`存在 ${nonApproved.length} 张非 external_approved 卡，与当前规范快照不符`);
+  const invalid = all.filter((c) => !['external_approved', 'internal_approved'].includes(c.knowledgeClass));
+  if (invalid.length > 0) {
+    fail(`存在 ${invalid.length} 张非 approved 卡: ${invalid.map((c) => c.cardId).join(', ')}`);
+  }
+  const internalBad = all.filter((c) => c.knowledgeClass === 'internal_approved' && c.disclosureMode !== 'none');
+  if (internalBad.length > 0) {
+    fail(`internal_approved 卡必须 disclosureMode=none，违规: ${internalBad.map((c) => c.cardId).join(', ')}`);
   }
   const exact = all.filter((c) => c.disclosureMode === 'exact');
-  if (exact.length !== 4 || exact.some((c) => c.mentorId !== 'lydia')) {
+  if (exact.length !== 5) {
     fail(
-      `exact 卡应为 4 张且全部属于 lydia，实际 ${exact.length} 张: ${exact
+      `exact 卡应为 5 张（4 lydia + 1 freya），实际 ${exact.length} 张: ${exact
         .map((c) => `${c.mentorId}/${c.cardId}`)
         .join(', ')}`,
     );
@@ -133,7 +137,9 @@ async function main() {
   for (const m of mentors) {
     console.log(`  ${m.mentorId.padEnd(9)} ${m.cards.length} 张`);
   }
-  console.log(`  合计 ${all.length} 张，全部 external_approved；exact ${exact.length} 张（lydia）`);
+  const extCount = all.filter((c) => c.knowledgeClass === 'external_approved').length;
+  const intCount = all.filter((c) => c.knowledgeClass === 'internal_approved').length;
+  console.log(`  合计 ${all.length} 张（external_approved ${extCount} + internal_approved ${intCount}）；exact ${exact.length} 张（lydia）`);
 
   if (DRY_RUN) {
     console.log('\n--dry-run：未写库');

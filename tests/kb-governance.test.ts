@@ -119,8 +119,8 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     });
   }
 
-  it('总数 = 340', () => {
-    assert.equal(CANONICAL_TOTAL_CARDS, 340);
+  it('总数 = 361', () => {
+    assert.equal(CANONICAL_TOTAL_CARDS, 361);
     assert.equal(allCards.length, CANONICAL_TOTAL_CARDS);
   });
 
@@ -129,22 +129,32 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     assert.equal(new Set(ids).size, ids.length);
   });
 
-  it('全部 external_approved（本期无 pending/internal 资产）', () => {
+  it('全部 external_approved 或 internal_approved（无 pending）', () => {
     for (const { card, line } of allCards) {
-      assert.equal(card.knowledgeClass, 'external_approved', `第 ${line} 行 ${card.cardId}`);
+      assert.ok(
+        ['external_approved', 'internal_approved'].includes(card.knowledgeClass),
+        `第 ${line} 行 ${card.cardId} knowledgeClass=${card.knowledgeClass}`,
+      );
     }
   });
 
-  it('generalized 336 张 + exact 4 张，exact 仅 LYD-R2-022~025', () => {
+  it('internal_approved 卡 disclosureMode 必须为 none', () => {
+    const internal = allCards.filter((x) => x.card.knowledgeClass === 'internal_approved');
+    assert.equal(internal.length, 1);
+    assert.equal(internal[0].card.cardId, 'FRE-R1-015');
+    assert.equal(internal[0].card.disclosureMode, 'none');
+  });
+
+  it('generalized 355 张 + exact 5 张', () => {
     const exact = allCards.filter((x) => x.card.disclosureMode === 'exact');
     const generalized = allCards.filter((x) => x.card.disclosureMode === 'generalized');
-    assert.equal(generalized.length, 336);
-    assert.equal(exact.length, 4);
+    assert.equal(generalized.length, 355);
+    assert.equal(exact.length, 5);
     assert.deepEqual(
       exact.map((x) => x.card.cardId).sort(),
-      ['LYD-R2-022', 'LYD-R2-023', 'LYD-R2-024', 'LYD-R2-025'],
+      ['FRE-R1-002', 'LYD-R2-022', 'LYD-R2-023', 'LYD-R2-024', 'LYD-R2-025'],
     );
-    assert.ok(exact.every((x) => x.card.mentorId === 'lydia'));
+    assert.ok(exact.every((x) => ['lydia', 'freya'].includes(x.card.mentorId)));
   });
 
   it('caseText 仅 LYD-CASE-001 一张（Lydia 案例卡）', () => {
@@ -232,7 +242,7 @@ describe('formatKnowledgeCards 去编号 / 去元数据', () => {
   });
 });
 
-// ---------- 5. DB 权限矩阵（本地 MySQL xinzang_dev，需要 seed 后的 340 张卡） ----------
+// ---------- 5. DB 权限矩阵（本地 MySQL xinzang_dev，需要 seed 后的 361 张卡） ----------
 describe('本地 MySQL 检索权限矩阵', () => {
   // 未显式配置时指向本地开发库（.env 的 DATABASE_URL 优先）
   process.env.DATABASE_URL ??= 'mysql://root:root123@localhost:3306/xinzang_dev';
@@ -260,7 +270,7 @@ describe('本地 MySQL 检索权限矩阵', () => {
     assert.ok(dbReady);
   });
 
-  it('知识卡总数 340 且全部 external_approved / 非 none', async (t) => {
+  it('知识卡总数 361 且分类合规（external_approved 或 internal_approved:none）', async (t) => {
     if (!dbReady) return t.skip();
     const total = await (prisma as any).mentorKnowledgeCard.count();
     assert.equal(total, CANONICAL_TOTAL_CARDS);
@@ -271,8 +281,13 @@ describe('本地 MySQL 检索权限矩阵', () => {
     });
     const byMentor = new Map<string, number>();
     for (const g of grouped) {
-      assert.equal(g.knowledgeClass, 'external_approved');
-      assert.notEqual(g.disclosureMode, 'none');
+      // 允许 external_approved（disclosureMode 非 none）和 internal_approved（必须 none）
+      if (g.knowledgeClass === 'internal_approved') {
+        assert.equal(g.disclosureMode, 'none', `internal_approved 卡必须 disclosureMode=none`);
+      } else {
+        assert.equal(g.knowledgeClass, 'external_approved', `非法分类: ${g.knowledgeClass}`);
+        assert.notEqual(g.disclosureMode, 'none', `external_approved 卡不应 disclosureMode=none`);
+      }
       byMentor.set(g.mentorId, (byMentor.get(g.mentorId) ?? 0) + g._count._all);
     }
     for (const { mentorId, expectedCount } of CANONICAL_MENTORS) {
@@ -280,14 +295,22 @@ describe('本地 MySQL 检索权限矩阵', () => {
     }
   });
 
-  it('生产 where 条件检索不到任何 internal_* / pending 卡', async (t) => {
+  it('internal_approved 卡不参与生产检索（库中存在但 searchKnowledgeCards 召回不到）', async (t) => {
     if (!dbReady) return t.skip();
-    for (const cls of ['internal_pending', 'internal_approved', 'external_pending']) {
+    // 库中确实存在 1 张 internal_approved 卡（FRE-R1-015）
+    const internal = await (prisma as any).mentorKnowledgeCard.findFirst({
+      where: { knowledgeClass: 'internal_approved' },
+      select: { cardId: true, disclosureMode: true },
+    });
+    assert.equal(internal?.cardId, 'FRE-R1-015');
+    assert.equal(internal?.disclosureMode, 'none');
+    // pending 卡在库中不应存在
+    for (const cls of ['internal_pending', 'external_pending']) {
       const hit = await (prisma as any).mentorKnowledgeCard.findFirst({
         where: { knowledgeClass: cls },
         select: { cardId: true },
       });
-      assert.equal(hit, null, `生产库不应存在 ${cls} 卡`);
+      assert.equal(hit, null, `库中不应存在 ${cls} 卡`);
     }
   });
 
