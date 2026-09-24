@@ -87,6 +87,19 @@
       "interviewComplete": false,
       "caseCount": 0,
       "caseMaterialsReceived": false
+    },
+    {
+      "mentorId": "freyaren",
+      "displayName": "Freya Ren",
+      "promptVersion": "v0.2",
+      "promptFile": "prompts/freyaren_system_prompt.md",
+      "knowledgeFile": "cards/freyaren_knowledge_cards.jsonl",
+      "knowledgeCardCount": 38,
+      "interviewRoundsComplete": 1,
+      "interviewRoundsExpected": 2,
+      "interviewComplete": false,
+      "caseCount": 0,
+      "caseMaterialsReceived": false
     }
   ]
 }
