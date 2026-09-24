@@ -4,6 +4,9 @@ set -e
 echo "===== 磁盘检查 ====="
 df -h / | tail -1
 
+echo "===== 清理旧镜像（build 前执行） ====="
+docker image prune -f
+
 echo "===== 拉取最新代码 ====="
 REL=/opt/xinzang-release
 cd $REL
@@ -21,7 +24,6 @@ docker rm -f xinzang
 docker run -d --name xinzang --restart unless-stopped \
   --log-opt max-size=10m --log-opt max-file=3 \
   -p 3000:3000 \
-  -v /opt/xinzang-data:/app/data \
   --env-file /opt/xinzang/.env \
   xinzang-new
 

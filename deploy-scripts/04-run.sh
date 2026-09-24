@@ -16,7 +16,6 @@ docker rm xinzang
 docker run -d --name xinzang --restart unless-stopped \
   --log-opt max-size=10m --log-opt max-file=3 \
   -p 3000:3000 \
-  -v /opt/xinzang-data:/app/data \
   --env-file /opt/xinzang/.env \
   xinzang-new
 
