@@ -71,6 +71,7 @@ export const CANONICAL_MENTORS: ReadonlyArray<{
   expectedCount: number;
 }> = [
   { mentorId: 'freyagao', expectedCount: 54 },
+  { mentorId: 'freyaren', expectedCount: 38 },
   { mentorId: 'lydiachen', expectedCount: 63 },
   { mentorId: 'phyllischi', expectedCount: 48 },
   { mentorId: 'tinazhang', expectedCount: 64 },

@@ -547,6 +547,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     isFree: false,
     gender: 'female',
     hasFirstRoundCards: true,
+    usesDbKnowledge: true,
     knowledgeEntries: [],
     suggestedQuestions: [],
     comingSoon: true,
