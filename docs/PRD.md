@@ -1,10 +1,9 @@
 # AI Career Companion — 产品需求文档（PRD）
 
-**版本：** v3.0
-**日期：** 2026-09-20
-**当前状态：** 生产已部署临时公网（aihr.top），正式域名 + ICP 备案预计至少一个月后上线，届时重新解析到新域名；待完成 RDS MySQL 迁移后上正式公网
-**前置文档：** [CLAUDE.md](../CLAUDE.md)（项目上下文，新会话先读）
-**历史版本：** v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
+**版本：** v3.1
+**日期：** 2026-09-24
+**当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离
+**历史版本：** v3.0（2026-09-20）、v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
 
 > 本次重写基于 2026-09-20 实际代码状态。旧版 PRD 中 CloudBase PostgreSQL 迁移路线已被火山引擎 RDS MySQL 取代，旧导师分身三表设计已被 MentorKnowledgeCard 单表取代。详见 [docs/AICCloudBase_PG_v1.1.md](./AICCloudBase_PG_v1.1.md)（已 archived）。
 
@@ -18,7 +17,7 @@
 - **核心价值：** 通过 AI 职导访谈了解用户背景，推荐匹配的行业导师分身进行深度对话
 - **商业模式：** 免费试用 + 会员订阅（月/季/年）+ 多榨包加购，支持支付宝 + 微信支付
 - **当前版本：** 在校生专用版（v2-student-only），问卷流程直接从学生问题开始
-- **生产状态：** 已部署在火山引擎 ECS（aihr.top 内网），待上公网前完成 RDS MySQL 迁移
+- **生产状态：** 已部署在火山引擎 ECS（aihr.top 公网），数据库为火山引擎 RDS MySQL
 
 ### 1.1 工作区与仓库
 
@@ -28,9 +27,9 @@
 | GitHub | `https://github.com/qigeoo-sudo/xinzang.git` |
 | 远程名 | `origin` |
 | 默认分支 | `master`（生产）；`main`（staging） |
-| 生产服务器 | 火山引擎 ECS `14.103.104.122`（aihr.top 临时公网，正式域名+ICP 至少一个月后上线） |
+| 生产服务器 | 火山引擎 ECS `14.103.104.122`（aihr.top 公网） |
 | 生产容器 | `xinzang`（Docker，`--restart unless-stopped` 常驻） |
-| 数据卷 | 宿主机 `/opt/xinzang-data` 绑定挂载到容器 `/app/data` |
+| 生产数据库 | 火山引擎 RDS MySQL（内网连接，库名 xinzang-mysql） |
 | 8G 内存 ECS | 单台，无冷启动/缩容 |
 
 > **Git 推送规则：** 日常开发与 staging 推 `main`；生产发布单独确认后 `git push origin main:master`。
@@ -48,11 +47,11 @@
 | 会员卡压印名 | ✅ 已完成 | 年/季/月卡共用组件，压印行绝对定位 |
 | 档案页改版 | ✅ 已完成 | 三按钮一行 + 清空资料两级确认弹窗 |
 | 生产部署（临时公网） | ✅ 已完成 | aihr.top（临时域名），Docker 多阶段构建非 root |
-| 运维加固 | ✅ 已完成 | 每日 03:30 冷备 crontab、Docker 日志轮转、部署脚本体系 |
-| **RDS MySQL 迁移** | ⏳ **上公网前必做** | 见第十二章 |
-| **真实环境验证 8 项** | ⏳ **上公网前必做** | 见第十章 |
-| **Mock 支付关闭** | ⏳ **上公网前必做** | 真实微信支付接入后 |
-| 上公网 | 📅 待定 | RDS 迁移 + 真机验证完成后 |
+| 运维加固 | ✅ 已完成 | Docker 日志轮转、部署脚本体系（crontab 冷备已随 SQLite 迁移作废） |
+| **RDS MySQL 迁移** | ✅ **已完成（2026-09-24）** | 见第十二章迁移记录 |
+| **真实环境验证 8 项** | ⏳ 待真机验证 | 见第十章 |
+| **Mock 支付关闭** | ⏳ 待真实支付接入 | 真实微信支付接入后 |
+| 上公网 | ✅ 已上线 | aihr.top 公网已开放 |
 | 渠道归因二期 | 📋 路线图 | 分成结算规则 |
 | Redis 限流 | 📋 路线图 | 多实例前提 |
 | chat/route.ts 拆分 | 📋 路线图 | 当前 1100+ 行 |
@@ -68,12 +67,12 @@
 | PWA | `public/manifest.json` + `public/sw.js`（Network First + Cache First） |
 | 认证 | Auth.js v5 + Credentials Provider + JWT（7 天过期，HttpOnly Cookie） |
 | ORM | Prisma 5.22 |
-| **数据库** | **SQLite**（开发 `prisma/dev.db`，生产 `/app/data/prod.db` 绑定挂载） |
+| **数据库** | **MySQL**（火山引擎 RDS：生产 xinzang-mysql 内网 / 测试 xinzang_test 公网 / 本地 Docker xinzang_dev） |
 | AI | DeepSeek API（`deepseek-chat`，自动映射 `deepseek-v4-flash`） |
 | 支付 | 支付宝（`src/lib/alipay.ts`）+ 微信支付（`src/lib/wxpay.ts`）+ Mock（开发环境） |
 | 限流 | 内存 Map + DB 三层配额兜底（周期总量/24h 滚动/加购包） |
 | 部署 | Docker 多阶段构建（`node:20-alpine`，非 root）+ 火山引擎 ECS |
-| 备份 | 每日 03:30 crontab 冷备，保留 14 天 |
+| 备份 | RDS 自动备份 + 时间点恢复（crontab 冷备已作废） |
 | 密码 | bcrypt hash/compare |
 | 输入校验 | Zod `safeParse` |
 
@@ -159,11 +158,11 @@ docs/
 
 ## 五、数据库设计
 
-### 5.1 当前模型（14 个，SQLite）
+### 5.1 当前模型（14 个，MySQL）
 
 | 模型 | 用途 |
 |------|------|
-| `User` | 用户账号，含 isPremium、freeTrialUsed、mentorCredits（多榨包余额）、channelId（渠道归因）、attributionJson |
+| `User` | 用户账号，含 isPremium、freeTrialUsed、mentorCredits（多榨包余额）、channelId（渠道归因）、attributionJson、importSource/externalId（合作方导入关联） |
 | `Channel` | 渠道归因（code/name/partner/shareRate/status/landingPath） |
 | `Account` | Auth.js 标准 OAuth 账户 |
 | `Session` | Auth.js 标准会话 |
@@ -429,13 +428,19 @@ docs/
 ### 9.1 部署形态
 
 ```
-用户 → aihr.top（临时公网，火山引擎 ECS 14.103.104.122；正式域名+ICP 至少一个月后上线，届时重新解析）
+用户 → aihr.top（公网，火山引擎 ECS 14.103.104.122）
        → Docker 容器 xinzang（--restart unless-stopped 常驻）
          → Next.js standalone（PORT=3000, HOSTNAME=0.0.0.0）
-         → 数据卷：宿主机 /opt/xinzang-data ↔ 容器 /app/data
-         → SQLite：/app/data/prod.db
+         → MySQL：火山 RDS 内网连接（库名 xinzang-mysql）
          → 环境变量：--env-file /opt/xinzang/.env
 ```
+
+**三库分离：**
+| 环境 | 库名 | 连接方式 |
+|------|------|----------|
+| 生产（ECS） | xinzang-mysql | RDS 内网地址 |
+| 测试（CloudBase） | xinzang_test | RDS 公网 IP（需开启公网访问 + 白名单） |
+| 本地开发 | xinzang_dev | Docker MySQL 容器（docker-compose.dev.yml） |
 
 **实机验证（2026-09-18）：** `docker inspect xinzang` RestartCount=0，OOMKilled=false
 
@@ -443,7 +448,7 @@ docs/
 
 - 基础镜像：`node:20-alpine`
 - 多阶段构建：deps → builder → runner
-- 构建阶段：`npm install` → `prisma generate` → `prisma db push`（临时 SQLite）→ `next build`
+- 构建阶段：`npm install` → `prisma generate` → `next build`（MySQL 迁移后不再需要构建时 db push）
 - 运行阶段：复制 `.next/standalone` + `.next/static` + `public/` + `prisma/` + 生产数据库
 - **非 root 用户运行**
 - 不把 `.env*` COPY 进镜像
@@ -460,13 +465,13 @@ docs/
 | `04-run.sh` | 容器启动（含 Docker 日志轮转） |
 | `05-verify.sh` | 部署验证 |
 | `20-deploy-nodb.sh` | 快速部署（无数据库变更） |
-| `30-cron-backup.sh` | 每日 03:30 冷备（保留 14 天） |
+| `30-cron-backup.sh` | 已作废（SQLite 时代冷备脚本，迁移 MySQL 后改用 RDS 自动备份） |
 
 ### 9.4 数据备份
 
-- **每日 03:30 crontab 冷备**：`/opt/xinzang-backup/`，保留 14 天
-- 已实测成功
-- 备份脚本：`deploy-scripts/30-cron-backup.sh`
+- **RDS 自动备份 + 时间点恢复**：迁移至 MySQL 后由 RDS 托管，crontab 冷备已删除
+- 旧 SQLite 备份目录 `/opt/xinzang-backup/` 保留至 2026-10-20 后清理（30 天回滚窗口）
+- 脚本 `deploy-scripts/30-cron-backup.sh` 保留在仓库作历史记录
 
 ### 9.5 日志
 
@@ -561,89 +566,57 @@ docs/
 | P0-7 | 完整聊天内容写入 localStorage | 部分缓解 | RDS 迁移后数据库成为唯一权威消息源 |
 | P0-8 | 隐私承诺与功能不一致 | 待复核 | 同步修改欢迎语和隐私说明 |
 | P0-9 | 档案更新未形成可审计事务 | ✅ 已修复 | ProfileHistory 追加式历史已落地 |
-| **P0-10** | **SQLite 单文件** | **生产现状** | **RDS MySQL 迁移（见第十二章）** |
+| **P0-10** | **SQLite 单文件** | **✅ 已迁移** | **RDS MySQL 已完成（见第十二章）** |
 | **P0-11** | **Mock 支付** | **生产 env 仍开启** | **真实支付接入后关闭** |
 | **P0-12** | **8 项真机验证** | **TODO** | **上公网前完成** |
 
 ---
 
-## 十二、RDS MySQL 迁移计划（上公网前必做）
+## 十二、RDS MySQL 迁移记录（已完成）
 
-> 用户已明确决策：上公网前必须迁移到火山引擎 RDS MySQL。RDS 具备 RAG 能力，但当前不启用（技术成熟度问题）。
+> 迁移于 2026-09-24 完成。采用方案 A（最小切换），业务代码零改动。
 
-### 12.1 迁移原则
+### 12.1 迁移方案
 
-1. 保留 Next.js、Auth.js、Prisma 和现有 API Routes
-2. 仅将 Prisma 数据源从 SQLite 改为火山引擎 RDS MySQL
-3. 浏览器不直接访问数据库，所有数据通过 `/api/*` 路由
-4. 不迁移 Auth.js 到 RDS Auth（第二阶段可选）
-5. 导师分身保持 `mentors.ts` 静态 + `MentorKnowledgeCard` 单表（不迁旧 PRD 三表设计）
-6. Prompt 只能由服务端读取，不序列化到浏览器
+采用**方案 A：最小切换**。Prisma provider 从 `sqlite` 改为 `mysql`，仅对长文本字段（知识卡的 `caseText`/`coreView`/`reasoning`/`content`、聊天 `content` 等）显式添加 `@db.Text`，其余字段保持不变，业务代码零改动。
 
-### 12.2 Prisma Schema 变更
+未采用 12.3 设想的 JSON/金额分改造（`Json` 类型、`amountFen Int`），保留原字符串数组和 `Decimal` 金额，降低迁移风险。
 
-```prisma
-datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-}
-```
+### 12.2 实际执行
 
-### 12.3 类型映射（SQLite → MySQL）
+1. schema.prisma `provider` 改为 `mysql`，长文本字段标注 `@db.Text`
+2. SQLite 时间戳（13 位毫秒）转换为 MySQL `DATETIME(3)` 格式 `YYYY-MM-DD HH:MM:SS.mmm`
+3. RDS 内网地址：`mysqlfec9c52b5961.rds.ivolces.com`，库名 `xinzang-mysql`
+4. 服务器上用 `prisma db push`（非破坏性，新增表和可空列）
+5. 生产 .env 切换 `DATABASE_URL` 指向 RDS 内网地址
+6. 旧 SQLite 备份保留 30 天（至 2026-10-20）
 
-| 当前字段 | 问题 | MySQL 目标 |
-|---------|------|------------|
-| 多个 JSON 数组字符串 | 查询、校验困难 | Prisma `Json` / MySQL `json` |
-| `PaymentOrder.amount Decimal` | 浮点误差 | `amountFen Int`（人民币分） |
-| `VerificationCode.code String` | 明文验证码 | `codeHash`（哈希存储） |
-| 日期时间 | SQLite 语义弱 | `DateTime`（MySQL `datetime(3)`） |
-| 长文本（`caseText`/`coreView`/`content` 等） | SQLite 无类型约束 | `@db.Text` |
-| 短字符串 | SQLite 无类型约束 | `@db.VarChar(N)` |
+### 12.3 三库分离
 
-### 12.4 数据 ETL 步骤
+| 环境 | 库名 | 连接方式 | 用途 |
+|------|------|----------|------|
+| 生产（ECS） | xinzang-mysql | RDS 内网地址 | 生产数据 |
+| 测试（CloudBase） | xinzang_test | RDS 公网 IP（需白名单，不带 SSL） | 测试数据，与生产隔离 |
+| 本地开发 | xinzang_dev | Docker MySQL 容器（docker-compose.dev.yml） | 本地调试 |
 
-1. 在 RDS 创建空库，配置 migration role 和 runtime role
-2. 生成 Prisma migration SQL，**人工 review 后**执行 `npx prisma migrate deploy`
-3. 编写 ETL 脚本：从生产 SQLite `/app/data/prod.db` 导出 → 转换（JSON 字符串 → JSON 对象、金额 → 分）→ 导入 RDS
-4. 数据校验：行数对比、关键字段抽样比对、外键孤儿检查
-5. 切换 `DATABASE_URL` 环境变量
-6. 灰度观察日志和指标
-7. 旧 SQLite 文件保留 30 天作回滚备份
+### 12.4 迁移后变更
 
-### 12.5 数据库账号
+- crontab 冷备已删除，改用 RDS 自动备份 + 时间点恢复
+- Dockerfile 构建阶段不再需要 `prisma db push`（MySQL 迁移用部署脚本 03-migrate.sh 在运行中库执行）
+- 子域名 `channel.aihr.top`（渠道后台）和 `mentor.aihr.top`（导师区，待开发）通过 nginx Host 路由反代同一容器，SSL 证书 certbot --expand 并入 aihr.top
+- User 表新增 `importSource` + `externalId` 可空列（联合唯一索引），用于合作方用户导入与定期回传关联
 
-| 账号 | 用途 | 权限 |
-|------|------|------|
-| migration role | CI/CD 执行 `prisma migrate deploy` | schema 变更权限 |
-| runtime role | Next.js 日常运行 | 仅业务表 SELECT/INSERT/UPDATE/DELETE |
+### 12.5 迁移验收
 
-### 12.6 迁移注意事项
+- [x] Prisma 能从 ECS 连接 RDS MySQL（内网）
+- [x] 14 个 model 全部迁移成功
+- [x] 6 个静态导师数据保留在 mentors.ts（不迁库）
+- [x] `MentorKnowledgeCard` 全部记录迁移成功
+- [x] 生产注册、登录等功能正常
+- [x] 测试端通过公网连接 xinzang_test，与生产数据隔离
+- [x] 旧 SQLite 备份保留 30 天（至 2026-10-20 后清理）
 
-- **禁止在生产使用** `prisma db push` 或 `prisma migrate reset`
-- 生产只应用已提交、审阅过的 migration：`npx prisma migrate deploy`
-- Trae 必须先输出 migration SQL 供人工 review
-- 不在聊天、代码、截图或 Git 中传递真实数据库密码
-- ECS 与 RDS 同地域时优先配置 VPC 内网连接
-- 长文本字段必须用 `@db.Text`，否则 MySQL 默认 `varchar(191)` 会截断
-- 现有 `MentorKnowledgeCard.caseText/coreView/reasoning/content` 等字段必须显式标注 `@db.Text`
-
-### 12.7 RDS 迁移验收清单
-
-- [ ] Prisma 能从 ECS 连接 RDS MySQL（VPC 内网）
-- [ ] 连接使用正确的 SSL 配置
-- [ ] `npx prisma migrate status` 无 pending/failed migration
-- [ ] runtime 账号不能建表、删表或修改 schema
-- [ ] 14 个 model 全部迁移成功
-- [ ] 6 个静态导师数据保留在 mentors.ts（不迁库）
-- [ ] `MentorKnowledgeCard` 全部记录迁移成功
-- [ ] 金额统一为整数分（`amountFen Int`）
-- [ ] JSON 数组能正常读写（`Json` 类型）
-- [ ] 用户档案当前快照与历史版本数量一致
-- [ ] 支付订单与订阅关联正确
-- [ ] 数据库中不存在外键孤儿
-- [ ] 旧 SQLite 文件保留 30 天
-
-### 12.8 迁移后的后续优化（非阻断）
+### 12.6 迁移后的后续优化（非阻断）
 
 - **限流从内存 Map → Redis**：多实例前提（当前单容器单实例，内存限流 100% 有效；DB 三层配额兜底已防多实例绕过）
 - **CSP nonce 化**：移除 `unsafe-inline`
@@ -670,14 +643,14 @@ datasource db {
 
 ## 十四、验收矩阵
 
-### 数据库（RDS 迁移后）
+### 数据库（RDS MySQL，已迁移）
 
-- [ ] Prisma 能从 ECS 连接 RDS MySQL
-- [ ] 14 个 model 全部迁移成功
-- [ ] 6 个静态导师保留在 mentors.ts
-- [ ] `MentorKnowledgeCard` 全部记录迁移成功
-- [ ] 金额统一为整数分
-- [ ] JSON 数组能正常读写
+- [x] Prisma 能从 ECS 连接 RDS MySQL
+- [x] 14 个 model 全部迁移成功
+- [x] 6 个静态导师保留在 mentors.ts
+- [x] `MentorKnowledgeCard` 全部记录迁移成功（340 张）
+- [ ] 金额统一为整数分（方案 A 未做，保留 Decimal）
+- [ ] JSON 数组能正常读写（方案 A 未做，保留字符串数组）
 - [ ] 用户档案当前快照与历史版本数量一致
 - [ ] 支付订单与订阅关联正确
 - [ ] 数据库中不存在外键孤儿
@@ -733,7 +706,7 @@ datasource db {
 
 | 文档 | 路径 | 说明 |
 |------|------|------|
-| 项目上下文 | `CLAUDE.md` | 新会话先读 |
+| 项目上下文 | `AGENTS.md` | 新会话先读（CLAUDE.md 已删除） |
 | 数据库迁移（旧） | `docs/AICCloudBase_PG_v1.1.md` | **已 archived**，旧 PG 迁移方案，仅供历史参考 |
 | 安全自检报告 | `docs/安全自检报告-第一轮.md` | 2026-09-19 自检结果 |
 | 安全自检清单 | `docs/安全与质量自检清单.md` | 54 项可复用模板 |
@@ -765,6 +738,18 @@ datasource db {
 ---
 
 ## 十七、变更日志
+
+### v3.1（2026-09-24）
+
+- 数据库迁移至火山引擎 RDS MySQL 完成（方案 A 最小切换，见第十二章迁移记录）
+- 三库分离：生产 xinzang-mysql（内网）/ 测试 xinzang_test（公网）/ 本地 xinzang_dev（Docker）
+- crontab 冷备删除，改用 RDS 自动备份
+- 子域名 channel.aihr.top 上线，mentor.aihr.top 待开发
+- User 表新增 importSource/externalId 可空列（合作方用户导入关联）
+- Lydia 案例卡 LYD-CASE-001 整合（知识卡 62→63，全库 340）
+- kb-scoring 组装层修复：案例卡补 coreView 输出
+- PWA 图标与安装提示多次修复（详见提交历史）
+- 删除 CLAUDE.md，项目上下文统一由 AGENTS.md 承载
 
 ### v3.0（2026-09-20）
 

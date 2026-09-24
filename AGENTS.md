@@ -37,8 +37,12 @@
 ## 快速启动
 
 ```bash
-npm install          # 安装依赖（含 postinstall: prisma generate）
-npx prisma db push   # 同步数据库 schema
+# 1. 启动本地 MySQL（Docker Desktop 已安装）
+docker compose -f docker-compose.dev.yml up -d
+
+# 2. 安装依赖 + 同步 schema + 启动
+npm install
+npx prisma db push   # 同步数据库 schema 到本地 MySQL (xinzang_dev)
 npm run dev          # 启动开发服务器 (localhost:3000)
 ```
 
@@ -46,7 +50,22 @@ npm run dev          # 启动开发服务器 (localhost:3000)
 
 - Mock 支付：点击"确认支付(模拟)"即可；注册验证码 Mock 模式直接返回
 
+## 数据库架构
+
+数据库已从 SQLite 迁移至火山引擎 RDS MySQL（2026-09-24 完成，方案 A 最小切换）。
+
+| 环境 | 数据库 | 连接方式 |
+|------|--------|----------|
+| 本地开发 | xinzang_dev（Docker MySQL 容器） | `docker compose -f docker-compose.dev.yml up -d`，DATABASE_URL 指向 localhost |
+| 测试（CloudBase） | xinzang_test（RDS 同实例） | 公网 IP 连接，DATABASE_URL 在 CloudBase 控制台配置（不带 SSL 参数） |
+| 生产（ECS） | xinzang-mysql（RDS 内网） | 容器通过 RDS 内网地址连接 |
+
+- 迁移细节见 `docs/PRD.md` 第十二章（迁移记录，非计划）。
+- User 表新增 `importSource` + `externalId` 可空列（联合唯一索引），用于合作方用户导入与定期回传关联。
+- `docs/AICCloudBase_PG_v1.1.md` 已 archived，仅供历史参考。
+
 ## 项目上下文
 
-完整技术栈、目录结构、业务流程见 `CLAUDE.md`（首次会话请先阅读）。
-数据库迁移方案见 `docs/PRD.md` 第十二章（RDS MySQL 迁移计划，上公网前必做）；`docs/AICCloudBase_PG_v1.1.md` 已 archived，仅供历史参考。
+技术栈：Next.js + Prisma + MySQL（火山 RDS）+ Docker（生产 ECS / 本地开发）。
+域名：主站 `aihr.top`、渠道后台 `channel.aihr.top`、导师区 `mentor.aihr.top`（待开发）。
+完整业务流程与产品需求见 `docs/PRD.md`。
