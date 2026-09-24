@@ -3,11 +3,11 @@
  *
  * 用法:
  *   npx tsx scripts/export-chat-logs.ts                              # 导出全部对话
- *   npx tsx scripts/export-chat-logs.ts --mentor lydia               # 只看 Lydia
+ *   npx tsx scripts/export-chat-logs.ts --mentor lydiachen               # 只看 Lydia
  *   npx tsx scripts/export-chat-logs.ts --user 手机号或邮箱            # 只看某用户
  *   npx tsx scripts/export-chat-logs.ts --from 2026-09-01 --to 2026-09-10  # 按日期范围
  *   npx tsx scripts/export-chat-logs.ts --keyword 简历                 # 按关键词搜索
- *   npx tsx scripts/export-chat-logs.ts --mentor lydia --keyword 简历  # 组合筛选
+ *   npx tsx scripts/export-chat-logs.ts --mentor lydiachen --keyword 简历  # 组合筛选
  *
  * 输出:
  *   在项目根目录下生成 outbox/chat-export-{时间戳}.md
@@ -80,16 +80,16 @@ const prisma = loadPrisma();
 
 // ---------- 导师 ID → 可读名称 ----------
 const MENTOR_NAMES: Record<string, string> = {
-  'lydia': 'Lydia Chen（HRVP）',
-  'winnie': 'Winnie Ni（HR/心理咨询）',
-  'tina': 'Tina Zhang（HR负责人）',
+  'lydiachen': 'Lydia Chen（HRVP）',
+  'winnieni': 'Winnie Ni（HR/心理咨询）',
+  'tinazhang': 'Tina Zhang（HR负责人）',
   'james': 'James Chen（AI产品经理）',
   'sarah': 'Sarah Wang（投行VP）',
   'marcus': 'Marcus Liu（管理咨询）',
   'lily': 'Lily Zhang（创业者）',
   'david': 'David Kim（技术总监）',
   'emma': 'Emma Zhou（品牌总监）',
-  'kevin': 'Kevin Wu（全栈工程师）',
+  'kevinyuan': 'Kevin Wu（全栈工程师）',
   'grace': 'Grace Li（临床研究经理）',
   'tony': 'Tony Ma（运营总监）',
 };

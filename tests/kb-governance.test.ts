@@ -154,13 +154,13 @@ describe('content/knowledge-governance/cards 规范资产', () => {
       exact.map((x) => x.card.cardId).sort(),
       ['FRE-R1-002', 'LYD-R2-022', 'LYD-R2-023', 'LYD-R2-024', 'LYD-R2-025'],
     );
-    assert.ok(exact.every((x) => ['lydia', 'freya'].includes(x.card.mentorId)));
+    assert.ok(exact.every((x) => ['lydiachen', 'freyagao'].includes(x.card.mentorId)));
   });
 
   it('caseText 仅 LYD-CASE-001 一张（Lydia 案例卡）', () => {
     const withCase = allCards.filter((x) => x.card.caseText !== null);
     assert.deepEqual(withCase.map((x) => x.card.cardId), ['LYD-CASE-001']);
-    assert.equal(withCase[0].card.mentorId, 'lydia');
+    assert.equal(withCase[0].card.mentorId, 'lydiachen');
   });
 });
 
@@ -168,7 +168,7 @@ describe('content/knowledge-governance/cards 规范资产', () => {
 describe('formatKnowledgeCards 去编号 / 去元数据', () => {
   const secretCard: KnowledgeCardLike = {
     cardId: 'LYD-R1-001',
-    mentorId: 'lydia',
+    mentorId: 'lydiachen',
     domain: '内部密级领域XYZ',
     title: '内部秘密标题ABC',
     coreView: '可以讲给用户的核心观点：职业选择要同时看能力与兴趣。',
@@ -316,8 +316,8 @@ describe('本地 MySQL 检索权限矩阵', () => {
 
   it('searchKnowledgeCards 实召回结果全部越权字段干净', async (t) => {
     if (!dbReady) return t.skip();
-    const cards = await searchKnowledgeCards('freya', '审计 转型 产业投资 医疗器械', 8);
-    assert.ok(cards.length > 0, 'freya 应至少召回 1 张卡');
+    const cards = await searchKnowledgeCards('freyagao', '审计 转型 产业投资 医疗器械', 8);
+    assert.ok(cards.length > 0, 'freyagao 应至少召回 1 张卡');
     for (const c of cards) {
       assert.equal(c.knowledgeClass, 'external_approved');
       assert.notEqual(c.disclosureMode, 'none');

@@ -15,12 +15,12 @@
 
 | 导师 | Prompt | 知识卡 | 访谈进度 | 案例 |
 |---|---|---:|---:|---:|
-| Freya | `freya_system_prompt.md` v0.3 | 33 | 1/2 | 0 |
-| Lydia | `lydia_system_prompt.md` v0.7 | 62 | 2/2 | 0 |
-| Phyllis | `phyllis_system_prompt.md` v0.3 | 48 | 1/2 | 0 |
-| Tina | `tina_system_prompt.md` v0.5 | 64 | 2/2 | 0 |
-| Winnie | `winnie_system_prompt.md` v0.8 | 67 | 2/2 | 0 |
-| Ying | `ying_system_prompt.md` v0.2 | 65 | 1/2 | 0 |
+| Freya | `freyagao_system_prompt.md` v0.3 | 33 | 1/2 | 0 |
+| Lydia | `lydiachen_system_prompt.md` v0.7 | 62 | 2/2 | 0 |
+| Phyllis | `phyllischi_system_prompt.md` v0.3 | 48 | 1/2 | 0 |
+| Tina | `tinazhang_system_prompt.md` v0.5 | 64 | 2/2 | 0 |
+| Winnie | `winnieni_system_prompt.md` v0.8 | 67 | 2/2 | 0 |
+| Ying | `yingwang_system_prompt.md` v0.2 | 65 | 1/2 | 0 |
 
 “1/2”表示已经完整吸收第一轮现有材料，但第二轮尚未收到；不能把当前Prompt称为最终完整版本。所有导师目前都没有案例文档，禁止编造案例。
 

@@ -70,12 +70,12 @@ export const CANONICAL_MENTORS: ReadonlyArray<{
   mentorId: string;
   expectedCount: number;
 }> = [
-  { mentorId: 'freya', expectedCount: 54 },
-  { mentorId: 'lydia', expectedCount: 63 },
-  { mentorId: 'phyllis', expectedCount: 48 },
-  { mentorId: 'tina', expectedCount: 64 },
-  { mentorId: 'winnie', expectedCount: 67 },
-  { mentorId: 'ying', expectedCount: 65 },
+  { mentorId: 'freyagao', expectedCount: 54 },
+  { mentorId: 'lydiachen', expectedCount: 63 },
+  { mentorId: 'phyllischi', expectedCount: 48 },
+  { mentorId: 'tinazhang', expectedCount: 64 },
+  { mentorId: 'winnieni', expectedCount: 67 },
+  { mentorId: 'yingwang', expectedCount: 65 },
 ];
 
 export const CANONICAL_MENTOR_IDS = CANONICAL_MENTORS.map((m) => m.mentorId);

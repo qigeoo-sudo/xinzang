@@ -51,9 +51,9 @@ export interface Mentor {
 
 export const mentors: Mentor[] = [
   {
-    id: 'lydia',
+    id: 'lydiachen',
     name: 'Lydia Chen',
-    avatar: '/avatars/lydia-chen.svg',
+    avatar: '/avatars/lydiachen-chen.svg',
     launchedAt: '2026-08-13',
     title: 'HRVP',
     company: '心擎医疗',
@@ -255,9 +255,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     ],
   },
   {
-    id: 'winnie',
+    id: 'winnieni',
     name: 'Winnie Ni',
-    avatar: '/avatars/winnie-ni.svg',
+    avatar: '/avatars/winnieni-ni.svg',
     launchedAt: '2026-08-22',
     title: 'HR从业者 / 心理咨询师',
     company: '心擎医疗',
@@ -363,9 +363,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     ],
   },
   {
-    id: 'tina',
+    id: 'tinazhang',
     name: 'Tina Zhang',
-    avatar: '/avatars/tina-zhang.svg',
+    avatar: '/avatars/tinazhang-zhang.svg',
     launchedAt: '2026-08-22',
     title: 'HR负责人',
     company: '精品战略咨询',
@@ -473,9 +473,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     ],
   },
   {
-    id: 'freya',
+    id: 'freyagao',
     name: 'Freya Gao',
-    avatar: '/avatars/freya-gao.svg',
+    avatar: '/avatars/freyagao-gao.svg',
     title: '产业投资经理',
     company: '医疗器械产业基金',
     companyType: '投资',
@@ -486,7 +486,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     price: 59,
     isFree: false,
     gender: 'female',
-    // 人格 Prompt 由 content/knowledge-governance/prompts/freya_system_prompt.md 加载（v0.3）
+    // 人格 Prompt 由 content/knowledge-governance/prompts/freyagao_system_prompt.md 加载（v0.3）
     personalityPrompt: '',
     knowledgeEntries: [],
     usesDbKnowledge: true,
@@ -503,9 +503,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     comingSoon: true,
   },
   {
-    id: 'phyllis',
+    id: 'phyllischi',
     name: 'Phyllis Chi',
-    avatar: '/avatars/phyllis-chi.svg',
+    avatar: '/avatars/phyllischi-chi.svg',
     title: '资深财务顾问',
     company: '多家企业（顾问）',
     companyType: '企业服务',
@@ -516,7 +516,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     price: 59,
     isFree: false,
     gender: 'female',
-    // 人格 Prompt 由 content/knowledge-governance/prompts/phyllis_system_prompt.md 加载（v0.3）
+    // 人格 Prompt 由 content/knowledge-governance/prompts/phyllischi_system_prompt.md 加载（v0.3）
     personalityPrompt: '',
     knowledgeEntries: [],
     usesDbKnowledge: true,
@@ -535,7 +535,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'freyaren',
     name: 'Freya Ren',
-    avatar: '/avatars/freya-ren.svg',
+    avatar: '/avatars/freyagao-ren.svg',
     title: '创始人兼CEO',
     company: '创业公司',
     companyType: '创业',
@@ -552,9 +552,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     comingSoon: true,
   },
   {
-    id: 'ying',
+    id: 'yingwang',
     name: 'Ying Wang',
-    avatar: '/avatars/ying-wang.svg',
+    avatar: '/avatars/yingwang-wang.svg',
     launchedAt: '2026-09-16',
     title: '生产负责人',
     company: '具身智能/人形机器人',
@@ -566,7 +566,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     price: 59,
     isFree: false,
     gender: 'male',
-    // 人格 Prompt 由 content/knowledge-governance/prompts/ying_system_prompt.md 加载（v0.2）
+    // 人格 Prompt 由 content/knowledge-governance/prompts/yingwang_system_prompt.md 加载（v0.2）
     personalityPrompt: '',
     knowledgeEntries: [],
     usesDbKnowledge: true,
@@ -581,9 +581,9 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     ],
   },
   {
-    id: 'kevin',
+    id: 'kevinyuan',
     name: 'Kevin Yuan',
-    avatar: '/avatars/kevin-yuan.svg',
+    avatar: '/avatars/kevinyuan-yuan.svg',
     title: '行业导师',
     company: '—',
     companyType: '—',

@@ -11,11 +11,11 @@
   ],
   "prompts": [
     {
-      "mentorId": "freya",
+      "mentorId": "freyagao",
       "displayName": "Freya Gao",
       "promptVersion": "v0.3",
-      "promptFile": "prompts/freya_system_prompt.md",
-      "knowledgeFile": "cards/freya_knowledge_cards.jsonl",
+      "promptFile": "prompts/freyagao_system_prompt.md",
+      "knowledgeFile": "cards/freyagao_knowledge_cards.jsonl",
       "knowledgeCardCount": 54,
       "interviewRoundsComplete": 1,
       "interviewRoundsExpected": 2,
@@ -24,11 +24,11 @@
       "caseMaterialsReceived": false
     },
     {
-      "mentorId": "lydia",
+      "mentorId": "lydiachen",
       "displayName": "Lydia Chen",
       "promptVersion": "v0.7",
-      "promptFile": "prompts/lydia_system_prompt.md",
-      "knowledgeFile": "cards/lydia_knowledge_cards.jsonl",
+      "promptFile": "prompts/lydiachen_system_prompt.md",
+      "knowledgeFile": "cards/lydiachen_knowledge_cards.jsonl",
       "knowledgeCardCount": 63,
       "interviewRoundsComplete": 2,
       "interviewRoundsExpected": 2,
@@ -37,11 +37,11 @@
       "caseMaterialsReceived": true
     },
     {
-      "mentorId": "phyllis",
+      "mentorId": "phyllischi",
       "displayName": "Phyllis Chi",
       "promptVersion": "v0.3",
-      "promptFile": "prompts/phyllis_system_prompt.md",
-      "knowledgeFile": "cards/phyllis_knowledge_cards.jsonl",
+      "promptFile": "prompts/phyllischi_system_prompt.md",
+      "knowledgeFile": "cards/phyllischi_knowledge_cards.jsonl",
       "knowledgeCardCount": 48,
       "interviewRoundsComplete": 1,
       "interviewRoundsExpected": 2,
@@ -50,11 +50,11 @@
       "caseMaterialsReceived": false
     },
     {
-      "mentorId": "tina",
+      "mentorId": "tinazhang",
       "displayName": "Tina Zhang",
       "promptVersion": "v0.5",
-      "promptFile": "prompts/tina_system_prompt.md",
-      "knowledgeFile": "cards/tina_knowledge_cards.jsonl",
+      "promptFile": "prompts/tinazhang_system_prompt.md",
+      "knowledgeFile": "cards/tinazhang_knowledge_cards.jsonl",
       "knowledgeCardCount": 64,
       "interviewRoundsComplete": 2,
       "interviewRoundsExpected": 2,
@@ -63,11 +63,11 @@
       "caseMaterialsReceived": false
     },
     {
-      "mentorId": "winnie",
+      "mentorId": "winnieni",
       "displayName": "Winnie Ni",
       "promptVersion": "v0.8",
-      "promptFile": "prompts/winnie_system_prompt.md",
-      "knowledgeFile": "cards/winnie_knowledge_cards.jsonl",
+      "promptFile": "prompts/winnieni_system_prompt.md",
+      "knowledgeFile": "cards/winnieni_knowledge_cards.jsonl",
       "knowledgeCardCount": 67,
       "interviewRoundsComplete": 2,
       "interviewRoundsExpected": 2,
@@ -76,11 +76,11 @@
       "caseMaterialsReceived": false
     },
     {
-      "mentorId": "ying",
+      "mentorId": "yingwang",
       "displayName": "Ying Wang",
       "promptVersion": "v0.2",
-      "promptFile": "prompts/ying_system_prompt.md",
-      "knowledgeFile": "cards/ying_knowledge_cards.jsonl",
+      "promptFile": "prompts/yingwang_system_prompt.md",
+      "knowledgeFile": "cards/yingwang_knowledge_cards.jsonl",
       "knowledgeCardCount": 65,
       "interviewRoundsComplete": 1,
       "interviewRoundsExpected": 2,

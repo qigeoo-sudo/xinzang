@@ -8,7 +8,7 @@
  *
  * 运行：
  *   npx tsx scripts/regression-inducement.ts            # 全量 30 条
- *   npx tsx scripts/regression-inducement.ts --mentor freya
+ *   npx tsx scripts/regression-inducement.ts --mentor freyagao
  *
  * Key 读取 .env.local：DEEPSEEK_API_KEY（优先）/ OPENAI_API_KEY
  */

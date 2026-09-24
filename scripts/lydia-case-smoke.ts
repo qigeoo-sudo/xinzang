@@ -9,12 +9,12 @@
  *  8   62→63 与 Prompt 不变（文件哈希/行数 + DB 计数）
  *
  * 运行：
- *   npx tsx scripts/lydia-case-smoke.ts                # 静态 + DeepSeek 动态
- *   npx tsx scripts/lydia-case-smoke.ts --static-only  # 只跑确定性检查
+ *   npx tsx scripts/lydiachen-case-smoke.ts                # 静态 + DeepSeek 动态
+ *   npx tsx scripts/lydiachen-case-smoke.ts --static-only  # 只跑确定性检查
  *
  * 环境：.env 提供 DATABASE_URL（本地 MySQL xinzang_dev，需先 seed）；
  *      .env.local 提供 DEEPSEEK_API_KEY（优先）/ OPENAI_API_KEY。
- * 结果落盘：results/lydia-case-smoke-<时间戳>.json
+ * 结果落盘：results/lydiachen-case-smoke-<时间戳>.json
  */
 import { readFileSync, mkdirSync, writeFileSync } from 'fs';
 import { createHash } from 'crypto';
@@ -56,7 +56,7 @@ const API_KEY = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || ''
 const CARDS_DIR = resolve(process.cwd(), 'content/knowledge-governance/cards');
 const PROMPT_FILE = resolve(
   process.cwd(),
-  'content/knowledge-governance/prompts/lydia_system_prompt.md',
+  'content/knowledge-governance/prompts/lydiachen_system_prompt.md',
 );
 const EXPECTED_PROMPT_SHA256 =
   '381105eac84c536b0de31026dabac7d433656ff24ea50d6b87e9348fb968fa02';
@@ -144,8 +144,8 @@ const QUESTIONS = {
 
 async function main() {
   const prisma = new PrismaClient();
-  const mentor = getMentorById('lydia');
-  if (!mentor) throw new Error('导师 lydia 不存在');
+  const mentor = getMentorById('lydiachen');
+  if (!mentor) throw new Error('导师 lydiachen 不存在');
 
   // ---------- T8：62→63 与 Prompt 不变 ----------
   const promptHash = sha256(PROMPT_FILE);
@@ -154,7 +154,7 @@ async function main() {
     ok: promptHash === EXPECTED_PROMPT_SHA256, evidence: promptHash.slice(0, 16),
   });
 
-  const lydiaFile = resolve(CARDS_DIR, 'lydia_knowledge_cards.jsonl');
+  const lydiaFile = resolve(CARDS_DIR, 'lydiachen_knowledge_cards.jsonl');
   const lydiaLines = readFileSync(lydiaFile, 'utf8').split('\n').filter((l) => l.trim());
   const lastCard = JSON.parse(lydiaLines[lydiaLines.length - 1]);
   record({
@@ -163,24 +163,24 @@ async function main() {
     evidence: `lines=${lydiaLines.length}, last=${lastCard.cardId}`,
   });
 
-  const otherCounts: Record<string, number> = { freya: 33, phyllis: 48, tina: 64, winnie: 67, ying: 65 };
+  const otherCounts: Record<string, number> = { freyagao: 33, phyllischi: 48, tinazhang: 64, winnieni: 67, yingwang: 65 };
   const othersOk = CANONICAL_MENTORS
-    .filter((m) => m.mentorId !== 'lydia')
+    .filter((m) => m.mentorId !== 'lydiachen')
     .every((m) => countLines(resolve(CARDS_DIR, `${m.mentorId}_knowledge_cards.jsonl`)) === otherCounts[m.mentorId]);
   record({
     id: 'T8c', suite: 'static', name: '其他五位导师卡数不变（33/48/64/67/65）',
     ok: othersOk, evidence: Object.entries(otherCounts).map(([k, v]) => `${k}=${v}`).join(' '),
   });
 
-  const dbLydia = await prisma.mentorKnowledgeCard.count({ where: { mentorId: 'lydia' } });
+  const dbLydia = await prisma.mentorKnowledgeCard.count({ where: { mentorId: 'lydiachen' } });
   const dbTotal = await prisma.mentorKnowledgeCard.count();
   record({
-    id: 'T8d', suite: 'static', name: '本地库 lydia=63、总数=340',
-    ok: dbLydia === 63 && dbTotal === 340, evidence: `lydia=${dbLydia}, total=${dbTotal}`,
+    id: 'T8d', suite: 'static', name: '本地库 lydiachen=63、总数=340',
+    ok: dbLydia === 63 && dbTotal === 340, evidence: `lydiachen=${dbLydia}, total=${dbTotal}`,
   });
 
   // ---------- T1/T2/T3：检索命中边界 ----------
-  const hits1 = await searchKnowledgeCards('lydia', QUESTIONS.q1, 4);
+  const hits1 = await searchKnowledgeCards('lydiachen', QUESTIONS.q1, 4);
   const rank1 = hits1.findIndex((c) => c.cardId === CASE_CARD_ID);
   record({
     id: 'T1', suite: 'static', name: '相关问题命中案例（数据科学岗位方向）',
@@ -188,7 +188,7 @@ async function main() {
     hits: hits1.map((c) => c.cardId),
   });
 
-  const hits2 = await searchKnowledgeCards('lydia', QUESTIONS.q2, 4);
+  const hits2 = await searchKnowledgeCards('lydiachen', QUESTIONS.q2, 4);
   const caseHit2 = hits2.some((c) => c.cardId === CASE_CARD_ID);
   record({
     id: 'T2', suite: 'static', name: '读研/工作问题可结合案例但不只有案例',
@@ -197,7 +197,7 @@ async function main() {
     hits: hits2.map((c) => c.cardId),
   });
 
-  const hits3 = await searchKnowledgeCards('lydia', QUESTIONS.q3, 4);
+  const hits3 = await searchKnowledgeCards('lydiachen', QUESTIONS.q3, 4);
   record({
     id: 'T3', suite: 'static', name: '无关问题不命中案例',
     ok: !hits3.some((c) => c.cardId === CASE_CARD_ID),
@@ -322,7 +322,7 @@ async function main() {
   try {
     mkdirSync(join(process.cwd(), 'results'), { recursive: true });
     writeFileSync(
-      join(process.cwd(), 'results', `lydia-case-smoke-${ts}.json`),
+      join(process.cwd(), 'results', `lydiachen-case-smoke-${ts}.json`),
       JSON.stringify({ ts, pass, fail, note, results }, null, 2),
       'utf8',
     );

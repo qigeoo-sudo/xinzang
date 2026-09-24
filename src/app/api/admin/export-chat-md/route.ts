@@ -1,6 +1,6 @@
 /**
  * 管理员聊天记录导出 API
- * GET /api/admin/export-chat-md?mentor=lydia&user=手机号或邮箱&from=2026-09-01&to=2026-09-10&keyword=简历
+ * GET /api/admin/export-chat-md?mentor=lydiachen&user=手机号或邮箱&from=2026-09-01&to=2026-09-10&keyword=简历
  *
  * - 仅限 role=ADMIN 的登录用户访问（每次从数据库校验，不信任旧 session token）
  * - 输出通俗易读的 Markdown 文件（浏览器直接下载），技术字段附通俗解释

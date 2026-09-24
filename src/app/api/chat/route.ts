@@ -136,7 +136,7 @@ async function routeMentorRequest(
   userMessage: string,
   recentMessages: { role: 'user' | 'assistant'; content: string }[] = [],
 ): Promise<MentorRouteDecision> {
-  const lydiaPolicy = mentorId === 'lydia'
+  const lydiaPolicy = mentorId === 'lydiachen'
     ? `
 对 Lydia 的额外规则：
 - HR、招聘、简历、面试、求职、职业探索、职业选择、薪酬沟通、反馈、绩效、冲突、组织和人才问题，通常是 MENTOR_ANSWER + GENERAL_FRAMEWORK_ALLOWED。

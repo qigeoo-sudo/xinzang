@@ -119,15 +119,15 @@ async function main() {
   const exact = all.filter((c) => c.disclosureMode === 'exact');
   if (exact.length !== 5) {
     fail(
-      `exact 卡应为 5 张（4 lydia + 1 freya），实际 ${exact.length} 张: ${exact
+      `exact 卡应为 5 张（4 lydiachen + 1 freyagao），实际 ${exact.length} 张: ${exact
         .map((c) => `${c.mentorId}/${c.cardId}`)
         .join(', ')}`,
     );
   }
   const withCaseText = all.filter((c) => typeof c.caseText === 'string' && c.caseText.length > 0);
-  if (withCaseText.length !== 1 || withCaseText[0].cardId !== 'LYD-CASE-001' || withCaseText[0].mentorId !== 'lydia') {
+  if (withCaseText.length !== 1 || withCaseText[0].cardId !== 'LYD-CASE-001' || withCaseText[0].mentorId !== 'lydiachen') {
     fail(
-      `当前规范案例卡应为 1 张且为 lydia/LYD-CASE-001，实际 ${withCaseText.length} 张: ${withCaseText
+      `当前规范案例卡应为 1 张且为 lydiachen/LYD-CASE-001，实际 ${withCaseText.length} 张: ${withCaseText
         .map((c) => `${c.mentorId}/${c.cardId}`)
         .join(', ')}`,
     );
@@ -139,7 +139,7 @@ async function main() {
   }
   const extCount = all.filter((c) => c.knowledgeClass === 'external_approved').length;
   const intCount = all.filter((c) => c.knowledgeClass === 'internal_approved').length;
-  console.log(`  合计 ${all.length} 张（external_approved ${extCount} + internal_approved ${intCount}）；exact ${exact.length} 张（lydia）`);
+  console.log(`  合计 ${all.length} 张（external_approved ${extCount} + internal_approved ${intCount}）；exact ${exact.length} 张（lydiachen）`);
 
   if (DRY_RUN) {
     console.log('\n--dry-run：未写库');
