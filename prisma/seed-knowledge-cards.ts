@@ -11,7 +11,7 @@
  * 行为：
  * - 全量结构/枚举/组合校验，任一非法立即失败，不写库
  * - cardId 全局唯一校验
- * - 六位导师数量必须与 CANONICAL_MENTORS 一致（33/62/48/64/67/65，共 339）
+ * - 六位导师数量必须与 CANONICAL_MENTORS 一致（33/63/48/64/67/65，共 340）
  * - 事务内按 cardId upsert；该导师不在规范集内的旧卡删除（孤儿清理）
  * - 不触碰其他导师和任何用户数据表
  */
@@ -121,8 +121,12 @@ async function main() {
     );
   }
   const withCaseText = all.filter((c) => typeof c.caseText === 'string' && c.caseText.length > 0);
-  if (withCaseText.length !== 0) {
-    fail(`当前规范案例卡应为 0，实际 ${withCaseText.length} 张 caseText 非空`);
+  if (withCaseText.length !== 1 || withCaseText[0].cardId !== 'LYD-CASE-001' || withCaseText[0].mentorId !== 'lydia') {
+    fail(
+      `当前规范案例卡应为 1 张且为 lydia/LYD-CASE-001，实际 ${withCaseText.length} 张: ${withCaseText
+        .map((c) => `${c.mentorId}/${c.cardId}`)
+        .join(', ')}`,
+    );
   }
 
   console.log('校验通过：');

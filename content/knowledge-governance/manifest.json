@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-09-15",
+  "generatedAt": "2026-09-24",
   "globalSystemPolicy": "GLOBAL_MENTOR_SYSTEM_POLICY.md",
   "knowledgeCardSchema": "knowledge_card.schema.json",
   "loadOrder": [
@@ -29,12 +29,12 @@
       "promptVersion": "v0.7",
       "promptFile": "prompts/lydia_system_prompt.md",
       "knowledgeFile": "cards/lydia_knowledge_cards.jsonl",
-      "knowledgeCardCount": 62,
+      "knowledgeCardCount": 63,
       "interviewRoundsComplete": 2,
       "interviewRoundsExpected": 2,
       "interviewComplete": true,
-      "caseCount": 0,
-      "caseMaterialsReceived": false
+      "caseCount": 1,
+      "caseMaterialsReceived": true
     },
     {
       "mentorId": "phyllis",

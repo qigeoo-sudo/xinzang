@@ -94,10 +94,11 @@ export function formatKnowledgeCards(cards: KnowledgeCardLike[]): string {
   const paragraphs = cards.map((c) => {
     const parts: string[] = [];
 
-    // 案例卡：先案例正文，再导师评点；普通观点卡：核心观点 + 理由
+    // 案例卡：先案例正文，再导师评点，最后提炼结论；普通观点卡：核心观点 + 理由
     if (c.caseText && c.caseText.trim()) {
       parts.push(c.caseText.trim());
       if (c.reasoning) parts.push(c.reasoning.trim());
+      parts.push(c.coreView.trim());
     } else {
       parts.push(c.coreView.trim());
       if (c.reasoning) parts.push(c.reasoning.trim());

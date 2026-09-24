@@ -119,8 +119,8 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     });
   }
 
-  it('总数 = 339', () => {
-    assert.equal(CANONICAL_TOTAL_CARDS, 339);
+  it('总数 = 340', () => {
+    assert.equal(CANONICAL_TOTAL_CARDS, 340);
     assert.equal(allCards.length, CANONICAL_TOTAL_CARDS);
   });
 
@@ -135,10 +135,10 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     }
   });
 
-  it('generalized 335 张 + exact 4 张，exact 仅 LYD-R2-022~025', () => {
+  it('generalized 336 张 + exact 4 张，exact 仅 LYD-R2-022~025', () => {
     const exact = allCards.filter((x) => x.card.disclosureMode === 'exact');
     const generalized = allCards.filter((x) => x.card.disclosureMode === 'generalized');
-    assert.equal(generalized.length, 335);
+    assert.equal(generalized.length, 336);
     assert.equal(exact.length, 4);
     assert.deepEqual(
       exact.map((x) => x.card.cardId).sort(),
@@ -147,9 +147,10 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     assert.ok(exact.every((x) => x.card.mentorId === 'lydia'));
   });
 
-  it('caseText 本期全部为 null', () => {
+  it('caseText 仅 LYD-CASE-001 一张（Lydia 案例卡）', () => {
     const withCase = allCards.filter((x) => x.card.caseText !== null);
-    assert.deepEqual(withCase.map((x) => x.card.cardId), []);
+    assert.deepEqual(withCase.map((x) => x.card.cardId), ['LYD-CASE-001']);
+    assert.equal(withCase[0].card.mentorId, 'lydia');
   });
 });
 
@@ -205,7 +206,7 @@ describe('formatKnowledgeCards 去编号 / 去元数据', () => {
     assert.ok(!/根据卡|知识卡显示|编号/.test(body));
   });
 
-  it('案例卡输出 caseText + reasoning，且仍不泄露 cardId/title/domain', () => {
+  it('案例卡输出 caseText + reasoning + coreView，且仍不泄露 cardId/title/domain', () => {
     const out = formatKnowledgeCards([
       {
         ...secretCard,
@@ -213,11 +214,13 @@ describe('formatKnowledgeCards 去编号 / 去元数据', () => {
         title: '履历案例秘密标题ZZZ',
         caseText: '一段可以公开的履历叙述正文。',
         reasoning: '导师对这段经历的评点。',
+        coreView: '案例提炼出的一句话结论ZZZ。',
         disclosureMode: 'exact',
       },
     ]);
     assert.ok(out.includes('一段可以公开的履历叙述正文。'));
     assert.ok(out.includes('导师对这段经历的评点。'));
+    assert.ok(out.includes('案例提炼出的一句话结论ZZZ。'));
     assert.ok(!out.includes('LYD-R2-022'));
     assert.ok(!out.includes('履历案例秘密标题ZZZ'));
     assert.ok(!out.includes('exact'));
@@ -229,10 +232,10 @@ describe('formatKnowledgeCards 去编号 / 去元数据', () => {
   });
 });
 
-// ---------- 5. DB 权限矩阵（dev.db，需要 seed 后的 339 张卡） ----------
-describe('dev.db 检索权限矩阵', () => {
-  // 防止 .env 指向陈旧的 prod.db；显式指定 dev.db
-  process.env.DATABASE_URL ??= 'file:./dev.db';
+// ---------- 5. DB 权限矩阵（本地 MySQL xinzang_dev，需要 seed 后的 340 张卡） ----------
+describe('本地 MySQL 检索权限矩阵', () => {
+  // 未显式配置时指向本地开发库（.env 的 DATABASE_URL 优先）
+  process.env.DATABASE_URL ??= 'mysql://root:root123@localhost:3306/xinzang_dev';
 
   let prisma: any;
   let searchKnowledgeCards: typeof import('../src/lib/mentor-kb').searchKnowledgeCards;
@@ -251,13 +254,13 @@ describe('dev.db 检索权限矩阵', () => {
 
   it('DB 可连接（不可用则跳过本套件）', async (t) => {
     if (!dbReady) {
-      t.skip('dev.db 不可用');
+      t.skip('数据库不可用');
       return;
     }
     assert.ok(dbReady);
   });
 
-  it('知识卡总数 339 且全部 external_approved / 非 none', async (t) => {
+  it('知识卡总数 340 且全部 external_approved / 非 none', async (t) => {
     if (!dbReady) return t.skip();
     const total = await (prisma as any).mentorKnowledgeCard.count();
     assert.equal(total, CANONICAL_TOTAL_CARDS);
