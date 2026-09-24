@@ -535,7 +535,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'freyaren',
     name: 'Freya Ren',
-    avatar: '/avatars/freyagao-ren.svg',
+    avatar: '/avatars/freyaren-ren.svg',
     title: '创始人兼CEO',
     company: '创业公司',
     companyType: '创业',
