@@ -2,20 +2,21 @@
 # Next.js standalone 模式
 
 # ===== Stage 1: deps =====
+# 此阶段只做依赖下载与解压，不装系统 apk：apk 层（如 openssl 小版本升级）
+# 一旦失效会连带 npm ci 重跑；Node 官方镜像已内置 TLS 所需 openssl
 FROM node:20-alpine AS deps
-RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 # 国内 npm 镜像源：生产 ECS 位于国内，官方源下载依赖缓慢
 RUN npm config set registry https://registry.npmmirror.com
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 # Alpine 使用 musl libc，明确指定平台以安装正确的 SWC 二进制
-RUN npm_config_platform=linux npm_config_arch=x64 npm_config_libc=musl npm ci
-# 显式安装 musl 版 SWC，防止 Next.js build 时找不到二进制
-RUN npm install @next/swc-linux-x64-musl --save-optional
-# 显式安装 musl 版 sharp：standalone 模式的 next/image 图片优化必须有 sharp，
-# 否则线上每张优化图片都会报 'sharp' is required to be installed in standalone mode
-RUN npm install @img/sharp-linuxmusl-x64 --save-optional
+# BuildKit 缓存挂载：即使层缓存失效，安装包仍从本地缓存读取、不重新下载
+RUN --mount=type=cache,target=/root/.npm \
+    npm_config_platform=linux npm_config_arch=x64 npm_config_libc=musl npm ci
+# 一次性补装 musl 版 SWC（Next.js build 所需）与 sharp（standalone next/image 所需）
+RUN --mount=type=cache,target=/root/.npm \
+    npm install @next/swc-linux-x64-musl @img/sharp-linuxmusl-x64 --save-optional
 
 # ===== Stage 2: builder =====
 FROM node:20-alpine AS builder

@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Dockerfile 使用了 BuildKit 缓存挂载（--mount=type=cache），必须显式启用
+export DOCKER_BUILDKIT=1
+
 echo "===== 磁盘检查 ====="
 df -h / | tail -1
 
