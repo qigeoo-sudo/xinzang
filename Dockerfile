@@ -2,7 +2,7 @@
 # Next.js standalone 模式
 
 # ===== Stage 1: deps =====
-FROM node:20-alpine AS deps
+FROM node:25-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 # 国内 npm 镜像源：生产 ECS 位于国内，官方源下载依赖缓慢
@@ -18,7 +18,7 @@ RUN npm install @next/swc-linux-x64-musl --save-optional
 RUN npm install @img/sharp-linuxmusl-x64 --save-optional
 
 # ===== Stage 2: builder =====
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -29,7 +29,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # ===== Stage 3: runner =====
-FROM node:20-alpine AS runner
+FROM node:25-alpine AS runner
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
