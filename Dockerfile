@@ -5,6 +5,8 @@
 FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
+# 国内 npm 镜像源：生产 ECS 位于国内，官方源下载依赖缓慢
+RUN npm config set registry https://registry.npmmirror.com
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 # Alpine 使用 musl libc，明确指定平台以安装正确的 SWC 二进制
