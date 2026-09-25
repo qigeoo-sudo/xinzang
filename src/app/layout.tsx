@@ -19,7 +19,8 @@ export const metadata: Metadata = {
   description:
     '通过 AI 导师分身技术，为大学生和职场新人提供真实的职业指导。温暖、有同理心，不说空话套话。',
   applicationName: 'AI Career Companion',
-  manifest: '/manifest.json',
+  // 带版本号：手机检测到 manifest 地址变化后重新拉取并更新已安装应用的配色
+  manifest: '/manifest.json?v=20260925',
   icons: {
     icon: '/icons/favicon-32x32.png',
     apple: '/icons/apple-touch-icon-180x180.png',
@@ -37,7 +38,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   // 与导航按钮行橙色渐变顶端同色，状态栏 → 导航 → 页头颜色连成一条
-  themeColor: '#F8B357',
+  // 浅色/深色双版本：手机处于深色模式时也强制染橙，避免状态栏回退系统白
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F8B357' },
+    { media: '(prefers-color-scheme: dark)', color: '#F8B357' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
