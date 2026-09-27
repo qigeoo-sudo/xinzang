@@ -354,11 +354,14 @@ export default function DashboardPage() {
     if (sourceEl) burstAtElement(sourceEl);
   }, [juicing, draining, counts, burstAtElement]);
 
+  // 机身震动三态：shake 持续（开榨→液面停止上升）/ dampen 渐止 0.6s / off 静止
+  const [shakePhase, setShakePhase] = useState<'shake' | 'dampen' | 'off'>('off');
   // 按下开关：整个榨汁时序用 JS 逐帧驱动（沉降、逐个淡出、液面涨、吸管喝掉）
   const startBlending = useCallback((smallList: SelectedFruit[], allList: SelectedFruit[]) => {
     if (juicing || allList.length === 0) return;
     cancelAnimationFrame(rafRef.current);
     setJuicing(true);
+    setShakePhase('shake');
     setDraining(false);
     setStrawOut(false);
     setSink(0);
@@ -449,11 +452,11 @@ export default function DashboardPage() {
     // 满汁基准停留 400ms；沉降速度减半（窗口加倍）后，刀片要转到水果全部沉没才停机
     const settleBase = riseEnd + 400;
     // 沉降贯穿刀片旋转全程（bladeStart→settleEnd）：刀片开始转，舱内水果就同时开始从上往下缓降，与液面上涨无关。
-    // 速度减半：水果在高处停留更久，液面才来得及涨到足够高度再触发「遮挡 +3%」上限，否则液面过早封顶
+    // 速度减半：水果在高处停留更久，液面才来得及涨到足够高度再触发「遮挡 +1/4 剩余高度」上限，否则液面过早封顶
     const sinkSpan = 2 * Math.max(settleBase - bladeStart, 1);
     const settleEnd = bladeStart + sinkSpan;
 
-    // 液面遮挡上限：液面一旦盖住舱内所有仍可见的水果，最多再上涨「当前高度」的 3%。
+    // 液面遮挡上限：液面一旦盖住舱内所有仍可见的水果，还可再上涨「当前液面到杯口剩余高度」的 1/4。
     // 数值扫描时间轴找遮挡时刻：遮挡需求 = 最高的仍可见水果顶部所在液面；
     // 水果边沉边淡出（与 step() 同一公式），已榨没的不计入。全程未遮挡则不设限。
     if (n > 0) {
@@ -472,13 +475,13 @@ export default function DashboardPage() {
         }
         const lv = levelAt(t);
         if (lv >= need) {
-          targetLevel = Math.min(targetLevel, Math.round(lv * 1.03));
+          targetLevel = Math.min(targetLevel, Math.round(lv + (100 - lv) / 4));
           break;
         }
       }
     }
 
-    const strawAt = settleEnd + 150;             // 吸管飞入（CSS 约 400ms）
+    const strawAt = settleEnd + 50;              // 吸管飞入（CSS 约 400ms）
     const drinkStart = strawAt + 550;            // 插稳后开始喝
     const drinkDur = 1600 + targetLevel * 8;     // 汁多喝久一点
     const drinkEnd = drinkStart + drinkDur;      // 液面见底
@@ -510,6 +513,8 @@ export default function DashboardPage() {
       setBlending(el < totalDur);
       setBladeSpin(el >= bladeStart && el < settleEnd); // 注水/飞入完成后刀片才开始旋转
       setJuicing(el < settleEnd);
+      // 震动跟随液面：液面停止上升（riseEnd）后渐止 0.6s
+      setShakePhase(el < riseEnd ? 'shake' : el < riseEnd + 600 ? 'dampen' : 'off');
       setDraining(el >= strawAt && el < totalDur);
       setStrawOut(el >= drinkEnd);
       if (el < totalDur) {
@@ -529,6 +534,7 @@ export default function DashboardPage() {
         setPouring(false);
         setBlending(false);
         setBladeSpin(false);
+        setShakePhase('off');
         const id = ++recipeIdRef.current;
         setRecipeCards((prev) => [
           { id, color: mixColorsWeighted(allList.map((s) => ({ color: s.color, weight: weightOf(s.en) }))), recipe: recipeText },
@@ -826,7 +832,7 @@ export default function DashboardPage() {
             smallFruits={smallList}
             bigFruits={bigList}
             fades={fades}
-            juicing={juicing}
+            shakePhase={shakePhase}
             draining={draining}
             strawOut={strawOut}
             mist={mist}
@@ -853,7 +859,7 @@ export default function DashboardPage() {
                   ? `已放 ${totalCount} 份水果，按机器上的绿色开关开榨`
                   : recipeCards.length > 0
                     ? '杯子空了，再配一杯新的试试'
-                    : '点上面已解锁的水果放进榨汁机，共可放 9 份，每样不限'}
+                    : '点上面已解锁的水果放进榨汁机，共可放 9 份，除西瓜、榴莲等水果，其余每样不限'}
           </p>
             </div>
 

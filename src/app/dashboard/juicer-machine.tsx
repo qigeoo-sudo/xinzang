@@ -28,7 +28,8 @@ interface JuicerMachineProps {
   bigFruits: SelectedFruit[];
   /** 每份舱内水果的淡出进度 0→1（JS 逐帧驱动；1 = 完全消失） */
   fades: number[];
-  juicing: boolean;
+  /** 机身震动三态：shake 持续震动 / dampen 液面停止上升后渐止 / off 静止 */
+  shakePhase: 'shake' | 'dampen' | 'off';
   /** 喝汁阶段：吸管已插入，液面正在下降 */
   draining: boolean;
   /** 拔吸管：液面见底后吸管上移淡出 */
@@ -114,7 +115,7 @@ export default function JuicerMachine({
   smallFruits,
   bigFruits,
   fades,
-  juicing,
+  shakePhase,
   draining,
   strawOut,
   mist,
@@ -140,7 +141,11 @@ export default function JuicerMachine({
 
   return (
     <div className="relative w-full max-w-[520px]">
-      <svg viewBox="0 0 560 340" fill="none" className={`w-full ${juicing ? 'juicer-shake' : ''}`}>
+      <svg
+        viewBox="0 0 560 340"
+        fill="none"
+        className={`w-full ${shakePhase === 'shake' ? 'juicer-shake' : shakePhase === 'dampen' ? 'juicer-shake-dampen' : ''}`}
+      >
         <defs>
           <linearGradient id="glassMain" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%" stopColor="rgba(220,225,230,0.4)" />
