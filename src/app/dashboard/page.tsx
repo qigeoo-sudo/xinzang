@@ -360,8 +360,10 @@ export default function DashboardPage() {
         const add = next - cur;
         setBasket((prev) => [...prev, ...Array.from({ length: add }, () => en)]);
       } else if (next < cur) {
-        let remove = cur - next;
         setBasket((prev) => {
+          // 删除数量必须在 updater 内部计算：StrictMode 会双调用 updater，
+          // 外部可变变量会被第一次调用耗尽，导致第二次（以原数组重跑）什么都不删
+          let remove = cur - next;
           const arr = [...prev];
           for (let i = arr.length - 1; i >= 0 && remove > 0; i--) {
             if (arr[i] === en) {
