@@ -857,7 +857,7 @@ export default function DashboardPage() {
             sink={sink}
             mixColor={grindWindowRef.current.water && mistElapsed < grindWindowRef.current.start ? '#DBEEF9' : mixColor}
             canStart={totalCount > 0 && !juicing && !draining}
-            running={blending}
+            running={juicing}
             onStart={() => startBlending(smallList, [...smallList, ...bigList])}
           />
           <p className="mt-2 text-center text-xs text-muted">

@@ -55,7 +55,7 @@ interface JuicerMachineProps {
   sink: number;
   mixColor: string;
   canStart: boolean;
-  /** 作业进行中（开榨到喝完拔管）：按钮不可点但保持绿色，整轮结束才恢复灰色 */
+  /** 电机运转中（开榨到刀片停转）：按钮不可点但保持绿色，刀片一停就恢复灰色 */
   running: boolean;
   onStart: () => void;
 }
