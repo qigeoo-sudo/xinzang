@@ -96,13 +96,14 @@ export const { handlers, auth } = NextAuth({
             return null;
           }
 
-          // 登录成功: 重置失败计数
+          // 登录成功: 重置失败计数 + 累计登录次数
           await prisma.user.update({
             where: { id: user.id },
             data: {
               loginAttempts: 0,
               lockUntil: null,
               lastLoginAt: new Date(),
+              loginCount: { increment: 1 },
             },
           });
 
@@ -195,6 +196,7 @@ export const { handlers, auth } = NextAuth({
         '/forgot-password',
         '/mentors', // 导师列表和详情页公开，聊天组件自行检查登录
         '/r', // 渠道短链（扫码发生在登录/注册之前，匿名可达）
+        '/growth-lab', // 成长追踪旧路由（重定向到 /dashboard，需保持公开才能执行重定向）
         '/payment/mock', // Mock 支付页面 (开发环境)
         '/api/auth',
         '/api/logout',
@@ -203,6 +205,7 @@ export const { handlers, auth } = NextAuth({
         '/api/payment/notify', // 微信支付回调 (服务器间调用)
         '/api/maintenance', // 维护任务 (CRON_SECRET 鉴权)
         '/api/payment/mock-pay', // Mock 支付 (开发环境模拟回调)
+        '/api/growth', // 成长追踪 API 自身做 401 校验
       ];
       const isPublicPath = publicPaths.some(
         (p) => logicalPath === p || logicalPath.startsWith(p + '/')
@@ -213,8 +216,14 @@ export const { handlers, auth } = NextAuth({
         return Response.redirect(new URL('/', headerOrigin));
       }
 
+      // 开发预览：/dashboard?preview=N 免登录（配合 /api/growth 的开发示例数据，生产不生效）
+      const isDevPreview =
+        process.env.NODE_ENV === 'development' &&
+        logicalPath === '/dashboard' &&
+        request.nextUrl.searchParams.has('preview');
+
       // 未登录用户访问受保护路由 → 显式重定向到登录页
-      if (!isLoggedIn && !isPublicPath) {
+      if (!isLoggedIn && !isPublicPath && !isDevPreview) {
         const loginUrl = new URL('/login', headerOrigin);
         // 子域名场景 callback 用绝对地址并经 redirect 白名单放行，保证登录后留在子域
         const callback = isChannelHost

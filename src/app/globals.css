@@ -472,6 +472,235 @@
   100% { opacity: 1; }
 }
 
+/* 榨汁机从右侧快速滑入 */
+@keyframes juicerSlideIn {
+  0% { transform: translateX(160px) rotate(8deg); opacity: 0; }
+  70% { transform: translateX(-6px) rotate(-2deg); opacity: 1; }
+  100% { transform: translateX(0) rotate(0); opacity: 1; }
+}
+.juicer-slide-in {
+  animation: juicerSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 榨完从左边离开 */
+@keyframes juicerSlideOut {
+  0% { transform: translateX(0) rotate(0); opacity: 1; }
+  100% { transform: translateX(-280px) rotate(-10deg); opacity: 0; }
+}
+.juicer-slide-out {
+  animation: juicerSlideOut 0.45s cubic-bezier(0.55, 0, 0.8, 0.4) forwards;
+}
+
+/* 搅拌时机身轻微高频震动 */
+@keyframes juicerShake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25% { transform: translate(1px, -1px) rotate(0.4deg); }
+  50% { transform: translate(-1px, 1px) rotate(-0.4deg); }
+  75% { transform: translate(1px, 1px) rotate(0.3deg); }
+}
+.juicer-shake {
+  animation: juicerShake 0.18s linear infinite;
+}
+
+/* 搅拌桨快速旋转 */
+.juicer-swirl {
+  animation: juicerSwirl 0.32s linear infinite;
+}
+@keyframes juicerSwirl {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 开关可启动时呼吸发光 */
+@keyframes switchPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(127, 191, 95, 0.6); }
+  50% { box-shadow: 0 0 0 7px rgba(127, 191, 95, 0); }
+}
+.switch-pulse {
+  animation: switchPulse 1.3s ease-out infinite;
+}
+
+/* 液面波浪左右轻摆 */
+.juice-wave {
+  animation: juiceWave 1.4s ease-in-out infinite alternate;
+}
+@keyframes juiceWave {
+  from { transform: translateX(-5px); }
+  to { transform: translateX(5px); }
+}
+
+/* 吸管飞入插稳（喝汁开始时） */
+@keyframes strawIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.straw-in {
+  animation: strawIn 0.4s ease-out both;
+}
+
+/* 拔吸管：液面见底后上移淡出 */
+@keyframes strawOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(-34px); opacity: 0; }
+}
+.straw-out {
+  animation: strawOut 0.35s ease-in both;
+}
+
+/* 新解锁水果：闪光颗粒撒开后，水果弹出来 */
+@keyframes fruitAppear {
+  0% { transform: scale(0); opacity: 0; }
+  55% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.fruit-appear {
+  animation: fruitAppear 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+}
+
+/* 大水果化雾：开榨时整颗快速淡出（0.45s，与粒子切块喷出同步，避免切块已飞走、带切片的整图还残留在原地） */
+@keyframes bigFruitVanish {
+  to { opacity: 0; }
+}
+.big-fruit-vanish {
+  animation: bigFruitVanish 0.45s ease-out 0s both;
+}
+
+/* 勋章网格纵向滚动：竖屏一律隐藏滚动条（手指直接滑），
+   仅横屏（桌面端窗口）显示细滚动条供鼠标拖动 */
+.growth-v-scroll {
+  scrollbar-width: none;
+}
+.growth-v-scroll::-webkit-scrollbar {
+  width: 0;
+}
+@media (orientation: landscape) {
+  .growth-v-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #F3D9B8 transparent;
+  }
+  .growth-v-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .growth-v-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .growth-v-scroll::-webkit-scrollbar-thumb {
+    background: #F3D9B8;
+    border-radius: 3px;
+  }
+}
+
+/* ===== 魔幻金光光雾爆发 ===== */
+.burst {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 中心爆光球 */
+.burst-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(255,225,140,0.6) 30%, rgba(255,180,40,0.15) 60%, transparent 75%);
+  filter: blur(2px);
+  animation: burstCore 1.5s ease-out forwards;
+}
+@keyframes burstCore {
+  0% { transform: scale(0); opacity: 0.9; }
+  35% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(3.2); opacity: 0; }
+}
+
+/* 旋转光环 */
+.burst-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 100px;
+  margin: -50px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255,210,90,0.9) 60deg, rgba(255,255,255,0.95) 120deg, rgba(255,180,40,0.8) 180deg, transparent 240deg, rgba(255,220,120,0.7) 300deg, transparent 360deg);
+  -webkit-mask: radial-gradient(circle, transparent 46%, #000 48%, #000 52%, transparent 54%);
+  mask: radial-gradient(circle, transparent 46%, #000 48%, #000 52%, transparent 54%);
+  animation: burstRing 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+}
+@keyframes burstRing {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: scale(2.6) rotate(720deg); opacity: 0; }
+}
+
+/* 小粒子（12颗，向外扩散，带光晕） */
+.sparkle-particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #FFFFFF 0%, #FFF0B0 40%, #FFC53D 75%, #EC9112 100%);
+  box-shadow: 0 0 12px 3px rgba(255, 183, 43, 0.9), 0 0 4px 1px rgba(255,255,255,0.8);
+  transform: rotate(var(--ang)) translateX(0) scale(0.2);
+  animation: sparkleFly 1.5s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+@keyframes sparkleFly {
+  0% { transform: rotate(var(--ang)) translateX(0) scale(0.2); opacity: 0; }
+  12% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(var(--ang)) translateX(var(--dist)) scale(1); opacity: 0; }
+}
+
+/* 光雾大粒子（8颗，慢速远扩散、模糊，形成雾气拖尾） */
+.mist-particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  margin: -13px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,235,160,0.85) 0%, rgba(255,190,70,0.35) 45%, transparent 70%);
+  filter: blur(4px);
+  transform: rotate(var(--ang)) translateX(0) scale(0.3);
+  animation: mistFly 1.8s ease-out forwards;
+}
+@keyframes mistFly {
+  0% { transform: rotate(var(--ang)) translateX(0) scale(0.3); opacity: 0; }
+  18% { opacity: 0.9; }
+  100% { transform: rotate(var(--ang)) translateX(var(--dist)) scale(1.6); opacity: 0; }
+}
+
+/* 进度拖拉条滑块 */
+input[type='range'].appearance-none::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #F8B357, #F6A44C);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+input[type='range'].appearance-none::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #F8B357, #F6A44C);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
 /* PWA 滚动优化 */
 html {
   scroll-behavior: smooth;

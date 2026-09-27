@@ -46,6 +46,8 @@ model User {
   // 审计字段
   lastLoginAt       DateTime?
   lastLoginIp       String?
+  // 累计登录次数（成长追踪页统计用）
+  loginCount        Int       @default(0)
   // 登录安全: 失败锁定机制（5次失败后锁定15分钟）
   loginAttempts     Int       @default(0)
   lockUntil         DateTime?
@@ -344,11 +346,27 @@ model ChatSession {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages ChatMessage[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages   ChatMessage[]
+  milestones ChatMilestone[]
 
   @@index([userId, mentorId])
   @@index([updatedAt])
+}
+
+// 对话回顾里程碑：每 5 轮一小结(mini, 50字内)，每 15 轮一总结(major, 100字内)
+model ChatMilestone {
+  id        String   @id @default(cuid())
+  sessionId String
+  type      String // 'mini' | 'major'
+  atCount   Int // 该导师累计的全局轮次（小结 = 本场末轮全局序号；总结 = 整十值）
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, atCount])
+  @@index([sessionId])
 }
 
 /// 聊天消息模型 — 存储对话中的每条消息
