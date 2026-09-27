@@ -446,10 +446,12 @@ export default function DashboardPage() {
     const riseStart = grindStart;                // 液面与沉降同步起涨（加水场景从水位线接力）
     const riseEnd = Math.max(blendEnd, riseStart + 1400) + 800; // 液面涨慢 800ms，给沉降更多被看见的窗口
     const riseSpan = riseEnd - riseStart;
-    // 满汁停留 400ms，吸管才出场
-    const settleEnd = riseEnd + 400;
-    // 沉降贯穿刀片旋转全程（bladeStart→settleEnd）：刀片开始转，舱内水果就同时开始从上往下缓降，与液面上涨无关
-    const sinkSpan = Math.max(settleEnd - bladeStart, 1);
+    // 满汁基准停留 400ms；沉降速度减半（窗口加倍）后，刀片要转到水果全部沉没才停机
+    const settleBase = riseEnd + 400;
+    // 沉降贯穿刀片旋转全程（bladeStart→settleEnd）：刀片开始转，舱内水果就同时开始从上往下缓降，与液面上涨无关。
+    // 速度减半：水果在高处停留更久，液面才来得及涨到足够高度再触发「遮挡 +3%」上限，否则液面过早封顶
+    const sinkSpan = 2 * Math.max(settleBase - bladeStart, 1);
+    const settleEnd = bladeStart + sinkSpan;
 
     // 液面遮挡上限：液面一旦盖住舱内所有仍可见的水果，最多再上涨「当前高度」的 3%。
     // 数值扫描时间轴找遮挡时刻：遮挡需求 = 最高的仍可见水果顶部所在液面；
