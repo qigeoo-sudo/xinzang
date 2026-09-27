@@ -172,6 +172,9 @@ export default function DashboardPage() {
 
   // 每种已解锁水果的选中份数（en → 1..3；大水果 0..1）
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // 舱内小水果入舱队列：每份一个 en，按点击放入先后排列（决定堆叠层序，后放的堆上面）；
+  // 减份时从队尾移除该水果最后放入的那份。大水果不进此队列（站舱外固定位置）
+  const [basket, setBasket] = useState<string[]>([]);
   // 点击循环方向：加满后转为连减，减到 0 后转为连加
   const dirRef = useRef<Record<string, 'up' | 'down'>>({});
   const [juicing, setJuicing] = useState(false);
@@ -351,6 +354,25 @@ export default function DashboardPage() {
       }
       return { ...prev, [en]: next };
     });
+    // 同步入舱队列（仅中小水果）：加几份就在队尾追加几份；减几份就从队尾拿走该水果最后放入的几份
+    if (!BIG_FRUITS.has(en)) {
+      if (next > cur) {
+        const add = next - cur;
+        setBasket((prev) => [...prev, ...Array.from({ length: add }, () => en)]);
+      } else if (next < cur) {
+        let remove = cur - next;
+        setBasket((prev) => {
+          const arr = [...prev];
+          for (let i = arr.length - 1; i >= 0 && remove > 0; i--) {
+            if (arr[i] === en) {
+              arr.splice(i, 1);
+              remove--;
+            }
+          }
+          return arr;
+        });
+      }
+    }
     if (sourceEl) burstAtElement(sourceEl);
   }, [juicing, draining, counts, burstAtElement]);
 
@@ -484,7 +506,7 @@ export default function DashboardPage() {
       }
     }
 
-    const strawAt = settleEnd + 50;              // 吸管飞入（CSS 约 400ms）
+    const strawAt = settleEnd + 150;             // 吸管飞入（CSS 约 400ms）
     const drinkStart = strawAt + 550;            // 插稳后开始喝
     const drinkDur = 1600 + targetLevel * 8;     // 汁多喝久一点
     const drinkEnd = drinkStart + drinkDur;      // 液面见底
@@ -531,6 +553,7 @@ export default function DashboardPage() {
       } else {
         // 收尾：清空榨汁机，配方卡存档（最新在前）
         setCounts({});
+        setBasket([]);
         dirRef.current = {};
         setFades([]);
         setJuiceLevel(0);
@@ -583,17 +606,18 @@ export default function DashboardPage() {
     return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
   };
 
-  // 展开选中份数：舱内小水果按份数重复，大水果各 1 份站舱外
-  const smallList: SelectedFruit[] = [];
+  // 展开选中份数：舱内小水果按入舱队列顺序（后放的堆上层），大水果各 1 份站舱外
+  const smallList: SelectedFruit[] = basket.map((en) => ({
+    en,
+    color: FLESH_COLOR_MAP[en] || JUICE_COLOR_MAP[en] || '#F6A44C',
+  }));
   const bigList: SelectedFruit[] = [];
   for (const fruit of data.fruits) {
     const n = counts[fruit.en] ?? 0;
     if (n === 0) continue;
-    const color = FLESH_COLOR_MAP[fruit.en] || JUICE_COLOR_MAP[fruit.en] || '#F6A44C';
     if (BIG_FRUITS.has(fruit.en)) {
+      const color = FLESH_COLOR_MAP[fruit.en] || JUICE_COLOR_MAP[fruit.en] || '#F6A44C';
       bigList.push({ en: fruit.en, color });
-    } else {
-      for (let k = 0; k < n; k++) smallList.push({ en: fruit.en, color });
     }
   }
   const totalCount = smallList.length + bigList.length;
