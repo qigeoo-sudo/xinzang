@@ -94,7 +94,8 @@ export { BIG_SLOTS, BIG_SIZE };
 const BLADE_ANGLES = [0, 60, 120, 180, 240, 300];
 
 // 舱内堆叠：水果互相叠加交错，从舱底往上堆，最高到舱高的 3/4 处
-function stackPos(i: number) {
+// （导出给页面层计算「液面盖住全部水果」的遮挡液面用，两处必须同一公式）
+export function stackPos(i: number) {
   const layer = Math.floor(i / 2);
   const col = i % 2;
   const jitterX = ((i * 13) % 11) - 5;
@@ -102,6 +103,11 @@ function stackPos(i: number) {
   const y = Math.max(88, 172 - layer * 27);
   const r = ((i * 53) % 31) - 15;
   return { x, y, r };
+}
+
+// 沉降余量：份数越少初始堆得越低、需要沉得越深才能出视野；满舱 7 份以上则浅沉即可
+export function extraSinkFor(count: number) {
+  return count >= 7 ? 120 : count >= 4 ? 150 : 180;
 }
 
 export default function JuicerMachine({
@@ -130,7 +136,7 @@ export default function JuicerMachine({
   const surfaceY = 200 - (170 * juiceLevel) / 100;
   // 沉降幅度：水果只要刀片在转就该持续往下缓降，最终全部沉到舱底以下被遮挡
   // 份数越多舱内越满、初始堆得越高，需要更大 extraSink 才能确保高位水果也能沉出视野
-  const extraSink = smallFruits.length >= 7 ? 120 : smallFruits.length >= 4 ? 150 : 180;
+  const extraSink = extraSinkFor(smallFruits.length);
 
   return (
     <div className="relative w-full max-w-[520px]">

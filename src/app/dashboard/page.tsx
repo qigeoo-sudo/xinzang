@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Header } from '@/components/header';
-import JuicerMachine, { SelectedFruit, MistParticle, BIG_SLOTS, BIG_SIZE } from './juicer-machine';
+import JuicerMachine, { SelectedFruit, MistParticle, BIG_SLOTS, BIG_SIZE, stackPos, extraSinkFor } from './juicer-machine';
 import { PageHero, StageShell, PaperPanel, StageTitle, StageCredits } from '@/components/page-shell';
 
 // ── 类型 ──
@@ -381,7 +381,7 @@ export default function DashboardPage() {
     // 加水量为名义液面的 14%；当非低出汁水果的贡献占比 < 1/3（杯中几乎全是果泥），加水量 ×3 补足液体
     const normalYield = allList.reduce((sum, s) => sum + (juiceYield(s.en) > 0.1 ? weightOf(s.en) * juiceYield(s.en) : 0), 0);
     const waterLevel = Math.round(nominalLevel * 0.14 * (normalYield * 3 < juiceTotal ? 3 : 1));
-    const targetLevel = Math.min(waterLevel + Math.round((juiceTotal / 9) * MAX_JUICE * 0.86), MAX_JUICE);
+    let targetLevel = Math.min(waterLevel + Math.round((juiceTotal / 9) * MAX_JUICE * 0.86), MAX_JUICE);
 
     // 配方文案：按放入顺序去重统计（水果中文名 × 份数）
     const order: string[] = [];
@@ -429,6 +429,8 @@ export default function DashboardPage() {
       });
     });
 
+    const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
     // 时间轴（ms）：开榨一律先加纯净水（0~WATER_DUR 注水），刀片等注水/飞入完成后才旋转；
     // 刀片旋转 0.1 秒后，水果沉降、逐个榨没、液面上升三者同时开始（果汁 0.95 微透明，沉降淡出全程隐约可见）
     const needWater = true;                      // 每次开榨先加水再榨
@@ -448,13 +450,38 @@ export default function DashboardPage() {
     const settleEnd = riseEnd + 400;
     // 沉降贯穿刀片旋转全程（bladeStart→settleEnd）：刀片开始转，舱内水果就同时开始从上往下缓降，与液面上涨无关
     const sinkSpan = Math.max(settleEnd - bladeStart, 1);
+
+    // 液面遮挡上限：液面一旦盖住舱内所有仍可见的水果，最多再上涨「当前高度」的 3%。
+    // 数值扫描时间轴找遮挡时刻：遮挡需求 = 最高的仍可见水果顶部所在液面；
+    // 水果边沉边淡出（与 step() 同一公式），已榨没的不计入。全程未遮挡则不设限。
+    if (n > 0) {
+      const perFadeScan = 0.7 / n;
+      const eSink = extraSinkFor(n);
+      const levelAt = (t: number) => waterLevel + (targetLevel - waterLevel) * clamp01((t - riseStart) / riseSpan);
+      for (let k = 0; k <= 240; k++) {
+        const t = riseStart + (riseSpan * k) / 240;
+        const s = clamp01((t - bladeStart) / sinkSpan);
+        let need = 0;
+        for (let i = 0; i < n; i++) {
+          if (clamp01((s - 0.25 - perFadeScan * i) / perFadeScan) >= 1) continue; // 已榨没，无需遮挡
+          const pos = stackPos(i);
+          const topY = pos.y - 30 + s * (174 - pos.y + eSink);
+          need = Math.max(need, (200 - topY) / 1.7); // 1.7 = 每单位液面等级对应的像素高度
+        }
+        const lv = levelAt(t);
+        if (lv >= need) {
+          targetLevel = Math.min(targetLevel, Math.round(lv * 1.03));
+          break;
+        }
+      }
+    }
+
     const strawAt = settleEnd + 150;             // 吸管飞入（CSS 约 400ms）
     const drinkStart = strawAt + 550;            // 插稳后开始喝
     const drinkDur = 1600 + targetLevel * 8;     // 汁多喝久一点
     const drinkEnd = drinkStart + drinkDur;      // 液面见底
     const totalDur = drinkEnd + 450;             // 留时间演拔吸管
 
-    const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
     const t0 = performance.now();
     const step = () => {
       const el = performance.now() - t0;
@@ -721,10 +748,10 @@ export default function DashboardPage() {
           </PaperPanel>
         </div>
 
-        {/* 你获得的水果勋章：纵向排列，一次可见 6 个槽位 */}
+        {/* 榨职机 · 成长实验室：水果勋章与榨汁台合为一张卡 */}
         <div className="mb-8">
           <div className="mb-3 flex items-center justify-between px-1">
-            <StageTitle>你获得的水果勋章</StageTitle>
+            <StageTitle>榨职机 · 成长实验室</StageTitle>
             <span className="text-xs text-white/55">
               {data.unlockedCount}/{data.fruits.length} 已解锁
             </span>
@@ -789,14 +816,10 @@ export default function DashboardPage() {
               );
             })}
           </div>
-          </PaperPanel>
-        </div>
 
-        {/* 榨职机 · 成长实验室：配方卡浮在深展台上，榨汁台用信纸承托 */}
-        <div className="mb-2">
-          <StageTitle>榨职机 · 成长实验室</StageTitle>
-          <PaperPanel className="bg-[#f5eee3]">
-            <div className="flex flex-col items-center">
+          {/* 榨汁台：与勋章同卡，分隔线隔开 */}
+          <div className="my-4 h-px bg-[#E5D8C4]" aria-hidden />
+          <div className="flex flex-col items-center">
           <JuicerMachine
             smallFruits={smallList}
             bigFruits={bigList}
@@ -831,7 +854,6 @@ export default function DashboardPage() {
                     : '点上面已解锁的水果放进榨汁机，共可放 9 份，每样不限'}
           </p>
             </div>
-          </PaperPanel>
 
           {/* 创自己配方：每榨完一杯自动存档一张（最新在前），右上角 ✕ 可删除 */}
           {recipeCards.length > 0 && (
@@ -858,6 +880,7 @@ export default function DashboardPage() {
               </div>
             </div>
           )}
+          </PaperPanel>
         </div>
 
         <StageCredits lang="zh" />
