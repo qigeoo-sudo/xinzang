@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CAREER_OPTIONS } from '@/lib/register-options';
 
-interface RecommendedMentorsProfile {
+export interface RecommendedMentorsProfile {
   status?: string | null;
   careers?: string | null;
   customCareerDirections?: string | null;
@@ -40,6 +40,16 @@ const CAREER_LABELS: Record<string, string> = Object.fromEntries(
 // mentorPreference 里的纯社交关系对“职业方向匹配”没有区分度，不进搜索词
 const NON_PROFESSIONAL_PREFS = new Set(['家人', '好友', '朋友', '同学', '其他']);
 
+// RIASEC 六维 → 导师库（name/title/tags/industry）可命中的中文关键词
+const RIASEC_KEYWORDS: Record<string, string[]> = {
+  R: ['制造业', '生产', '工程', '技术'],
+  I: ['研究', '分析', '数据', '技术'],
+  A: ['设计', '创意', '内容', '媒体'],
+  S: ['HR', '教育', '咨询', '服务', '沟通'],
+  E: ['创业', '管理', '市场', '商业'],
+  C: ['财务', '审计', '运营', '行政'],
+};
+
 function toLabel(values: string[], map: Record<string, string>): string[] {
   return values.map((v) => map[v] || v);
 }
@@ -47,13 +57,18 @@ function toLabel(values: string[], map: Record<string, string>): string[] {
 /**
  * 推荐导师：根据档案关键词匹配已上线导师。
  * 由调用方传入档案字段；未做测评时可显示引导提示。
+ * 双信号匹配：档案关键词优先；档案命中不足 2 位时用 RIASEC 兴趣码关键词补位，
+ * 补位不覆盖档案命中（冲突以档案为准）。
  */
 export function RecommendedMentors({
   profile,
+  assessmentCode = null,
   showAssessmentHint = false,
   surface = 'card',
 }: {
   profile: RecommendedMentorsProfile | null;
+  /** RIASEC 兴趣码（如 RIA），用于档案匹配不足时补位 */
+  assessmentCode?: string | null;
   showAssessmentHint?: boolean;
   /** card=旧版毛玻璃白卡（浅底页面）；paper=暖白信纸（深展台页面） */
   surface?: 'card' | 'paper';
@@ -98,33 +113,44 @@ export function RecommendedMentors({
       parts.push(`当前困惑：${profile.careerAnxiety.trim()}。`);
     }
 
-    if (parts.length === 0) return '';
+    if (parts.length === 0) {
+      // 档案为空但有测评结果：以兴趣码作为推荐理由
+      return assessmentCode
+        ? `你的兴趣代码是 ${assessmentCode}，根据你的情况，为你找到以下导师分身，快去聊聊吧。`
+        : '';
+    }
     return parts.join('') + '根据你的情况，为你找到以下导师分身，快去聊聊吧。';
   })();
 
   useEffect(() => {
-    if (!profile) return;
+    if (!profile && !assessmentCode) return;
 
     // 关键：value 要先转成中文 label 再拿去匹配中文导师库
-    const careers = toLabel(parseJsonArray(profile.careers), CAREER_LABELS);
-    const customCareers = parseJsonArray(profile.customCareerDirections);
-    const helpPriority = parseJsonArray(profile.helpPriority);
-    const mentorPref = parseJsonArray(profile.mentorPreference).filter(
+    const careers = toLabel(parseJsonArray(profile?.careers), CAREER_LABELS);
+    const customCareers = parseJsonArray(profile?.customCareerDirections);
+    const helpPriority = parseJsonArray(profile?.helpPriority);
+    const mentorPref = parseJsonArray(profile?.mentorPreference).filter(
       (v) => v && !NON_PROFESSIONAL_PREFS.has(v)
     );
 
-    const query = [
+    const profileQuery = [
       ...careers,
       ...customCareers,
       ...helpPriority,
       ...mentorPref,
-      profile.careerAnxiety,
+      profile?.careerAnxiety,
     ]
       .filter(Boolean)
       .join(' ')
       .trim();
 
-    if (!query) {
+    // 兴趣码三位字母铺开成中文关键词词袋（维度已按得分强弱排序）
+    const riasecQuery = (assessmentCode ?? '')
+      .split('')
+      .flatMap((l) => RIASEC_KEYWORDS[l] ?? [])
+      .join(' ');
+
+    if (!profileQuery && !riasecQuery) {
       setLoaded(true);
       return;
     }
@@ -132,31 +158,43 @@ export function RecommendedMentors({
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
 
-    fetch(`/api/search/mentors?q=${encodeURIComponent(query)}`, { signal: controller.signal })
-      .then(async (r) => {
-        // 未登录会被中间件重定向到登录页（返回 HTML），不能当 JSON 解析
-        if (!r.ok || (r.headers.get('content-type') || '').includes('text/html')) {
-          throw new Error('unavailable');
+    const search = async (q: string): Promise<MentorHit[]> => {
+      const r = await fetch(`/api/search/mentors?q=${encodeURIComponent(q)}`, { signal: controller.signal });
+      // 未登录会被中间件重定向到登录页（返回 HTML），不能当 JSON 解析
+      if (!r.ok || (r.headers.get('content-type') || '').includes('text/html')) {
+        throw new Error('unavailable');
+      }
+      const data = (await r.json()) as { hits?: MentorHit[] };
+      return data.hits ?? [];
+    };
+
+    (async () => {
+      try {
+        // 第一优先：档案关键词匹配（结果以它为准）
+        const hits = profileQuery ? await search(profileQuery) : [];
+        // 第二优先：档案命中不足 2 位时，兴趣码关键词补位（不覆盖档案命中）
+        if (hits.length < 2 && riasecQuery) {
+          const extra = await search(riasecQuery);
+          for (const h of extra) {
+            if (hits.length >= 2) break;
+            if (!hits.some((x) => x.id === h.id)) hits.push(h);
+          }
         }
-        return r.json();
-      })
-      .then((data: { hits?: MentorHit[] }) => {
-        setMentors((data.hits ?? []).slice(0, 2));
-      })
-      .catch(() => {
+        setMentors(hits.slice(0, 2));
+      } catch {
         // 网络/鉴权/超时失败：保持空导师列表，但模块仍展示（含测评提示与去挑选入口）
         setMentors([]);
-      })
-      .finally(() => {
+      } finally {
         clearTimeout(timer);
         setLoaded(true);
-      });
+      }
+    })();
 
     return () => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [profile]);
+  }, [profile, assessmentCode]);
 
   if (!loaded) return null;
 

@@ -16,6 +16,7 @@ import {
 import { sampleBalanced } from '@/lib/riasec/shuffle';
 import { scoreAnswers, type AnswerItem, type ScoreResult } from '@/lib/riasec/score';
 import { savePendingAssessment } from '@/lib/riasec/storage';
+import { RecommendedMentors, type RecommendedMentorsProfile } from '@/components/recommended-mentors';
 
 type Stage = 'intro1' | 'intro2' | 'test' | 'result';
 
@@ -59,6 +60,8 @@ export function AssessmentFlow() {
   // 已有测评结果（从档案加载，用于直接展示而非重新答题）
   const [existingResult, setExistingResult] = useState<ScoreResult | null>(null);
   const [loadingExisting, setLoadingExisting] = useState(true);
+  // 注册档案（结果页推荐导师卡片的第一优先匹配信号）
+  const [profile, setProfile] = useState<RecommendedMentorsProfile | null>(null);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 「第 i / 30 题」进度条：切题时把它定位到吸顶导航正下方
   const progressRef = useRef<HTMLDivElement | null>(null);
@@ -80,16 +83,15 @@ export function AssessmentFlow() {
   // 但若用户刚点过"重新测一次"（sessionStorage 标记），则进入引导页，不加载旧结果
   useEffect(() => {
     let cancelled = false;
-    // 用户主动重测：跳过旧结果加载，停留在引导页
-    if (sessionStorage.getItem('assessment_retake') === '1') {
-      sessionStorage.removeItem('assessment_retake');
-      setLoadingExisting(false);
-      return;
-    }
+    // 用户主动重测：跳过旧结果加载，停留在引导页（但仍取档案用于推荐导师）
+    const retake = sessionStorage.getItem('assessment_retake') === '1';
+    if (retake) sessionStorage.removeItem('assessment_retake');
     fetch('/api/user/profile', { cache: 'no-store' })
       .then((r) => r.json())
-      .then((data: { assessment?: { scores?: Record<Dimension, number>; code?: string | null; explanation?: string | null; recommendedJobs?: string | null } | null }) => {
+      .then((data: { profile?: RecommendedMentorsProfile | null; assessment?: { scores?: Record<Dimension, number>; code?: string | null; explanation?: string | null; recommendedJobs?: string | null } | null }) => {
         if (cancelled) return;
+        setProfile(data.profile ?? null);
+        if (retake) return;
         const a = data.assessment;
         if (a && a.scores && a.code) {
           setExistingResult({ scores: a.scores, code: a.code });
@@ -661,6 +663,12 @@ export function AssessmentFlow() {
                 </div>
               </div>
             )}
+
+            {/* 推荐导师：档案关键词匹配优先，兴趣码补位（冲突以档案为准） */}
+            <RecommendedMentors
+              profile={profile}
+              assessmentCode={displayResult?.code ?? null}
+            />
 
             {/* 底部声明 */}
             <p className="mt-4 rounded-xl bg-bg/70 px-4 py-3 text-xs leading-6 text-muted">

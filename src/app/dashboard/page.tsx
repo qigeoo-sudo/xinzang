@@ -737,7 +737,7 @@ export default function DashboardPage() {
 
           <div
             ref={scrollRef}
-            className="growth-v-scroll grid h-[312px] grid-cols-4 content-start justify-items-center gap-y-3 overflow-y-auto rounded-xl bg-[#FDF6ED] px-2 py-3"
+            className="growth-v-scroll grid h-[252px] grid-cols-4 content-start justify-items-center gap-y-3 overflow-y-auto rounded-xl bg-[#FDF6ED] px-2 py-3"
           >
             {data.primes.slice(0, medalLimit).map((prime, idx) => {
               const fruit = data.fruits[idx];
@@ -795,23 +795,6 @@ export default function DashboardPage() {
         {/* 榨职机 · 成长实验室：配方卡浮在深展台上，榨汁台用信纸承托 */}
         <div className="mb-2">
           <StageTitle>榨职机 · 成长实验室</StageTitle>
-          {/* 创自己配方：每榨完一杯自动存档一张（最新在前） */}
-          {recipeCards.length > 0 && (
-            <div className="mb-4">
-              <p className="mb-2 px-1 text-center text-xs text-white/55">创自己配方 · 已榨 {recipeCards.length} 杯</p>
-              <div className="year-chips-scroll flex gap-2 overflow-x-auto pb-1">
-                {recipeCards.map((c) => (
-                  <div key={c.id} className="animate-rise flex-none rounded-xl bg-white px-3 py-2 shadow-sm">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
-                      <span className="text-[10px] font-semibold text-gray-400">第 {c.id} 杯</span>
-                    </div>
-                    <p className="mt-1 max-w-[150px] text-[11px] leading-snug text-gray-600">{c.recipe}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <PaperPanel className="bg-[#f5eee3]">
             <div className="flex flex-col items-center">
           <JuicerMachine
@@ -849,6 +832,32 @@ export default function DashboardPage() {
           </p>
             </div>
           </PaperPanel>
+
+          {/* 创自己配方：每榨完一杯自动存档一张（最新在前），右上角 ✕ 可删除 */}
+          {recipeCards.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 px-1 text-center text-xs text-white/55">创自己配方 · 已榨 {recipeCards.length} 杯</p>
+              <div className="year-chips-scroll flex gap-2 overflow-x-auto pb-1">
+                {recipeCards.map((c) => (
+                  <div key={c.id} className="animate-rise relative flex-none rounded-xl bg-white px-3 py-2 shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setRecipeCards((prev) => prev.filter((r) => r.id !== c.id))}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 text-[10px] leading-none text-white shadow-sm transition-colors hover:bg-gray-400 active:scale-90"
+                      aria-label={`删除第 ${c.id} 杯配方`}
+                    >
+                      ✕
+                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.color }} />
+                      <span className="text-[10px] font-semibold text-gray-400">第 {c.id} 杯</span>
+                    </div>
+                    <p className="mt-1 max-w-[150px] text-[11px] leading-snug text-gray-600">{c.recipe}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <StageCredits lang="zh" />
