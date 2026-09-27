@@ -449,12 +449,14 @@ export default function DashboardPage() {
     const riseStart = grindStart;                // 液面与沉降同步起涨（加水场景从水位线接力）
     const riseEnd = Math.max(blendEnd, riseStart + 1400) + 800; // 液面涨慢 800ms，给沉降更多被看见的窗口
     const riseSpan = riseEnd - riseStart;
-    // 满汁基准停留 400ms；沉降速度减半（窗口加倍）后，刀片要转到水果全部沉没才停机
-    const settleBase = riseEnd + 400;
-    // 沉降贯穿刀片旋转全程（bladeStart→settleEnd）：刀片开始转，舱内水果就同时开始从上往下缓降，与液面上涨无关。
-    // 速度减半：水果在高处停留更久，液面才来得及涨到足够高度再触发「遮挡 +1/4 剩余高度」上限，否则液面过早封顶
-    const sinkSpan = 2 * Math.max(settleBase - bladeStart, 1);
-    const settleEnd = bladeStart + sinkSpan;
+    // 沉降分两段（统一时间轴）：
+    // ① 液面上涨期间慢沉，riseEnd（液面到顶）时只沉到 50%——避免水果过快消失让液面过早触发遮挡上限；
+    // ② 液面到顶后 400ms 内加速沉到 100%、剩余水果快速榨没，此时水果已被果汁遮住，刀片再转 0.4s 收尾即停，
+    //    与震动 0.6s 渐止同步结束（旧版沉降窗口翻倍导致液面到顶后刀片空转 5 秒以上）
+    const SINK_AT_RISE_END = 0.5;
+    const sinkRiseDur = Math.max(riseEnd - bladeStart, 1);
+    const settleTail = 400;
+    const settleEnd = riseEnd + settleTail;
 
     // 液面遮挡上限：液面一旦盖住舱内所有仍可见的水果，还可再上涨「当前液面到杯口剩余高度」的 1/4。
     // 数值扫描时间轴找遮挡时刻：遮挡需求 = 最高的仍可见水果顶部所在液面；
@@ -465,7 +467,8 @@ export default function DashboardPage() {
       const levelAt = (t: number) => waterLevel + (targetLevel - waterLevel) * clamp01((t - riseStart) / riseSpan);
       for (let k = 0; k <= 240; k++) {
         const t = riseStart + (riseSpan * k) / 240;
-        const s = clamp01((t - bladeStart) / sinkSpan);
+        // 与 step() 同公式：扫描区间在上涨段内，沉降只走到 50%
+        const s = SINK_AT_RISE_END * clamp01((t - bladeStart) / sinkRiseDur);
         let need = 0;
         for (let i = 0; i < n; i++) {
           if (clamp01((s - 0.25 - perFadeScan * i) / perFadeScan) >= 1) continue; // 已榨没，无需遮挡
@@ -490,7 +493,13 @@ export default function DashboardPage() {
     const t0 = performance.now();
     const step = () => {
       const el = performance.now() - t0;
-      const sinkNow = clamp01((el - bladeStart) / sinkSpan);
+      // 沉降两段：上涨段慢沉到 50%，液面到顶后 400ms 加速沉完（与上方时间轴同一公式）
+      const sinkNow =
+        el < bladeStart
+          ? 0
+          : el <= riseEnd
+            ? SINK_AT_RISE_END * clamp01((el - bladeStart) / sinkRiseDur)
+            : SINK_AT_RISE_END + (1 - SINK_AT_RISE_END) * clamp01((el - riseEnd) / settleTail);
       setSink(sinkNow);
       // 淡出绑定沉降：全体先一起沉到 sink=0.25，再从舱底（序号 0）向上逐个榨没，每个水果 fade 占 0.7/n 的 sink 区间
       const fadeTotal = 0.7;
@@ -848,6 +857,7 @@ export default function DashboardPage() {
             sink={sink}
             mixColor={grindWindowRef.current.water && mistElapsed < grindWindowRef.current.start ? '#DBEEF9' : mixColor}
             canStart={totalCount > 0 && !juicing && !draining}
+            running={blending}
             onStart={() => startBlending(smallList, [...smallList, ...bigList])}
           />
           <p className="mt-2 text-center text-xs text-muted">

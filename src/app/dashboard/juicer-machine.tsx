@@ -55,6 +55,8 @@ interface JuicerMachineProps {
   sink: number;
   mixColor: string;
   canStart: boolean;
+  /** 作业进行中（开榨到喝完拔管）：按钮不可点但保持绿色，整轮结束才恢复灰色 */
+  running: boolean;
   onStart: () => void;
 }
 
@@ -131,6 +133,7 @@ export default function JuicerMachine({
   sink,
   mixColor,
   canStart,
+  running,
   onStart,
 }: JuicerMachineProps) {
   const bladeCenterY = 178;
@@ -172,8 +175,8 @@ export default function JuicerMachine({
             <stop offset="100%" stopColor="rgba(0,0,0,0.18)" />
           </linearGradient>
           <radialGradient id="btnGrad" cx="50%" cy="40%" r="60%">
-            <stop offset="0%" stopColor={canStart ? '#9ADE7C' : '#888'} />
-            <stop offset="100%" stopColor={canStart ? '#4A8436' : '#555'} />
+            <stop offset="0%" stopColor={canStart || running ? '#9ADE7C' : '#888'} />
+            <stop offset="100%" stopColor={canStart || running ? '#4A8436' : '#555'} />
           </radialGradient>
           <clipPath id="cupClip">
             <path d="M52 50 Q52 30 100 30 Q148 30 148 50 L148 200 Q148 206 142 206 L58 206 Q52 206 52 200 Z" />
