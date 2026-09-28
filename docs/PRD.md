@@ -1,7 +1,7 @@
 # AI Career Companion — 产品需求文档（PRD）
 
-**版本：** v3.1
-**日期：** 2026-09-24
+**版本：** v3.2
+**日期：** 2026-09-28
 **当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离
 **历史版本：** v3.0（2026-09-20）、v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
 
@@ -11,12 +11,12 @@
 
 ## 一、产品概述
 
-**榨职机（AI Career Companion）** 是通过 AI 职导访谈 + 行业导师 AI 分身，为高校学生提供求职指导的平台。
+**榨职机（AI Career Companion）** 是通过表单注册向导 + 行业导师 AI 分身，为高校学生提供求职指导的平台。
 
 - **目标用户：** 高校在校生（大三、大四为主）
-- **核心价值：** 通过 AI 职导访谈了解用户背景，推荐匹配的行业导师分身进行深度对话
-- **商业模式：** 免费试用 + 会员订阅（月/季/年）+ 多榨包加购，支持支付宝 + 微信支付
-- **当前版本：** 在校生专用版（v2-student-only），问卷流程直接从学生问题开始
+- **核心价值：** 通过 /register-v2 表单分步向导收集用户背景，推荐匹配的行业导师分身进行深度对话
+- **商业模式：** 免费试用 + 会员订阅（月/季/年）+ 加榨包加购，支持支付宝 + 微信支付
+- **当前版本：** 在校生专用版，注册采用 /register-v2 表单分步向导（account / identity / locations 三步）
 - **生产状态：** 已部署在火山引擎 ECS（aihr.top 公网），数据库为火山引擎 RDS MySQL
 
 ### 1.1 工作区与仓库
@@ -40,7 +40,7 @@
 
 | 里程碑 | 状态 | 说明 |
 |--------|------|------|
-| 核心功能开发 | ✅ 已完成 | AI 职导访谈、导师分身对话、用户档案、订阅支付、PWA |
+| 核心功能开发 | ✅ 已完成 | 表单注册向导、导师分身对话、用户档案、订阅支付、PWA |
 | 安全加固第一轮 | ✅ 已完成（2026-09-19） | 54 项自检：0 FAIL / 37 PASS / 7 已修复 / 2 暂缓 / 8 待真机 |
 | 渠道归因一期 | ✅ 已完成（2026-09-18） | Channel 表 + /r/[code] 短链 + /admin/channels 后台 |
 | 多榨包加购 | ✅ 已完成 | CREDIT_10，9折/8.5折批量折扣，余额上限 2970 |
@@ -102,26 +102,26 @@ src/
 │   │   ├── subscription/              # 订阅状态查询
 │   │   ├── admin/                     # ADMIN 鉴权（含 /channels）
 │   │   └── search/                    # 知识卡检索
-│   ├── chat/page.tsx                  # AI 职导对话页
-│   ├── mentors/[id]/page.tsx          # 导师详情页（含访问控制）
-│   ├── mentors/page.tsx               # 导师列表页
+│   ├── mentors/[id]/page.tsx          # 导师详情页（含访问控制 + 聊天）
+│   ├── mentors/page.tsx               # 导师列表页（选择分身后进入聊天）
 │   ├── assessment/                    # 职业兴趣测评（RIASEC）
 │   ├── history/                       # 历史会话
-│   ├── dashboard/                     # 用户面板（档案/订阅/历史）
-│   ├── login/ register-v2/            # 登录注册页（/register 已移除）
+│   ├── dashboard/                     # 榨汁机成长可视化 + juicer-machine 子组件
+│   ├── growth-lab/                    # 重定向到 /dashboard（保留 ?preview=N）
+│   ├── login/ register-v2/            # 登录注册页（/register 已移除，注册用 /register-v2 表单向导）
 │   ├── subscribe/ payment/            # 订阅与支付页面
 │   ├── payment/mock-pay/ success/     # Mock 支付与成功页
 │   ├── r/[code]/route.ts              # 渠道短链（写 httpOnly cookie）
 │   └── admin/channels/                # 渠道后台（ADMIN）
 ├── components/
-│   ├── mentor-chat.tsx                # 聊天组件（断点续传、问卷流程）
+│   ├── mentor-chat.tsx                # 聊天组件（断点续传、导师分身对话）
 │   ├── collapsible-text.tsx           # 长消息折叠（>80% 屏高自动折叠）
 │   ├── chat-options.tsx               # 选项题渲染（[CHOICE] 标签）
 │   ├── subscription-flow.tsx          # 订阅支付流程（含会员卡压印名）
 │   ├── knowledge-panel.tsx            # 导师知识库展示
 │   └── header.tsx                     # 导航栏
 ├── lib/
-│   ├── mentors.ts                     # 6 个静态导师 + 人格 Prompt + 知识库索引
+│   ├── mentors.ts                     # 8 个静态导师 + 人格 Prompt + 知识库索引
 │   ├── prisma.ts                      # Prisma Client 单例
 │   ├── auth.ts → ../auth.ts           # NextAuth 配置
 │   ├── plans.ts                       # 订阅套餐 + 多榨包定价
@@ -181,7 +181,7 @@ docs/
 
 **保持 `MentorKnowledgeCard` 单表设计**（不迁旧 PRD 规划的 mentor_agents 三表）：
 
-- `src/lib/mentors.ts` 保留作静态人格配置（6 个导师：lydia/winnie/tina/freya/phyllis/ying）
+- `src/lib/mentors.ts` 保留作静态人格配置（8 个导师：lydiachen/winnieni/tinazhang/yingwang 已上线，freyagao/phyllischi/freyaren 待上线（完成第一轮知识卡），kevinyuan 待上线（完成第二轮知识卡））
 - 知识库通过 `MentorKnowledgeCard` 表管理，结构对齐 knowledge-governance 规范 schemaVersion 1.1
 - 旧 PRD 中 `mentor_agents` + `mentor_agent_prompt_versions` + `mentor_knowledge_entries` 三表设计**已废弃**
 
@@ -212,16 +212,20 @@ docs/
 
 ## 六、核心业务流程
 
-### 6.1 AI 职导访谈（在校版）
+### 6.1 注册向导（/register-v2）
 
-**问卷序列：** A1 → A2 → A3 → A4 → A5 → G1 → G2 → G3 → G4 → G5 → G6 → G7 → G8
+**注册流程：** 表单分步向导（`src/components/register-wizard.tsx`），三步（SECTIONS）收集用户档案：
 
-- 问题定义在 `src/lib/mentors.ts` 的 `personalityPrompt` 中
-- 选项题使用 `[CHOICE:type=single|multi|rank]` 标签格式
-- AI 回复末尾添加 `[QUESTIONNAIRE_COMPLETED]` 标记表示完成
-- 完成后自动调用 `/api/profile/extract` 提取用户档案写入 UserProfile
-- 支持断点续传：localStorage 中保存进度
-- 版本标记：localStorage `ai-guide-version-${userId}` = `v2-student-only`
+- **account**：账号信息（手机号 + 密码 + 短信验证码）
+- **identity**：身份信息（姓名、昵称、性别、生日等）
+- **locations**：地域与意向（城市、目标行业、求职阶段等）
+
+完成后写入 `UserProfile`，进入 `/dashboard`。
+
+- 旧的 AI 对话式访谈（/register + /chat 页面）已完全移除
+- /chat 页面已不存在；导师对话通过 /mentors 列表选择分身后进入聊天
+- 支持断点续传：表单进度保存在 localStorage
+- 短信验证码 Mock 模式直接返回（生产需真实 Provider）
 
 **P0-3 安全修订（已完成 2026-08-16）：**
 - 客户端只发送单条 `message`，不再发送 `messages` 数组
@@ -233,14 +237,14 @@ docs/
 
 ### 6.2 访问控制规则
 
-| 用户类型 | AI 职导 | 行业导师 |
-|---------|--------|---------|
-| 未登录 | 提示登录 | 提示登录 |
-| 非会员（未完成访谈） | 可以对话 | **拦截，跳转到 /chat** |
-| 非会员（已完成访谈） | 可以对话 | 免费试用 3 次 |
-| 会员 | 按套餐配额 | 按套餐配额 |
+| 用户类型 | 行业导师 |
+|---------|---------|
+| 未登录 | 提示登录 |
+| 非会员（未完成注册/档案） | 拦截，引导完成 /register-v2 |
+| 非会员（已完成注册） | 免费试用 3 次 |
+| 会员 | 按套餐配额 |
 
-- 访谈完成判断：`UserProfile.profileSource === 'ai_extracted'` 或 `nickname` 不为空
+- 档案完成判断：`UserProfile.profileSource` 不为空或 `nickname` 不为空
 - 三层检查：服务端页面重定向 → API 拦截 → 客户端跳转
 - 会员状态由服务端数据库管理（`User.isPremium` + `Subscription` 表）
 
@@ -351,7 +355,6 @@ docs/
 | `/api/chat/usage` | GET | 对话用量查询 |
 | `/api/chat/sessions` | GET | 历史会话列表 |
 | `/api/chat/sessions/[id]` | GET | 单会话详情 |
-| `/api/profile/extract` | POST | 从对话提取用户档案 |
 | `/api/profile/clear` | POST | 清空用户档案（真实删除会话/历史/测评） |
 
 ### 7.3 支付
@@ -395,13 +398,13 @@ docs/
 |------|------|
 | `/` | 首页（蓝灰鼠色 + 浅棕 + 红橙色系） |
 | `/login` | 登录（手机号 + 密码） |
-| `/register-v2` | 新版注册（/register 已移除） |
-| `/chat` | AI 职导对话 |
-| `/mentors` | 导师列表 |
-| `/mentors/[id]` | 导师详情（含访问控制三层检查） |
+| `/register-v2` | 新版注册（表单分步向导，/register 已移除） |
+| `/mentors` | 导师列表（选择分身后进入聊天） |
+| `/mentors/[id]` | 导师详情（含访问控制三层检查 + 聊天） |
 | `/assessment` | 职业兴趣测评 |
 | `/history` | 历史会话 |
-| `/dashboard` | 用户面板（档案/订阅/历史） |
+| `/growth-lab` | 重定向到 /dashboard |
+| `/dashboard` | 榨汁机成长可视化（水果勋章 + 榨汁机交互，详见 8.1） |
 | `/subscribe` | 订阅套餐选择 |
 | `/payment` | 支付页 |
 | `/payment/mock-pay` | Mock 支付页 |
@@ -420,6 +423,22 @@ docs/
 - 黑卡 slogan：`陪你一起  见证成长`（无标点，双空格）
 - 签名：`榨职机 · AI Career Companion 团队`，刘建毛草草体字体，`榨职机`放大倾斜 -7°
 - 桌面端点击"安装到手机"按钮提示`请用手机浏览器打开本页面后再点此按钮`
+
+### 8.1 榨汁机成长可视化（/dashboard）
+
+`/dashboard`（`src/app/dashboard/page.tsx` + `juicer-machine.tsx`）是用户成长可视化主页，`/growth-lab` 重定向到此处。包含：
+
+**水果勋章系统：**
+- 100 个素数槽位（2 到 541），用户每完成一轮有效对话解锁对应槽位
+- 解锁规则：有效对话轮次未达 193 时，锁定槽只展示到素数 223（第 48 个槽位），后面隐藏；达到 193 轮后展示到 541（全部 100 个槽位）
+
+**榨汁机交互游戏：**
+- 用户可放水果进榨汁舱，刀片旋转榨汁，果汁上升
+- 榨汁刀常驻显示，即使舱内无水果也不消失
+- 果汁透明度 0.9（近乎纯果泥时 1.0），背景色深鼠尾草绿
+- 每份水果一个 en（英文 key），按点击放入先后排列（决定堆叠层序）
+- 大型水果（西瓜/哈密瓜/榴莲/菠萝蜜/椰子/释迦果/面包果/菠萝等）整颗站机器外地面，每样 1 份，影响果汁颜色但不进舱
+- 每样最多 9 份，总份数上限 9，满榨约 86
 
 ---
 
@@ -603,14 +622,14 @@ docs/
 
 - crontab 冷备已删除，改用 RDS 自动备份 + 时间点恢复
 - Dockerfile 构建阶段不再需要 `prisma db push`（MySQL 迁移用部署脚本 03-migrate.sh 在运行中库执行）
-- 子域名 `channel.aihr.top`（渠道后台）和 `mentor.aihr.top`（导师区，待开发）通过 nginx Host 路由反代同一容器，SSL 证书 certbot --expand 并入 aihr.top
+- 子域名 `channel.aihr.top`（渠道后台，已上线 2026-09-23）、`mentor.aihr.top`（导师区，待开发）和 `admin.aihr.top`（后台管理系统，待开发）通过 nginx Host 路由反代同一容器，SSL 证书 certbot --expand 并入 aihr.top
 - User 表新增 `importSource` + `externalId` 可空列（联合唯一索引），用于合作方用户导入与定期回传关联
 
 ### 12.5 迁移验收
 
 - [x] Prisma 能从 ECS 连接 RDS MySQL（内网）
 - [x] 14 个 model 全部迁移成功
-- [x] 6 个静态导师数据保留在 mentors.ts（不迁库）
+- [x] 8 个静态导师数据保留在 mentors.ts（不迁库）
 - [x] `MentorKnowledgeCard` 全部记录迁移成功
 - [x] 生产注册、登录等功能正常
 - [x] 测试端通过公网连接 xinzang_test，与生产数据隔离
@@ -647,8 +666,8 @@ docs/
 
 - [x] Prisma 能从 ECS 连接 RDS MySQL
 - [x] 14 个 model 全部迁移成功
-- [x] 6 个静态导师保留在 mentors.ts
-- [x] `MentorKnowledgeCard` 全部记录迁移成功（340 张）
+- [x] 8 个静态导师保留在 mentors.ts
+- [x] `MentorKnowledgeCard` 全部记录迁移成功（external_approved 398 张）
 - [ ] 金额统一为整数分（方案 A 未做，保留 Decimal）
 - [ ] JSON 数组能正常读写（方案 A 未做，保留字符串数组）
 - [ ] 用户档案当前快照与历史版本数量一致
@@ -716,6 +735,12 @@ docs/
 | 部署脚本 | `deploy-scripts/01-05*.sh, 20, 30` | 部署与备份 |
 | 安全头配置 | `next.config.js` | CSP/HSTS/X-Frame-Options |
 | Docker 构建 | `Dockerfile` | node:20-alpine 多阶段非 root |
+| 指标字典与埋点清单 | `docs/metrics-and-tracking-v1.md` | 全自研轻量埋点方案，事件语义化命名保证改版弹性 |
+
+**后台管理系统（待建设）：**
+- 将建设 `admin.aihr.top`（ADMIN_FULL 角色后台）和 `mentor.aihr.top`（MENTOR_HUMAN 角色后台）
+- 采用全自研轻量埋点方案，事件语义化命名保证改版弹性
+- 详细产品方案见用户手中的《Admin_Mentor 后台管理系统产品方案_v0.2.md》
 
 **外部参考：**
 - Prisma migration 工作流：https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production
@@ -738,6 +763,16 @@ docs/
 ---
 
 ## 十七、变更日志
+
+### v3.2（2026-09-28）
+
+- 注册流程从 AI 对话式访谈（/register + /chat）改为 /register-v2 表单分步向导（account/identity/locations）；/chat 页面已移除，导师对话经 /mentors 列表进入
+- /growth-lab 重定向到 /dashboard；/dashboard 升级为榨汁机成长可视化（100 素数槽位水果勋章 + 榨汁机交互游戏）
+- 导师列表更新为 8 位：已上线 lydiachen/winnieni/tinazhang/yingwang，待上线 freyagao/phyllischi/freyaren（完成第一轮知识卡），kevinyuan（完成第二轮知识卡）
+- 知识卡 external_approved 总数更新为 398 张（manifest.json 校验）
+- 删除所有 ai-guide 引用（代码已无残留）
+- 子域名新增 admin.aihr.top（后台管理系统，待开发）；channel.aihr.top 已于 2026-09-23 上线
+- 关联文档新增指标字典与埋点清单（docs/metrics-and-tracking-v1.md）及后台管理系统产品方案引用
 
 ### v3.1（2026-09-24）
 
