@@ -161,6 +161,7 @@ export default async function BuyingQaPage() {
       <main className="relative z-10 flex-1 w-full max-w-2xl mx-auto px-4 py-8">
         <Link
           href="/dashboard/subscription"
+          data-track="qa_back_to_subscription"
           className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-dark mb-5"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none">

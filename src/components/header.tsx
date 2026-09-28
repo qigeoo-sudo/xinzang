@@ -93,6 +93,7 @@ function HeaderInner() {
     {
       href: '/',
       label: tr.home,
+      track: 'nav_home',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
@@ -103,6 +104,7 @@ function HeaderInner() {
     {
       href: '/assessment',
       label: tr.assessment,
+      track: 'nav_assessment',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect width="18" height="18" x="3" y="3" rx="2" />
@@ -113,6 +115,7 @@ function HeaderInner() {
     {
       href: '/mentors',
       label: tr.mentors,
+      track: 'nav_mentors',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -125,6 +128,7 @@ function HeaderInner() {
     {
       href: '/history',
       label: tr.history,
+      track: 'nav_history',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -134,6 +138,7 @@ function HeaderInner() {
     {
       href: '/dashboard/profile',
       label: tr.myProfile,
+      track: 'nav_profile',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -277,6 +282,7 @@ function HeaderInner() {
               key={item.href + item.label}
               href={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
+              data-track={item.track}
               className={`relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-medium transition-colors ${
                 isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
               }`}
@@ -316,6 +322,7 @@ function HeaderInner() {
                 key={item.href + item.label}
                 href={item.href}
                 onClick={(e) => handleNavClick(e, item.href)}
+                data-track={item.track}
                 className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
                   isActive(item.href) ? 'text-accent' : 'text-ink/55 hover:text-accent'
               }`}

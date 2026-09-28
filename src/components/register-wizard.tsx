@@ -1152,6 +1152,7 @@ export function RegisterWizard({
                           type="button"
                           onClick={handleSendCode}
                           disabled={countdown > 0 || sending}
+                          data-track="register_send_code"
                           className="shrink-0 px-4 rounded-[10px] text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
                           style={{ background: C.orange, minWidth: 104 }}
                         >
@@ -1727,6 +1728,7 @@ export function RegisterWizard({
                     type="button"
                     onClick={goNext}
                     disabled={aiChecking}
+                    data-track="register_step_next"
                     className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-60"
                     style={{ background: C.orange }}
                   >
@@ -1737,6 +1739,7 @@ export function RegisterWizard({
                     type="button"
                     onClick={handleSubmit}
                     disabled={submitting || aiChecking}
+                    data-track={isEdit ? 'profile_save' : 'register_submit'}
                     className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white transition-all active:scale-95 disabled:opacity-60"
                     style={{ background: C.orange }}
                   >
@@ -1885,6 +1888,7 @@ export function RegisterWizard({
                 <button
                   type="button"
                   onClick={() => { window.location.href = '/assessment'; }}
+                  data-track="register_view_assessment"
                   className="w-full py-3 rounded-[10px] text-sm font-bold text-white mb-5"
                   style={{ background: '#4E6B44' }}
                 >
@@ -1955,6 +1959,7 @@ export function RegisterWizard({
                 type="button"
                 // 整页跳转：自动登录刚完成时，Link 的客户端预取可能拿到旧的「跳登录」缓存
                 onClick={() => { window.location.href = '/dashboard/profile'; }}
+                data-track="register_edit_profile"
                 className="flex-1 py-3 rounded-[10px] text-sm font-bold text-white text-center"
                 style={{ background: C.orange }}
               >

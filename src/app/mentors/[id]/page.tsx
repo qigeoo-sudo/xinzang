@@ -4,6 +4,7 @@ import { getMentorById, mentors } from '@/lib/mentors';
 import { MentorChat } from '@/components/mentor-chat';
 import { KnowledgePanel } from '@/components/knowledge-panel';
 import { BackButton } from '@/components/back-button';
+import { MentorProfileTracker } from '@/components/mentor-profile-tracker';
 import { PageHero, PaperPanel, PaperCredits, GoldFlakes } from '@/components/page-shell';
 
 // 预生成导师页面路径
@@ -36,6 +37,7 @@ export default async function MentorDetailPage({
     <div className="relative flex min-h-screen flex-col bg-bg cream-foil overflow-hidden">
       <Header />
       <GoldFlakes />
+      <MentorProfileTracker mentorId={mentor.id} />
 
       <PageHero
         eyebrow={mentor.industry}

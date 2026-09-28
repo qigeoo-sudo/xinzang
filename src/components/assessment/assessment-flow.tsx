@@ -347,6 +347,7 @@ export function AssessmentFlow() {
 
             <button
               onClick={() => setStage('intro2')}
+              data-track="assessment_intro_next"
               className="mt-6 flex w-full items-center justify-center gap-1.5 rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
             >
               下一步
@@ -399,6 +400,7 @@ export function AssessmentFlow() {
               </button>
               <button
                 onClick={() => setStage('test')}
+                data-track="assessment_start"
                 className="flex flex-1 items-center justify-center rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
               >
                 开始测试
@@ -477,6 +479,7 @@ export function AssessmentFlow() {
                 <button
                   onClick={() => allAnswered && setStage('result')}
                   disabled={!allAnswered}
+                  data-track="assessment_view_result"
                   className="rounded-xl bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-brand-600 disabled:opacity-40"
                 >
                   查看结果
@@ -485,6 +488,7 @@ export function AssessmentFlow() {
                 <button
                   onClick={() => answers[order[idx].id] && setIdx((i) => i + 1)}
                   disabled={!answers[order[idx].id]}
+                  data-track="assessment_next_question"
                   className="rounded-xl border border-rule bg-white px-5 py-2.5 text-sm font-medium text-muted transition-all hover:bg-bg disabled:opacity-40"
                 >
                   下一题
@@ -624,6 +628,7 @@ export function AssessmentFlow() {
                 <button
                   type="button"
                   onClick={restart}
+                  data-track="assessment_retake"
                   className="block w-full rounded-xl bg-sage-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-sage-600 active:scale-[.98]"
                 >
                   重新测一次
@@ -643,6 +648,7 @@ export function AssessmentFlow() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
+                    data-track="assessment_save_result"
                     className="flex flex-1 items-center justify-center rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98] disabled:opacity-50"
                   >
                     {saving
@@ -655,6 +661,7 @@ export function AssessmentFlow() {
                   {status === 'authenticated' && (
                     <button
                       onClick={restart}
+                      data-track="assessment_retake"
                       className="rounded-xl border border-rule bg-white px-6 py-3 text-sm font-medium text-muted transition-all hover:bg-bg"
                     >
                       重新测一次
@@ -699,12 +706,14 @@ export function AssessmentFlow() {
               <div className="mt-5 flex gap-2.5">
                 <button
                   onClick={goRegisterWithResult}
+                  data-track="assessment_go_register"
                   className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
                 >
                   注册
                 </button>
                 <button
                   onClick={goLoginWithResult}
+                  data-track="assessment_go_login"
                   className="flex-1 rounded-xl border border-rule bg-white px-4 py-3 text-sm font-semibold text-brand-600 transition-all hover:bg-bg active:scale-[.98]"
                 >
                   登录

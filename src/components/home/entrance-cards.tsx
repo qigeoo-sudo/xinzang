@@ -91,6 +91,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
                 <button
                   type="button"
                   onClick={goSearch}
+                  data-track="home_search_submit"
                   className="flex shrink-0 items-center gap-1 pb-0.5 text-[13px] font-bold text-ink transition-opacity hover:opacity-60 active:scale-95"
                   aria-label={t.go}
                 >
@@ -106,6 +107,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
         <div className="w-full max-w-[335px]">
           <Link
             href="/mentors"
+            data-track="home_view_mentors"
             className="card-metal card-sage group block flex aspect-[1.586/1] flex-col p-4 md:p-5"
           >
             <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">
@@ -127,6 +129,7 @@ export function EntranceCards({ lang }: { lang: 'zh' | 'en' }) {
         <div className="w-full max-w-[335px] md:mt-8">
           <Link
             href="/assessment"
+            data-track="home_start_assessment"
             className="card-metal card-coral group block flex aspect-[1.586/1] flex-col p-4 md:p-5"
           >
             <span className="text-foil-light font-mono text-[10px] font-medium uppercase tracking-masthead">

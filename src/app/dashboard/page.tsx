@@ -818,6 +818,7 @@ export default function DashboardPage() {
                   key={prime}
                   type="button"
                   data-fruit
+                  data-track="juicer_add_fruit"
                   disabled={!unlocked || juicing || draining}
                   onClick={(e) => cycleFruit(fruit.en, e.currentTarget)}
                   className={`group relative h-12 w-12 ${

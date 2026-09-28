@@ -14,6 +14,7 @@ import {
 } from '@/lib/plans';
 
 import { PaperCredits, GoldFlakes } from '@/components/page-shell';
+import { track } from '@/lib/analytics/tracker';
 
 /** 当前生效订阅（卡内显示到期时间/剩余天数） */
 export interface ActiveSubscriptionInfo {
@@ -218,6 +219,20 @@ export function SubscriptionFlow({
     // 多榨卡持有上限冻结：余额 + 本次轮次 > 2970 时拦截（双保险）
     const pack = creditPacks.find((p) => p.id === planId);
     if (pack && creditBalance + pack.credits * quantity > CREDIT_PACK_MAX_BALANCE) return;
+    // 套餐选择上报；续期同样记（行为分析可区分）
+    const planForEvent = planId === 'CREDIT_PACK' ? 'CREDIT_PACK' : planId;
+    const ctaIdMap: Record<string, string> = {
+      MONTHLY: 'subscription_monthly_select',
+      QUARTERLY: 'subscription_quarterly_select',
+      YEARLY: 'subscription_yearly_select',
+      CREDIT_PACK: 'credit_pack_select',
+    };
+    track('subscribe.click', {
+      props: {
+        plan: planForEvent as 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CREDIT_PACK',
+        ctaId: ctaIdMap[planId] ?? 'subscription_unknown_select',
+      },
+    });
     setModalPlan({ planId, isRenewal, quantity });
     setShowPayModal(true);
   };
@@ -732,6 +747,7 @@ export function SubscriptionFlow({
               <button
                 type="button"
                 onClick={() => handlePay('wechat')}
+                data-track="pay_method_wechat"
                 className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#07C160] bg-[#E7FAF1] transition-all active:scale-95"
               >
                 <div className="w-8 h-8 rounded-lg bg-[#07C160] flex items-center justify-center flex-shrink-0">
@@ -749,6 +765,7 @@ export function SubscriptionFlow({
               <button
                 type="button"
                 onClick={() => handlePay('alipay')}
+                data-track="pay_method_alipay"
                 className="w-full flex items-center gap-3 py-3 px-4 rounded-xl border-2 border-[#1677FF] bg-[#E9F2FF] transition-all active:scale-95"
               >
                 <div className="w-8 h-8 rounded-lg bg-[#1677FF] flex items-center justify-center flex-shrink-0">

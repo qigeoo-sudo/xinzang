@@ -53,6 +53,9 @@ export async function GET(request: NextRequest) {
       role: true,
       content: true,
       createdAt: true,
+      feedback: {
+        select: { feedbackType: true, reportReason: true },
+      },
     },
   });
 

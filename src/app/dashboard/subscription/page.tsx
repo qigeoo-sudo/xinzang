@@ -5,7 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { StageCredits, GoldFlakes, PageHero } from '@/components/page-shell';
 import { SubscriptionFlow } from '@/components/subscription-flow';
+import { PaywallTracker } from '@/components/paywall-tracker';
 import { SUBSCRIPTION_PLANS, CREDIT_PACKS, type PlanId } from '@/lib/plans';
+import { getMentorById } from '@/lib/mentors';
 
 export default async function SubscriptionPage({
   searchParams,
@@ -87,10 +89,19 @@ export default async function SubscriptionPage({
     (user?.mentorCredits ?? 0) - (user?.mentorCreditsConsumed ?? 0)
   );
 
+  // from 是有效分身 ID 时作为来源分身（入口来自该分身对话）
+  const sourceMentorId = searchParams.from && getMentorById(searchParams.from)
+    ? searchParams.from
+    : undefined;
+
   return (
     <div className="relative min-h-screen flex flex-col home-backdrop overflow-hidden">
       <Header />
       <GoldFlakes variant="dark" />
+      <PaywallTracker
+        from={sourceMentorId ? 'mentor_chat' : searchParams.from}
+        sourceMentorId={sourceMentorId}
+      />
 
       <PageHero
         eyebrow="MEMBERSHIP"

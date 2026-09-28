@@ -258,8 +258,8 @@ async function persistFixedMentorReply(
   chatSessionId: string,
   reply: string,
   modelUsed: string,
-): Promise<void> {
-  await prisma.$transaction([
+): Promise<string> {
+  const result = await prisma.$transaction([
     prisma.chatMessage.create({
       data: { chatSessionId, role: 'assistant', content: reply, modelUsed },
     }),
@@ -268,6 +268,7 @@ async function persistFixedMentorReply(
       data: { messageCount: { increment: 2 } },
     }),
   ]);
+  return result[0].id;
 }
 
 /**
@@ -901,13 +902,14 @@ export async function POST(request: NextRequest) {
         hitCardIds.length === 0
       ) {
         const missingEvidenceReply = `这个问题目前不在${mentor.name}分身已经确认的资料里，所以我现在不知道。它需要${mentor.name}本人补充确认后才可能回答。`;
-        await persistFixedMentorReply(
+        const evidenceGateMessageId = await persistFixedMentorReply(
           chatSessionId,
           missingEvidenceReply,
           'mentor-evidence-gate',
         );
         return NextResponse.json({
           reply: missingEvidenceReply,
+          messageId: evidenceGateMessageId,
           sessionId: chatSessionId,
           degraded: false,
           // 系统边界冷回复不计费：不返回计数，前端保持原用量并重新核对
@@ -1121,7 +1123,16 @@ export async function POST(request: NextRequest) {
           })]
         : [];
 
-    await prisma.$transaction([
+    // 本轮权益来源（盖在 assistant 消息上）：多榨卡 / 订阅 / 免费试用
+    const entitlementSource = consumeCredit
+      ? 'CREDIT_PACK'
+      : isPremium
+        ? 'SUBSCRIPTION'
+        : !mentor.isFree
+          ? 'FREE_TRIAL'
+          : null;
+
+    const txResult = await prisma.$transaction([
       prisma.chatMessage.create({
         data: {
           chatSessionId,
@@ -1130,6 +1141,7 @@ export async function POST(request: NextRequest) {
           tokensUsed: aiData.usage?.total_tokens,
           modelUsed: model,
           hitCardIds: hitCardIds.length ? JSON.stringify(hitCardIds) : null,
+          entitlementSource,
         },
       }),
       prisma.chatSession.update({
@@ -1141,6 +1153,7 @@ export async function POST(request: NextRequest) {
       }),
       ...quotaDecrement,
     ]);
+    const assistantMessageId = txResult[0].id;
 
     if (consumeCredit || (!isPremium && !mentor.isFree)) {
       invalidateMemberCache(session.user.id);
@@ -1183,6 +1196,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       reply: finalReply,
+      messageId: assistantMessageId,
       sessionId: chatSessionId,
       degraded: false,
       billed: true,

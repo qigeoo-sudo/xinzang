@@ -60,6 +60,7 @@ export default async function HistoryPage() {
                 <Link
                   key={session.id}
                   href={`/mentors/${session.mentorId}`}
+                  data-track="history_open_chat"
                   className="card card-hover flex items-center gap-4"
                 >
                   {/* 导师头像 */}

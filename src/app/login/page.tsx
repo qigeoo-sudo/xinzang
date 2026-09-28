@@ -117,6 +117,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
+              data-track="login_submit"
               className="btn-primary w-full"
             >
               {loading ? '登录中...' : '登录'}

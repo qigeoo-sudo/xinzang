@@ -207,6 +207,7 @@ export const { handlers, auth } = NextAuth({
         '/api/payment/mock-pay', // Mock 支付 (开发环境模拟回调)
         '/api/growth', // 成长追踪 API 自身做 401 校验
         '/api/events', // 行为事件批量上报（匿名可达，接口自行限流与身份补写）
+        '/api/feedback', // 消息反馈（接口自行 401/403 校验）
       ];
       const isPublicPath = publicPaths.some(
         (p) => logicalPath === p || logicalPath.startsWith(p + '/')

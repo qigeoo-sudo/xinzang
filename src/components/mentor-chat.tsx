@@ -6,12 +6,14 @@ import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { type Mentor } from '@/lib/mentors';
 import { CollapsibleText } from '@/components/collapsible-text';
+import { MessageFeedbackBar } from '@/components/message-feedback-bar';
 
 interface ChatMessage {
   id?: string;
   role: 'user' | 'assistant';
   content: string;
   createdAt?: string;
+  feedback?: { feedbackType: string; reportReason: string | null } | null;
 }
 
 interface MentorChatProps {
@@ -153,7 +155,12 @@ export function MentorChat({ mentor }: MentorChatProps) {
       // 有保存的消息 — 从 localStorage 恢复
       if (savedMessages) {
         const parsed = JSON.parse(savedMessages) as ChatMessage[];
-        if (parsed.length > 0) {
+        // 完整性校验：分身回复必须带 id（旧版缓存缺 id，无法挂反馈条），
+        // 不完整则丢弃缓存，回退数据库加载
+        const cacheUsable =
+          parsed.length > 0 &&
+          parsed.every((m) => m.role === 'user' || typeof m.id === 'string');
+        if (cacheUsable) {
           setMessages(parsed);
           if (savedSessionId) {
             setSessionId(savedSessionId);
@@ -178,11 +185,12 @@ export function MentorChat({ mentor }: MentorChatProps) {
       if (res.ok) {
         const data = await res.json();
         if (data.session && data.messages && data.messages.length > 0) {
-          const dbMessages: ChatMessage[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string }) => ({
+          const dbMessages: ChatMessage[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string; feedback?: { feedbackType: string; reportReason: string | null } | null }) => ({
             id: m.id,
             role: m.role as 'user' | 'assistant',
             content: m.content,
             createdAt: m.createdAt,
+            feedback: m.feedback ?? null,
           }));
           setMessages(dbMessages);
           setSessionId(data.session.id);
@@ -324,7 +332,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
       }
 
       // 添加 AI 回复
-      const finalMessages = [...newMessages, { role: 'assistant' as const, content: data.reply }];
+      const finalMessages = [...newMessages, { id: data.messageId, role: 'assistant' as const, content: data.reply }];
       setMessages(finalMessages);
 
       if (data.sessionId && data.sessionId !== sessionId) {
@@ -454,15 +462,20 @@ export function MentorChat({ mentor }: MentorChatProps) {
               </div>
             )}
 
-            {/* 消息气泡 */}
-            <div
-              className={`max-w-[90%] sm:max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-brand-500 text-white rounded-br-md'
-                  : 'bg-white border border-slate-100 text-brand-900 rounded-bl-md'
-              }`}
-            >
-              <CollapsibleText content={msg.content} isUser={msg.role === 'user'} />
+            {/* 消息气泡（assistant：气泡与反馈条纵向排列） */}
+            <div className="flex flex-col items-end max-w-[90%] sm:max-w-[80%]">
+              <div
+                className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-brand-500 text-white rounded-br-md'
+                    : 'bg-white border border-slate-100 text-brand-900 rounded-bl-md'
+                }`}
+              >
+                <CollapsibleText content={msg.content} isUser={msg.role === 'user'} />
+              </div>
+              {msg.role === 'assistant' && msg.id && (
+                <MessageFeedbackBar messageId={msg.id} initial={msg.feedback ?? undefined} />
+              )}
             </div>
           </div>
         ))}
@@ -532,6 +545,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
             <button
               key={i}
               onClick={() => handleSend(q)}
+              data-track="chat_suggested_question"
               className="text-xs px-3 py-1.5 rounded-full bg-beige text-accent border border-accent/20 hover:bg-sand transition-colors"
             >
               {q}
@@ -610,6 +624,7 @@ export function MentorChat({ mentor }: MentorChatProps) {
           <button
             onClick={() => handleSend()}
             disabled={!input.trim() || loading}
+            data-track="chat_send"
             className="btn-primary !py-2.5 !px-4 flex-shrink-0"
           >
             {loading ? (

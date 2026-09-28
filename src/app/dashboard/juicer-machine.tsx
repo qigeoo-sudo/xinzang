@@ -434,6 +434,7 @@ export default function JuicerMachine({
         type="button"
         onClick={onStart}
         disabled={!canStart}
+        data-track="juicer_start"
         aria-label="开始榨汁"
         className={`absolute h-[34px] w-[34px] rounded-full ${
           canStart ? 'cursor-pointer switch-pulse' : 'cursor-not-allowed'

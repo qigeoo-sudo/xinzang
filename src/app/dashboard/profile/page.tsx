@@ -215,6 +215,7 @@ export default function ProfilePage() {
         <div className="flex gap-2 sm:gap-3 mb-6">
           <Link
             href="/dashboard/profile/edit"
+            data-track="profile_edit"
             className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-[10px] bg-brand-500 px-2 sm:px-4 py-2.5 text-[13px] sm:text-sm font-semibold text-white transition-all hover:bg-brand-600 active:scale-[.98]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -225,6 +226,7 @@ export default function ProfilePage() {
           </Link>
           <Link
             href="/dashboard"
+            data-track="profile_growth_tracking"
             className="inline-flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-1.5 rounded-[10px] bg-sage-400 px-2 sm:px-4 py-2.5 text-[13px] sm:text-sm font-semibold text-white transition-all hover:bg-sage-500 active:scale-[.98]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -306,6 +308,7 @@ export default function ProfilePage() {
             </p>
             <Link
               href="/assessment"
+              data-track="profile_take_assessment"
               className="mt-1 inline-flex items-center rounded-[10px] bg-sage-400 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-sage-500"
             >
               做职业兴趣测试 →

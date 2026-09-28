@@ -157,7 +157,12 @@ export function AnalyticsCollector() {
       if (!el) return;
       const ctaId = el.getAttribute('data-track');
       if (!ctaId) return;
-      const label = el.getAttribute('data-track-label') ?? undefined;
+      // label：显式 data-track-label 优先；否则取元素自身文字（去掉多余空白）
+      let label = el.getAttribute('data-track-label');
+      if (!label) {
+        const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+        if (text) label = text.slice(0, 30);
+      }
       track('cta.click', { props: label ? { ctaId, label } : { ctaId } });
     };
     document.addEventListener('click', onClick);
