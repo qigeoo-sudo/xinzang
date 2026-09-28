@@ -226,10 +226,20 @@ export async function POST(request: NextRequest) {
     // 任何归因异常都不阻断注册（按自然量落库）。
     try {
       const snapshot = readAttribution(request, parsed.data.attribution);
-      const channel = await resolveActiveChannel(snapshot?.ch);
+      const channel = snapshot ? await resolveActiveChannel(snapshot.ch) : null;
       if (snapshot && channel) {
         userData.channelId = channel.id;
-        userData.attributionJson = JSON.stringify({ ...snapshot, ch: channel.code });
+      }
+      // 首访匿名标识（httpOnly aid cookie）始终写入归因快照，
+      // 供双阶段旅程回溯串联注册前的匿名行为；无渠道时同样保留
+      const aid = request.cookies.get('aid')?.value ?? null;
+      if (snapshot || aid) {
+        userData.attributionJson = JSON.stringify({
+          ...(snapshot
+            ? channel ? { ...snapshot, ch: channel.code } : snapshot
+            : {}),
+          ...(aid ? { aid } : {}),
+        });
       }
     } catch (attrError) {
       console.warn(
