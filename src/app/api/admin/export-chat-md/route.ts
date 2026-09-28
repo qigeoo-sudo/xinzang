@@ -2,7 +2,7 @@
  * 管理员聊天记录导出 API
  * GET /api/admin/export-chat-md?mentor=lydiachen&user=手机号或邮箱&from=2026-09-01&to=2026-09-10&keyword=简历
  *
- * - 仅限 role=ADMIN 的登录用户访问（每次从数据库校验，不信任旧 session token）
+ * - 仅限管理员角色（ADMIN_FULL；迁移期兼容 ADMIN）的登录用户访问，每次从数据库校验
  * - 输出通俗易读的 Markdown 文件（浏览器直接下载），技术字段附通俗解释
  * - 与 scripts/export-chat-logs.ts 的输出格式保持一致
  */
@@ -11,6 +11,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getMentorById } from '@/lib/mentors';
 import { rateLimit } from '@/lib/rate-limit';
+import { isAdminRole } from '@/lib/admin';
 
 // 单次导出会话数上限，防止内存爆掉
 const MAX_SESSIONS = 1000;
@@ -84,7 +85,7 @@ function formatMessage(msg: {
 }
 
 export async function GET(request: NextRequest) {
-  // ---------- 鉴权：登录 + 数据库实时校验 ADMIN 角色 ----------
+  // ---------- 鉴权：登录 + 数据库实时校验管理员角色 ----------
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: '请先登录' }, { status: 401 });
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     where: { id: session.user.id },
     select: { role: true },
   });
-  if (!me || me.role !== 'ADMIN') {
+  if (!me || !isAdminRole(me.role)) {
     return NextResponse.json({ error: '无权访问' }, { status: 403 });
   }
 

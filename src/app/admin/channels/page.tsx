@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * 渠道管理后台（仅 role=ADMIN 可见数据；未授权时接口返回 403）
+ * 渠道管理后台（仅管理员角色 ADMIN_FULL 可见数据，迁移期兼容 ADMIN；未授权时接口返回 403）
  * 新建渠道、生成/下载二维码、查看注册与付费统计、导出对账 CSV、启用/停用。
  */
 import { useCallback, useEffect, useState } from 'react';

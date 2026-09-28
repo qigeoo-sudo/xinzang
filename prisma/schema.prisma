@@ -26,70 +26,85 @@ datasource db {
 
 /// 用户模型 — 系统核心模型，存储认证信息和基础状态
 model User {
-  id                String    @id @default(cuid())
+  id                    String    @id @default(cuid())
   // Auth.js 标准字段
-  name              String?
-  email             String?   @unique
-  emailVerified     DateTime?
-  image             String?
+  name                  String?
+  email                 String?   @unique
+  emailVerified         DateTime?
+  image                 String?
   // 自定义认证字段
-  phone             String?   @unique
-  passwordHash      String?
-  // 用户角色: USER | PREMIUM | ADMIN
-  role              String    @default("USER")
+  phone                 String?   @unique
+  passwordHash          String?
+  // 用户角色: USER | ADMIN（过渡期保留）| ADMIN_FULL | MENTOR_HUMAN
+  role                  String    @default("USER")
+  // 真人导师绑定的分身 ID（role=MENTOR_HUMAN 时必填），一对一，服务端验证分身有效
+  boundMentorId         String?   @unique
+  // 用户群组（当前状态缓存，历史区间见 UserGroupHistory）:
+  // NORMAL | BETA | MENTOR_SELF_TEST | OPS_QA | PENDING_REVIEW
+  userGroup             String    @default("NORMAL")
+  groupMarkedAt         DateTime?
+  groupMarkedBy         String?
+  groupReason           String?   @db.Text
   // 会员与试用状态 (服务端管理 — 修复安全审计 A01-1.2)
-  isPremium         Boolean   @default(false)
-  freeTrialUsed     Int       @default(0)
+  isPremium             Boolean   @default(false)
+  freeTrialUsed         Int       @default(0)
   // 多榨卡（消耗品，不过期）：累计购买 / 累计消耗，余额=二者之差
-  mentorCredits           Int @default(0)
-  mentorCreditsConsumed   Int @default(0)
+  mentorCredits         Int       @default(0)
+  mentorCreditsConsumed Int       @default(0)
   // 审计字段
-  lastLoginAt       DateTime?
-  lastLoginIp       String?
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
   // 累计登录次数（成长追踪页统计用）
-  loginCount        Int       @default(0)
+  loginCount            Int       @default(0)
   // 登录安全: 失败锁定机制（5次失败后锁定15分钟）
-  loginAttempts     Int       @default(0)
-  lockUntil         DateTime?
+  loginAttempts         Int       @default(0)
+  lockUntil             DateTime?
   // 密码重置后使旧会话失效
-  passwordChangedAt DateTime?
+  passwordChangedAt     DateTime?
   // 渠道归因：首次触点锁定，注册时一次性写入，之后不可更改（分成反查依据）
-  channelId       String?
+  channelId             String?
   // 首次触点快照 JSON：ch / utm_source / utm_medium / utm_campaign / utm_term / utm_content / landing / ts
-  attributionJson String? @db.Text
+  attributionJson       String?   @db.Text
   // 合作方用户导入：来源标识（合作方代码，如 aliyun_partner_a）
-  importSource    String?
+  importSource          String?
   // 合作方系统中的原始用户ID：定期回传时的关联键，不依赖手机号（手机号可能被用户修改）
-  externalId      String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  externalId            String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   // 关联关系
-  accounts          Account[]
-  sessions          Session[]
-  profile           UserProfile?
-  profileHistory    ProfileHistory[]
-  payments          PaymentOrder[]
-  subscriptions     Subscription[]
-  chatSessions      ChatSession[]
-  verificationCodes VerificationCode[]
-  interestAssessment InterestAssessment?
-  channel           Channel?  @relation(fields: [channelId], references: [id])
+  accounts            Account[]
+  sessions            Session[]
+  profile             UserProfile?
+  profileHistory      ProfileHistory[]
+  payments            PaymentOrder[]
+  subscriptions       Subscription[]
+  chatSessions        ChatSession[]
+  verificationCodes   VerificationCode[]
+  interestAssessment  InterestAssessment?
+  channel             Channel?            @relation(fields: [channelId], references: [id])
+  // 后台与数据采集关联
+  events              Event[]
+  groupHistory        UserGroupHistory[]
+  submissions         MentorSubmission[]  @relation("SubmissionSubmitter")
+  reviewedSubmissions MentorSubmission[]  @relation("SubmissionReviewer")
+  auditLogs           AuditLog[]
+  feedback            MessageFeedback[]
 
+  // 同一合作方来源下外部用户ID唯一；MySQL 中两列均为 NULL 的自然注册用户不受唯一约束限制
+  @@unique([importSource, externalId])
   @@index([email])
   @@index([phone])
   @@index([channelId])
-  // 同一合作方来源下外部用户ID唯一；MySQL 中两列均为 NULL 的自然注册用户不受唯一约束限制
-  @@unique([importSource, externalId])
   @@index([importSource])
 }
 
 /// 渠道模型 — 渠道归因与未来分成结算
 /// 二维码/导流链接形如 https://域名/r/{code}，用户首次落地锁定，注册时盖章到 User.channelId
 model Channel {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   // 渠道码：链接参数 /r/{code}，仅允许字母数字下划线短横线（如 xhs_lydia01）
-  code        String    @unique
+  code        String   @unique
   // 渠道名称（如「小红书-Lydia 笔记 9 月」）
   name        String
   // 合作方/分成归属人（自由文本，结算时对账用）
@@ -97,12 +112,12 @@ model Channel {
   // 分成比例（百分比整数 0-100，先占位；结算规则二期启用，不进任何用户侧逻辑）
   shareRate   Int?
   // ACTIVE | DISABLED：停用后旧链接落到自然量，不再新归因
-  status      String    @default("ACTIVE")
+  status      String   @default("ACTIVE")
   // 扫码后站内落地路径，默认首页
-  landingPath String?   @default("/")
+  landingPath String?  @default("/")
   note        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   users User[]
 
@@ -196,21 +211,21 @@ model UserProfile {
   mentorPreference String? // 最想深聊的人群 (JSON 数组字符串)
 
   // === register-v2 结构化字段 ===
-  birthMonth      String? // 出生年月 YYYY-MM
-  enrollMonth     String? // 入学年月 YYYY-MM
-  expectedGrad    String? // 预计毕业（在校）
-  gradMonth       String? // 毕业日期 YYYY-MM（在职/待业）
-  workGoal        String? // [已废弃] 最近打算，保留列以兼容老档案，不再写入
-  fullTimeExp     String? // 全职工作时长档位
-  partTimeExp     String? // 兼职工作时长档位
-  workProvince    String? // 希望工作地点-省/地区
-  workCity        String? // 希望工作地点-市（含 __any__ 均可考虑 / __other__ 其他 等特殊值）
-  curProvince     String? // 目前所在地-省/地区
-  curCity         String? // 目前所在地-市
-  careers         String? // 感兴趣的职业方向 (JSON 数组字符串，固定枚举值)
-  customCareerDirections String? @db.Text // 用户自填的职业方向 (JSON 数组字符串，与固定枚举分开存储)
+  birthMonth              String? // 出生年月 YYYY-MM
+  enrollMonth             String? // 入学年月 YYYY-MM
+  expectedGrad            String? // 预计毕业（在校）
+  gradMonth               String? // 毕业日期 YYYY-MM（在职/待业）
+  workGoal                String? // [已废弃] 最近打算，保留列以兼容老档案，不再写入
+  fullTimeExp             String? // 全职工作时长档位
+  partTimeExp             String? // 兼职工作时长档位
+  workProvince            String? // 希望工作地点-省/地区
+  workCity                String? // 希望工作地点-市（含 __any__ 均可考虑 / __other__ 其他 等特殊值）
+  curProvince             String? // 目前所在地-省/地区
+  curCity                 String? // 目前所在地-市
+  careers                 String? // 感兴趣的职业方向 (JSON 数组字符串，固定枚举值)
+  customCareerDirections  String?   @db.Text // 用户自填的职业方向 (JSON 数组字符串，与固定枚举分开存储)
   registrationCompletedAt DateTime? // 新注册流程完成时间
-  contactEmail String? // 选填联系邮箱（线下活动通知用，独立于登录邮箱）
+  contactEmail            String? // 选填联系邮箱（线下活动通知用，独立于登录邮箱）
 
   // 审计字段
   createdAt DateTime @default(now())
@@ -229,7 +244,7 @@ model ProfileHistory {
   id        String   @id @default(cuid())
   userId    String
   action    String // update
-  snapshot  String? @db.Text // 操作前的档案数据快照 (JSON 字符串)
+  snapshot  String?  @db.Text // 操作前的档案数据快照 (JSON 字符串)
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -248,13 +263,13 @@ model InterestAssessment {
   // 六维得分 JSON: {"R":number,"I":number,"A":number,"S":number,"E":number,"C":number}
   scores          String
   // 原始作答 JSON: [{ "qid": string, "value": 1-5 }]
-  answers         String @db.Text
+  answers         String   @db.Text
   // 题库版本（题目改版后可据此重算/区分）
   questionVersion String
   // 主码/副码，如 "SIA"（便于列表与推荐直接使用）
   code            String?
   // LLM 生成的兴趣代码解读（约150字职业规划师口吻），供导师分身聊天时参考
-  explanation     String? @db.Text
+  explanation     String?  @db.Text
   // 推荐探索方向（CSV 匹配的 1~3 个职业，JSON 数组字符串），供展示与导师参考
   recommendedJobs String?
   takenAt         DateTime @default(now())
@@ -284,7 +299,7 @@ model PaymentOrder {
   // 第三方支付流水号
   transactionId  String? // 微信/支付宝交易号
   // 元数据 (JSON 字符串，存储额外信息)
-  metadata       String? @db.Text
+  metadata       String?   @db.Text
   // 时间戳
   paidAt         DateTime?
   expiredAt      DateTime? // 订单过期时间
@@ -338,7 +353,7 @@ model ChatSession {
   // 统计信息
   messageCount        Int      @default(0)
   // 滚动对话摘要 (用于长期陪伴上下文)
-  summary             String? @db.Text
+  summary             String?  @db.Text
   summaryMessageCount Int      @default(0) // 生成摘要时已覆盖的消息数
   // 跨导师分身查看授权状态：JSON {"pending":"winnie","granted":["tina"]}，授权仅限当前会话
   crossConsent        String?
@@ -346,7 +361,7 @@ model ChatSession {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages   ChatMessage[]
   milestones ChatMilestone[]
 
@@ -372,20 +387,25 @@ model ChatMilestone {
 /// 聊天消息模型 — 存储对话中的每条消息
 /// role: user | assistant | system
 model ChatMessage {
-  id            String   @id @default(cuid())
-  chatSessionId String
-  role          String // user | assistant | system
-  content       String @db.Text // 消息内容
+  id                String   @id @default(cuid())
+  chatSessionId     String
+  role              String // user | assistant | system
+  content           String   @db.Text // 消息内容
   // AI 回复元数据
-  tokensUsed    Int? // 消耗的 token 数
-  modelUsed     String? // 使用的模型名称
-  hitCardIds    String? @db.Text // 命中知识卡的 card_id 列表 (JSON 数组字符串，用于命中记录)
+  tokensUsed        Int? // 消耗的 token 数
+  modelUsed         String? // 使用的模型名称
+  hitCardIds        String?  @db.Text // 命中知识卡的 card_id 列表 (JSON 数组字符串，用于命中记录)
+  // 权益来源（只写在成功的 assistant 回复上，服务端盖章）:
+  // FREE_TRIAL | SUBSCRIPTION | CREDIT_PACK | NON_BILLING | UNKNOWN（历史数据）
+  entitlementSource String?
   // 审计字段
-  createdAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
 
-  chatSession ChatSession @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  chatSession ChatSession      @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  feedback    MessageFeedback?
 
   @@index([chatSessionId, createdAt])
+  @@index([entitlementSource])
 }
 
 /// 导师知识卡模型 — 导师分身 RAG 知识库
@@ -397,31 +417,207 @@ model ChatMessage {
 ///   external_approved   外部已审（普通生产唯一可检索类）
 /// disclosureMode (披露方式): none | generalized | exact
 model MentorKnowledgeCard {
-  id               String   @id @default(cuid())
-  cardId           String   @unique // 如 LYD-R1-001
-  schemaVersion    String   @default("1.1")
-  mentorId         String // 导师 ID (如 lydia)，必须与被加载导师完全相同
-  domain           String // 领域
-  title            String // 标题
-  caseText         String? @db.Text // 案例卡正文（背景/经过/结果）；普通观点卡为 null
-  coreView         String @db.Text // 核心观点（案例卡为提炼结论）
-  reasoning        String? @db.Text // 理由；案例卡为导师评点
+  id              String   @id @default(cuid())
+  cardId          String   @unique // 如 LYD-R1-001
+  schemaVersion   String   @default("1.1")
+  mentorId        String // 导师 ID (如 lydia)，必须与被加载导师完全相同
+  domain          String // 领域
+  title           String // 标题
+  caseText        String?  @db.Text // 案例卡正文（背景/经过/结果）；普通观点卡为 null
+  coreView        String   @db.Text // 核心观点（案例卡为提炼结论）
+  reasoning       String?  @db.Text // 理由；案例卡为导师评点
   // 适用边界
-  applicableTo     String? @db.Text // 适用对象/场景
-  notApplicableTo  String? @db.Text // 不适用对象
-  prerequisites    String? @db.Text // 前提条件
-  exceptions       String? @db.Text // 边界与例外
-  risks            String? @db.Text // 风险
-  source           String? @db.Text // 来源时间戳 JSON 数组字符串（仅审计/后台，不进模型上下文）
-  confidence       String   @default("medium") // high | medium | low（仅审计/后台）
-  knowledgeClass   String   @default("external_approved")
-  disclosureMode   String   @default("generalized") // none | generalized | exact
-  validFrom        String? // 有效期起点，如 2026-08
-  reviewAfter      String? // 需复审时间
-  version          String? // 卡片版本
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  applicableTo    String?  @db.Text // 适用对象/场景
+  notApplicableTo String?  @db.Text // 不适用对象
+  prerequisites   String?  @db.Text // 前提条件
+  exceptions      String?  @db.Text // 边界与例外
+  risks           String?  @db.Text // 风险
+  source          String?  @db.Text // 来源时间戳 JSON 数组字符串（仅审计/后台，不进模型上下文）
+  confidence      String   @default("medium") // high | medium | low（仅审计/后台）
+  knowledgeClass  String   @default("external_approved")
+  disclosureMode  String   @default("generalized") // none | generalized | exact
+  validFrom       String? // 有效期起点，如 2026-08
+  reviewAfter     String? // 需复审时间
+  version         String? // 卡片版本
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([mentorId, knowledgeClass])
   @@index([domain])
+}
+
+// ============================================================
+// 后台管理系统与数据采集模型（admin-mentor-system-v1）
+// ============================================================
+
+/// 行为事件表 — 前端埋点统一入口，服务端补写身份并按 eventId 幂等去重
+/// 分层保留：普通用户及未绑定匿名事件 90 天；曾付费用户（含注册绑定的匿名段）3 年
+model Event {
+  id                String   @id @default(cuid())
+  eventId           String   @unique // 客户端 crypto.randomUUID，服务端按此去重
+  eventName         String // page.view | page.active_duration | mentor_card.impression 等（白名单校验）
+  anonymousId       String? // httpOnly cookie `aid`，首访种植，有效期 1 年
+  sessionId         String? // 行为会话：30 分钟无事件切新，仅用于路径分析
+  pageInstanceId    String? // 页面实例级标识，区分同一路由的多次挂载
+  userId            String? // 服务端从登录态补写，前端不传
+  userGroupSnapshot String? // 服务端补写的群组快照（辅助证据，历史口径以 UserGroupHistory 为准）
+  page              String // 语义路由，不含查询参数
+  target            String? // 元素语义名
+  props             String?  @db.Text // 事件参数 JSON，结构按事件名分别校验
+  clientTs          DateTime // 客户端发生时间
+  serverTs          DateTime @default(now()) // 统计口径以此为准
+  ua                String? // User-Agent 原文（解析后尽量只留设备类型）
+  schemaVer         String   @default("v1") // 事件结构版本
+  releaseVersion    String? // 产品发布版本，构建时注入
+  // 活动码字段位置（第一期只存储不做有效性校验，Campaign 表第二期建）
+  cmp               String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventName, serverTs])
+  @@index([userId, serverTs])
+  @@index([anonymousId, serverTs])
+  @@index([serverTs])
+}
+
+/// 消息反馈表 — 点赞/点踩/报错，业务接口直写（不进 Event）
+/// feedbackType: LIKE | DISLIKE | REPORT
+/// reportReason（REPORT 时必填）: OFFENSIVE | OFF_TOPIC | HALLUCINATION | REPETITIVE | OTHER
+model MessageFeedback {
+  id           String   @id @default(cuid())
+  messageId    String   @unique // 每条 assistant 消息最多一条反馈
+  userId       String // 反馈发起人（消息所属用户）
+  mentorId     String // 冗余分身 ID，便于分身维度统计
+  feedbackType String
+  reportReason String?
+  comment      String?  @db.Text
+  createdAt    DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, createdAt])
+  @@index([feedbackType])
+}
+
+/// 用户群组历史区间 — 汇总时按行为发生时间匹配当时生效群组，不按当前群组重写历史
+model UserGroupHistory {
+  id            String    @id @default(cuid())
+  userId        String
+  userGroup     String // NORMAL | BETA | MENTOR_SELF_TEST | OPS_QA | PENDING_REVIEW
+  effectiveFrom DateTime
+  effectiveTo   DateTime? // 当前生效记录为空
+  markedBy      String?
+  reason        String?   @db.Text
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, effectiveFrom])
+  @@index([effectiveTo])
+}
+
+/// 导师提交表 — 资料修改申请与内容纠错/补充的轻量业务存储
+/// submissionType: PROFILE_EDIT | CONTENT_CORRECTION | CONTENT_SUPPLEMENT
+/// status: PENDING -> APPROVED -> APPROVED_PENDING_RELEASE -> PUBLISHED（或 REJECTED）
+model MentorSubmission {
+  id             String    @id @default(cuid())
+  submissionType String
+  userId         String // 提交人（MENTOR_HUMAN）
+  boundMentorId  String // 绑定的分身 ID
+  beforeValue    String?   @db.Text // 修改前值（PROFILE_EDIT）
+  afterValue     String?   @db.Text // 修改后值，或纠错/补充内容
+  status         String    @default("PENDING")
+  reviewerId     String?
+  reviewNote     String?   @db.Text
+  submittedAt    DateTime  @default(now())
+  reviewedAt     DateTime?
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user     User  @relation("SubmissionSubmitter", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer User? @relation("SubmissionReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([boundMentorId, status])
+  @@index([status])
+}
+
+/// 平台日汇总 — 看板只读，不实时扫原始表；维度可空表示全量行
+model DailyPlatformStats {
+  id                String    @id @default(cuid())
+  date              DateTime // 北京时间当日
+  metricKey         String    @db.VarChar(64) // 不可变指标键（见操作手册）
+  channelCode       String?   @db.VarChar(64) // 渠道维度（可空=全渠道）
+  deviceType        String?   @db.VarChar(64) // 设备维度（可空=全部）
+  userGroup         String?   @db.VarChar(64) // 群组维度（可空=NORMAL 正式口径）
+  valueInt          Int?
+  valueDecimal      Decimal?
+  payload           String?   @db.Text // 分布类指标 JSON（如 active_hour_dist、client_dist）
+  aggregationVersion String   @default("v1") @db.VarChar(64) // 计算实现版本
+  createdAt         DateTime  @default(now())
+
+  @@unique([date, metricKey, channelCode, deviceType, userGroup, aggregationVersion])
+  @@index([date, metricKey])
+  @@index([metricKey, date])
+}
+
+/// 分身日汇总 — 每个分身每个指标一行，分布类放 payload
+model DailyMentorStats {
+  id                 String   @id @default(cuid())
+  date               DateTime
+  mentorId           String   @db.VarChar(64)
+  metricKey          String   @db.VarChar(64)
+  valueInt           Int?
+  valueDecimal       Decimal?
+  payload            String?  @db.Text // JSON（如 rounds_by_entitlement、payment_contribution 分列权重）
+  excluded           Boolean  @default(false) // true=被排除数据单独行（见 21.3）
+  aggregationVersion String   @default("v1") @db.VarChar(64)
+  createdAt          DateTime @default(now())
+
+  @@unique([date, mentorId, metricKey, excluded, aggregationVersion])
+  @@index([date, mentorId])
+  @@index([mentorId, date])
+}
+
+/// 旅程多维预聚合 — 双阶段旅程回溯榜单；用户级单人链直接查 Event
+/// stage: stage1 | stage2 | unpaid_stage2
+model DailyJourneyStats {
+  id                 String   @id @default(cuid())
+  date               DateTime
+  cohort             String   @db.VarChar(32) // 同期批次标识（首次落地日）
+  stage              String   @db.VarChar(32)
+  channel            String?  @db.VarChar(64)
+  campaign           String?  @db.VarChar(64) // 第一期只存字段位置，不做校验
+  deviceType         String?  @db.VarChar(32)
+  topPages           String?  @db.Text // JSON：页面->访问次数
+  topCtas            String?  @db.Text // JSON：ctaId->点击次数
+  dwellByPage        String?  @db.Text // JSON：页面->停留秒数
+  userCount          Int      @default(0)
+  aggregationVersion String   @default("v1") @db.VarChar(64)
+  createdAt          DateTime @default(now())
+
+  @@unique([date, cohort, stage, channel, campaign, deviceType, aggregationVersion])
+  @@index([date, cohort, stage])
+  @@index([channel, date])
+  @@index([campaign, date])
+}
+
+/// 审计日志 — 后台敏感操作留痕（只记操作过程，不承担业务计数）
+/// action: profile_update | content_feedback | group_change | data_export | sensitive_view |
+///         interaction_exclude | submission_review | mentor_account_manage 等
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  targetId  String?
+  reason    String?  @db.Text
+  metadata  String?  @db.Text // JSON 操作详情
+  createdAt DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
 }
