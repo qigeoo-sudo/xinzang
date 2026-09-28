@@ -4,6 +4,7 @@ import { ServiceWorkerRegister } from '@/components/sw-register';
 import { PendingAssessmentSync } from '@/components/pending-assessment-sync';
 import { JuiceOverlay } from '@/components/juice-splash';
 import { AttributionCapture } from '@/components/attribution-capture';
+import { AnalyticsCollector } from '@/components/analytics-collector';
 // 杂志风标题字体（思源宋体）与刊头小字（DM Mono），fontsource 自托管，构建不依赖外网
 import '@fontsource/noto-serif-sc/600.css';
 import '@fontsource/noto-serif-sc/700.css';
@@ -63,6 +64,8 @@ export default function RootLayout({
         </Providers>
         {/* 渠道归因：带 ch/utm 参数落地时记录首次触点（无 UI） */}
         <AttributionCapture />
+        {/* 行为埋点：路由浏览、按钮点击、活跃时长（无 UI） */}
+        <AnalyticsCollector />
         {/* 全局果汁飞溅层：只挂载一次，页面切换不卸载，动画可跨页面播完 */}
         <JuiceOverlay />
         <ServiceWorkerRegister />
