@@ -1,8 +1,8 @@
 # AI Career Companion — 产品需求文档（PRD）
 
-**版本：** v3.2
+**版本：** v3.2（评审稿）
 **日期：** 2026-09-28
-**当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离
+**当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离；后台管理系统部分以 `docs/admin-mentor-system-v1.md`（评审稿）为准
 **历史版本：** v3.0（2026-09-20）、v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
 
 > 本次重写基于 2026-09-20 实际代码状态。旧版 PRD 中 CloudBase PostgreSQL 迁移路线已被火山引擎 RDS MySQL 取代，旧导师分身三表设计已被 MentorKnowledgeCard 单表取代。详见 [docs/AICCloudBase_PG_v1.1.md](./AICCloudBase_PG_v1.1.md)（已 archived）。
@@ -197,7 +197,7 @@ docs/
 
 **检索规则：**
 - 生产环境只检索 `external_approved` 类
-- 检索字段仅 `title` + `applicableTo`（`domain` 字段已不再使用）
+- 导师聊天检索字段：`title`、`domain`、`coreView`、`applicableTo`、`exceptions`、`reasoning`、`caseText` 等知识卡内容字段；公开搜索（`/api/search`）仅用 `title` + `applicableTo` 字段，两者不能混写
 - 元数据（cardId/source/confidence）**不进模型上下文**，防止模型引用"卡1"式编号
 
 ### 5.4 字段约束
@@ -689,7 +689,6 @@ docs/
 - [x] 客户端只发送本轮消息
 - [x] 服务端从数据库加载历史
 - [x] 同一请求重试不会重复扣次数
-- [ ] 对话记录了实际使用的 Prompt 版本和模型（RDS 迁移后可选加 promptVersionId）
 - [x] 免费、付费和套餐配额测试通过
 
 ### 认证与支付
@@ -735,12 +734,12 @@ docs/
 | 部署脚本 | `deploy-scripts/01-05*.sh, 20, 30` | 部署与备份 |
 | 安全头配置 | `next.config.js` | CSP/HSTS/X-Frame-Options |
 | Docker 构建 | `Dockerfile` | node:20-alpine 多阶段非 root |
-| 指标字典与埋点清单 | `docs/metrics-and-tracking-v1.md` | 全自研轻量埋点方案，事件语义化命名保证改版弹性 |
+| 后台管理系统与数据采集规范 | `docs/admin-mentor-system-v1.md` | Admin/Mentor 后台产品定义、数据采集规范和指标口径主文档（评审稿），含 A/B 付费归因、page.active_duration 活跃采集、双阶段旅程回溯、用户群组历史等 |
 
 **后台管理系统（待建设）：**
 - 将建设 `admin.aihr.top`（ADMIN_FULL 角色后台）和 `mentor.aihr.top`（MENTOR_HUMAN 角色后台）
 - 采用全自研轻量埋点方案，事件语义化命名保证改版弹性
-- 详细产品方案见用户手中的《Admin_Mentor 后台管理系统产品方案_v0.2.md》
+- 详细产品方案、数据采集规范和指标口径见 `docs/admin-mentor-system-v1.md`
 
 **外部参考：**
 - Prisma migration 工作流：https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production
@@ -752,7 +751,6 @@ docs/
 ## 十六、不在本次范围内
 
 - 不迁移 Auth.js 到 RDS Auth（第二阶段可选）
-- 不建立导师侧页面或导师登录（导师是 AI 分身，无真人账户）
 - 不在 P0/P1 提前上线账号注销（P2 实现）
 - 不代替商户签约或假设支付费率
 - 不上传真实密钥到 Git
@@ -772,7 +770,7 @@ docs/
 - 知识卡 external_approved 总数更新为 398 张（manifest.json 校验）
 - 删除所有 ai-guide 引用（代码已无残留）
 - 子域名新增 admin.aihr.top（后台管理系统，待开发）；channel.aihr.top 已于 2026-09-23 上线
-- 关联文档新增指标字典与埋点清单（docs/metrics-and-tracking-v1.md）及后台管理系统产品方案引用
+- 关联文档改为 `docs/admin-mentor-system-v1.md`（评审稿），整合后台产品定义、数据采集规范和指标口径
 
 ### v3.1（2026-09-24）
 

@@ -1,6 +1,6 @@
 # AIHR 后台管理系统与数据采集规范 v1
 
-版本：v1（合并定稿）
+版本：v1（评审稿）
 日期：2026-09-28
 适用域名：`admin.aihr.top`、`mentor.aihr.top`
 
@@ -31,7 +31,7 @@
 |---|---|---|
 | 普通平台用户 | **Student** | 注册、测评、付费、与 AI 分身对话的人 |
 | 导师 AI 分身 | **Mentor** | 现有代码中的导师分身业务对象，继续使用 `mentorId`，不改名为 `avatarId` |
-| 真人导师登录账号 | **MentorHuman** | 登录 `mentor.aihr.top` 的真人导师，主键为 `mentorHumanId` |
+| 真人导师登录账号 | **MentorHuman** | 登录 `mentor.aihr.top` 的真人导师，是 User 账号的一种业务身份，实际主键为 `User.id`，`User.role=MENTOR_HUMAN`，`User.boundMentorId` 指向其管理的 AI 分身 |
 | 后台工作人员 | **AdminHuman** | 登录 Admin 后台的人，按权限查看和处理数据 |
 | 头像图片 | **avatar** | 仅表示头像图片，不作为业务对象名称 |
 
@@ -39,7 +39,7 @@
 
 > 第一、二期均保持一个 `MentorHuman` 唯一绑定一个 `Mentor`，一个 `Mentor` 也只绑定一个 `MentorHuman`。首版不支持一名真人导师管理多个分身，也不支持多人共同管理一个分身，以减少对现有代码和内容结构的改动。
 
-`ai-guide` 在现有代码中也使用 `mentorId`，但属于平台 AI 职业顾问，不属于真人导师分身。导师排行榜、导师经营数据和 Mentor 后台统计默认排除平台顾问类对象。排除方式见第 11 章总则与第 21 章用户群组机制：在导师配置中打 `isPlatformAssistant` 标记，汇总时按标记排除，不写死具体 ID。
+未来若在导师配置中新增平台 AI 顾问类对象（不作为真人导师分身），应在导师配置中打 `isPlatformAssistant` 标记，汇总时按标记排除，不写死具体 ID。导师排行榜、导师经营数据和 Mentor 后台统计默认排除平台顾问类对象。排除方式见第 11 章总则与第 21 章用户群组机制。
 
 #### 1.2 数据统计基本原则（产品层面）
 
@@ -64,7 +64,7 @@
 - 当前付费用户数、历史付费用户数、流失付费用户数、免费试用使用人数、加榨包余额；
 - 分身总数和活跃分身数（Mentor）；
 - 推荐、主页访问、有效对话和付费转化概览；
-- 全平台有效对话用户数、完成轮次、计费轮次和活跃时长；
+- 全平台有效对话用户数、完成轮次、计费轮次和活跃时长（第二期展示，第一期只采集 page.active_duration）；
 - AI 推断问题解决率和满意倾向率（第二期，须标"AI 推断"+样本量+更新时间）；
 - 主要未解决问题和高失望主题（第二期）；
 - 数据采集异常及语义分析更新时间。
@@ -85,7 +85,7 @@
 
 #### 2.3 导师分身与对话
 
-Admin 可按 Mentor 查看和排序：推荐覆盖用户数、卡片点击、主页访问用户数、帮助用户数、完成轮次（含计费/免费试用/非计费分项）、权益来源分布、页面活跃时长、AI 推断问题解决率（第二期）、高频已解决/未解决问题、满意点和失望点（第二期）。
+Admin 可按 Mentor 查看和排序：推荐覆盖用户数、卡片点击、主页访问用户数、帮助用户数、完成轮次（含计费/免费试用/非计费分项）、权益来源分布、页面活跃时长（第二期展示）、AI 推断问题解决率（第二期）、高频已解决/未解决问题、满意点和失望点（第二期）。
 
 点击导师名称后，复用该导师的 Mentor 看板，并增加管理员专属信息。由于当前固定一名导师对应一个分身，Admin 不需要设计"一位导师下多个分身"的列表或切换器。
 
@@ -113,7 +113,7 @@ Admin 可查看推荐后低访问的分身、访问后低对话的分身、免�
 
 #### 2.7 活动登记管理
 
-Admin 可登记与维护 Campaign（活动），详见 Part IV 来源体系。
+Admin 可登记与维护 Campaign（活动），详见 Part IV 来源体系。第一期不建活动管理模块、不建 Campaign 表；只在 Event 的 props 中预留 `cmp` 字段位置，在 `User.attributionJson` 中预留活动码位置。完整 Campaign 管理（表、登记、活动码校验、效果分析）放第二期。
 
 #### 2.8 用户群组管理
 
@@ -171,7 +171,7 @@ MentorHuman 可提交：头像修改、对外关键词标签修改、对外简�
 
 #### 4.1 角色
 
-首版两个角色，框架可扩展：
+首版新增或使用两个后台角色：ADMIN_FULL、MENTOR_HUMAN。现有 USER 继续作为普通主站用户角色，但没有后台访问权限。框架可扩展：
 
 | role 值 | 名称 | 权限范围 |
 |---|---|---|
@@ -219,7 +219,7 @@ Event 表字段：
 | sessionId | string | 行为会话：30 分钟无事件则切新，仅用于路径分析，与 ChatSession 无关 |
 | userId | string? | 登录后由服务端在上报接口补写，前端不传 |
 | userGroupSnapshot | string? | 上报时服务端从 User 表补写的用户群组快照（NORMAL / BETA / MENTOR_SELF_TEST / OPS_QA / PENDING_REVIEW） |
-| page | string | 语义路由，如 `/mentors`、`/chat`、`/dashboard/subscription`，不含查询参数 |
+| page | string | 语义路由，如 `/mentors`、`/mentors/[id]`、`/dashboard/subscription`，不含查询参数 |
 | target | string? | 元素语义名，如 `mentor_card`、`plan_monthly` |
 | props | JSON | 事件参数，见各事件定义 |
 | clientTs | datetime | 客户端发生时间 |
@@ -249,38 +249,39 @@ Event 表字段：
 | 事件名 | 触发时机 | props | 备注 |
 |---|---|---|---|
 | page.view | 路由切换完成（SDK 自动，全站覆盖） | referrer | 所有页面自动有，新页面零成本接入 |
-| page.active_tick | 页面前台可见且未进入空闲状态时每 30 秒一条 | seconds=30, mentorId?（聊天页带）, pageInstanceId | 详见第 7 章活跃采集规则 |
-| mentor_card.impression | 导师卡进入视口 ≥50% 且停留 ≥0.5 秒 | mentorId, position, sourcePage, label='导师卡片：<导师名>' | IntersectionObserver，每页每卡只报一次 |
-| mentor_card.click | 点击导师卡 | mentorId, position, sourcePage, label='导师卡片：<导师名>' | |
+| page.active_duration | 离开页面/页面隐藏/进入空闲时上报本段累计秒数 | activeSeconds, segmentNo, pageInstanceId, mentorId?（导师页才有） | 详见第 7 章活跃采集规则 |
+| mentor_card.impression | 导师卡进入视口 ≥50% 且停留 ≥0.5 秒 | mentorId, position, sourcePage, ctaId='mentor_card_impression' | IntersectionObserver，每页每卡只报一次 |
+| mentor_card.click | 点击导师卡 | mentorId, position, sourcePage, ctaId='mentor_card_open' | |
 | mentor_profile.view | /mentors/[id] 打开 | mentorId, from（card_click/direct/search） | 分身主页访问 |
-| paywall.view | 订阅页打开 | from? | |
-| subscribe.click | 点击具体套餐 | plan（MONTHLY/QUARTERLY/YEARLY/CREDIT_PACK）, label='订阅：<套餐名>' | |
-| cta.click | 点击带 data-track 标记的任意按钮 | label（data-track 值，按钮语义标签），extraProps?（data-track-props 的 JSON） | 见下方标记约定 |
+| paywall.view | 订阅页打开 | from?, sourceMentorId?（付费页入口携带来源导师，作为 A/B 归因补充证据） | |
+| subscribe.click | 点击具体套餐 | plan（MONTHLY/QUARTERLY/YEARLY/CREDIT_PACK）, ctaId='subscription_monthly_select' 等 | |
+| cta.click | 点击带 data-track 标记的任意按钮 | ctaId（data-track 值，稳定英文 ID）, label?（可选中文展示文案）, extraProps?（data-track-props 的 JSON） | 见下方标记约定 |
 
 #### 6.1 data-track 标记约定（通用按钮点击，低成本接入）
 
-1. 需要统计的按钮加属性 `data-track="按钮语义标签"`；需要额外参数时加 `data-track-props='{"key":"value"}'`。
+1. 需要统计的按钮加属性 `data-track="稳定英文ID"`；需要额外参数时加 `data-track-props='{"key":"value"}'`。
 2. SDK 在 document 上注册一个委托点击监听，命中带 data-track 的元素（或其最近祖先）即自动上报 cta.click，无需逐个按钮写代码。
 3. 首版要求所有与转化相关的关键按钮加标记：注册向导各步按钮、开始/提交测评、开始对话、发送消息以外的聊天操作、资料保存、游戏主按钮等；导航链接可不标（其去向由 page.view 体现）。
-4. label 用统一语义文案，不随 UI 措辞变化频繁改动；确需改动时按口径变更处理（新 label）。
-5. 统计"点击最多的按钮"时，所有 `*.click` 事件按统一 label 字段合并排序。
+4. **ctaId 用稳定英文 ID 做统计键**（如 `mentor_card_open`、`subscription_monthly_select`、`register_v2_submit`），不用中文文案做统计键；中文文案仅做可选展示 label，不能因 UI 措辞调整导致指标断裂。确需改动时按口径变更处理（新 ctaId）。
+5. 统计"点击最多的按钮"时，所有 `*.click` 事件按统一 ctaId 字段合并排序。
 
 ---
 
-### 7. 活跃采集规则（page.active_tick）
+### 7. 活跃采集规则（page.active_duration）
 
-1. 只在页面处于前台可见状态时计时（Page Visibility API：document.visibilityState === 'visible'）。
-2. 页面失焦、切到后台或锁屏时停止上报。
-3. 最近 5 分钟没有点击、输入、触摸、滚动等行为后进入空闲状态，停止上报；再次互动后恢复。
-4. 每次上报携带唯一 eventId（去重用）和 pageInstanceId（页面实例级，区分同页面多次打开）。
-5. 事件批量发送，不每 30 秒单独发起一次网络请求。
-6. 只保存语义页面名称，不保存带手机号、搜索词等内容的完整 URL。
-7. 聊天页面可以携带 mentorId，但不携带聊天原文或输入内容。
-8. 内测、导师自测、Admin 和 QA 账号的数据照常采集，在汇总时按 userGroupSnapshot 单独分组和排除。
-9. 30 秒只是活跃采样间隔，不得用于切分 ChatSession 或问题链。
-10. 原始事件按既定保留期保存，第一期暂不向 Mentor 展示"精确活跃时长"。
+1. 页面前台可见且窗口处于有效状态时，在客户端内存中累计秒数（Page Visibility API：document.visibilityState === 'visible'）。
+2. 切换路由、关闭页面、进入后台、锁屏或进入空闲状态（最近 5 分钟无点击、输入、触摸、滚动）时，通过 sendBeacon 或批量队列上报本段 `activeSeconds`。
+3. 再次回到前台或恢复互动后开始新的活跃片段，不补报上一段时间。
+4. 每段携带 eventId（去重用）、pageInstanceId（页面实例级，区分同页面多次打开）、segmentNo（片段序号）、page（语义路由）和 mentorId（导师页才有）。
+5. 服务端按 eventId 去重，并对单段时长设置合理上限。
+6. 同一导师主页的多个活跃片段可以相加；付款前累计达到 5 秒，即满足"B 付款前有效浏览"（详见第 13 章 A/B 归因规则）。
+7. 指标全称仍使用"估算有效停留时间"，不表述为阅读、理解或认可。
+8. 为减少浏览器异常关闭造成的数据损失，超长停留每 5 分钟做一次同类型增量检查点；这只是容错，不改变统计口径，也不是新的监测类型。
+9. 只保存语义页面名称，不保存带手机号、搜索词等内容的完整 URL；导师页可携带 mentorId，但不携带聊天原文或输入内容。
+10. 内测、导师自测、Admin 和 QA 账号的数据照常采集，在汇总时按 userGroupSnapshot 单独分组和排除。
+11. 活跃片段仅用于行为分析会话，不得用于切分 ChatSession 或问题链。
 
-指标全称：页面前台可见且未进入空闲状态的估算活跃时间。第一期采集，看板第二期展示。
+第一期完整采集；Admin 双阶段旅程回溯中的 dwell_by_page 第一期展示，平台概览、Mentor 看板和复杂时长分布第二期展示。
 
 ---
 
@@ -288,10 +289,9 @@ Event 表字段：
 
 | 页面 | 事件 |
 |---|---|
-| 全站所有页面 | page.view、page.active_tick（SDK 自动）、cta.click（带 data-track 的按钮，委托监听自动上报） |
+| 全站所有页面 | page.view、page.active_duration（SDK 自动）、cta.click（带 data-track 的按钮，委托监听自动上报） |
 | /mentors、/（含导师卡的页面） | mentor_card.impression、mentor_card.click |
-| /mentors/[id] | mentor_profile.view |
-| 聊天页 | active_tick 带 props.mentorId |
+| /mentors/[id] | mentor_profile.view、active_duration 带 props.mentorId |
 | /dashboard/subscription | paywall.view、subscribe.click |
 | 每条 assistant 消息气泡 | 点赞/点踩/报错组件（写 MessageFeedback） |
 
@@ -319,7 +319,7 @@ Event 表字段：
 
 - 每日清理任务按保留期删除过期原始事件：删除前先查用户付费状态，曾付费用户（含其注册绑定匿名段）保留 3 年；普通用户和未绑定匿名事件 90 天。
 - 用户在第 90 天前才完成付费，其事件因清理时的付费检查而自动转为 3 年保留。
-- 汇总表、MetricDefinition 与审计记录不清理。
+- 汇总表、aggregationVersion 重算记录与审计记录不清理。
 
 ---
 
@@ -327,15 +327,16 @@ Event 表字段：
 
 ### 11. 总则
 
-1. **语义化命名**：事件名描述业务动作（如 `mentor_card.click`），禁止按页面位置命名（如 `home.card3.click`）。页面改版不改业务动作时，事件名与 props 保持不变，统计口径天然连续。
-2. **数据源优先级**：业务表已有的数据一律从业务表算，不重复埋点。埋点只补业务表没有的行为数据（曝光、点击、活跃时长、终端）。
-3. **看板只读汇总表**：所有看板页面查询 DailyMentorStats / DailyPlatformStats / 业务表轻聚合，不实时扫 Event 原始表和 ChatMessage 全表。
-4. **三种统计主体不混用**：Student（用户）、Mentor（AI 分身）、MentorHuman（真人导师），每个指标必须标明主体。
-5. **排除项**：当前导师配置中没有平台顾问分身；今后若新增平台顾问类对象，在导师配置中打 `isPlatformAssistant` 标记，汇总时按标记排除，不写死具体 ID。内测用户、导师本人及自测账号、Admin/运营/QA 账号的数据照常采集，但在汇总时按用户群组排除出正式经营指标和排名。不使用硬编码手机号白名单维护排除名单。
-6. **小样本保护**：任何分布、排名类指标，分母小于 5 时页面显示"暂无足够样本"，不展示具体数值。敏感画像和语义分布默认样本少于 10 时不展示。
-7. **语义指标标注**：AI 推断类指标页面必须写"AI 推断"字样 + 样本量 + 更新时间，不得表述为用户明确反馈。
-8. **事件幂等**：每条事件携带唯一 eventId（crypto.randomUUID）和 pageInstanceId（页面实例级），服务端按 eventId 去重，防止 React 重复渲染和网络重试造成重复计数。
-9. **财务实收与自然用户转化分别统计**：测试/内测账号的真实付款仍进入财务实收对账，但不进入自然用户付费转化和导师资源分配指标。
+1. **指标定义不可变登记处**：本操作手册是 metricKey 和文字定义的唯一不可变登记处，不新增 MetricDefinition 表，也不建设全套指标版本中心。已启用指标定义不得覆盖；业务含义变化时新增 metricKey，旧 metricKey 标记停用但不删除。Event 保存 `schemaVer` 和 `releaseVersion`；汇总表保留 `aggregationVersion`；计算实现修复或改变时升级 aggregationVersion 并记录重算日期范围、原因、执行时间和结果。
+2. **语义化命名**：事件名描述业务动作（如 `mentor_card.click`），禁止按页面位置命名（如 `home.card3.click`）。页面改版不改业务动作时，事件名与 props 保持不变，统计口径天然连续。
+3. **数据源优先级**：业务表已有的数据一律从业务表算，不重复埋点。埋点只补业务表没有的行为数据（曝光、点击、活跃时长、终端）。
+4. **看板只读汇总表**：所有看板页面查询 DailyMentorStats / DailyPlatformStats / 业务表轻聚合，不实时扫 Event 原始表和 ChatMessage 全表。
+5. **三种统计主体不混用**：Student（用户）、Mentor（AI 分身）、MentorHuman（真人导师），每个指标必须标明主体。
+6. **排除项**：当前导师配置中没有平台顾问分身；今后若新增平台顾问类对象，在导师配置中打 `isPlatformAssistant` 标记，汇总时按标记排除，不写死具体 ID。内测用户、导师本人及自测账号、Admin/运营/QA 账号的数据照常采集，但在汇总时按用户群组排除出正式经营指标和排名。不使用硬编码手机号白名单维护排除名单。
+7. **小样本保护**：任何分布、排名类指标，分母小于 5 时页面显示"暂无足够样本"，不展示具体数值。敏感画像和语义分布默认样本少于 10 时不展示。
+8. **语义指标标注**：AI 推断类指标页面必须写"AI 推断"字样 + 样本量 + 更新时间，不得表述为用户明确反馈。
+9. **事件幂等**：每条事件携带唯一 eventId（crypto.randomUUID）和 pageInstanceId（页面实例级），服务端按 eventId 去重，防止 React 重复渲染和网络重试造成重复计数。
+10. **财务实收与自然用户转化分别统计**：测试/内测账号的真实付款仍进入财务实收对账，但不进入自然用户付费转化和导师资源分配指标。
 
 ---
 
@@ -372,11 +373,13 @@ Event 表字段：
 | mentor.billed_rounds | 计费轮次：由付费权益支撑的完成问答轮次（SUBSCRIPTION + CREDIT_PACK），不含免费试用轮次 | ChatMessage | 每日 |
 | mentor.free_trial_rounds | 免费试用轮次：消耗免费试用配额（每人 3 次）的完成问答轮次 | ChatMessage | 每日 |
 | mentor.non_billing_replies | 路由门禁、证据不足提示、系统错误等不扣次数的回复数 | ChatMessage | 每日 |
-| mentor.paid_first_chat_users | 付费首聊归因人数：用户首次付费后第一场对话发生在本分身的去重付费用户数；付费后尚未开始对话的暂不归因。分身对订阅决策贡献的主口径 | ChatSession+PaymentOrder | 每日 |
+| mentor.paid_first_chat_users | 已废弃，由 mentor.payment_contribution_weight 和 mentor.paid_usage_user_count 替代 | — | — |
+| mentor.payment_contribution_weight | 按 A/B 归因规则累计的付费贡献权重（按 paymentType 分列：SUBSCRIPTION 与 CREDIT_PACK，见 13.5） | ChatSession+PaymentOrder+Event | 每日 |
+| mentor.paid_usage_user_count | 付费后实际使用过该导师（完成至少一轮问答）的去重用户数 | ChatMessage+PaymentOrder | 每日 |
 | mentor.paid_round_user_count | 与本分身有过计费轮次（SUBSCRIPTION / CREDIT_PACK）的去重用户数 | ChatMessage | 每日 |
 | mentor.avg_rounds_per_user | 完成问答轮次 ÷ 帮助用户数 | 计算 | 每日 |
-| mentor.rounds_by_entitlement | 按 entitlementSource 分 FREE_TRIAL / SUBSCRIPTION / CREDIT_PACK / UNKNOWN 四桶 | ChatMessage | 每日 |
-| mentor.estimated_active_time | 聊天页 page.active_tick 秒数求和（按 props.mentorId 归分身）。指标全称：页面前台可见且未进入空闲状态的估算活跃时间 | Event | 每日（采集第一期，展示第二期） |
+| mentor.rounds_by_entitlement | 按 entitlementSource 分 FREE_TRIAL / SUBSCRIPTION / CREDIT_PACK / NON_BILLING 四桶 | ChatMessage | 每日 |
+| mentor.estimated_active_time | 导师页 page.active_duration 的 activeSeconds 求和（按 props.mentorId 归分身）。指标全称：页面前台可见且未进入空闲状态的估算有效停留时间。第一期采集全部有效停留数据；Mentor 看板和平台概览中的导师时长展示为第二期 | Event | 每日（采集第一期；旅程回溯 dwell_by_page 第一期展示，看板时长汇总第二期展示） |
 | mentor.feedback_like_count | 点赞数 | MessageFeedback | 实时可查 |
 | mentor.feedback_dislike_count | 点踩数 | MessageFeedback | 实时可查 |
 | mentor.feedback_report_count | 报错数，细分原因（冒犯/偏题/幻觉/反复/其他） | MessageFeedback | 实时可查 |
@@ -395,7 +398,7 @@ Event 表字段：
 
 #### 13.2 权益来源四桶
 
-`entitlementSource`：`FREE_TRIAL | SUBSCRIPTION | CREDIT_PACK | UNKNOWN`。写消息时由服务端按用户当时权益来源盖章。历史无法可靠反推的数据标记为 `UNKNOWN`，不得伪造精确分类。待正式赠送权益台账建成后增加 `GIFT`。
+`entitlementSource`：`FREE_TRIAL | SUBSCRIPTION | CREDIT_PACK | NON_BILLING`。**只写在成功的 assistant 回复上**（即完成问答轮次中 Mentor 成功返回的那条消息），由服务端按用户当时权益来源盖章。路由门禁、证据不足提示、系统错误等非计费边界回复为空或采用独立 `NON_BILLING` 标识，不与历史未知来源混淆。历史无法可靠反推的数据标记为 `UNKNOWN`，不得伪造精确分类。待正式赠送权益台账建成后增加 `GIFT`。
 
 #### 13.3 对话、问题链、行为会话三概念区分
 
@@ -409,7 +412,45 @@ Event 表字段：
 
 #### 13.4 说明
 
-产品方案中的"有效访问"定义（注册成功才算）在本字典中落为"主页访问用户数"（漏斗分母）与旅程回溯能力（见第 16 章）；分身对订阅的贡献以"付费首聊归因人数"为准。
+产品方案中的"有效访问"定义（注册成功才算）在本字典中落为"主页访问用户数"（漏斗分母）与旅程回溯能力（见第 16 章）；分身的付费贡献以 A/B 归因规则下的 `mentor.payment_contribution_weight` 为准，按 paymentType 分列展示，不再使用"订阅决策贡献"或"全部首次真实付款"等混用措辞。
+
+#### 13.5 导师付费贡献 A/B 归因规则
+
+**定义：**
+
+- **A 导师**：用户首次真实付款前，最后完成有效问答的导师。
+- **B 导师**：用户首次真实付款后，第一位完成有效问答的导师。
+- **B 的观察窗口**：B 必须在首次付款后 7 天内完成首次有效问答；超过 7 天才发生的首次有效问答视为没有归因意义的付款后使用，只计入 `mentor.paid_usage_user_count`，不计入 `mentor.payment_contribution_weight`，也不参与 B 付款前有效浏览判定。
+- **B 付款前有效浏览**：用户付款前进入过 B 的导师主页，累计有效停留至少 5 秒（page.active_duration 多段相加）。
+- **归因窗口**：A 的有效问答原则上应发生在首次付款前 7 天内。后续如业务数据表明决策周期更长，可新增 30 天口径，不能静默改写 7 天定义。
+
+**权重规则（四种场景）：**
+
+| 条件 | 付费贡献权重 |
+|---|---|
+| A 与 B 相同 | A 获得 1.0 |
+| A 与 B 不同，付款前有效浏览过 B | A 获得 0.5，B 获得 0.5 |
+| A 与 B 不同，付款前未有效浏览 B | A 获得 1.0；B 只计付费后使用（paid_usage_user_count），不计转化贡献 |
+| 付款前没有任何导师完成问答 | 暂记平台/渠道/无法归因，不把贡献倒推给付款后首次导师 |
+
+补充：付款后尚未发生导师问答时，A 获得 1.0（前提是 A 在归因窗口内）；若付款后超过 7 天才发生首次有效问答，则该次问答只计入 paid_usage_user_count，不重新触发 B 归因。
+
+这里的"1.0"表示平台按既定经营规则完整分配一次贡献，不表示科学意义上证明了用户付款的唯一心理原因。
+
+**贡献按 paymentType 分列：**
+
+- 首次订阅（paymentType=SUBSCRIPTION）和首次加榨包（paymentType=CREDIT_PACK）分别按上述 A/B 规则计算付费贡献权重，两列分开展示。
+- 平台总贡献可在前端合并展示，但底层分列存储，便于区分订阅决策与加榨包决策的不同经营信号。
+- 用户同时存在订阅和加榨包付款时，各自按其首次付款时刻独立计算 A/B 与观察窗口，不合并为一次。
+
+**指标拆分：**
+
+- `mentor.payment_contribution_weight`：按上述规则累计的付费贡献权重（按 paymentType 分列：SUBSCRIPTION 与 CREDIT_PACK）；
+- `mentor.paid_usage_user_count`：付费后实际使用过该导师（完成至少一轮问答）的去重用户数。
+
+**统一用语：** 不再混用"订阅决策贡献"和"全部首次真实付款"，统一称为"付费贡献权重（按 paymentType 分列）"。应保存 A、B、B 付款前有效停留、付款时间、付款 paymentType、归因窗口和最终权重，使规则将来可以重新计算。
+
+进入付费页时如能取得来源导师，还应在 `paywall.view` 和订单归因信息中记录 `sourceMentorId`，作为补充证据；第一期 A/B 权重规则不必因此变复杂。
 
 ---
 
@@ -419,27 +460,31 @@ Event 表字段：
 |---|---|---|
 | mentorhuman.last_login_at | User.lastLoginAt | 实时 |
 | mentorhuman.login_count | User.loginCount | 实时 |
-| mentorhuman.dashboard_active_time | mentor 子域 page.active_tick 秒数求和 | Event（每日） |
-| mentorhuman.profile_edit_submitted | 展示资料修改申请提交次数 | AuditLog |
-| mentorhuman.content_feedback_count | 内容纠错或补充建议提交次数 | AuditLog |
+| mentorhuman.dashboard_active_time | mentor 子域 page.active_duration 的 activeSeconds 求和 | Event（每日） |
+| mentorhuman.profile_edit_submitted | 展示资料修改申请提交次数 | MentorSubmission（PROFILE_EDIT 计数） |
+| mentorhuman.content_feedback_count | 内容纠错或补充建议提交次数 | MentorSubmission（CONTENT_CORRECTION + CONTENT_SUPPLEMENT 计数） |
 
 ---
 
 ### 15. 漏斗与转化（主体：Student，同期批次口径）
 
-#### 15.1 核心漏斗（七阶段）
+#### 15.1 核心漏斗（获客主链 + 激活里程碑 + 付费主链）
 
-首次有效落地 → 注册成功 → 引导/档案完成 → 首次导师主页访问 → 首次导师完成问答 → 到达付费页 → 首次真实付费。
+当前设计允许用户在完成 0 轮导师问答时付款，因此七个阶段不是所有用户必然依次经过的严格漏斗。改为"主链 + 里程碑"结构：
 
-| 阶段 | 定义 |
-|---|---|
-| S1 首次有效落地 | 满足全部条件的最早一条用户侧 page.view：用户群组为 NORMAL 或注册前未标记；ua 非机器人；事件发生时尚未注册（排除已注册回访）；page 非后台路径；属正常页面访问而非技术请求。无法识别来源的正常访问归"自然/未知"，不丢弃 |
-| S2 注册成功 | User.createdAt |
-| S3 引导/档案完成 | UserProfile.registrationCompletedAt 非空；无该时间戳的老用户，档案存在即视为完成并单独标注口径 |
-| S4 首次导师主页访问 | 该用户首个 mentor_profile.view |
-| S5 首次导师完成问答 | 该用户首个完成问答轮次（用户发有效消息 + Avatar 成功回复配对） |
-| S6 到达付费页 | 该用户首个 paywall.view |
-| S7 首次真实付费 | 该用户首个真实付款订单（定义见 15.4） |
+- **获客主链**（有严格先后顺序，算 step_rate）：首次有效落地 → 注册成功 → 档案完成；
+- **激活里程碑**（里程碑式，只算 overall_rate，不强制在获客主链之后）：首次导师主页访问、首次导师完成问答；
+- **付费主链**（有严格先后顺序，算 step_rate）：到达付费页 → 首次真实付费。
+
+| 阶段 | 链/里程碑 | 定义 |
+|---|---|---|
+| S1 首次有效落地 | 获客主链 | 满足全部条件的最早一条用户侧 page.view：用户群组为 NORMAL 或注册前未标记；ua 非机器人；事件发生时尚未注册（排除已注册回访）；page 非后台路径；属正常页面访问而非技术请求。无法识别来源的正常访问归"自然/未知"，不丢弃 |
+| S2 注册成功 | 获客主链 | User.createdAt |
+| S3 引导/档案完成 | 获客主链 | UserProfile.registrationCompletedAt 非空；无该时间戳的老用户，档案存在即视为完成并单独标注口径 |
+| S4 首次导师主页访问 | 激活里程碑 | 该用户首个 mentor_profile.view |
+| S5 首次导师完成问答 | 激活里程碑 | 该用户首个完成问答轮次（用户发有效消息 + Avatar 成功回复配对） |
+| S6 到达付费页 | 付费主链 | 该用户首个 paywall.view |
+| S7 首次真实付费 | 付费主链 | 该用户首个真实付款订单（定义见 15.4） |
 
 #### 15.2 同期批次规则
 
@@ -453,8 +498,8 @@ Event 表字段：
 | metricKey | 口径 |
 |---|---|
 | funnel.stage_users | 各阶段去重用户数，以阶段和观察窗口为维度（统计的是人，不是事件次数） |
-| funnel.step_rate | 本阶段人数 ÷ 上一阶段人数 |
-| funnel.overall_rate | 本阶段人数 ÷ S1 首次有效落地人数 |
+| funnel.step_rate | 本阶段人数 ÷ 上一阶段人数（仅适用于获客主链 S1→S2→S3 和付费主链 S6→S7，有严格先后顺序） |
+| funnel.overall_rate | 本阶段人数 ÷ S1 首次有效落地人数（所有阶段均计算，激活里程碑 S4/S5 只用此口径） |
 | funnel.free_trial_to_paid_30d | 首次免费试用轮次起 30 天内真实付费的成熟批次转化率：分母只含首次试用时间 +30 天已过的用户，未完整经过观察期的用户不进分母 |
 | funnel.paid_at_completed_round | 首次真实付款时刻之前累计完成问答轮次分桶：0 / 1–3 / 4–10 / 11–30 / 30 以上；轮次完成时间必须早于付款时间，不用用户当前总轮次 |
 | funnel.channel_performance | 按首次锁定渠道（含自然/未知）比较经营表现，明细见 15.5 |
@@ -499,24 +544,49 @@ Event 表字段：
 | journey.stage2_duration | 阶段二耗时：User.createdAt 到首个 PAID 订单 paidAt |
 | journey.chain | 两阶段各自的完整事件链（按 serverTs 排序），支持用户级逐条查看 |
 | journey.top_pages | 阶段内浏览次数最多的页面（page.view 按 page 计数） |
-| journey.top_cta | 阶段内点击次数最多的按钮（所有 `*.click` 事件按统一 label 合并排序） |
-| journey.dwell_by_page | 阶段内各页面逗留时长（active_tick 按 page 求和） |
+| journey.top_cta | 阶段内点击次数最多的按钮（所有 `*.click` 事件按统一 ctaId 合并排序） |
+| journey.dwell_by_page | 阶段内各页面有效停留时长（page.active_duration 的 activeSeconds 按 page 求和） |
 
-#### 16.3 人群范围
+#### 16.3 第一期保留功能
 
-1. 完成全部两阶段的用户：分阶段输出上述指标。
-2. 只完成阶段一、未完成阶段二的用户（有注册、无 PAID 订单）：输出阶段二窗口（注册后至统计时点）的 top_pages、top_cta、dwell_by_page，用于定位流失前的集中行为。
+1. 阶段一（首次落地→注册）和阶段二（注册→首次真实付费）的事件链。
+2. 选定用户后按 serverTs 排序的事件链查看。
+3. 每阶段的 top_pages、top_cta、页面有效停留（dwell_by_page）。
+4. 支持时间、渠道、活动、设备筛选。
+5. 未付费用户可查看"注册至当前"的阶段二行为（有注册、无 PAID 订单时，输出注册后至统计时点的 top_pages、top_cta、dwell_by_page，用于定位流失前的集中行为）。
+6. 单个用户原始事件查询。
+7. 每日预聚合的页面、按钮和停留榜单。
 
-#### 16.4 切分维度
+完成全部两阶段的用户分阶段输出上述指标。
+
+#### 16.4 第二期才做
+
+- 自动路径聚类（top_paths）；
+- 流失路径识别；
+- 统计显著性比较；
+- AI 解释流失；
+- 改版归因；
+- 路径预测；
+- 用户分群。
+
+#### 16.5 切分维度
 
 - 时间段：按注册日或付费日圈定任意区间；
-- 活动：按首触活动码圈定人群（User.attributionJson，见 Part IV 来源体系）；活动前后对比用同一日期区间规则分别聚合；
+- 渠道：按首次锁定渠道圈定人群；
+- 活动：按首触活动码圈定人群（User.attributionJson，见 Part IV 来源体系）；第一期不做活动码有效性校验，无效或未登记码归入自然量；活动前后对比用同一日期区间规则分别聚合；
 - 设备：按首事件 ua 解析桌面 / 安卓 / 苹果；
 - 上述维度可叠加。
 
-#### 16.5 实现说明
+#### 16.6 实现边界
 
-用户级事件链查询走 Event 表（按 userId 或注册绑定的 anonymousId 过滤、serverTs 排序）；回溯窗口受保留期约束——普通用户 90 天，曾付费用户 3 年。聚合榜单与耗时分布由每日汇总任务预算，下钻页面只读汇总加单人事件链，不做全表扫描。全部事件为全站统一采集，首版旅程回溯页面仅 ADMIN_FULL 可见；数据同时为导师端将来的相关视图做好储备，导师端首版仍只展示聚合指标。
+- 用户级下钻只查单人事件链，不做全表扫描。
+- top 榜单与耗时分布由每日汇总任务预算，下钻页面只读汇总加单人事件链。
+- 原始事件链仅 ADMIN_FULL 可见。
+- 每次查看用户级事件链写审计日志。
+- 事件链页面标注事件缺失和跨设备不完整（同一 userId 不同 anonymousId 的历史各自保留，不自动串联）。
+- 不自动解释因果：旅程回溯展示事件序列和聚合榜单，不自动给出"用户因 X 流失"的因果结论。
+- 回溯窗口受保留期约束——普通用户 90 天，曾付费用户 3 年。
+- 全部事件为全站统一采集，首版旅程回溯页面仅 ADMIN_FULL 可见；数据同时为导师端将来的相关视图做好储备，导师端首版仍只展示聚合指标。
 
 ---
 
@@ -552,9 +622,14 @@ Event 表字段：
 
 #### 18.2 活动（Campaign）
 
-有明确起止时间的阶段性动作，新增 Campaign 表登记（表结构见第 19 章）。活动类型：EVENT（市场活动：合办 event/直播/线下）、PROMOTION（促销活动：折扣/赠送）、ADS（付费投放）。
+有明确起止时间的阶段性动作，活动类型：EVENT（市场活动：合办 event/直播/线下）、PROMOTION（促销活动：折扣/赠送）、ADS（付费投放）。完整 Campaign 管理（表、登记、活动码校验、效果分析）属于第二期；第一期不建 Campaign 表，也不建活动管理模块。
 
-规则：
+第一期预留：
+- Event 的 props 中预留 `cmp` 字段位置（活动码字符串，可空）；
+- `User.attributionJson` 中预留活动码位置（与 channelId 并列，可空）；
+- 旅程回溯切分维度中活动码字段保留，但第一期不做活动码有效性校验，无效或未登记码落自然量。
+
+第二期规则（保留产品定义）：
 
 1. 与其他机构合办的一次性 event 记为 EVENT，填 partnerOrg，不建立渠道；该机构转为持续导流关系时，再另建合作渠道。
 2. 促销活动记为 PROMOTION，与权益发放台账关联——折扣体现在订单，赠送体现在发放记录。
@@ -562,7 +637,9 @@ Event 表字段：
 
 ---
 
-### 19. Campaign 表结构
+### 19. Campaign 表结构（第二期建表）
+
+第一期不建 Campaign 表。完整 Campaign 管理（表、登记、活动码校验、效果分析）放第二期。下列结构为第二期建表时的参考定义。
 
 | 字段 | 说明 |
 |---|---|
@@ -575,13 +652,33 @@ Event 表字段：
 | status | ACTIVE / ENDED / DISABLED |
 | note | 备注 |
 
+### 19A. DailyJourneyStats 表结构（第一期预聚合）
+
+旅程回溯的多维汇总榜单存储位置。用户级单人事件链直接查 Event 表，不进汇总；DailyJourneyStats 只存预聚合榜单。
+
+| 字段 | 说明 |
+|---|---|
+| date | 日期（北京时间） |
+| cohort | 同期批次标识（如首次落地日） |
+| stage | 阶段：stage1 / stage2 / unpaid_stage2 |
+| channel | 渠道（可空） |
+| campaign | 活动码（可空，第一期只存字段位置，不做校验） |
+| deviceType | 设备类型（可空） |
+| topPages | JSON，页面→访问次数 |
+| topCtas | JSON，按钮 ctaId→点击次数 |
+| dwellByPage | JSON，页面→停留秒数（page.active_duration 的 activeSeconds 按 page 求和） |
+| userCount | 该维度组合下的用户数 |
+| aggregationVersion | 聚合计算版本 |
+
+索引建议：(date, cohort, stage)、(channel, date)、(campaign, date)。同一 (date, cohort, stage, channel, campaign, deviceType, aggregationVersion) 组合唯一。
+
 ---
 
 ### 20. 多活动触点规则
 
 1. 首次触点锁定一个渠道和一个活动（attributionJson），之后不可更改。
 2. 用户后来在促销期间下单，促销活动记录在订单 metadata 与权益发放台账中，不覆盖首触归因，两条信息并存。
-3. 旅程回溯按首触活动圈人；促销效果按订单关联的 PROMOTION 活动统计。
+3. 旅程回溯按首触活动圈人（第一期按 attributionJson 中的活动码字段圈人，不做有效性校验；促销效果按订单关联的 PROMOTION 活动统计属于第二期）。
 
 ---
 
@@ -601,16 +698,29 @@ Event 表字段：
 
 #### 21.2 标记与管理
 
-- 用户群组在 User 表上标记，带 groupMarkedAt / groupMarkedBy / groupReason 字段。
+- 用户群组在 User 表上标记当前状态（`userGroup` 作为缓存），完整的群组历史记录在 UserGroupHistory 表中。
+- **UserGroupHistory 表结构**：
+
+| 字段 | 说明 |
+|---|---|
+| userId | 用户 ID |
+| userGroup | 群组标签（NORMAL / BETA / MENTOR_SELF_TEST / OPS_QA / PENDING_REVIEW） |
+| effectiveFrom | 生效起始时间 |
+| effectiveTo | 生效结束时间（当前生效记录为空） |
+| markedBy | 标记人 userId |
+| reason | 标记原因 |
+
 - 手机号只用于首次确认身份，不能把手机号白名单硬编码进统计逻辑；系统把对应 userId 标为用户群组，并记录生效时间、结束时间、标记人和原因。
 - 账号由 BETA 转为 NORMAL 后，只排除其处于 BETA 期内的行为。真实付款仍进入财务实收对账，但不进入自然用户付费转化和导师资源分配指标。
+- 汇总 ChatMessage、PaymentOrder 等业务记录时，根据行为发生时间匹配当时生效的群组（查 UserGroupHistory），不按当前 User.userGroup 重写历史。Event 保留 `userGroupSnapshot` 作为辅助证据。
 - 不使用硬编码手机号维护排除名单。
+- 角色为 MENTOR_HUMAN 和 ADMIN_FULL 的账号，创建时应自动配置相应测试/运营群组（MENTOR_SELF_TEST / OPS_QA），避免其主站互动进入正式指标。
 
-User 表需新增 `userGroup` 字段（`NORMAL | BETA | MENTOR_SELF_TEST | OPS_QA | PENDING_REVIEW`），带 groupMarkedAt / groupMarkedBy / groupReason 记录。
+User 表需新增 `userGroup` 字段（`NORMAL | BETA | MENTOR_SELF_TEST | OPS_QA | PENDING_REVIEW`）作为当前状态缓存，带 groupMarkedAt / groupMarkedBy / groupReason 记录；群组历史区间存入 UserGroupHistory 表。
 
 #### 21.3 排除规则在汇总中的实现
 
-- 汇总任务读取 User.userGroup，在写入 DailyMentorStats / DailyPlatformStats 时按 group 决定是否计入正式指标列。
+- 汇总任务按行为发生时间匹配 UserGroupHistory 中当时生效的群组，在写入 DailyMentorStats / DailyPlatformStats 时按 group 决定是否计入正式指标列。
 - 被排除的数据单独写入一列（如 `excluded_helped_user_count`），不删除原始记录。
 - Admin 看板可切换"含排除数据 / 仅正式指标"视图。
 
@@ -638,43 +748,65 @@ User 表需新增 `userGroup` 字段（`NORMAL | BETA | MENTOR_SELF_TEST | OPS_Q
 
 #### 22.1 需要给现有表补的字段
 
-1. ChatMessage 增加 `entitlementSource` 列：`FREE_TRIAL | SUBSCRIPTION | CREDIT_PACK | UNKNOWN`，写消息时由服务端按用户当时权益来源盖章。历史无法可靠反推的数据标记为 `UNKNOWN`，不得伪造精确分类。待正式赠送权益台账建成后增加 `GIFT`。
-2. User.role 枚举值增加 `MENTOR_HUMAN`；User 增加可空唯一字段 `boundMentorId`（绑定的分身 ID）；User 增加 `userGroup` 字段，带 groupMarkedAt / groupMarkedBy / groupReason 记录。
-3. 新增表：Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog（后台操作审计）、MetricDefinition（指标定义登记表）、Campaign（活动登记）。
-
-导师数量和知识卡数量必须动态读取，不能硬编码进后台。
-
----
-
-### 23. MetricDefinition 表与指标版本管理
-
-#### 23.1 MetricDefinition 表结构
+1. ChatMessage 增加 `entitlementSource` 列：`FREE_TRIAL | SUBSCRIPTION | CREDIT_PACK | NON_BILLING | UNKNOWN`，**只写在成功的 assistant 回复上**，由服务端按用户当时权益来源盖章。路由门禁、证据不足提示、系统错误等非计费边界回复为空或采用独立 `NON_BILLING` 标识，不与 UNKNOWN 混淆。历史无法可靠反推的数据标记为 `UNKNOWN`，不得伪造精确分类。待正式赠送权益台账建成后增加 `GIFT`。
+2. User.role 枚举值增加 `MENTOR_HUMAN`，并将现有 `ADMIN` 迁移为 `ADMIN_FULL`（详见 22.2）；User 增加可空唯一字段 `boundMentorId`（绑定的分身 ID，服务端验证其属于有效 Mentor）；User 增加 `userGroup` 字段作为当前状态缓存，带 groupMarkedAt / groupMarkedBy / groupReason 记录。
+3. 新增表：Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog（后台操作审计）、UserGroupHistory（用户群组历史区间）、MentorSubmission（导师资料修改申请与内容反馈）、DailyJourneyStats（旅程多维预聚合）。不新增 MetricDefinition 表，不新增 Campaign 表（第一期只在 Event props 和 attributionJson 中预留 cmp 字段位置，Campaign 表与活动管理模块放第二期）。
+4. **MentorSubmission 表结构**（导师资料修改申请与内容反馈的轻量业务存储）：
 
 | 字段 | 说明 |
 |---|---|
-| metricKey | 不可变唯一键，如 `mentor.helped_users`、`student.registration_count` |
-| definition | 口径文字描述（冻结后不可修改） |
-| subject | Student / Mentor / MentorHuman |
-| dataSource | 数据来源说明 |
-| status | ACTIVE / RETIRED |
-| createdAt | 登记时间 |
-| retiredAt | 停用时间（停用后看板不再展示，但历史数据保留可查） |
+| submissionType | 提交类型：PROFILE_EDIT / CONTENT_CORRECTION / CONTENT_SUPPLEMENT |
+| userId | 提交人 userId（MentorHuman） |
+| boundMentorId | 绑定的分身 ID |
+| beforeValue / afterValue | 修改前后值，或提交的纠错/补充内容 |
+| status | PENDING → APPROVED → APPROVED_PENDING_RELEASE → PUBLISHED（或 REJECTED） |
+| reviewerId | 审核人 userId（ADMIN_FULL） |
+| reviewNote | 审核意见 |
+| submittedAt / reviewedAt | 提交时间 / 审核时间 |
+| publishedAt | 发布完成时间（进入 PUBLISHED 时填写） |
 
-#### 23.2 不可变 metricKey
+状态流转与发布方式：审核通过后进入 APPROVED_PENDING_RELEASE，由管理员人工修改静态 Mentor 配置（`src/lib/mentors.ts`）并发布，发布完成后由 Admin 在后台将记录标记为 PUBLISHED。第一期不建运行时覆盖表，导师资料仍以静态 Mentor 配置为准。
 
-- 每个指标登记时获得不可变 metricKey 和口径定义，登记后不得覆盖修改。
-- 业务口径变化时新增 metricKey（如 `mentor.helped_users_v2`），旧 key 标记 RETIRED 但数据不动，历史数据按旧定义永远可解释。
+资料修改次数和内容反馈次数从 MentorSubmission 统计（按 submissionType 聚合），不从 AuditLog 统计；AuditLog 只记录操作过程审计，不承担业务计数职能。
+
+导师数量和知识卡数量必须动态读取，不能硬编码进后台。
+
+#### 22.2 ADMIN → ADMIN_FULL 迁移
+
+当前代码仍使用 `role=ADMIN`。第一期实施计划必须补充：
+
+- 将现有唯一管理员从 ADMIN 迁移为 ADMIN_FULL；
+- 同步修改 channel 后台、Admin API 和导出接口的实时角色校验；
+- 迁移前备份现有管理员 ID；
+- 迁移后立即验证 admin、channel 两个后台均能正常进入；
+- 准备避免唯一管理员被锁在系统外的回滚方式。
+
+---
+
+### 23. 指标版本管理（不新增 MetricDefinition 表）
+
+第一期不新增 MetricDefinition 表，也不建设全套指标版本中心。采用以下规则：
+
+#### 23.1 不可变 metricKey 登记处
+
+- 本操作手册是 metricKey 和文字定义的唯一不可变登记处。
+- 已启用指标定义不得覆盖；业务含义变化时新增 metricKey（如 `mentor.helped_users_v2`），旧 metricKey 标记停用但不删除，历史数据按旧定义永远可解释。
 - 看板切换指标时是"停用旧 key、启用新 key"的操作记录，运营人员看到的是时间线，不需要理解版本号。
 
-#### 23.3 aggregationVersion
+#### 23.2 事件与汇总版本
 
-- 同一 metricKey 下，计算实现修复或变更时升级 aggregationVersion。
-- 每次升级记录：重算范围（日期区间）、变更原因、结果状态、执行人。
-- 可以重算最近若干天，以处理延迟事件和规则修订。
+- Event 保存 `schemaVer`（事件结构版本，当前 `v1`）和 `releaseVersion`（产品发布版本，构建时从环境变量注入）。
+- 汇总表保留 `aggregationVersion`：同一 metricKey 下，计算实现修复或变更时升级 aggregationVersion。
+- 第一期不保存导师 Prompt/知识库版本、排名规则版本和独立指标定义版本。
+- 第二期语义分析使用的分析模型版本和分析 Prompt 版本仍需保存，它们与导师内容版本不是同一概念。
+
+#### 23.3 重算记录
+
+每次 aggregationVersion 升级记录：重算日期范围、aggregationVersion、变更原因、执行时间和结果。可以重算最近若干天，以处理延迟事件和规则修订。
 
 #### 23.4 版本回溯与回滚
 
-第一期从数据层保存：产品发布版本和实际生效时间、事件结构版本、指标定义版本、聚合计算版本、排名/排除规则版本、导师 Prompt 和知识库版本、修改人/审核人/原因和影响指标、是否重算历史数据及重算范围。Admin 首期只需提供简洁的版本时间线和变更详情，不必立即做复杂可视化对比。
+第一期从数据层保存：产品发布版本和实际生效时间、事件结构版本、聚合计算版本、修改人/审核人/原因和影响指标、是否重算历史数据及重算范围。Admin 首期只需提供简洁的版本时间线和变更详情，不必立即做复杂可视化对比。
 
 回滚原则：
 
@@ -694,9 +826,9 @@ User 表需新增 `userGroup` 字段（`NORMAL | BETA | MENTOR_SELF_TEST | OPS_Q
 3. 每次重算记录数据范围、计算版本和结果状态。
 4. 看板读取汇总数据，不在打开页面时扫描完整聊天表。
 5. 可以重算最近若干天，以处理延迟事件和规则修订。
-6. 漏斗按同期批次计算：每日任务识别首次有效落地、圈定 cohort、按 7/14/30 天窗口写入各阶段去重人数与成熟状态；免费试用转化仅对成熟分母出率。
-7. 旅程回溯的聚合榜单（top_pages / top_cta / dwell_by_page）与阶段耗时分布在每日任务中按 cohort 预算，支持时间段、活动、设备维度叠加。
-8. 第一期先手动脚本触发，稳定后挂 cron 每日凌晨执行。
+6. 漏斗按同期批次 + 获客主链/激活里程碑/付费主链结构预算：每日任务识别首次有效落地、圈定 cohort、按 7/14/30 天窗口写入各阶段去重人数与成熟状态；获客主链（S1→S2→S3）和付费主链（S6→S7）算 step_rate，激活里程碑（S4/S5）只算 overall_rate；免费试用转化仅对成熟分母出率。
+7. 旅程回溯的聚合榜单（top_pages / top_cta / dwell_by_page）与阶段耗时分布在每日任务中按 cohort 预算，支持时间段、渠道、活动、设备维度叠加。
+8. staging 环境可手工运行汇总任务进行验证；**生产上线前必须配置定时任务，不能长期依赖人工执行**。第一期可先手动脚本触发验证，稳定后挂 cron 每日凌晨执行。
 
 ---
 
@@ -726,9 +858,9 @@ AuditLog 表记录所有后台敏感操作：
 
 #### 26.2 改版 checklist
 
-1. page.view / active_tick 为路由级自动埋点，新页面默认接入，确认 page 语义名是否符合新路由。
+1. page.view / page.active_duration 为路由级自动埋点，新页面默认接入，确认 page 语义名是否符合新路由。
 2. 涉及导师卡、分身主页、订阅页的改版：事件名与 props 不变，只改 UI。若业务动作本身变了，先在本文件登记新 metricKey 再改代码。
-3. 新增指标：先在 MetricDefinition 表登记 metricKey 和口径，再写代码。
+3. 新增指标：先在本操作手册登记 metricKey 和口径，再写代码。不建 MetricDefinition 表。
 4. 每次改版发布前核对：本文件中该页面涉及的事件是否全部仍然触发。
 
 事件不按页面位置命名，可以降低改版影响，但不能保证不同版本数据天然可比。流程、字段、推荐位置、免费额度和统计分母变化，都会改变指标。
@@ -742,26 +874,31 @@ AuditLog 表记录所有后台敏感操作：
 #### 27.1 必须完成
 
 1. 修复 admin.aihr.top、mentor.aihr.top 的 SSL 和 Host 路由。
-2. User 表加 role=MENTOR_HUMAN + boundMentorId + userGroup 字段；ChatMessage 加 entitlementSource。
-3. 新建 Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog、MetricDefinition、Campaign 表。
+2. User 表加 role=MENTOR_HUMAN + boundMentorId + userGroup 字段；ChatMessage 加 entitlementSource（只写在成功 assistant 回复上）；完成现有 ADMIN → ADMIN_FULL 迁移（迁移前备份、迁移后验证两个后台）。
+3. 新建 Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog、UserGroupHistory、MentorSubmission、DailyJourneyStats 表。不新建 MetricDefinition 表，不新建 Campaign 表（活动管理模块及活动码校验放第二期）。
 4. 前端 track() SDK + 批量上报接口（含 eventId 去重、pageInstanceId、releaseVersion）。
 5. 全站布点 + 点赞/点踩/报错组件（对话页消息级）。
-6. 每日汇总脚本（可重复执行、可重算）。
-7. Mentor 端看板：首页概览（浏览、聊天、付费三层聚合人数）+ 对话效果 + 用户画像聚合 + 展示资料修改申请 + 知识状态 + 内容反馈 + 修改密码。导师端不提供任何用户级数据，不做用户×分身汇总表。
-8. Admin 端看板：平台概览 + 同期批次核心漏斗（含成熟状态、真实付款三分类）+ 渠道经营表现 + 导师列表下钻 + 双阶段旅程回溯（用户级事件链下钻 + 两阶段聚合榜单，支持时间段/活动/设备切分）+ 用户群组管理 + 活动登记管理 + MentorHuman 账号管理 + 排除标记 + 审计。
-9. 子域名中间件按 Host 路由 + 角色校验（复用 channel.aihr.top 模式）。
+6. **事件安全要求**：事件名白名单、每种事件独立的 props 结构校验、单批事件数量和请求体大小上限、匿名和登录用户分别限流、page 和 referrer 去除查询参数、拒绝客户端提交 userId 和 userGroup（服务端从登录态和 Cookie 补写）、eventId 唯一约束和幂等写入、拒绝任意 data-track-props JSON 进入数据库。
+7. 每日汇总脚本（可重复执行、可重算、带 aggregationVersion）。
+8. Mentor 端看板：首页概览（浏览、聊天、付费三层聚合人数）+ 对话效果 + 用户画像聚合 + 展示资料修改申请 + 知识状态 + 内容反馈 + 修改密码。导师端不提供任何用户级数据，不做用户×分身汇总表。
+9. Admin 端看板：平台概览 + 同期批次核心漏斗（获客主链+激活里程碑+付费主链结构，含成熟状态、真实付款三分类）+ 渠道经营表现 + 导师列表下钻 + 双阶段旅程回溯（第一期保留功能见第 16 章：阶段一/二事件链、用户级逐条查看、top_pages/top_cta/dwell_by_page、时间/渠道/活动/设备筛选、未付费用户阶段二行为、单人原始事件查询、每日预聚合榜单）+ 用户群组管理（含 UserGroupHistory）+ MentorHuman 账号管理 + MentorSubmission 审核流程 + 排除标记 + 审计。
+10. 子域名中间件按 Host 路由 + 角色校验（复用 channel.aihr.top 模式）。
 
-上线前基础条件还包括：完成两个后台的登录回调、Cookie 和退出登录闭环；建立 MentorHuman 与 Mentor 一对一绑定；建立服务端权限校验和基础审计。
+上线前基础条件还包括：完成两个后台的登录回调、Cookie 和退出登录闭环；建立 MentorHuman 与 Mentor 一对一绑定（服务端验证 boundMentorId 属于有效 Mentor）；建立服务端权限校验和基础审计。
 
-#### 27.2 第一期采集但暂不展示
+第一期确认不建 Campaign 表、不建活动管理模块。Event 的 props 中预留 `cmp` 字段位置、`User.attributionJson` 中预留活动码位置，旅程回溯切分维度中活动码字段保留但第一期不做有效性校验。完整 Campaign 管理（表、登记、活动码校验、效果分析）放第二期。
 
-- 页面活跃时长（page.active_tick 数据照常采集，看板第二期展示）。
+#### 27.2 第一期采集但部分暂不展示
+
+- page.active_duration 数据第一期完整采集。
+- Admin 双阶段旅程回溯中按页面汇总的停留时间（dwell_by_page）第一期展示。
+- 平台概览、Mentor 看板和复杂时长分布第二期展示。
 
 #### 27.3 第二期
 
-1. 页面活跃时长展示、转化所需时间分布；
+1. 页面有效停留时长展示、转化所需时间分布；
 2. 问题链识别、AI 推断满意倾向/问题解决率、高频主题、完整画像分布；
-3. 旅程 Top 路径聚类；
+3. 旅程自动路径聚类（top_paths）、流失路径识别、统计显著性比较、AI 解释流失、改版归因、路径预测、用户分群；
 4. 渠道投放成本与 ROI（单个注册成本、单个有效对话用户成本、获客成本、投入产出比）；
 5. 不同用户画像的转化差异、改版前后漏斗对比；
 6. 版本前后对比、经脱敏的反馈原话片段；
@@ -774,9 +911,11 @@ AuditLog 表记录所有后台敏感操作：
 #### 27.5 不做
 
 - 一名导师管理多个分身。
+- MetricDefinition 表（指标定义以本操作手册为不可变登记处）。
 - Admin 六级预设角色（首版两角色起步）。
 - 临时提权（首版只有一个管理员）。
 - 异常互动自动检测页（首版只做排除标记+原因记录）。
+- 自动路径聚类（第一期旅程回溯只做事件链和每日预聚合榜单，聚类留第二期）。
 - 自动按排名分配推荐资源。
 - MentorHuman 编辑 JSONL 知识卡/Prompt/披露级别。
 - 实时调用 LLM 扫描全量聊天生成看板。
@@ -792,9 +931,9 @@ AuditLog 表记录所有后台敏感操作：
 
 1. 文档冻结与提交（本文件 + PRD 更新同步提交），避免依据孤立、未提交的文档开发。
 2. 子域名 SSL 修复 + Host 路由 + 登录回调 + 跨子域 Cookie 策略。
-3. 数据库变更（User 表补字段 + 新建 7 张表）。
+3. 数据库变更（User 表补字段 + ADMIN→ADMIN_FULL 迁移 + 新建 8 张表：Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog、UserGroupHistory、MentorSubmission、DailyJourneyStats。Campaign 表第二期建，第一期只在 Event props 和 attributionJson 中预留 cmp 字段位置）。
 4. 前端 track() SDK + 上报接口 + eventId 去重。
-5. 全站布点（含关键按钮 data-track 标记、活动码 cmp 归因）+ 点赞/点踩/报错组件。
+5. 全站布点（含关键按钮 data-track 标记、活动码 cmp 字段位置预留，第一期不做有效性校验）+ 点赞/点踩/报错组件。
 6. 每日汇总脚本（可重复执行、可重算、带计算版本）。
 7. Mentor 端看板页面。
 8. Admin 端看板页面。
@@ -810,7 +949,7 @@ AuditLog 表记录所有后台敏感操作：
 
 1. **子域名证书问题**：`admin.aihr.top`、`mentor.aihr.top` 当前存在证书域名不匹配，浏览器无法正常进入；须先修复 SSL、Host 路由、登录回调和跨子域 Cookie 策略，再开发页面。
 2. **认证现状落后**：当前认证主要支持普通用户与单一 ADMIN 角色，尚未为两个子域名完成独立角色与权限闭环；数据库还没有 MentorHuman、细粒度 Admin 权限、事件表、消息反馈表、每日汇总表和完整后台审计表。
-3. **PRD 落后**：当前 PRD 仍写"6 个导师、340 张知识卡、不建立导师侧页面"，已落后于实际代码和本次产品决定；当前知识治理清单有 7 个知识导师、合计 399 张知识卡，前端导师配置中另有 Kevin，共 8 个展示导师。导师数量和知识卡数量必须动态读取，不能硬编码。须同步更新 PRD。
+3. **PRD 同步**：须同步更新 PRD 中导师数量、知识卡数量、导师后台范围和认证现状，确保与实际代码和本次产品决定一致。导师数量和知识卡数量必须动态读取，不能硬编码。
 4. **文档一致性**：开发前必须将本方案、指标字典和 PRD 放在同一版本中评审并提交，避免依据孤立、未提交的文档开发。
 5. **可关联标识风险**：匿名标识、设备标识和行为轨迹属于可关联标识，不能表述为"不含个人信息"；应最小化采集并限制访问。原始 User-Agent 应尽量解析后保存，避免长期保留不必要的完整原文。
 6. **事件幂等与版本**：原始事件从第一天起即具备幂等标识、事件版本和发布版本，避免 React 重复触发或网络重试造成重复统计。
@@ -826,7 +965,7 @@ AuditLog 表记录所有后台敏感操作：
 4. Admin 权限在接口层生效（首版校验 role=ADMIN_FULL），前端隐藏菜单不等于权限控制。
 5. 内测、导师自测、Admin、运营和 QA 数据完整保留，但默认不进入正式经营指标和排名。
 6. 财务实收与自然用户转化分别统计。
-7. `ai-guide` / 平台顾问类对象不进入真人导师经营指标（按 isPlatformAssistant 标记排除，非硬编码 ID）。
+7. 平台顾问类对象不进入真人导师经营指标（按 isPlatformAssistant 标记排除，非硬编码 ID）。
 8. 完成轮次、计费轮次和非计费边界回复能够区分。
 9. 免费试用、订阅、加购和历史未知权益不混算。
 10. 重复上报和重复执行汇总任务不会重复计数。
@@ -836,6 +975,16 @@ AuditLog 表记录所有后台敏感操作：
 14. 无数据时展示引导状态，而不是整页全零；小样本（分布/排名 <5，敏感画像/语义 <10）不展示具体数值。
 15. 页面不把 AI 推断结果表述成用户明确反馈；自动运营建议不会直接修改知识库或发布内容。
 16. 两个子域名在正式开发验收前通过 HTTPS、登录、退出和权限验证。
+17. 现有 ADMIN 账号迁移为 ADMIN_FULL 后，admin 和 channel 后台均能正常进入。
+18. 修改前端 mentorId 不能读取其他导师数据。
+19. 用户群组变更后，历史行为按发生时群组统计，不按当前群组重写。
+20. A/B 付费贡献四种场景均有固定测试数据和期望权重。
+21. 导师 B 付款前有效停留 4 秒不分配贡献，5 秒及以上按规则分配。
+22. 页面隐藏、路由切换、恢复前台和空闲恢复不会重复累计有效停留。
+23. Event 随机灌入、超大批次、未知事件名和非法 props 会被拒绝或限流。
+24. 曾付费用户事件按 3 年策略保留，普通用户和未绑定匿名事件到期自动清理。
+25. Mentor 资料修改申请从提交、审核到生效具有完整状态记录。
+26. 第一阶段看板不展示尚未成熟的语义、完整画像和自动风控结论。
 
 ---
 
