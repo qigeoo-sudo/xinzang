@@ -526,7 +526,7 @@ model MentorSubmission {
   userId         String // 提交人（MENTOR_HUMAN）
   boundMentorId  String // 绑定的分身 ID
   beforeValue    String?   @db.Text // 修改前值（PROFILE_EDIT）
-  afterValue     String?   @db.Text // 修改后值，或纠错/补充内容
+  afterValue     String?   @db.MediumText // 修改后值，或纠错/补充内容（头像 base64 可达数百 KB）
   status         String    @default("PENDING")
   reviewerId     String?
   reviewNote     String?   @db.Text

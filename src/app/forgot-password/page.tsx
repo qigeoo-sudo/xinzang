@@ -290,7 +290,7 @@ function ForgotPasswordForm() {
               </div>
               <h3 className="text-lg font-bold text-ink mb-2">密码重置成功！</h3>
               <p className="text-sm text-muted mb-4">请使用新密码登录</p>
-              <Link href="/login" className="btn-primary inline-block">去登录</Link>
+              <Link href="/mentor-console" className="btn-primary inline-block">去登录</Link>
             </div>
           )}
 

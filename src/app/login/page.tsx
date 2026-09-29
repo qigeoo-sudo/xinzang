@@ -38,8 +38,13 @@ function LoginForm() {
           setError('手机号或密码不正确');
         }
       } else if (result?.ok) {
+        // 登录成功后检查角色：导师直跳导师后台，其余走 callbackUrl
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        const dest =
+          session?.user?.role === 'MENTOR_HUMAN' ? '/mentor-console' : callbackUrl;
         // 使用完整页面跳转确保 session cookie 生效后再渲染受保护页面
-        window.location.href = callbackUrl;
+        window.location.href = dest;
       }
     } catch {
       setError('登录失败，请稍后再试');

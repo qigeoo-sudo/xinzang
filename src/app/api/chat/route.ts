@@ -651,6 +651,8 @@ export async function POST(request: NextRequest) {
     let mentorQuotaLimit: number | null = null;
     let mentorDailyUsedCount = 0;
     let mentorDailyQuotaLimit: number | null = null;
+    // 当前生效订阅档位（供 assistant 消息盖章：SUBSCRIPTION_MONTHLY/QUARTERLY/YEARLY）
+    let activeSubscriptionPlan: string | null = null;
     if (isPremium) {
       const subscription = await prisma.subscription.findFirst({
         where: {
@@ -663,6 +665,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (subscription) {
+        activeSubscriptionPlan = subscription.plan;
         mentorQuotaLimit = getMentorQuota(subscription.plan);
         mentorDailyQuotaLimit = getMentorDailyQuota(subscription.plan);
 
@@ -1123,11 +1126,13 @@ export async function POST(request: NextRequest) {
           })]
         : [];
 
-    // 本轮权益来源（盖在 assistant 消息上）：多榨卡 / 订阅 / 免费试用
+    // 本轮权益来源（盖在 assistant 消息上）：多榨卡 / 订阅（含档位）/ 免费试用
     const entitlementSource = consumeCredit
       ? 'CREDIT_PACK'
       : isPremium
-        ? 'SUBSCRIPTION'
+        ? activeSubscriptionPlan
+          ? `SUBSCRIPTION_${activeSubscriptionPlan}`
+          : 'SUBSCRIPTION'
         : !mentor.isFree
           ? 'FREE_TRIAL'
           : null;

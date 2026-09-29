@@ -155,11 +155,16 @@ export const { handlers, auth } = NextAuth({
     redirect: ({ url, baseUrl }) => {
       // 默认放行同源地址
       if (url.startsWith(baseUrl)) return url;
-      // 白名单：已配置的管理后台子域名的绝对回调地址（CHANNEL_DOMAIN）
-      // 生产设 CHANNEL_DOMAIN=channel.aihr.top；测试端不设则此分支不生效
+      // 白名单：已配置的后台子域名的绝对回调地址
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top；测试端不设则不生效
       try {
         const u = new URL(url);
-        if (process.env.CHANNEL_DOMAIN && u.hostname === process.env.CHANNEL_DOMAIN) return url;
+        if (
+          (process.env.CHANNEL_DOMAIN && u.hostname === process.env.CHANNEL_DOMAIN) ||
+          (process.env.MENTOR_DOMAIN && u.hostname === process.env.MENTOR_DOMAIN)
+        ) {
+          return url;
+        }
       } catch {
         // 非绝对 URL，继续走相对路径处理
       }
@@ -172,15 +177,20 @@ export const { handlers, auth } = NextAuth({
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
-      // 渠道后台子域名：CHANNEL_DOMAIN 根路径在内部映射到 /admin/channels
-      // 单应用 Host 路由——nginx 把该子域名流量代理到同一容器，此处按 Host 改写
-      // 生产设 CHANNEL_DOMAIN=channel.aihr.top；测试端不设则 isChannelHost 恒为 false
+      // 后台子域名：单应用 Host 路由——nginx 把各子域名流量代理到同一容器，此处按 Host 改写
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top；
+      // 测试端不设对应变量则 Host 判定恒为 false
       const host = request.headers.get('host') ?? '';
-      const channelDomain = process.env.CHANNEL_DOMAIN;
-      const isChannelHost = !!channelDomain && host === channelDomain;
+      const isChannelHost = !!process.env.CHANNEL_DOMAIN && host === process.env.CHANNEL_DOMAIN;
+      const isMentorHost = !!process.env.MENTOR_DOMAIN && host === process.env.MENTOR_DOMAIN;
       const isChannelRoot = isChannelHost && pathname === '/';
-      // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 渠道后台）
-      const logicalPath = isChannelRoot ? '/admin/channels' : pathname;
+      const isMentorRoot = isMentorHost && pathname === '/';
+      // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 对应后台）
+      const logicalPath = isChannelRoot
+        ? '/admin/channels'
+        : isMentorRoot
+          ? '/mentor-console'
+          : pathname;
       // 请求头来源（NEXTAUTH_URL 会把 nextUrl 规范化到主域，子域场景必须按 Host 还原）
       const proto = request.headers.get('x-forwarded-proto') ?? 'https';
       const headerOrigin = `${proto}://${host}`;
@@ -195,6 +205,7 @@ export const { handlers, auth } = NextAuth({
         '/logout',
         '/forgot-password',
         '/mentors', // 导师列表和详情页公开，聊天组件自行检查登录
+        '/mentor-console', // 导师后台入口（未登录由 page.tsx 渲染登录 gate，不走 /login）
         '/r', // 渠道短链（扫码发生在登录/注册之前，匿名可达）
         '/growth-lab', // 成长追踪旧路由（重定向到 /dashboard，需保持公开才能执行重定向）
         '/payment/mock', // Mock 支付页面 (开发环境)
@@ -228,16 +239,20 @@ export const { handlers, auth } = NextAuth({
       if (!isLoggedIn && !isPublicPath && !isDevPreview) {
         const loginUrl = new URL('/login', headerOrigin);
         // 子域名场景 callback 用绝对地址并经 redirect 白名单放行，保证登录后留在子域
-        const callback = isChannelHost
+        const isSubHost = isChannelHost || isMentorHost;
+        const callback = isSubHost
           ? new URL(pathname + request.nextUrl.search, headerOrigin).toString()
           : pathname + request.nextUrl.search;
         loginUrl.searchParams.set('callbackUrl', callback);
         return Response.redirect(loginUrl);
       }
 
-      // 已登录访问渠道子域名根路径 → 内部改写渲染渠道后台（地址栏保留子域名）
+      // 已登录访问子域名根路径 → 内部改写渲染对应后台（地址栏保留子域名）
       if (isChannelRoot) {
         return NextResponse.rewrite(new URL('/admin/channels', request.url));
+      }
+      if (isMentorRoot) {
+        return NextResponse.rewrite(new URL('/mentor-console', request.url));
       }
 
       return true;

@@ -10,10 +10,30 @@
  */
 import { prisma } from '@/lib/prisma';
 import { mentors } from '@/lib/mentors';
+import { fetchWithRetry } from '@/lib/ai-retry';
 
 export const AGG_VERSION = 'v1';
 const BJ_OFFSET = 8 * 3600_000;
 const DAY_MS = 24 * 3600_000;
+
+// ==================== 权益来源判定 ====================
+
+/** 订阅档位盖章值（月/季/年） */
+export const SUBSCRIPTION_TIER_SOURCES = [
+  'SUBSCRIPTION_MONTHLY',
+  'SUBSCRIPTION_QUARTERLY',
+  'SUBSCRIPTION_YEARLY',
+] as const;
+
+/** 是否订阅类来源（含历史无档位 SUBSCRIPTION） */
+export function isSubscriptionSource(src: string | null | undefined): boolean {
+  return !!src && (src === 'SUBSCRIPTION' || src.startsWith('SUBSCRIPTION_'));
+}
+
+/** 是否完成问答轮（消耗任一权益：免费试用 / 订阅 / 加榨包） */
+export function isCompletedSource(src: string | null | undefined): boolean {
+  return src === 'FREE_TRIAL' || src === 'CREDIT_PACK' || isSubscriptionSource(src);
+}
 
 // ==================== 时间工具（北京时间） ====================
 
@@ -86,6 +106,68 @@ function safeParseJson(raw: string | null | undefined): Record<string, unknown> 
   return safeParseProps(raw ?? null);
 }
 
+// ==================== 焦虑归类（LLM） ====================
+
+interface AnxietyCategory {
+  category: string;
+  count: number;
+}
+
+/**
+ * 调 LLM 对职业焦虑自由文本归并类别，返回类别与条数（降序）。
+ * 未配置 key 或调用失败时返回 null，不阻断聚合主流程。
+ */
+async function categorizeAnxieties(texts: string[]): Promise<AnxietyCategory[] | null> {
+  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  const apiUrl = process.env.AI_API_URL || 'https://api.deepseek.com/v1';
+  const model = process.env.AI_MODEL || 'deepseek-chat';
+
+  const numbered = texts.map((t, i) => `${i + 1}. ${t.slice(0, 300)}`).join('\n');
+
+  try {
+    const res = await fetchWithRetry(`${apiUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          {
+            role: 'system',
+            content:
+              '你是职业咨询分析师。把用户的职业焦虑原话归并为若干互斥类别，类别名 4-10 字，不要编造原话没有的类别。只返回 JSON：{"categories":[{"category":"类别名","count":数字}]}，按 count 降序。',
+          },
+          { role: 'user', content: numbered },
+        ],
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const content: string | undefined = data.choices?.[0]?.message?.content;
+    if (!content) return null;
+    const cats = JSON.parse(content)?.categories;
+    if (!Array.isArray(cats)) return null;
+    return cats
+      .filter(
+        (c: unknown) =>
+          !!c &&
+          typeof (c as AnxietyCategory).category === 'string' &&
+          typeof (c as AnxietyCategory).count === 'number',
+      )
+      .map((c: AnxietyCategory) => ({
+        category: c.category,
+        count: Number(c.count),
+      }));
+  } catch {
+    return null;
+  }
+}
+
 // ==================== 主入口 ====================
 
 export interface AggregationReport {
@@ -132,6 +214,7 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
           major: true,
           workProvince: true,
           curProvince: true,
+          careerAnxiety: true,
           registrationCompletedAt: true,
         },
       },
@@ -384,9 +467,9 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
   >();
   for (const m of assistantMessages) {
     const src = m.entitlementSource;
-    if (src !== 'FREE_TRIAL' && src !== 'SUBSCRIPTION' && src !== 'CREDIT_PACK') continue;
+    if (!isCompletedSource(src)) continue;
     const list = roundsByUser.get(m.chatSession.userId) ?? [];
-    list.push({ mentorId: m.chatSession.mentorId, time: m.createdAt, source: src });
+    list.push({ mentorId: m.chatSession.mentorId, time: m.createdAt, source: src ?? 'UNKNOWN' });
     roundsByUser.set(m.chatSession.userId, list);
   }
 
@@ -493,10 +576,6 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
     });
   };
 
-  // 完成问答轮的权益来源判定（分身循环与漏斗共用）
-  const isCompleted = (src: string | null) =>
-    src === 'FREE_TRIAL' || src === 'SUBSCRIPTION' || src === 'CREDIT_PACK';
-
   for (const mentor of mentors) {
     // 窗口内分身相关事件
     let impressionCount = 0;
@@ -527,18 +606,18 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
     const windowMsgs = mentorMsgs.filter((m) => inWindow(m.createdAt));
     const cumMsgs = mentorMsgs.filter((m) => m.createdAt < dayEnd);
 
-    const completedWindow = windowMsgs.filter((m) => isCompleted(m.entitlementSource));
+    const completedWindow = windowMsgs.filter((m) => isCompletedSource(m.entitlementSource));
     const billedWindow = windowMsgs.filter(
-      (m) => m.entitlementSource === 'SUBSCRIPTION' || m.entitlementSource === 'CREDIT_PACK',
+      (m) => isSubscriptionSource(m.entitlementSource) || m.entitlementSource === 'CREDIT_PACK',
     );
     const freeWindow = windowMsgs.filter((m) => m.entitlementSource === 'FREE_TRIAL');
     const nonBillingWindow = windowMsgs.filter((m) => m.entitlementSource === 'NON_BILLING');
 
-    const cumCompleted = cumMsgs.filter((m) => isCompleted(m.entitlementSource));
+    const cumCompleted = cumMsgs.filter((m) => isCompletedSource(m.entitlementSource));
     const helpedUsers = new Set(cumCompleted.map((m) => m.chatSession.userId));
     const billedUsers = new Set(
       cumMsgs
-        .filter((m) => m.entitlementSource === 'SUBSCRIPTION' || m.entitlementSource === 'CREDIT_PACK')
+        .filter((m) => isSubscriptionSource(m.entitlementSource) || m.entitlementSource === 'CREDIT_PACK')
         .map((m) => m.chatSession.userId),
     );
 
@@ -563,8 +642,12 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
     addMentor(mentor.id, 'mentor.rounds_by_entitlement', {
       payload: {
         FREE_TRIAL: freeWindow.length,
-        SUBSCRIPTION: windowMsgs.filter((m) => m.entitlementSource === 'SUBSCRIPTION').length,
         CREDIT_PACK: windowMsgs.filter((m) => m.entitlementSource === 'CREDIT_PACK').length,
+        SUBSCRIPTION_TOTAL: windowMsgs.filter((m) => isSubscriptionSource(m.entitlementSource)).length,
+        SUBSCRIPTION_MONTHLY: windowMsgs.filter((m) => m.entitlementSource === 'SUBSCRIPTION_MONTHLY').length,
+        SUBSCRIPTION_QUARTERLY: windowMsgs.filter((m) => m.entitlementSource === 'SUBSCRIPTION_QUARTERLY').length,
+        SUBSCRIPTION_YEARLY: windowMsgs.filter((m) => m.entitlementSource === 'SUBSCRIPTION_YEARLY').length,
+        SUBSCRIPTION_UNKNOWN: windowMsgs.filter((m) => m.entitlementSource === 'SUBSCRIPTION').length,
         NON_BILLING: nonBillingWindow.length,
       },
     });
@@ -597,6 +680,16 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
 
     addMentor(mentor.id, 'mentor.knowledge_card_count', {
       int: cardCountMap[mentor.id] ?? 0,
+    });
+
+    // 焦虑归类（LLM）：该分身已帮助用户的 careerAnxiety 原文
+    const anxietyTexts = normalUsers
+      .filter((u) => helpedUsers.has(u.id))
+      .map((u) => u.profile?.careerAnxiety?.trim())
+      .filter((t): t is string => !!t && t.length >= 3);
+    const anxietyCats = await categorizeAnxieties(anxietyTexts);
+    addMentor(mentor.id, 'mentor.anxiety_categories', {
+      payload: anxietyCats ?? { unavailable: true, sourceCount: anxietyTexts.length },
     });
   }
 
@@ -750,7 +843,7 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
     };
 
     const userRounds = assistantMessages.filter(
-      (m) => m.chatSession.userId === u.id && isCompleted(m.entitlementSource),
+      (m) => m.chatSession.userId === u.id && isCompletedSource(m.entitlementSource),
     );
     const s5 = userRounds.length ? userRounds[0].createdAt : null;
     const s6 = firstOf((n) => n === 'paywall.view');
@@ -844,7 +937,7 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
     const n = assistantMessages.filter(
       (m) =>
         m.chatSession.userId === u.id &&
-        isCompleted(m.entitlementSource) &&
+        isCompletedSource(m.entitlementSource) &&
         m.createdAt < T,
     ).length;
     const bucket =
@@ -888,7 +981,7 @@ export async function runDailyAggregation(opts: { date?: Date } = {}): Promise<A
   // 有过完成问答轮的用户（不依赖 S1，独立判定，避免登录型老用户漏统）
   const usersWithCompletedRound = new Set<string>();
   for (const m of assistantMessages) {
-    if (isCompleted(m.entitlementSource) && m.createdAt < dayEnd) {
+    if (isCompletedSource(m.entitlementSource) && m.createdAt < dayEnd) {
       usersWithCompletedRound.add(m.chatSession.userId);
     }
   }

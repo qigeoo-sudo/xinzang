@@ -1,0 +1,84 @@
+{
+  "range": 90,
+  "dateRange": {
+    "start": "2026-07-17",
+    "end": "2026-09-29"
+  },
+  "cumulative": {
+    "helpedUsers": 440,
+    "impressionUsers": 850,
+    "profileViewUsers": 504,
+    "freeTrialUsers": 440,
+    "paidRoundUsers": 213,
+    "conversationCount": 697,
+    "sessionCount": 701,
+    "feedback": {
+      "likes": 435,
+      "dislikes": 161,
+      "reports": 155,
+      "reportReasons": {
+        "REPETITIVE": 27,
+        "OFFENSIVE": 36,
+        "OTHER": 23,
+        "HALLUCINATION": 35,
+        "OFF_TOPIC": 34
+      }
+    },
+    "knowledgeCardCount": 60,
+    "caseCardCount": 18,
+    "rounds": 2706,
+    "freeTrialRounds": 1317,
+    "subscriptionRounds": 1148,
+    "subscriptionMonthlyRounds": 396,
+    "subscriptionQuarterlyRounds": 347,
+    "subscriptionYearlyRounds": 405,
+    "subscriptionUnknownRounds": 0,
+    "creditPackRounds": 241,
+    "subscriptionPurchases": 216,
+    "creditPackPurchases": 45,
+    "subscriptionMonthlyPurchases": 75,
+    "subscriptionQuarterlyPurchases": 64,
+    "subscriptionYearlyPurchases": 77,
+    "subscriptionOtherPurchases": 0
+  },
+  "inRange": {
+    "helpedUsers": 440,
+    "rounds": 2706,
+    "freeTrialRounds": 1317,
+    "subscriptionRounds": 1148,
+    "subscriptionMonthlyRounds": 396,
+    "subscriptionQuarterlyRounds": 347,
+    "subscriptionYearlyRounds": 405,
+    "subscriptionUnknownRounds": 0,
+    "creditPackRounds": 241,
+    "likes": 435,
+    "dislikes": 161,
+    "reports": 155
+  },
+  "platform": {
+    "cumulative": {
+      "helpedUsers": 1540,
+      "impressionUsers": 2933,
+      "profileViewUsers": 1711,
+      "freeTrialUsers": 1540,
+      "paidRoundUsers": 595,
+      "conversationCount": 2260,
+      "sessionCount": 2260,
+      "knowledgeCardCount": 480,
+      "caseCardCount": 136,
+      "subscriptionPurchases": 580,
+      "creditPackPurchases": 140,
+      "subscriptionMonthlyPurchases": 199,
+      "subscriptionQuarterlyPurchases": 189,
+      "subscriptionYearlyPurchases": 192,
+      "subscriptionOtherPurchases": 0
+    },
+    "inRange": {
+      "helpedUsers": 1540,
+      "rounds": 8503,
+      "freeTrialRounds": 4590,
+      "subscriptionRounds": 3131,
+      "creditPackRounds": 782
+    }
+  }
+}

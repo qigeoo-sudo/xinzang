@@ -1,0 +1,620 @@
+{
+  "totalQualified": 440,
+  "dimensions": {
+    "status": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "在校",
+          180
+        ],
+        [
+          "在职",
+          168
+        ],
+        [
+          "待业",
+          92
+        ]
+      ],
+      "suppressed": false
+    },
+    "ageBand": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "16-18",
+          72
+        ],
+        [
+          "19-21",
+          96
+        ],
+        [
+          "22-24",
+          101
+        ],
+        [
+          "25-27",
+          81
+        ],
+        [
+          "28-30",
+          52
+        ],
+        [
+          "31-35",
+          33
+        ],
+        [
+          "36-40",
+          5
+        ]
+      ],
+      "suppressed": false
+    },
+    "major": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "计算机与信息技术",
+          68
+        ],
+        [
+          "工程",
+          42
+        ],
+        [
+          "商科与管理",
+          40
+        ],
+        [
+          "数据与量化",
+          38
+        ],
+        [
+          "会计",
+          36
+        ],
+        [
+          "金融",
+          34
+        ],
+        [
+          "医学与健康",
+          30
+        ],
+        [
+          "人文与创意",
+          28
+        ],
+        [
+          "教育与社会服务",
+          24
+        ],
+        [
+          "法律",
+          22
+        ],
+        [
+          "社会科学与公共管理",
+          18
+        ],
+        [
+          "自然科学",
+          16
+        ],
+        [
+          "体育学",
+          12
+        ],
+        [
+          "食品",
+          10
+        ],
+        [
+          "应急与公共安全",
+          8
+        ],
+        [
+          "农林",
+          6
+        ],
+        [
+          "畜牧兽医与水产",
+          4
+        ],
+        [
+          "其他",
+          4
+        ]
+      ],
+      "suppressed": false
+    },
+    "careers": {
+      "sampleSize": 606,
+      "dist": [
+        [
+          "software_it",
+          44
+        ],
+        [
+          "career_skills",
+          42
+        ],
+        [
+          "accounting_advisory",
+          38
+        ],
+        [
+          "data",
+          36
+        ],
+        [
+          "engineering",
+          34
+        ],
+        [
+          "banking_finance",
+          32
+        ],
+        [
+          "consulting",
+          30
+        ],
+        [
+          "marketing",
+          30
+        ],
+        [
+          "ai",
+          28
+        ],
+        [
+          "design_ux",
+          28
+        ],
+        [
+          "hr",
+          26
+        ],
+        [
+          "product_management",
+          24
+        ],
+        [
+          "education",
+          22
+        ],
+        [
+          "healthcare",
+          20
+        ],
+        [
+          "project_management",
+          20
+        ],
+        [
+          "entrepreneurship",
+          18
+        ],
+        [
+          "sales",
+          18
+        ],
+        [
+          "government",
+          16
+        ],
+        [
+          "supply_chain",
+          16
+        ],
+        [
+          "client_services",
+          14
+        ],
+        [
+          "law",
+          14
+        ],
+        [
+          "insurance",
+          12
+        ],
+        [
+          "retail",
+          12
+        ],
+        [
+          "real_estate",
+          10
+        ],
+        [
+          "security",
+          10
+        ],
+        [
+          "life_sciences",
+          8
+        ],
+        [
+          "military",
+          4
+        ]
+      ],
+      "suppressed": false
+    },
+    "helpPriority": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "帮我看清自己适合什么",
+          95
+        ],
+        [
+          "受挫后帮我复盘并给出具体建议",
+          88
+        ],
+        [
+          "告诉我行业岗位真实情况",
+          76
+        ],
+        [
+          "教我具体求职技巧",
+          62
+        ],
+        [
+          "帮我做职业规划",
+          58
+        ],
+        [
+          "帮我准备面试",
+          45
+        ],
+        [
+          "其他",
+          16
+        ]
+      ],
+      "suppressed": false
+    },
+    "mentorPreference": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "资深HR",
+          72
+        ],
+        [
+          "目标单位在职员工",
+          58
+        ],
+        [
+          "心理咨询师",
+          52
+        ],
+        [
+          "行业大咖",
+          48
+        ],
+        [
+          "职业规划师",
+          44
+        ],
+        [
+          "学哥学姐",
+          42
+        ],
+        [
+          "猎头",
+          38
+        ],
+        [
+          "创业导师",
+          32
+        ],
+        [
+          "家人",
+          16
+        ],
+        [
+          "好友",
+          10
+        ],
+        [
+          "其他",
+          28
+        ]
+      ],
+      "suppressed": false
+    },
+    "riasecPrimary": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "I",
+          92
+        ],
+        [
+          "R",
+          85
+        ],
+        [
+          "A",
+          78
+        ],
+        [
+          "S",
+          70
+        ],
+        [
+          "E",
+          65
+        ],
+        [
+          "C",
+          50
+        ]
+      ],
+      "suppressed": false
+    },
+    "riasecCombo": {
+      "sampleSize": 430,
+      "dist": [
+        [
+          "IRA",
+          28
+        ],
+        [
+          "IAS",
+          25
+        ],
+        [
+          "SEC",
+          24
+        ],
+        [
+          "EAC",
+          22
+        ],
+        [
+          "CRE",
+          20
+        ],
+        [
+          "AES",
+          18
+        ],
+        [
+          "SCR",
+          16
+        ],
+        [
+          "RIE",
+          15
+        ],
+        [
+          "ICE",
+          14
+        ],
+        [
+          "ARS",
+          12
+        ],
+        [
+          "其他",
+          236
+        ]
+      ],
+      "suppressed": false
+    },
+    "curProvince": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "上海",
+          95
+        ],
+        [
+          "北京",
+          62
+        ],
+        [
+          "广东",
+          48
+        ],
+        [
+          "浙江",
+          40
+        ],
+        [
+          "江苏",
+          38
+        ],
+        [
+          "四川",
+          28
+        ],
+        [
+          "湖北",
+          24
+        ],
+        [
+          "湖南",
+          22
+        ],
+        [
+          "福建",
+          18
+        ],
+        [
+          "山东",
+          18
+        ],
+        [
+          "河南",
+          14
+        ],
+        [
+          "陕西",
+          10
+        ],
+        [
+          "安徽",
+          8
+        ],
+        [
+          "江西",
+          7
+        ],
+        [
+          "重庆",
+          6
+        ],
+        [
+          "其他",
+          2
+        ]
+      ],
+      "suppressed": false
+    },
+    "workProvince": {
+      "sampleSize": 440,
+      "dist": [
+        [
+          "上海",
+          95
+        ],
+        [
+          "北京",
+          62
+        ],
+        [
+          "广东",
+          48
+        ],
+        [
+          "浙江",
+          40
+        ],
+        [
+          "江苏",
+          38
+        ],
+        [
+          "四川",
+          28
+        ],
+        [
+          "湖北",
+          24
+        ],
+        [
+          "湖南",
+          22
+        ],
+        [
+          "福建",
+          18
+        ],
+        [
+          "山东",
+          18
+        ],
+        [
+          "河南",
+          14
+        ],
+        [
+          "陕西",
+          10
+        ],
+        [
+          "安徽",
+          8
+        ],
+        [
+          "江西",
+          7
+        ],
+        [
+          "重庆",
+          6
+        ],
+        [
+          "其他",
+          2
+        ]
+      ],
+      "suppressed": false
+    }
+  },
+  "careerLabels": {
+    "accounting_advisory": "会计与审计",
+    "ai": "人工智能",
+    "banking_finance": "银行与金融",
+    "career_skills": "职业发展与面试技巧",
+    "consulting": "咨询与战略",
+    "client_services": "客户成功与客户管理",
+    "data": "数据与分析",
+    "design_ux": "设计与用户体验",
+    "education": "教育",
+    "engineering": "工程",
+    "entrepreneurship": "创业",
+    "government": "政府与公共服务",
+    "healthcare": "医疗健康",
+    "hr": "人力资源与招聘",
+    "insurance": "保险",
+    "law": "法律",
+    "life_sciences": "生命科学",
+    "marketing": "市场营销",
+    "military": "军队与军工",
+    "product_management": "产品管理",
+    "project_management": "项目管理",
+    "real_estate": "房地产",
+    "retail": "零售与消费品",
+    "sales": "销售",
+    "security": "网络安全",
+    "software_it": "软件工程与 IT",
+    "supply_chain": "供应链与物流"
+  },
+  "anxiety": {
+    "categories": [
+      {
+        "category": "求职迷茫/不知适合什么",
+        "count": 68
+      },
+      {
+        "category": "面试焦虑/发挥失常",
+        "count": 52
+      },
+      {
+        "category": "职业选择困难/offer纠结",
+        "count": 45
+      },
+      {
+        "category": "能力焦虑/感觉什么都不精",
+        "count": 38
+      },
+      {
+        "category": "转行/跨专业困难",
+        "count": 32
+      },
+      {
+        "category": "工作倦怠/看不到成长",
+        "count": 28
+      },
+      {
+        "category": "家庭期望冲突",
+        "count": 22
+      },
+      {
+        "category": "同辈压力/比较焦虑",
+        "count": 18
+      }
+    ],
+    "asOf": "2026-09-29",
+    "sourceCount": 440
+  }
+}
