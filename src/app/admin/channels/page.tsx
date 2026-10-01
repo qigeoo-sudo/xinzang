@@ -63,6 +63,20 @@ export default function AdminChannelsPage() {
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
+  const [mentorNames, setMentorNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/demo/admin/mentors.json', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((data) => {
+        const names: string[] = (data.mentors ?? [])
+          .slice(0, 8)
+          .map((m: { name?: string }) => m.name)
+          .filter(Boolean);
+        setMentorNames(names);
+      })
+      .catch(() => setMentorNames([]));
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -199,15 +213,32 @@ export default function AdminChannelsPage() {
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
               />
             </label>
-            <label className="text-sm">
-              合作方/分成归属
+            <div className="text-sm">
+              <label className="flex items-center justify-between">
+                <span>合作方/分成归属</span>
+                {mentorNames.length > 0 && (
+                  <select
+                    value={mentorNames.includes(form.partner) ? form.partner : ''}
+                    onChange={(e) => setForm({ ...form, partner: e.target.value })}
+                    className="rounded border border-stone-200 px-1.5 py-0.5 text-xs text-stone-500"
+                  >
+                    <option value="">选择导师…</option>
+                    {mentorNames.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                )}
+              </label>
               <input
                 value={form.partner}
                 onChange={(e) => setForm({ ...form, partner: e.target.value })}
-                placeholder="如 Lydia"
+                placeholder="导师选英文名，机构手填名称"
                 className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
               />
-            </label>
+              <p className="mt-1 text-[11px] text-stone-400">
+                渠道名称与合作方在分成属性上需保持一致
+              </p>
+            </div>
             <label className="text-sm">
               分成比例 %（可后补）
               <input
@@ -265,6 +296,7 @@ export default function AdminChannelsPage() {
                 onToggleEdit={() => setEditingCode(editingCode === ch.code ? null : ch.code)}
                 onPatch={patchChannel}
                 onCopy={copyLink}
+                mentorNames={mentorNames}
               />
             ))}
           </section>
@@ -284,12 +316,14 @@ function ChannelRow({
   onToggleEdit,
   onPatch,
   onCopy,
+  mentorNames,
 }: {
   channel: Channel;
   editing: boolean;
   onToggleEdit: () => void;
   onPatch: (code: string, patch: Record<string, unknown>) => Promise<void>;
   onCopy: (code: string) => void;
+  mentorNames: string[];
 }) {
   const [draft, setDraft] = useState({
     name: channel.name,
@@ -395,14 +429,32 @@ function ChannelRow({
               className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
             />
           </label>
-          <label className="text-sm">
-            合作方
+          <div className="text-sm">
+            <label className="flex items-center justify-between">
+              <span>合作方</span>
+              {mentorNames.length > 0 && (
+                <select
+                  value={mentorNames.includes(draft.partner) ? draft.partner : ''}
+                  onChange={(e) => setDraft({ ...draft, partner: e.target.value })}
+                  className="rounded border border-stone-200 px-1.5 py-0.5 text-xs text-stone-500"
+                >
+                  <option value="">选择导师…</option>
+                  {mentorNames.map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              )}
+            </label>
             <input
               value={draft.partner}
               onChange={(e) => setDraft({ ...draft, partner: e.target.value })}
+              placeholder="导师选英文名，机构手填名称"
               className="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm"
             />
-          </label>
+            <p className="mt-1 text-[11px] text-stone-400">
+              渠道名称与合作方分成属性保持一致
+            </p>
+          </div>
           <label className="text-sm">
             分成比例 %
             <input
