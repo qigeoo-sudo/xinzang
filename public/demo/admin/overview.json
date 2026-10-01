@@ -1,0 +1,24 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "users": {
+    "total": 2933,
+    "funnel": [
+      { "key": "impressed", "label": "看到过卡片", "count": 2933, "desc": "首页或导师列表展示过导师卡片" },
+      { "key": "profileViewed", "label": "点进过导师主页", "count": 2213, "desc": "至少打开过一位导师的主页" },
+      { "key": "registered", "label": "注册用户", "count": 2213, "desc": "完成手机号注册" },
+      { "key": "chatted", "label": "开口对话", "count": 1540, "desc": "与分身至少聊过 1 轮" },
+      { "key": "freeTrial", "label": "用过免费试用", "count": 1047, "desc": "用免费 3 次聊过至少 1 轮" },
+      { "key": "paid", "label": "付费用户", "count": 521, "desc": "买过订阅或加榨包（去重）" }
+    ],
+    "paidBreakdown": [
+      { "key": "subscribed", "label": "订阅用户", "count": 452 },
+      { "key": "creditPack", "label": "加榨包用户", "count": 96 }
+    ]
+  },
+  "traffic": {
+    "totalPageViews": 45036,
+    "totalSessions": 12836,
+    "avgSessionSec": 312,
+    "avgPagesPerSession": 3.5
+  }
+}

@@ -1,0 +1,1064 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "population": {
+    "note": "chip 上的数字是各状态用户全量数；下方列表为抽样行为流（全量行为流约 10MB，浏览器无法承载，故按状态抽样展示）",
+    "SUBSCRIBED": 452,
+    "FREE_TRIAL": 526,
+    "CREDIT_PACK": 96,
+    "CHURNED": 720,
+    "sampleSize": 32
+  },
+  "stateLabels": {
+    "SUBSCRIBED": "已订阅",
+    "FREE_TRIAL": "试用中（用过免费、未付费、近期活跃）",
+    "CREDIT_PACK": "加榨包",
+    "CHURNED": "已流失（触达但从未注册，含少量注册后流失样本，标签单列）"
+  },
+  "users": [
+    {
+      "id": "u_38**21",
+      "state": "SUBSCRIBED",
+      "stateLabel": "已订阅 · 月卡",
+      "registeredAt": "2026-08-14",
+      "totalSessions": 4,
+      "totalDurationSec": 2175,
+      "loginIntervalDays": [1, 3, 5],
+      "outcome": { "type": "subscribed", "plan": "MONTHLY", "at": "2026-08-23", "lastPageBeforeSubscribe": "/mentors/lydiachen" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-14", "startedAt": "21:14:03", "durationSec": 512, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 52 },
+            { "offset": 52, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 53, "type": "page.view", "page": "/mentors", "dwellSec": 96 },
+            { "offset": 149, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Lydia Chen" },
+            { "offset": 150, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 210 },
+            { "offset": 360, "type": "cta.click", "page": "/mentors/lydiachen", "label": "返回列表" },
+            { "offset": 361, "type": "page.view", "page": "/mentors", "dwellSec": 151 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-15", "startedAt": "12:40:18", "durationSec": 733, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 24 },
+            { "offset": 24, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 25, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 45 },
+            { "offset": 70, "type": "cta.click", "page": "/mentors/lydiachen", "label": "开始对话" },
+            { "offset": 71, "type": "page.view", "page": "/chat", "dwellSec": 662 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-08-18", "startedAt": "22:05:41", "durationSec": 398, "exitPage": "/payment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 240, "note": "免费次数用完，进入支付墙" },
+            { "offset": 240, "type": "page.view", "page": "/payment", "dwellSec": 158 }
+          ]
+        },
+        {
+          "no": 4, "date": "2026-08-23", "startedAt": "20:31:07", "durationSec": 532, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 68 },
+            { "offset": 68, "type": "cta.click", "page": "/mentors/lydiachen", "label": "订阅按钮" },
+            { "offset": 69, "type": "page.view", "page": "/payment", "dwellSec": 95 },
+            { "offset": 164, "type": "subscribe.click", "page": "/payment", "label": "确认支付 · 月卡" },
+            { "offset": 165, "type": "page.view", "page": "/chat", "dwellSec": 367 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_55**63",
+      "state": "SUBSCRIBED",
+      "stateLabel": "已订阅 · 季卡",
+      "registeredAt": "2026-07-30",
+      "totalSessions": 5,
+      "totalDurationSec": 3410,
+      "loginIntervalDays": [1, 2, 4, 2],
+      "outcome": { "type": "subscribed", "plan": "QUARTERLY", "at": "2026-08-06", "lastPageBeforeSubscribe": "/assessment" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-07-30", "startedAt": "19:02:11", "durationSec": 905, "exitPage": "/assessment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 61 },
+            { "offset": 61, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 62, "type": "page.view", "page": "/assessment", "dwellSec": 720 },
+            { "offset": 782, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 783, "type": "page.view", "page": "/assessment", "dwellSec": 122, "note": "查看测评结果" }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-07-31", "startedAt": "21:18:44", "durationSec": 640, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 19 },
+            { "offset": 19, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 20, "type": "page.view", "page": "/mentors", "dwellSec": 110 },
+            { "offset": 130, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Tina Zhang" },
+            { "offset": 131, "type": "page.view", "page": "/mentors/tinazhang", "dwellSec": 154 },
+            { "offset": 285, "type": "cta.click", "page": "/mentors/tinazhang", "label": "开始对话" },
+            { "offset": 286, "type": "page.view", "page": "/chat", "dwellSec": 354 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-08-02", "startedAt": "12:47:09", "durationSec": 812, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 812 }]
+        },
+        {
+          "no": 4, "date": "2026-08-06", "startedAt": "20:55:33", "durationSec": 543, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/assessment", "dwellSec": 88, "note": "重看测评结果" },
+            { "offset": 88, "type": "cta.click", "page": "/assessment", "label": "订阅按钮" },
+            { "offset": 89, "type": "page.view", "page": "/payment", "dwellSec": 121 },
+            { "offset": 210, "type": "subscribe.click", "page": "/payment", "label": "确认支付 · 季卡" },
+            { "offset": 211, "type": "page.view", "page": "/chat", "dwellSec": 332 }
+          ]
+        },
+        {
+          "no": 5, "date": "2026-08-08", "startedAt": "22:10:15", "durationSec": 510, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 510 }]
+        }
+      ]
+    },
+    {
+      "id": "u_63**35",
+      "state": "SUBSCRIBED",
+      "stateLabel": "已订阅 · 年卡",
+      "registeredAt": "2026-07-22",
+      "totalSessions": 7,
+      "totalDurationSec": 6820,
+      "loginIntervalDays": [1, 1, 2, 1, 3, 2],
+      "outcome": { "type": "subscribed", "plan": "YEARLY", "at": "2026-07-25", "lastPageBeforeSubscribe": "/chat" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-07-22", "startedAt": "09:48:13", "durationSec": 1120, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 35 },
+            { "offset": 35, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：战略咨询" },
+            { "offset": 36, "type": "page.view", "page": "/search", "dwellSec": 72 },
+            { "offset": 108, "type": "cta.click", "page": "/search", "label": "导师卡片 · Lydia Chen" },
+            { "offset": 109, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 201 },
+            { "offset": 310, "type": "cta.click", "page": "/mentors/lydiachen", "label": "开始对话" },
+            { "offset": 311, "type": "page.view", "page": "/chat", "dwellSec": 809 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-07-23", "startedAt": "21:33:40", "durationSec": 1340, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 1340 }]
+        },
+        {
+          "no": 3, "date": "2026-07-25", "startedAt": "10:22:05", "durationSec": 760, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 415, "note": "免费次数用完，续聊意愿强" },
+            { "offset": 415, "type": "cta.click", "page": "/chat", "label": "订阅按钮" },
+            { "offset": 416, "type": "page.view", "page": "/payment", "dwellSec": 156 },
+            { "offset": 572, "type": "subscribe.click", "page": "/payment", "label": "确认支付 · 年卡" },
+            { "offset": 573, "type": "page.view", "page": "/chat", "dwellSec": 187 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_44**57",
+      "state": "SUBSCRIBED",
+      "stateLabel": "已订阅 · 月卡",
+      "registeredAt": "2026-09-03",
+      "totalSessions": 3,
+      "totalDurationSec": 1620,
+      "loginIntervalDays": [1, 2],
+      "outcome": { "type": "subscribed", "plan": "MONTHLY", "at": "2026-09-06", "lastPageBeforeSubscribe": "/search" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-03", "startedAt": "20:11:52", "durationSec": 684, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 47 },
+            { "offset": 47, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：产品经理" },
+            { "offset": 48, "type": "page.view", "page": "/search", "dwellSec": 95 },
+            { "offset": 143, "type": "cta.click", "page": "/search", "label": "导师卡片 · Winnie Ni" },
+            { "offset": 144, "type": "page.view", "page": "/mentors/winnieni", "dwellSec": 176 },
+            { "offset": 320, "type": "cta.click", "page": "/mentors/winnieni", "label": "开始对话" },
+            { "offset": 321, "type": "page.view", "page": "/chat", "dwellSec": 363 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-04", "startedAt": "21:29:14", "durationSec": 522, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 22 },
+            { "offset": 22, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 23, "type": "page.view", "page": "/chat", "dwellSec": 499 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-09-06", "startedAt": "19:44:38", "durationSec": 414, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/search", "dwellSec": 62 },
+            { "offset": 62, "type": "cta.click", "page": "/search", "label": "订阅按钮" },
+            { "offset": 63, "type": "page.view", "page": "/payment", "dwellSec": 88 },
+            { "offset": 151, "type": "subscribe.click", "page": "/payment", "label": "确认支付 · 月卡" },
+            { "offset": 152, "type": "page.view", "page": "/chat", "dwellSec": 262 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_88**31",
+      "state": "SUBSCRIBED",
+      "stateLabel": "已订阅 · 年卡",
+      "registeredAt": "2026-08-27",
+      "totalSessions": 4,
+      "totalDurationSec": 2985,
+      "loginIntervalDays": [2, 1, 3],
+      "outcome": { "type": "subscribed", "plan": "YEARLY", "at": "2026-09-02", "lastPageBeforeSubscribe": "/mentors/freyagao" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-27", "startedAt": "11:52:40", "durationSec": 940, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 43 },
+            { "offset": 43, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 44, "type": "page.view", "page": "/mentors", "dwellSec": 128 },
+            { "offset": 172, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Freya Gao" },
+            { "offset": 173, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 240 },
+            { "offset": 413, "type": "cta.click", "page": "/mentors/freyagao", "label": "开始对话" },
+            { "offset": 414, "type": "page.view", "page": "/chat", "dwellSec": 526 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-29", "startedAt": "22:41:09", "durationSec": 712, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 20 },
+            { "offset": 20, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 21, "type": "page.view", "page": "/chat", "dwellSec": 691 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-09-02", "startedAt": "20:33:55", "durationSec": 655, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 95 },
+            { "offset": 95, "type": "cta.click", "page": "/mentors/freyagao", "label": "订阅按钮" },
+            { "offset": 96, "type": "page.view", "page": "/payment", "dwellSec": 130 },
+            { "offset": 226, "type": "subscribe.click", "page": "/payment", "label": "确认支付 · 年卡" },
+            { "offset": 227, "type": "page.view", "page": "/chat", "dwellSec": 428 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_71**48",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-09-25",
+      "totalSessions": 2,
+      "totalDurationSec": 1156,
+      "loginIntervalDays": [2],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-27" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-25", "startedAt": "11:32:27", "durationSec": 684, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 44 },
+            { "offset": 44, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：转行" },
+            { "offset": 45, "type": "page.view", "page": "/search", "dwellSec": 87 },
+            { "offset": 132, "type": "cta.click", "page": "/search", "label": "导师卡片 · Winnie Ni" },
+            { "offset": 133, "type": "page.view", "page": "/mentors/winnieni", "dwellSec": 131 },
+            { "offset": 264, "type": "cta.click", "page": "/mentors/winnieni", "label": "开始对话" },
+            { "offset": 265, "type": "page.view", "page": "/register-v2", "dwellSec": 96 },
+            { "offset": 361, "type": "cta.click", "page": "/register-v2", "label": "注册提交" },
+            { "offset": 362, "type": "page.view", "page": "/chat", "dwellSec": 322 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-27", "startedAt": "21:44:52", "durationSec": 472, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 21 },
+            { "offset": 21, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 22, "type": "page.view", "page": "/chat", "dwellSec": 450 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_47**90",
+      "state": "FREE_TRIAL",
+      "stateLabel": "活跃 · 测评完成未对话",
+      "registeredAt": "2026-09-28",
+      "totalSessions": 2,
+      "totalDurationSec": 1340,
+      "loginIntervalDays": [1],
+      "outcome": { "type": "active", "lastPage": "/mentors", "at": "2026-09-29" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-28", "startedAt": "16:20:49", "durationSec": 945, "exitPage": "/dashboard",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 55 },
+            { "offset": 55, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 56, "type": "page.view", "page": "/assessment", "dwellSec": 688 },
+            { "offset": 744, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 745, "type": "page.view", "page": "/dashboard", "dwellSec": 200 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-29", "startedAt": "20:12:31", "durationSec": 395, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 22 },
+            { "offset": 22, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 23, "type": "page.view", "page": "/mentors", "dwellSec": 372 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_33**41",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 2 次",
+      "registeredAt": "2026-09-20",
+      "totalSessions": 2,
+      "totalDurationSec": 1080,
+      "loginIntervalDays": [3],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-23" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-20", "startedAt": "14:33:08", "durationSec": 602, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 39 },
+            { "offset": 39, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 40, "type": "page.view", "page": "/mentors", "dwellSec": 105 },
+            { "offset": 145, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Ying Wang" },
+            { "offset": 146, "type": "page.view", "page": "/mentors/yingwang", "dwellSec": 148 },
+            { "offset": 294, "type": "cta.click", "page": "/mentors/yingwang", "label": "开始对话" },
+            { "offset": 295, "type": "page.view", "page": "/chat", "dwellSec": 307 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-23", "startedAt": "20:58:33", "durationSec": 478, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 18 },
+            { "offset": 18, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 19, "type": "page.view", "page": "/chat", "dwellSec": 459 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_77**12",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-09-22",
+      "totalSessions": 2,
+      "totalDurationSec": 920,
+      "loginIntervalDays": [2],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-24" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-22", "startedAt": "10:07:19", "durationSec": 545, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 51 },
+            { "offset": 51, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：快消管培生" },
+            { "offset": 52, "type": "page.view", "page": "/search", "dwellSec": 66 },
+            { "offset": 118, "type": "cta.click", "page": "/search", "label": "导师卡片 · Phyllis Chi" },
+            { "offset": 119, "type": "page.view", "page": "/mentors/phyllischi", "dwellSec": 134 },
+            { "offset": 253, "type": "cta.click", "page": "/mentors/phyllischi", "label": "开始对话" },
+            { "offset": 254, "type": "page.view", "page": "/chat", "dwellSec": 291 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-24", "startedAt": "12:22:47", "durationSec": 375, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 375 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_25**88",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 测评后未对话",
+      "registeredAt": "2026-09-26",
+      "totalSessions": 1,
+      "totalDurationSec": 780,
+      "loginIntervalDays": [],
+      "outcome": { "type": "active", "lastPage": "/dashboard", "at": "2026-09-26" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-26", "startedAt": "15:41:26", "durationSec": 780, "exitPage": "/dashboard",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 58 },
+            { "offset": 58, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 59, "type": "page.view", "page": "/assessment", "dwellSec": 641 },
+            { "offset": 700, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 701, "type": "page.view", "page": "/dashboard", "dwellSec": 79 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_60**34",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 2 次",
+      "registeredAt": "2026-09-18",
+      "totalSessions": 2,
+      "totalDurationSec": 1010,
+      "loginIntervalDays": [4],
+      "outcome": { "type": "active", "lastPage": "/mentors/kevinyuan", "at": "2026-09-22" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-18", "startedAt": "21:12:05", "durationSec": 566, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 42 },
+            { "offset": 42, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 43, "type": "page.view", "page": "/mentors", "dwellSec": 122 },
+            { "offset": 165, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Kevin Yuan" },
+            { "offset": 166, "type": "page.view", "page": "/mentors/kevinyuan", "dwellSec": 190 },
+            { "offset": 356, "type": "cta.click", "page": "/mentors/kevinyuan", "label": "开始对话" },
+            { "offset": 357, "type": "page.view", "page": "/chat", "dwellSec": 209 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-22", "startedAt": "19:38:51", "durationSec": 444, "exitPage": "/mentors/kevinyuan",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 17 },
+            { "offset": 17, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 18, "type": "page.view", "page": "/mentors/kevinyuan", "dwellSec": 426 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_11**76",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-09-15",
+      "totalSessions": 3,
+      "totalDurationSec": 1425,
+      "loginIntervalDays": [1, 2],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-18" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-15", "startedAt": "20:24:37", "durationSec": 588, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 46 },
+            { "offset": 46, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：数据分析" },
+            { "offset": 47, "type": "page.view", "page": "/search", "dwellSec": 74 },
+            { "offset": 121, "type": "cta.click", "page": "/search", "label": "导师卡片 · Lydia Chen" },
+            { "offset": 122, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 158 },
+            { "offset": 280, "type": "cta.click", "page": "/mentors/lydiachen", "label": "开始对话" },
+            { "offset": 281, "type": "page.view", "page": "/chat", "dwellSec": 307 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-16", "startedAt": "13:07:12", "durationSec": 431, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 431 }]
+        },
+        {
+          "no": 3, "date": "2026-09-18", "startedAt": "21:55:48", "durationSec": 406, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 406 }]
+        }
+      ]
+    },
+    {
+      "id": "u_95**29",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 2 次",
+      "registeredAt": "2026-09-12",
+      "totalSessions": 1,
+      "totalDurationSec": 645,
+      "loginIntervalDays": [],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-12" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-12", "startedAt": "16:48:20", "durationSec": 645, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 37 },
+            { "offset": 37, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 38, "type": "page.view", "page": "/assessment", "dwellSec": 380 },
+            { "offset": 418, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 419, "type": "page.view", "page": "/mentors", "dwellSec": 84 },
+            { "offset": 503, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Tina Zhang" },
+            { "offset": 504, "type": "page.view", "page": "/mentors/tinazhang", "dwellSec": 141 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_42**63",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-09-10",
+      "totalSessions": 2,
+      "totalDurationSec": 890,
+      "loginIntervalDays": [1],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-11" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-10", "startedAt": "09:31:44", "durationSec": 512, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 40 },
+            { "offset": 40, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 41, "type": "page.view", "page": "/mentors", "dwellSec": 96 },
+            { "offset": 137, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Freya Ren" },
+            { "offset": 138, "type": "page.view", "page": "/mentors/freyaren", "dwellSec": 165 },
+            { "offset": 303, "type": "cta.click", "page": "/mentors/freyaren", "label": "开始对话" },
+            { "offset": 304, "type": "page.view", "page": "/chat", "dwellSec": 208 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-11", "startedAt": "20:47:03", "durationSec": 378, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 378 }]
+        }
+      ]
+    },
+    {
+      "id": "u_58**07",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 2 次",
+      "registeredAt": "2026-09-08",
+      "totalSessions": 1,
+      "totalDurationSec": 520,
+      "loginIntervalDays": [],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-08" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-08", "startedAt": "22:16:35", "durationSec": 520, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 33 },
+            { "offset": 33, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：考研还是工作" },
+            { "offset": 34, "type": "page.view", "page": "/search", "dwellSec": 58 },
+            { "offset": 92, "type": "cta.click", "page": "/search", "label": "导师卡片 · Ying Wang" },
+            { "offset": 93, "type": "page.view", "page": "/mentors/yingwang", "dwellSec": 120 },
+            { "offset": 213, "type": "cta.click", "page": "/mentors/yingwang", "label": "开始对话" },
+            { "offset": 214, "type": "page.view", "page": "/chat", "dwellSec": 306 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_06**91",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-09-05",
+      "totalSessions": 3,
+      "totalDurationSec": 1560,
+      "loginIntervalDays": [2, 1],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-08" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-05", "startedAt": "18:22:16", "durationSec": 604, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 49 },
+            { "offset": 49, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 50, "type": "page.view", "page": "/mentors", "dwellSec": 115 },
+            { "offset": 165, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Winnie Ni" },
+            { "offset": 166, "type": "page.view", "page": "/mentors/winnieni", "dwellSec": 152 },
+            { "offset": 318, "type": "cta.click", "page": "/mentors/winnieni", "label": "开始对话" },
+            { "offset": 319, "type": "page.view", "page": "/chat", "dwellSec": 285 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-07", "startedAt": "12:41:53", "durationSec": 498, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 498 }]
+        },
+        {
+          "no": 3, "date": "2026-09-08", "startedAt": "21:09:40", "durationSec": 458, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 458 }]
+        }
+      ]
+    },
+    {
+      "id": "u_83**45",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 测评后未对话",
+      "registeredAt": "2026-09-03",
+      "totalSessions": 2,
+      "totalDurationSec": 1120,
+      "loginIntervalDays": [2],
+      "outcome": { "type": "active", "lastPage": "/mentors", "at": "2026-09-05" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-03", "startedAt": "17:35:29", "durationSec": 705, "exitPage": "/dashboard",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 54 },
+            { "offset": 54, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 55, "type": "page.view", "page": "/assessment", "dwellSec": 570 },
+            { "offset": 625, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 626, "type": "page.view", "page": "/dashboard", "dwellSec": 79 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-05", "startedAt": "19:58:11", "durationSec": 415, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 21 },
+            { "offset": 21, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 22, "type": "page.view", "page": "/mentors", "dwellSec": 393 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_29**10",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 2 次",
+      "registeredAt": "2026-08-30",
+      "totalSessions": 2,
+      "totalDurationSec": 875,
+      "loginIntervalDays": [3],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-02" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-30", "startedAt": "13:52:08", "durationSec": 480, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 45 },
+            { "offset": 45, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：咨询顾问" },
+            { "offset": 46, "type": "page.view", "page": "/search", "dwellSec": 63 },
+            { "offset": 109, "type": "cta.click", "page": "/search", "label": "导师卡片 · Lydia Chen" },
+            { "offset": 110, "type": "page.view", "page": "/mentors/lydiachen", "dwellSec": 128 },
+            { "offset": 238, "type": "cta.click", "page": "/mentors/lydiachen", "label": "开始对话" },
+            { "offset": 239, "type": "page.view", "page": "/chat", "dwellSec": 241 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-02", "startedAt": "20:31:44", "durationSec": 395, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 395 }]
+        }
+      ]
+    },
+    {
+      "id": "u_64**52",
+      "state": "FREE_TRIAL",
+      "stateLabel": "试用中 · 还剩 1 次",
+      "registeredAt": "2026-08-28",
+      "totalSessions": 2,
+      "totalDurationSec": 960,
+      "loginIntervalDays": [1],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-08-29" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-28", "startedAt": "21:41:17", "durationSec": 555, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 41 },
+            { "offset": 41, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 42, "type": "page.view", "page": "/mentors", "dwellSec": 108 },
+            { "offset": 150, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Phyllis Chi" },
+            { "offset": 151, "type": "page.view", "page": "/mentors/phyllischi", "dwellSec": 140 },
+            { "offset": 291, "type": "cta.click", "page": "/mentors/phyllischi", "label": "开始对话" },
+            { "offset": 292, "type": "page.view", "page": "/chat", "dwellSec": 263 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-29", "startedAt": "14:26:50", "durationSec": 405, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 405 }]
+        }
+      ]
+    },
+    {
+      "id": "u_84**02",
+      "state": "CREDIT_PACK",
+      "stateLabel": "加榨包用户",
+      "registeredAt": "2026-07-18",
+      "totalSessions": 6,
+      "totalDurationSec": 4230,
+      "loginIntervalDays": [1, 1, 3, 6, 2],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-28" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-07-18", "startedAt": "10:15:44", "durationSec": 788, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 49 },
+            { "offset": 49, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 50, "type": "page.view", "page": "/assessment", "dwellSec": 402 },
+            { "offset": 452, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 453, "type": "page.view", "page": "/mentors", "dwellSec": 122 },
+            { "offset": 575, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Kevin Yuan" },
+            { "offset": 576, "type": "page.view", "page": "/mentors/kevinyuan", "dwellSec": 89 },
+            { "offset": 665, "type": "cta.click", "page": "/mentors/kevinyuan", "label": "开始对话" },
+            { "offset": 666, "type": "page.view", "page": "/chat", "dwellSec": 122 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-07-19", "startedAt": "21:03:18", "durationSec": 655, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 17 },
+            { "offset": 17, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 18, "type": "page.view", "page": "/chat", "dwellSec": 637 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-07-20", "startedAt": "20:44:51", "durationSec": 402, "exitPage": "/payment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 288, "note": "免费次数用完" },
+            { "offset": 288, "type": "page.view", "page": "/payment", "dwellSec": 114 }
+          ]
+        },
+        {
+          "no": 4, "date": "2026-07-23", "startedAt": "12:28:07", "durationSec": 615, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/payment", "dwellSec": 87 },
+            { "offset": 87, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 88, "type": "page.view", "page": "/chat", "dwellSec": 527 }
+          ]
+        },
+        {
+          "no": 5, "date": "2026-07-29", "startedAt": "22:17:33", "durationSec": 940, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 940 }]
+        },
+        {
+          "no": 6, "date": "2026-09-28", "startedAt": "20:09:26", "durationSec": 830, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 15 },
+            { "offset": 15, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 16, "type": "page.view", "page": "/history", "dwellSec": 84 },
+            { "offset": 100, "type": "page.view", "page": "/chat", "dwellSec": 730 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_51**23",
+      "state": "CREDIT_PACK",
+      "stateLabel": "加榨包用户",
+      "registeredAt": "2026-08-08",
+      "totalSessions": 3,
+      "totalDurationSec": 1980,
+      "loginIntervalDays": [2, 5],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-08-15" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-08", "startedAt": "19:55:31", "durationSec": 690, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 44 },
+            { "offset": 44, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：人力资源" },
+            { "offset": 45, "type": "page.view", "page": "/search", "dwellSec": 80 },
+            { "offset": 125, "type": "cta.click", "page": "/search", "label": "导师卡片 · Tina Zhang" },
+            { "offset": 126, "type": "page.view", "page": "/mentors/tinazhang", "dwellSec": 155 },
+            { "offset": 281, "type": "cta.click", "page": "/mentors/tinazhang", "label": "开始对话" },
+            { "offset": 282, "type": "page.view", "page": "/chat", "dwellSec": 408 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-10", "startedAt": "21:36:09", "durationSec": 520, "exitPage": "/payment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 350, "note": "免费次数用完" },
+            { "offset": 350, "type": "page.view", "page": "/payment", "dwellSec": 170 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-08-15", "startedAt": "20:18:42", "durationSec": 770, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/payment", "dwellSec": 92 },
+            { "offset": 92, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 93, "type": "page.view", "page": "/chat", "dwellSec": 677 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_09**66",
+      "state": "CREDIT_PACK",
+      "stateLabel": "加榨包用户",
+      "registeredAt": "2026-08-16",
+      "totalSessions": 2,
+      "totalDurationSec": 1240,
+      "loginIntervalDays": [3],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-08-19" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-16", "startedAt": "11:20:55", "durationSec": 640, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 52 },
+            { "offset": 52, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 53, "type": "page.view", "page": "/assessment", "dwellSec": 310 },
+            { "offset": 363, "type": "cta.click", "page": "/assessment", "label": "测评提交" },
+            { "offset": 364, "type": "page.view", "page": "/mentors", "dwellSec": 96 },
+            { "offset": 460, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Kevin Yuan" },
+            { "offset": 461, "type": "page.view", "page": "/chat", "dwellSec": 179 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-19", "startedAt": "19:02:38", "durationSec": 600, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 16 },
+            { "offset": 16, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 17, "type": "page.view", "page": "/payment", "dwellSec": 105 },
+            { "offset": 122, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 123, "type": "page.view", "page": "/chat", "dwellSec": 477 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_73**88",
+      "state": "CREDIT_PACK",
+      "stateLabel": "加榨包用户 · 买过 2 次",
+      "registeredAt": "2026-07-25",
+      "totalSessions": 3,
+      "totalDurationSec": 2110,
+      "loginIntervalDays": [1, 4],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-07-30" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-07-25", "startedAt": "20:44:13", "durationSec": 720, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 38 },
+            { "offset": 38, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 39, "type": "page.view", "page": "/mentors", "dwellSec": 132 },
+            { "offset": 171, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Freya Gao" },
+            { "offset": 172, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 148 },
+            { "offset": 320, "type": "cta.click", "page": "/mentors/freyagao", "label": "开始对话" },
+            { "offset": 321, "type": "page.view", "page": "/chat", "dwellSec": 399 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-07-26", "startedAt": "21:58:47", "durationSec": 610, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 430, "note": "免费次数用完" },
+            { "offset": 430, "type": "page.view", "page": "/payment", "dwellSec": 96 },
+            { "offset": 526, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 527, "type": "page.view", "page": "/chat", "dwellSec": 83 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-07-30", "startedAt": "19:36:22", "durationSec": 780, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 14 },
+            { "offset": 14, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 15, "type": "page.view", "page": "/payment", "dwellSec": 88 },
+            { "offset": 103, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 104, "type": "page.view", "page": "/chat", "dwellSec": 676 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_37**04",
+      "state": "CREDIT_PACK",
+      "stateLabel": "加榨包用户",
+      "registeredAt": "2026-09-06",
+      "totalSessions": 2,
+      "totalDurationSec": 1080,
+      "loginIntervalDays": [2],
+      "outcome": { "type": "active", "lastPage": "/chat", "at": "2026-09-08" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-06", "startedAt": "16:14:52", "durationSec": 590, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 47 },
+            { "offset": 47, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：求职简历" },
+            { "offset": 48, "type": "page.view", "page": "/search", "dwellSec": 71 },
+            { "offset": 119, "type": "cta.click", "page": "/search", "label": "导师卡片 · Freya Ren" },
+            { "offset": 120, "type": "page.view", "page": "/mentors/freyaren", "dwellSec": 158 },
+            { "offset": 278, "type": "cta.click", "page": "/mentors/freyaren", "label": "开始对话" },
+            { "offset": 279, "type": "page.view", "page": "/chat", "dwellSec": 311 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-08", "startedAt": "20:52:36", "durationSec": 490, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 310, "note": "免费次数用完" },
+            { "offset": 310, "type": "page.view", "page": "/payment", "dwellSec": 82 },
+            { "offset": 392, "type": "cta.click", "page": "/payment", "label": "购买加榨包" },
+            { "offset": 393, "type": "page.view", "page": "/chat", "dwellSec": 97 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_92**07",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 未注册",
+      "registeredAt": null,
+      "totalSessions": 1,
+      "totalDurationSec": 95,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/mentors", "at": "2026-09-02" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-02", "startedAt": "13:22:50", "durationSec": 95, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 38 },
+            { "offset": 38, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 39, "type": "page.view", "page": "/mentors", "dwellSec": 56 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_20**19",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 注册后未再激活",
+      "registeredAt": "2026-08-20",
+      "totalSessions": 3,
+      "totalDurationSec": 1087,
+      "loginIntervalDays": [4, 9],
+      "outcome": { "type": "churned", "lastPage": "/mentors/freyagao", "at": "2026-09-02" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-20", "startedAt": "14:08:36", "durationSec": 523, "exitPage": "/mentors/freyagao",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 58 },
+            { "offset": 58, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 59, "type": "page.view", "page": "/mentors", "dwellSec": 143 },
+            { "offset": 202, "type": "cta.click", "page": "/mentors", "label": "导师卡片 · Freya Gao" },
+            { "offset": 203, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 122 },
+            { "offset": 325, "type": "cta.click", "page": "/mentors/freyagao", "label": "开始对话" },
+            { "offset": 326, "type": "page.view", "page": "/register-v2", "dwellSec": 118 },
+            { "offset": 444, "type": "cta.click", "page": "/register-v2", "label": "注册提交" },
+            { "offset": 445, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 78 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-24", "startedAt": "19:51:02", "durationSec": 342, "exitPage": "/dashboard",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 26 },
+            { "offset": 26, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 27, "type": "page.view", "page": "/dashboard", "dwellSec": 315 }
+          ]
+        },
+        {
+          "no": 3, "date": "2026-09-02", "startedAt": "22:36:19", "durationSec": 222, "exitPage": "/mentors/freyagao",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/login", "dwellSec": 18 },
+            { "offset": 18, "type": "cta.click", "page": "/login", "label": "登录提交" },
+            { "offset": 19, "type": "page.view", "page": "/mentors/freyagao", "dwellSec": 203 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_16**77",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 注册后看过支付墙离开",
+      "registeredAt": "2026-08-11",
+      "totalSessions": 3,
+      "totalDurationSec": 1745,
+      "loginIntervalDays": [1, 2],
+      "outcome": { "type": "churned", "lastPage": "/payment", "at": "2026-08-14" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-11", "startedAt": "13:41:22", "durationSec": 692, "exitPage": "/chat",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 41 },
+            { "offset": 41, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：互联网运营" },
+            { "offset": 42, "type": "page.view", "page": "/search", "dwellSec": 96 },
+            { "offset": 138, "type": "cta.click", "page": "/search", "label": "导师卡片 · Phyllis Chi" },
+            { "offset": 139, "type": "page.view", "page": "/mentors/phyllischi", "dwellSec": 143 },
+            { "offset": 282, "type": "cta.click", "page": "/mentors/phyllischi", "label": "开始对话" },
+            { "offset": 283, "type": "page.view", "page": "/chat", "dwellSec": 409 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-08-12", "startedAt": "21:26:58", "durationSec": 588, "exitPage": "/chat",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 588 }]
+        },
+        {
+          "no": 3, "date": "2026-08-14", "startedAt": "22:14:40", "durationSec": 465, "exitPage": "/payment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/chat", "dwellSec": 331, "note": "免费次数用完" },
+            { "offset": 331, "type": "page.view", "page": "/payment", "dwellSec": 134, "note": "看了价格，没付款" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_08**54",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 秒退",
+      "registeredAt": null,
+      "totalSessions": 1,
+      "totalDurationSec": 42,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/", "at": "2026-09-15" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-15", "startedAt": "08:14:57", "durationSec": 42, "exitPage": "/",
+          "events": [{ "offset": 0, "type": "page.view", "page": "/", "dwellSec": 42 }]
+        }
+      ]
+    },
+    {
+      "id": "u_15**62",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 未注册",
+      "registeredAt": null,
+      "totalSessions": 1,
+      "totalDurationSec": 128,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/mentors", "at": "2026-09-08" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-08", "startedAt": "10:31:44", "durationSec": 128, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 55 },
+            { "offset": 55, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 56, "type": "page.view", "page": "/mentors", "dwellSec": 72 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_66**48",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 未注册",
+      "registeredAt": null,
+      "totalSessions": 1,
+      "totalDurationSec": 210,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/mentors/winnieni", "at": "2026-08-25" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-08-25", "startedAt": "15:02:33", "durationSec": 210, "exitPage": "/mentors/winnieni",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 62 },
+            { "offset": 62, "type": "cta.click", "page": "/", "label": "搜索提交", "note": "关键词：银行" },
+            { "offset": 63, "type": "page.view", "page": "/search", "dwellSec": 48 },
+            { "offset": 111, "type": "cta.click", "page": "/search", "label": "导师卡片 · Winnie Ni" },
+            { "offset": 112, "type": "page.view", "page": "/mentors/winnieni", "dwellSec": 98 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_30**93",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 未注册",
+      "registeredAt": null,
+      "totalSessions": 2,
+      "totalDurationSec": 335,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/mentors", "at": "2026-09-18" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-14", "startedAt": "21:15:09", "durationSec": 180, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 48 },
+            { "offset": 48, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 49, "type": "page.view", "page": "/mentors", "dwellSec": 131 }
+          ]
+        },
+        {
+          "no": 2, "date": "2026-09-18", "startedAt": "09:47:52", "durationSec": 155, "exitPage": "/mentors",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 36 },
+            { "offset": 36, "type": "cta.click", "page": "/", "label": "看所有导师分身" },
+            { "offset": 37, "type": "page.view", "page": "/mentors", "dwellSec": 118 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "u_52**17",
+      "state": "CHURNED",
+      "stateLabel": "已流失 · 未注册",
+      "registeredAt": null,
+      "totalSessions": 1,
+      "totalDurationSec": 76,
+      "loginIntervalDays": [],
+      "outcome": { "type": "churned", "lastPage": "/assessment", "at": "2026-09-21" },
+      "sessions": [
+        {
+          "no": 1, "date": "2026-09-21", "startedAt": "12:08:41", "durationSec": 76, "exitPage": "/assessment",
+          "events": [
+            { "offset": 0, "type": "page.view", "page": "/", "dwellSec": 30 },
+            { "offset": 30, "type": "cta.click", "page": "/", "label": "做职业兴趣测试" },
+            { "offset": 31, "type": "page.view", "page": "/assessment", "dwellSec": 45 }
+          ]
+        }
+      ]
+    }
+  ]
+}

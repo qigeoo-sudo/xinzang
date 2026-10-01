@@ -9,6 +9,12 @@ import { ViewState } from './stat-card';
 
 interface SummaryResponse {
   dateRange: { start: string | null; end: string };
+  /** 导师本人账号活跃（截至本次登录，含本次）；真实后端就绪前由 demo JSON 提供 */
+  accountActivity?: {
+    loginCount: number;
+    totalLoginDurationMin: number;
+    submissionCount: number;
+  };
   cumulative: {
     helpedUsers: number;
     impressionUsers: number;
@@ -145,7 +151,7 @@ function PurchaseCell({
   );
 }
 
-export function OverviewView() {
+export function OverviewView({ mentorName }: { mentorName?: string }) {
   const { data, loading, error } = useApi<SummaryResponse>(
     `/api/mentor/summary?range=90`,
   );
@@ -172,6 +178,20 @@ export function OverviewView() {
           {showPlatform ? '隐藏全体' : '显示全体'}
         </button>
       </div>
+
+      {/* 导师本人账号活跃：截至本次登录（含本次） */}
+      {data?.accountActivity && (
+        <p className="-mt-1 rounded-lg bg-white/70 px-3 py-2 text-xs text-stone-500 ring-1 ring-stone-900/[0.05]">
+          {mentorName ? `${mentorName}您好。` : '您好。'}截至本次登录，您累计登录{' '}
+          <b className="text-stone-700">{data.accountActivity.loginCount}</b> 次
+          {' · '}累计在线{' '}
+          <b className="text-stone-700">
+            {Math.floor(data.accountActivity.totalLoginDurationMin / 60)} 小时{' '}
+            {data.accountActivity.totalLoginDurationMin % 60} 分
+          </b>
+          {' · '}累计提交内容 <b className="text-stone-700">{data.accountActivity.submissionCount}</b> 次
+        </p>
+      )}
 
       {/* 核心数字 */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

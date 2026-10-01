@@ -5,7 +5,10 @@
  * 新建渠道、生成/下载二维码、查看注册与付费统计、导出对账 CSV、启用/停用。
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Header } from '@/components/header';
+import Link from 'next/link';
+import Image from 'next/image';
+import { signOut } from 'next-auth/react';
+import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 
 interface ChannelStat {
   registrations: number;
@@ -136,13 +139,43 @@ export default function AdminChannelsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F3EE] text-[#2B2A28]">
-      <Header />
-      <main className="mx-auto max-w-5xl px-4 py-6">
-        <h1 className="font-serif text-2xl font-bold">渠道管理</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          二维码链接指向 /r/渠道码，用户首次扫码锁定，注册时自动归因；停用后的旧链接按自然量处理。
-        </p>
+    <div className="relative min-h-screen overflow-hidden bg-bg">
+      <GoldFlakes variant="light" />
+      <div className="relative z-10 mx-auto max-w-5xl px-4 pb-16 pt-6 sm:px-6">
+        {/* 顶栏：与平台数据后台设计一致 */}
+        <nav className="flex items-center justify-between gap-2" aria-label="面包屑">
+          <p className="text-sm font-bold text-stone-700">
+            <span>渠道管理员</span>
+            <span className="mx-1.5 text-stone-400">/</span>
+            <span>渠道数据后台</span>
+          </p>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2" aria-label="AI Career Companion 首页">
+              <Image src="/icons/raw-logo.png" alt="AI Career Companion" width={40} height={40} priority className="h-10 w-10" />
+              <span className="text-base font-medium text-stone-600">AI Career Companion</span>
+            </Link>
+            <Link
+              href="/admin-console"
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-xs text-stone-600 hover:border-stone-400"
+            >
+              平台管理
+            </Link>
+            <button
+              onClick={async () => {
+                await signOut({ redirect: false });
+                window.location.href = '/admin-console';
+              }}
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-xs text-stone-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
+            >
+              退出登录
+            </button>
+          </div>
+        </nav>
+        <main className="mt-4">
+          <h1 className="font-serif text-2xl font-bold">渠道管理</h1>
+          <p className="mt-1 text-sm text-stone-500">
+            二维码链接指向 /r/渠道码，用户首次扫码锁定，注册时自动归因；停用后的旧链接按自然量处理。
+          </p>
 
         {/* 新建渠道 */}
         <section className="mt-5 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -237,6 +270,10 @@ export default function AdminChannelsPage() {
           </section>
         )}
       </main>
+      </div>
+      <div className="relative z-10">
+        <PaperCredits />
+      </div>
     </div>
   );
 }

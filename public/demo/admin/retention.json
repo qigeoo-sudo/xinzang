@@ -1,0 +1,41 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "loginIntervals": {
+    "title": "登录间隔（天）",
+    "desc": "同一用户相邻两次登录的间隔分布",
+    "medianLabel": "2.1 天",
+    "buckets": [
+      { "label": "当天再来", "count": 412 },
+      { "label": "1 天", "count": 388 },
+      { "label": "2-3 天", "count": 356 },
+      { "label": "4-7 天", "count": 290 },
+      { "label": "8-14 天", "count": 168 },
+      { "label": "15 天以上", "count": 142 }
+    ]
+  },
+  "sessionDurations": {
+    "title": "每次访问总时长",
+    "desc": "一次访问从进入到离开的全部停留时长",
+    "medianLabel": "3.9 分钟",
+    "buckets": [
+      { "label": "30 秒内", "count": 2230 },
+      { "label": "30 秒-2 分钟", "count": 3105 },
+      { "label": "2-5 分钟", "count": 3620 },
+      { "label": "5-10 分钟", "count": 2281 },
+      { "label": "10-20 分钟", "count": 1180 },
+      { "label": "20 分钟以上", "count": 420 }
+    ]
+  },
+  "loginCounts": {
+    "title": "登录次数（90 天累计）",
+    "desc": "同一用户在统计区间内的登录次数分布",
+    "medianLabel": "人均 3.8 次",
+    "buckets": [
+      { "label": "1 次", "count": 1150 },
+      { "label": "2-3 次", "count": 720 },
+      { "label": "4-7 次", "count": 410 },
+      { "label": "8-15 次", "count": 240 },
+      { "label": "16 次以上", "count": 120 }
+    ]
+  }
+}

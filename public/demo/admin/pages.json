@@ -1,0 +1,17 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "pages": [
+    { "path": "/", "label": "首页", "views": 12836, "uniqueVisitors": 2874, "avgStaySec": 46, "exitCount": 2824, "exitRate": 0.22 },
+    { "path": "/chat", "label": "对话页", "views": 7410, "uniqueVisitors": 1540, "avgStaySec": 486, "exitCount": 2297, "exitRate": 0.31 },
+    { "path": "/mentors", "label": "导师列表", "views": 6230, "uniqueVisitors": 2410, "avgStaySec": 74, "exitCount": 1121, "exitRate": 0.18 },
+    { "path": "/mentors/[id]", "label": "导师主页", "views": 5840, "uniqueVisitors": 2050, "avgStaySec": 132, "exitCount": 1402, "exitRate": 0.24 },
+    { "path": "/assessment", "label": "职业兴趣测试", "views": 2980, "uniqueVisitors": 1660, "avgStaySec": 210, "exitCount": 358, "exitRate": 0.12 },
+    { "path": "/login", "label": "登录", "views": 2210, "uniqueVisitors": 1980, "avgStaySec": 38, "exitCount": 133, "exitRate": 0.06 },
+    { "path": "/search", "label": "搜索结果", "views": 1830, "uniqueVisitors": 980, "avgStaySec": 64, "exitCount": 275, "exitRate": 0.15 },
+    { "path": "/register-v2", "label": "注册", "views": 1610, "uniqueVisitors": 1490, "avgStaySec": 96, "exitCount": 129, "exitRate": 0.08 },
+    { "path": "/dashboard", "label": "个人中心", "views": 1240, "uniqueVisitors": 720, "avgStaySec": 92, "exitCount": 136, "exitRate": 0.11 },
+    { "path": "/payment", "label": "支付页", "views": 890, "uniqueVisitors": 610, "avgStaySec": 75, "exitCount": 80, "exitRate": 0.09 },
+    { "path": "/history", "label": "历史记录", "views": 640, "uniqueVisitors": 410, "avgStaySec": 58, "exitCount": 90, "exitRate": 0.14 },
+    { "path": "/growth-lab", "label": "成长实验室", "views": 320, "uniqueVisitors": 260, "avgStaySec": 45, "exitCount": 51, "exitRate": 0.16 }
+  ]
+}

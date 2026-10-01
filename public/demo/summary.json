@@ -80,5 +80,11 @@
       "subscriptionRounds": 3131,
       "creditPackRounds": 782
     }
+  },
+  "accountActivity": {
+    "loginCount": 36,
+    "totalLoginDurationMin": 1122,
+    "submissionCount": 12,
+    "note": "截至本次登录的累计值（含本次）"
   }
 }

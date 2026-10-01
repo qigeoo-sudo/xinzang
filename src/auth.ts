@@ -206,6 +206,7 @@ export const { handlers, auth } = NextAuth({
         '/forgot-password',
         '/mentors', // 导师列表和详情页公开，聊天组件自行检查登录
         '/mentor-console', // 导师后台入口（未登录由 page.tsx 渲染登录 gate，不走 /login）
+        '/admin-console', // 平台数据后台入口（未登录由 page.tsx 渲染登录 gate，不走 /login）
         '/r', // 渠道短链（扫码发生在登录/注册之前，匿名可达）
         '/growth-lab', // 成长追踪旧路由（重定向到 /dashboard，需保持公开才能执行重定向）
         '/payment/mock', // Mock 支付页面 (开发环境)

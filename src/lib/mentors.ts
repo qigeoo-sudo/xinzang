@@ -17,6 +17,8 @@ export interface KnowledgeEntry {
 export interface Mentor {
   id: string;
   name: string;
+  // 中文真名：暂不展示；今后导师列表与导师页面可能插在英文名前
+  chineseName?: string;
   avatar: string;
   title: string;
   company: string;
@@ -53,6 +55,7 @@ export const mentors: Mentor[] = [
   {
     id: 'lydiachen',
     name: 'Lydia Chen',
+    chineseName: '陈初效',
     avatar: '/avatars/lydiachen-chen.svg',
     launchedAt: '2026-08-13',
     title: 'HRVP',
@@ -257,6 +260,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'winnieni',
     name: 'Winnie Ni',
+    chineseName: '倪慧逸',
     avatar: '/avatars/winnieni-ni.svg',
     launchedAt: '2026-08-22',
     title: 'HR从业者 / 心理咨询师',
@@ -365,6 +369,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'tinazhang',
     name: 'Tina Zhang',
+    chineseName: '张惠琼',
     avatar: '/avatars/tinazhang-zhang.svg',
     launchedAt: '2026-08-22',
     title: 'HR负责人',
@@ -475,6 +480,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'freyagao',
     name: 'Freya Gao',
+    chineseName: '高兰生',
     avatar: '/avatars/freyagao-gao.svg',
     title: '产业投资经理',
     company: '医疗器械产业基金',
@@ -505,6 +511,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'phyllischi',
     name: 'Phyllis Chi',
+    chineseName: '池娟',
     avatar: '/avatars/phyllischi-chi.svg',
     title: '资深财务顾问',
     company: '多家企业（顾问）',
@@ -535,6 +542,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'freyaren',
     name: 'Freya Ren',
+    chineseName: '任懿冰',
     avatar: '/avatars/freyaren-ren.svg',
     title: '创始人兼CEO',
     company: '创业公司',
@@ -555,6 +563,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'yingwang',
     name: 'Ying Wang',
+    chineseName: '王颖',
     avatar: '/avatars/yingwang-wang.svg',
     launchedAt: '2026-09-16',
     title: '生产负责人',
@@ -584,6 +593,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
   {
     id: 'kevinyuan',
     name: 'Kevin Yuan',
+    chineseName: '袁宁宁',
     avatar: '/avatars/kevinyuan-yuan.svg',
     title: '行业导师',
     company: '—',

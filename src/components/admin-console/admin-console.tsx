@@ -1,53 +1,43 @@
 'use client';
 
 /**
- * 导师真身后台 app shell — 面包屑身份 + 模块导航。
- * 底托：肉粉底 + 金屑（GoldFlakes）+ PaperCredits 版权（logo/slogan/copyright）。
+ * 管理员数据后台 app shell — 与导师真身后台同语言：面包屑身份 + 模块导航。
+ * 底托：肉粉底 + 金屑（GoldFlakes）+ PaperCredits 版权。
  */
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from 'next-auth/react';
 import { OverviewView } from './overview-view';
-import { ConversationsView } from './conversations-view';
-import { AudienceView } from './audience-view';
-import { SubmissionsView } from './submissions-view';
-import { AccountView } from './account-view';
+import { PagesView } from './pages-view';
+import { CtasView } from './ctas-view';
+import { JourneysView } from './journeys-view';
+import { RetentionView } from './retention-view';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 
 const TABS = [
   { key: 'overview', label: '概览' },
-  { key: 'conversations', label: '对话效果' },
-  { key: 'audience', label: '用户画像' },
-  { key: 'submissions', label: '我的提交' },
-  { key: 'account', label: '账号安全' },
+  { key: 'pages', label: '页面' },
+  { key: 'ctas', label: '按钮' },
+  { key: 'journeys', label: '行为链' },
+  { key: 'retention', label: '留存' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
 
-interface Props {
-  mentorName: string;
-  accountName: string;
-  lastLoginAt: string | null;
-  loginCount: number;
-  /** 退出登录后跳转地址；管理员预览视角传回 /admin-console/mentors */
-  exitHref?: string;
-}
-
-export function MentorConsole({ mentorName, accountName, lastLoginAt, loginCount, exitHref = '/mentor-console' }: Props) {
+export function AdminConsole({ accountName }: { accountName: string }) {
   const [tab, setTab] = useState<TabKey>('overview');
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg">
-      {/* 洒金屑：肉粉底上飘金币贴片 + 四芒星光，每次加载位置不同 */}
       <GoldFlakes variant="light" />
       <div className="relative z-10 mx-auto max-w-5xl px-4 pb-16 pt-6 sm:px-6">
-        {/* 面包屑：显示当前身份（加大加粗）+ 右侧 logo/slogan + 退出按钮 */}
+        {/* 面包屑：当前身份 + 右侧 logo + 渠道管理入口 + 退出 */}
         <nav className="flex items-center justify-between gap-2" aria-label="面包屑">
           <p className="text-sm font-bold text-stone-700">
-            <span>{mentorName}</span>
+            <span>{accountName}</span>
             <span className="mx-1.5 text-stone-400">/</span>
-            <span>导师真身后台</span>
+            <span>平台数据后台</span>
           </p>
           <div className="flex items-center gap-3">
             <Link
@@ -65,11 +55,22 @@ export function MentorConsole({ mentorName, accountName, lastLoginAt, loginCount
               />
               <span className="text-base font-medium text-stone-600">AI Career Companion</span>
             </Link>
+            <Link
+              href="/admin-console/mentors"
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-xs text-stone-600 hover:border-stone-400"
+            >
+              导师管理
+            </Link>
+            <Link
+              href="/admin/channels"
+              className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-xs text-stone-600 hover:border-stone-400"
+            >
+              渠道管理
+            </Link>
             <button
               onClick={async () => {
                 await signOut({ redirect: false });
-                // 退出后跳 exitHref（默认留在 mentor-console，未登录被服务端拦截到登录 gate）
-                window.location.href = exitHref;
+                window.location.href = '/admin-console';
               }}
               className="rounded-lg border border-stone-300 bg-white/80 px-3 py-1 text-xs text-stone-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700"
             >
@@ -97,22 +98,14 @@ export function MentorConsole({ mentorName, accountName, lastLoginAt, loginCount
 
         {/* 视图 */}
         <div className="mt-4">
-          {tab === 'overview' && <OverviewView mentorName={mentorName} />}
-          {tab === 'conversations' && <ConversationsView />}
-          {tab === 'audience' && <AudienceView />}
-          {tab === 'submissions' && <SubmissionsView />}
-          {tab === 'account' && (
-            <AccountView
-              mentorName={mentorName}
-              accountName={accountName}
-              lastLoginAt={lastLoginAt}
-              loginCount={loginCount}
-            />
-          )}
+          {tab === 'overview' && <OverviewView />}
+          {tab === 'pages' && <PagesView />}
+          {tab === 'ctas' && <CtasView />}
+          {tab === 'journeys' && <JourneysView />}
+          {tab === 'retention' && <RetentionView />}
         </div>
       </div>
 
-      {/* 底托：logo + slogan + copyright（深字版适配肉粉底） */}
       <div className="relative z-10">
         <PaperCredits />
       </div>

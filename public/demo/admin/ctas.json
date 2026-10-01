@@ -1,0 +1,44 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "spotlight": [
+    {
+      "ctaId": "home_view_mentors",
+      "label": "看所有导师分身",
+      "card": "鼠尾草绿卡",
+      "clicks": 5210,
+      "uniqueUsers": 2210,
+      "topDestinations": [
+        { "page": "/mentors", "count": 5210 }
+      ]
+    },
+    {
+      "ctaId": "home_start_assessment",
+      "label": "做职业兴趣测试",
+      "card": "珊瑚卡",
+      "clicks": 3120,
+      "uniqueUsers": 1730,
+      "topDestinations": [
+        { "page": "/assessment", "count": 3120 }
+      ]
+    },
+    {
+      "ctaId": "home_search_submit",
+      "label": "搜索提交",
+      "card": "杏金卡",
+      "clicks": 2350,
+      "uniqueUsers": 1420,
+      "topDestinations": [
+        { "page": "/search", "count": 2350 }
+      ]
+    }
+  ],
+  "others": [
+    { "ctaId": "chat_send", "label": "对话发送", "clicks": 28600, "uniqueUsers": 1540, "topDestinations": [] },
+    { "ctaId": "mentor_card_click", "label": "导师卡片（列表页）", "clicks": 4860, "uniqueUsers": 1980, "topDestinations": [{ "page": "/mentors/[id]", "count": 4860 }] },
+    { "ctaId": "login_submit", "label": "登录提交", "clicks": 1980, "uniqueUsers": 1750, "topDestinations": [{ "page": "/dashboard", "count": 1100 }, { "page": "/chat", "count": 620 }] },
+    { "ctaId": "register_submit", "label": "注册提交", "clicks": 1610, "uniqueUsers": 1490, "topDestinations": [{ "page": "/dashboard", "count": 980 }, { "page": "/", "count": 430 }] },
+    { "ctaId": "assessment_submit", "label": "测评提交", "clicks": 1450, "uniqueUsers": 1450, "topDestinations": [{ "page": "/mentors", "count": 900 }, { "page": "/dashboard", "count": 380 }] },
+    { "ctaId": "subscribe_click", "label": "订阅按钮", "clicks": 980, "uniqueUsers": 720, "topDestinations": [{ "page": "/payment", "count": 890 }] },
+    { "ctaId": "buy_credit_pack", "label": "购买加榨包", "clicks": 210, "uniqueUsers": 130, "topDestinations": [{ "page": "/payment", "count": 210 }] }
+  ]
+}

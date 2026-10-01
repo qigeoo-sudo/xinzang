@@ -1,0 +1,172 @@
+{
+  "dateRange": { "start": "2026-07-09", "end": "2026-10-01" },
+  "mentors": [
+    {
+      "id": "lydiachen", "name": "Lydia Chen", "chineseName": "陈初效", "tier": "S",
+      "revenueYuan": 46800, "subscribers": 179, "importedAt": "2026-07-01",
+      "totalDurationMin": 51240, "rounds": 3860, "knowledgeCards": 60, "caseCards": 18,
+      "dialogue": { "helpedUsers": 440, "validSessions": 412, "rounds": 3860, "freeTrialRounds": 920, "likes": 520, "dislikes": 18, "reports": 3, "avgRoundsPerSession": 9.4 },
+      "audience": { "totalUsers": 440, "topAge": "22-24（38%）", "topCareer": "金融学（22%）", "topRiasec": "E 主导（31%）", "topHelp": "秋招方向不清（29%）" },
+      "review": { "status": "PENDING", "pendingItems": [
+        { "id": "kc-lydia-101", "type": "知识卡", "title": "2026 秋招券商投行部时间线与笔试变化", "submittedAt": "2026-09-28 14:20" },
+        { "id": "kc-lydia-102", "type": "案例卡", "title": "面经案例：GPA 3.2 拿到中金 IBD 面试", "submittedAt": "2026-09-29 09:12" }
+      ], "lastReviewAt": "2026-09-12 10:30", "rejectReason": null }
+    },
+    {
+      "id": "winnieni", "name": "Winnie Ni", "chineseName": "倪慧逸", "tier": "A",
+      "revenueYuan": 12480, "subscribers": 42, "importedAt": "2026-07-03",
+      "totalDurationMin": 14820, "rounds": 1150, "knowledgeCards": 40, "caseCards": 12,
+      "dialogue": { "helpedUsers": 130, "validSessions": 118, "rounds": 1150, "freeTrialRounds": 260, "likes": 158, "dislikes": 7, "reports": 1, "avgRoundsPerSession": 9.7 },
+      "audience": { "totalUsers": 130, "topAge": "25-27（34%）", "topCareer": "心理学（26%）", "topRiasec": "S 主导（36%）", "topHelp": "转行迷茫（31%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-05 16:40", "rejectReason": null }
+    },
+    {
+      "id": "tinazhang", "name": "Tina Zhang", "chineseName": "张惠琼", "tier": "A",
+      "revenueYuan": 11860, "subscribers": 40, "importedAt": "2026-07-05",
+      "totalDurationMin": 13980, "rounds": 1080, "knowledgeCards": 42, "caseCards": 11,
+      "dialogue": { "helpedUsers": 128, "validSessions": 112, "rounds": 1080, "freeTrialRounds": 245, "likes": 149, "dislikes": 6, "reports": 2, "avgRoundsPerSession": 9.6 },
+      "audience": { "totalUsers": 128, "topAge": "22-24（36%）", "topCareer": "工商管理（24%）", "topRiasec": "E 主导（30%）", "topHelp": "offer 选择（27%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-08 11:15", "rejectReason": null }
+    },
+    {
+      "id": "freyagao", "name": "Freya Gao", "chineseName": "高兰生", "tier": "A",
+      "revenueYuan": 10920, "subscribers": 38, "importedAt": "2026-07-08",
+      "totalDurationMin": 12640, "rounds": 980, "knowledgeCards": 38, "caseCards": 12,
+      "dialogue": { "helpedUsers": 125, "validSessions": 104, "rounds": 980, "freeTrialRounds": 230, "likes": 136, "dislikes": 8, "reports": 2, "avgRoundsPerSession": 9.4 },
+      "audience": { "totalUsers": 125, "topAge": "28-30（29%）", "topCareer": "设计学（21%）", "topRiasec": "A 主导（33%）", "topHelp": "职业倦怠（25%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-10 09:05", "rejectReason": null }
+    },
+    {
+      "id": "phyllischi", "name": "Phyllis Chi", "chineseName": "池娟", "tier": "B",
+      "revenueYuan": 5320, "subscribers": 18, "importedAt": "2026-07-12",
+      "totalDurationMin": 6840, "rounds": 520, "knowledgeCards": 25, "caseCards": 7,
+      "dialogue": { "helpedUsers": 65, "validSessions": 55, "rounds": 520, "freeTrialRounds": 118, "likes": 72, "dislikes": 4, "reports": 1, "avgRoundsPerSession": 9.5 },
+      "audience": { "totalUsers": 65, "topAge": "25-27（35%）", "topCareer": "新闻传播（28%）", "topRiasec": "A 主导（31%）", "topHelp": "内容行业转型（33%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-11 14:22", "rejectReason": null }
+    },
+    {
+      "id": "freyaren", "name": "Freya Ren", "chineseName": "任懿冰", "tier": "B",
+      "revenueYuan": 4840, "subscribers": 17, "importedAt": "2026-07-15",
+      "totalDurationMin": 6380, "rounds": 486, "knowledgeCards": 26, "caseCards": 8,
+      "dialogue": { "helpedUsers": 64, "validSessions": 52, "rounds": 486, "freeTrialRounds": 112, "likes": 68, "dislikes": 5, "reports": 0, "avgRoundsPerSession": 9.3 },
+      "audience": { "totalUsers": 64, "topAge": "22-24（37%）", "topCareer": "电子工程（23%）", "topRiasec": "I 主导（29%）", "topHelp": "考研还是就业（30%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-11 14:22", "rejectReason": null }
+    },
+    {
+      "id": "yingwang", "name": "Ying Wang", "chineseName": "王颖", "tier": "B",
+      "revenueYuan": 4560, "subscribers": 16, "importedAt": "2026-07-18",
+      "totalDurationMin": 5960, "rounds": 452, "knowledgeCards": 24, "caseCards": 7,
+      "dialogue": { "helpedUsers": 62, "validSessions": 51, "rounds": 452, "freeTrialRounds": 104, "likes": 64, "dislikes": 4, "reports": 1, "avgRoundsPerSession": 8.9 },
+      "audience": { "totalUsers": 62, "topAge": "25-27（33%）", "topCareer": "教育学（25%）", "topRiasec": "S 主导（34%）", "topHelp": "体制内还是企业（28%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-14 10:50", "rejectReason": null }
+    },
+    {
+      "id": "kevinyuan", "name": "Kevin Yuan", "chineseName": "袁宁宁", "tier": "B",
+      "revenueYuan": 4280, "subscribers": 15, "importedAt": "2026-07-20",
+      "totalDurationMin": 5620, "rounds": 428, "knowledgeCards": 23, "caseCards": 6,
+      "dialogue": { "helpedUsers": 60, "validSessions": 49, "rounds": 428, "freeTrialRounds": 98, "likes": 61, "dislikes": 3, "reports": 1, "avgRoundsPerSession": 8.7 },
+      "audience": { "totalUsers": 60, "topAge": "28-30（30%）", "topCareer": "机械工程（24%）", "topRiasec": "R 主导（27%）", "topHelp": "转行互联网（26%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-14 10:50", "rejectReason": null }
+    },
+    {
+      "id": "sophialiu", "name": "Sophia Liu", "chineseName": "刘思雯", "tier": "B",
+      "revenueYuan": 3960, "subscribers": 14, "importedAt": "2026-07-22",
+      "totalDurationMin": 5240, "rounds": 402, "knowledgeCards": 22, "caseCards": 6,
+      "dialogue": { "helpedUsers": 58, "validSessions": 47, "rounds": 402, "freeTrialRounds": 92, "likes": 57, "dislikes": 4, "reports": 0, "avgRoundsPerSession": 8.6 },
+      "audience": { "totalUsers": 58, "topAge": "22-24（35%）", "topCareer": "法学（22%）", "topRiasec": "E 主导（28%）", "topHelp": "红圈所求职（24%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-18 15:33", "rejectReason": null }
+    },
+    {
+      "id": "emilychen", "name": "Emily Chen", "chineseName": "陈雅敏", "tier": "B",
+      "revenueYuan": 3640, "subscribers": 13, "importedAt": "2026-07-25",
+      "totalDurationMin": 4980, "rounds": 380, "knowledgeCards": 21, "caseCards": 5,
+      "dialogue": { "helpedUsers": 55, "validSessions": 44, "rounds": 380, "freeTrialRounds": 88, "likes": 52, "dislikes": 3, "reports": 1, "avgRoundsPerSession": 8.6 },
+      "audience": { "totalUsers": 55, "topAge": "25-27（32%）", "topCareer": "金融学（25%）", "topRiasec": "C 主导（26%）", "topHelp": "四大职业路径（27%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-18 15:33", "rejectReason": null }
+    },
+    {
+      "id": "oliviawu", "name": "Olivia Wu", "chineseName": "吴一诺", "tier": "C",
+      "revenueYuan": 1880, "subscribers": 8, "importedAt": "2026-08-01",
+      "totalDurationMin": 2640, "rounds": 196, "knowledgeCards": 15, "caseCards": 4,
+      "dialogue": { "helpedUsers": 32, "validSessions": 26, "rounds": 196, "freeTrialRounds": 46, "likes": 29, "dislikes": 2, "reports": 0, "avgRoundsPerSession": 7.5 },
+      "audience": { "totalUsers": 32, "topAge": "22-24（38%）", "topCareer": "建筑学（21%）", "topRiasec": "A 主导（30%）", "topHelp": "设计转产品（29%）" },
+      "review": { "status": "PENDING", "pendingItems": [
+        { "id": "kc-olivia-041", "type": "知识卡", "title": "建筑转产品经理的作品集改造清单", "submittedAt": "2026-09-27 20:05" }
+      ], "lastReviewAt": "2026-09-20 11:10", "rejectReason": null }
+    },
+    {
+      "id": "ameliazhao", "name": "Amelia Zhao", "chineseName": "赵若彤", "tier": "C",
+      "revenueYuan": 1720, "subscribers": 8, "importedAt": "2026-08-03",
+      "totalDurationMin": 2510, "rounds": 186, "knowledgeCards": 14, "caseCards": 4,
+      "dialogue": { "helpedUsers": 31, "validSessions": 25, "rounds": 186, "freeTrialRounds": 44, "likes": 27, "dislikes": 2, "reports": 1, "avgRoundsPerSession": 7.4 },
+      "audience": { "totalUsers": 31, "topAge": "28-30（31%）", "topCareer": "医学（19%）", "topRiasec": "I 主导（28%）", "topHelp": "临床转药企（31%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-22 09:48", "rejectReason": null }
+    },
+    {
+      "id": "isabellali", "name": "Isabella Li", "chineseName": "李书瑶", "tier": "C",
+      "revenueYuan": 1560, "subscribers": 7, "importedAt": "2026-08-06",
+      "totalDurationMin": 2380, "rounds": 176, "knowledgeCards": 14, "caseCards": 3,
+      "dialogue": { "helpedUsers": 30, "validSessions": 24, "rounds": 176, "freeTrialRounds": 42, "likes": 25, "dislikes": 2, "reports": 0, "avgRoundsPerSession": 7.3 },
+      "audience": { "totalUsers": 30, "topAge": "22-24（36%）", "topCareer": "计算机科学（26%）", "topRiasec": "I 主导（30%）", "topHelp": "大厂算法岗（25%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-22 09:48", "rejectReason": null }
+    },
+    {
+      "id": "chloewang", "name": "Chloe Wang", "chineseName": "王思齐", "tier": "C",
+      "revenueYuan": 1400, "subscribers": 7, "importedAt": "2026-08-10",
+      "totalDurationMin": 2240, "rounds": 165, "knowledgeCards": 13, "caseCards": 3,
+      "dialogue": { "helpedUsers": 29, "validSessions": 23, "rounds": 165, "freeTrialRounds": 40, "likes": 23, "dislikes": 2, "reports": 0, "avgRoundsPerSession": 7.2 },
+      "audience": { "totalUsers": 29, "topAge": "25-27（34%）", "topCareer": "新闻传播（24%）", "topRiasec": "A 主导（29%）", "topHelp": "品牌运营求职（27%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-25 13:27", "rejectReason": null }
+    },
+    {
+      "id": "miasun", "name": "Mia Sun", "chineseName": "孙一茗", "tier": "C",
+      "revenueYuan": 1280, "subscribers": 6, "importedAt": "2026-08-13",
+      "totalDurationMin": 2120, "rounds": 156, "knowledgeCards": 12, "caseCards": 3,
+      "dialogue": { "helpedUsers": 28, "validSessions": 22, "rounds": 156, "freeTrialRounds": 38, "likes": 22, "dislikes": 2, "reports": 0, "avgRoundsPerSession": 7.1 },
+      "audience": { "totalUsers": 28, "topAge": "22-24（39%）", "topCareer": "外语（22%）", "topRiasec": "S 主导（30%）", "topHelp": "留学还是就业（30%）" },
+      "review": { "status": "PENDING", "pendingItems": [
+        { "id": "kc-mia-018", "type": "知识卡", "title": "外语背景进快消管培生的准备节奏", "submittedAt": "2026-09-29 18:44" }
+      ], "lastReviewAt": "2026-09-25 13:27", "rejectReason": null }
+    },
+    {
+      "id": "lucyzheng", "name": "Lucy Zheng", "chineseName": "郑晓岚", "tier": "C",
+      "revenueYuan": 1160, "subscribers": 6, "importedAt": "2026-08-16",
+      "totalDurationMin": 2040, "rounds": 150, "knowledgeCards": 12, "caseCards": 3,
+      "dialogue": { "helpedUsers": 27, "validSessions": 21, "rounds": 150, "freeTrialRounds": 36, "likes": 21, "dislikes": 1, "reports": 0, "avgRoundsPerSession": 7.1 },
+      "audience": { "totalUsers": 27, "topAge": "25-27（33%）", "topCareer": "会计（21%）", "topRiasec": "C 主导（27%）", "topHelp": "事务所跳槽（26%）" },
+      "review": { "status": "REJECTED", "pendingItems": [], "lastReviewAt": "2026-09-26 17:02", "rejectReason": "案例卡里的公司薪资数据没有来源，请补充可核实出处后再提交。" }
+    },
+    {
+      "id": "gracexu", "name": "Grace Xu", "chineseName": "徐静宜", "tier": "C",
+      "revenueYuan": 1040, "subscribers": 5, "importedAt": "2026-08-19",
+      "totalDurationMin": 1920, "rounds": 141, "knowledgeCards": 11, "caseCards": 3,
+      "dialogue": { "helpedUsers": 26, "validSessions": 20, "rounds": 141, "freeTrialRounds": 34, "likes": 20, "dislikes": 1, "reports": 0, "avgRoundsPerSession": 7.0 },
+      "audience": { "totalUsers": 26, "topAge": "22-24（37%）", "topCareer": "金融学（23%）", "topRiasec": "E 主导（27%）", "topHelp": "实习选择（25%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-26 17:02", "rejectReason": null }
+    },
+    {
+      "id": "lilyhuang", "name": "Lily Huang", "chineseName": "黄嘉琪", "tier": "C",
+      "revenueYuan": 920, "subscribers": 5, "importedAt": "2026-08-22",
+      "totalDurationMin": 1810, "rounds": 132, "knowledgeCards": 10, "caseCards": 3,
+      "dialogue": { "helpedUsers": 25, "validSessions": 19, "rounds": 132, "freeTrialRounds": 32, "likes": 19, "dislikes": 1, "reports": 0, "avgRoundsPerSession": 6.9 },
+      "audience": { "totalUsers": 25, "topAge": "28-30（32%）", "topCareer": "市场营销（20%）", "topRiasec": "E 主导（29%）", "topHelp": "中年转行风险（28%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-28 10:15", "rejectReason": null }
+    },
+    {
+      "id": "annzhou", "name": "Ann Zhou", "chineseName": "周安琪", "tier": "C",
+      "revenueYuan": 800, "subscribers": 4, "importedAt": "2026-08-25",
+      "totalDurationMin": 1680, "rounds": 122, "knowledgeCards": 9, "caseCards": 2,
+      "dialogue": { "helpedUsers": 23, "validSessions": 18, "rounds": 122, "freeTrialRounds": 30, "likes": 17, "dislikes": 1, "reports": 0, "avgRoundsPerSession": 6.8 },
+      "audience": { "totalUsers": 23, "topAge": "22-24（38%）", "topCareer": "教育学（22%）", "topRiasec": "S 主导（31%）", "topHelp": "师范就业方向（27%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-28 10:15", "rejectReason": null }
+    },
+    {
+      "id": "helenma", "name": "Helen Ma", "chineseName": "马慧珍", "tier": "C",
+      "revenueYuan": 720, "subscribers": 4, "importedAt": "2026-08-28",
+      "totalDurationMin": 1580, "rounds": 114, "knowledgeCards": 9, "caseCards": 2,
+      "dialogue": { "helpedUsers": 22, "validSessions": 17, "rounds": 114, "freeTrialRounds": 28, "likes": 16, "dislikes": 1, "reports": 0, "avgRoundsPerSession": 6.7 },
+      "audience": { "totalUsers": 22, "topAge": "31+（34%）", "topCareer": "人力资源（24%）", "topRiasec": "S 主导（29%）", "topHelp": "HR 转业务（26%）" },
+      "review": { "status": "APPROVED", "pendingItems": [], "lastReviewAt": "2026-09-28 10:15", "rejectReason": null }
+    }
+  ]
+}
