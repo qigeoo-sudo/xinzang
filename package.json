@@ -24,6 +24,7 @@
     "@fontsource/liu-jian-mao-cao": "^5.3.0",
     "@fontsource/noto-serif-sc": "^5.3.0",
     "@prisma/client": "^5.22.0",
+    "@xyflow/react": "^12.12.0",
     "bcryptjs": "^2.4.3",
     "exceljs": "^4.4.0",
     "next": "^14.2.15",

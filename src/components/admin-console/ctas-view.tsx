@@ -36,10 +36,6 @@ export function CtasView() {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-stone-400">
-        数据区间：{data.dateRange.start} 至 {data.dateRange.end}
-      </p>
-
       {/* 首页三张卡片 */}
       <div>
         <p className="mb-2 text-xs text-stone-500">首页三张卡片使用量</p>

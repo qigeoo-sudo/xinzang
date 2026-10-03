@@ -459,7 +459,83 @@
       "caseCount": 10,
       "loginCount": 19,
       "recommendedReach": 893,
-      "profileVisits": 524
+      "profileVisits": 524,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "商科与管理",
+            "score": 88
+          },
+          {
+            "name": "医学与健康",
+            "score": 35
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 30
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "S 社会型",
+            "score": 96
+          },
+          {
+            "name": "E 企业型",
+            "score": 78
+          },
+          {
+            "name": "C 常规型",
+            "score": 45
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "咨询与战略",
+            "score": 82
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 96
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "LYD-R1-021",
+            "domain": "招聘",
+            "title": "最看重自驱、坦诚与好奇",
+            "coreView": "导师面试候选人时尤其关注自驱力、坦诚和好奇心。",
+            "applicableTo": "适合准备行为面试与自我举例。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LYD-R1-022",
+            "domain": "招聘",
+            "title": "用具体例子证明能力",
+            "coreView": "面试中主动给出具体情境、行动和结果，比只报能力标签更可信。",
+            "applicableTo": "适合简历与面试案例准备。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LYD-R1-025",
+            "domain": "招聘",
+            "title": "校招看探索，社招看轨迹解释",
+            "coreView": "校招可从多元经历判断探索和好奇；社招除能力外，还会关注频繁短期跳槽是否有清晰解释和逐步聚焦。",
+            "applicableTo": "适合校招与社招差异分析。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "面试中如何用具体例子证明能力",
+          "社招频繁跳槽怎么解释职业轨迹",
+          "HR面试最看重候选人什么特质"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "winnieni",
@@ -903,7 +979,79 @@
       "caseCount": 3,
       "loginCount": 9,
       "recommendedReach": 264,
-      "profileVisits": 187
+      "profileVisits": 187,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "商科与管理",
+            "score": 88
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 35
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 22
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "S 社会型",
+            "score": 93
+          },
+          {
+            "name": "E 企业型",
+            "score": 41
+          },
+          {
+            "name": "C 常规型",
+            "score": 35
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 96
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "WIN-R1-021",
+            "domain": "招聘面试",
+            "title": "面试看沟通、正直与合作感",
+            "coreView": "Winnie面试候选人时会重点看三类信号：能否把事情讲清楚，是否正直可信，以及是否让人愿意继续交流和合作。",
+            "applicableTo": "面试准备、候选人评价、HR招聘视角。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "WIN-R1-023",
+            "domain": "招聘面试",
+            "title": "校招看潜力证据，社招看经历匹配与独立判断",
+            "coreView": "在Winnie的面试视角里，校招会关注学校、学习与实习经历；第二轮她补充，针对HR入行，学校和专业是加分因素，她更看重实习证据。社招则更关注经历匹配与独立判断。这是她在不同场景下的权重表达，不是统一筛选公式。",
+            "applicableTo": "校招与社招准备、工作几年后的表达升级。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "WIN-R2-010",
+            "domain": "HR分阶段入行",
+            "title": "实习阶段多体验，首职看体系，工作数年后重深耕",
+            "coreView": "Winnie在第二轮主动修正对大学生的开头表述：实习阶段应多体验HR不同工种；应届生第一份正式HR工作，她更倾向体系成熟的大平台；工作三到五年后，更重视在已确定方向上深耕。",
+            "applicableTo": "HR学生实习规划、毕业择业、工作数年后的路线复盘。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "面试时HR最看重候选人什么特质",
+          "应届生第一份HR工作该选大公司还是小公司",
+          "想转行做HR需要提前准备哪些实习经历"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "tinazhang",
@@ -1347,7 +1495,83 @@
       "caseCount": 5,
       "loginCount": 19,
       "recommendedReach": 272,
-      "profileVisits": 180
+      "profileVisits": 180,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "商科与管理",
+            "score": 72
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 35
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 30
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "S 社会型",
+            "score": 88
+          },
+          {
+            "name": "E 企业型",
+            "score": 82
+          },
+          {
+            "name": "I 研究型",
+            "score": 72
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "咨询与战略",
+            "score": 97
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 95
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "TIN-R1-021",
+            "domain": "招聘标准",
+            "title": "HR初筛关注行业理解自我认知与态度",
+            "coreView": "对初级咨询候选人，Tina从HR视角重点看三类信号：对咨询行业的了解、对自己的self-awareness，以及由准备度、commitment、礼貌、沟通和presentation体现的态度。",
+            "applicableTo": "咨询校招、初级社招、HR面试准备。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "TIN-R1-024",
+            "domain": "面试准备",
+            "title": "行业和公司功课不能停在表面",
+            "coreView": "面试咨询岗位前，候选人应了解目标公司，也应知道咨询行业的基本格局、工作方式、methodology和case interview等内容；只会复述公司表面介绍会让准备度显得不足。",
+            "applicableTo": "咨询面试、公司研究、求职动机准备。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "TIN-R2-017",
+            "domain": "Offer选择",
+            "title": "公司大小不如发展路径文化与成长匹配重要",
+            "coreView": "比较大公司与小公司offer时，Tina更看发展路径是否清晰、晋升要求是否明确、文化与培训是否重视个人成长、客户和项目是否可理解，以及工作是否符合兴趣。大平台可能有品牌和机制优势，小公司可能有更紧密合作与更快机会。",
+            "applicableTo": "大公司与小公司offer比较、第一份工作选择。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "想进咨询行业该怎么准备面试",
+          "咨询公司校招社招到底看什么",
+          "拿到多个offer该怎么选"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "freyagao",
@@ -1791,7 +2015,83 @@
       "caseCount": 3,
       "loginCount": 20,
       "recommendedReach": 252,
-      "profileVisits": 158
+      "profileVisits": 158,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "会计",
+            "score": 88
+          },
+          {
+            "name": "医学与健康",
+            "score": 72
+          },
+          {
+            "name": "金融",
+            "score": 58
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 93
+          },
+          {
+            "name": "C 常规型",
+            "score": 76
+          },
+          {
+            "name": "I 研究型",
+            "score": 72
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "会计与审计",
+            "score": 93
+          },
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "医疗健康",
+            "score": 95
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "FRE-R1-021",
+            "domain": "校招面试",
+            "title": "校招重点观察主动学习解决问题抗压与沟通",
+            "coreView": "Freya在看简历与进行校招面试时，较看重主动学习、解决问题、抗压和沟通：候选人能否面对陌生问题主动补足信息、推进解决，在快节奏中保持韧性，并清楚协作。",
+            "applicableTo": "校招准备、实习面试、经历盘点。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "FRE-R1-024",
+            "domain": "面试表达",
+            "title": "从动作清单升级为动机结果与学习链条",
+            "coreView": "Freya认为学生式表达常停留在列出做过的action，忽略事情的契机、为什么这样做、希望达到什么结果、最终学到什么和形成了什么能力。",
+            "applicableTo": "项目经历表达、行为面试、实习复盘。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "FRE-R2-014",
+            "domain": "三到五年职业发展",
+            "title": "三到五年阶段重点检查能力壁垒与可迁移性",
+            "coreView": "Freya认为工作三到五年后，重点应从广泛试错转向判断自己是否形成了可迁移、可复用的职业能力壁垒，以及当前积累能否支持下一阶段。",
+            "applicableTo": "工作三到五年的发展复盘、转岗和晋升判断。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "会计审计背景如何转向产业投资",
+          "医疗器械行业求职需要哪些准备",
+          "工作三到五年如何判断能力壁垒"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "phyllischi",
@@ -2235,7 +2535,79 @@
       "caseCount": 4,
       "loginCount": 22,
       "recommendedReach": 138,
-      "profileVisits": 96
+      "profileVisits": 96,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "会计",
+            "score": 97
+          },
+          {
+            "name": "商科与管理",
+            "score": 45
+          },
+          {
+            "name": "金融",
+            "score": 22
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "C 常规型",
+            "score": 93
+          },
+          {
+            "name": "S 社会型",
+            "score": 81
+          },
+          {
+            "name": "E 企业型",
+            "score": 79
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "会计与审计",
+            "score": 88
+          },
+          {
+            "name": "职业发展与面试技巧",
+            "score": 90
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "PHY-R1-024",
+            "domain": "面试评估",
+            "title": "面试重点观察表达、逻辑和成长性",
+            "coreView": "Phyllis面试候选人时重点观察沟通表达能力、逻辑思考能力和自我成长性；表达不仅是流利，还要能快速组织信息、分清先后主次并突出重点。",
+            "applicableTo": "面试准备、财务岗位招聘、能力自测。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "PHY-R1-018",
+            "domain": "职业瓶颈",
+            "title": "先理解任务背景与目标再突破执行瓶颈",
+            "coreView": "Phyllis判断财务人若长期只停在局部工作、缺少跨部门沟通和总结，容易遇到发展瓶颈；接到任务时应先搞明白背景、目标、为什么做以及是否有更好的方式。",
+            "applicableTo": "财务晋升、执行岗成长、跨部门协作。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "PHY-R1-009",
+            "domain": "财务职业认知",
+            "title": "财务专业技能是地基而不是职业上限",
+            "coreView": "Phyllis刚入行时也把财务理解为核算、记账和报税，并想象路径只是从财务人员逐级升到CFO；现在她认为专业技能只是地基，往上发展还需要更高的视角、更宽的思路和长期阅历。",
+            "applicableTo": "财务新人、职业瓶颈、从专业岗走向管理岗。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "财务人工作几年遇到瓶颈怎么突破",
+          "面试中如何讲清项目角色和贡献",
+          "财务专业毕业后该选事务所还是企业"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "freyaren",
@@ -2679,7 +3051,83 @@
       "caseCount": 3,
       "loginCount": 21,
       "recommendedReach": 134,
-      "profileVisits": 69
+      "profileVisits": 69,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "商科与管理",
+            "score": 88
+          },
+          {
+            "name": "金融",
+            "score": 24
+          },
+          {
+            "name": "会计",
+            "score": 22
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "S 社会型",
+            "score": 88
+          },
+          {
+            "name": "E 企业型",
+            "score": 82
+          },
+          {
+            "name": "C 常规型",
+            "score": 45
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "创业",
+            "score": 90
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 96
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "FRN-R1-021",
+            "domain": "人力资源职业探索",
+            "title": "先验证自己是否愿意长期处理人的问题",
+            "coreView": "考虑 HR 时，应观察自己是否愿意接触不同的人、理解需求，并在人的切身利益与组织约束中持续解决问题。",
+            "applicableTo": "学生和转行者判断是否尝试 HR。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "FRN-R1-010",
+            "domain": "人力资源职业发展",
+            "title": "重复基础工作不足以形成长期价值",
+            "coreView": "HR 的长期价值来自经验积累、业务理解和复杂问题解决，若长期只重复基础流程，可替代风险会增大。",
+            "applicableTo": "HR 从业者盘点成长与可替代性。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "FRN-R1-018",
+            "domain": "简历",
+            "title": "把真实特征与用人需求连接起来",
+            "coreView": "简历最重要的不是制造惊奇，而是用真实经历说明自己为何匹配目标公司和岗位需求。",
+            "applicableTo": "简历重写和岗位定制。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "想转行做HR但不确定是否适合",
+          "HR工作多年如何突破基础瓶颈",
+          "面试中如何判断候选人真实匹配度"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "yingwang",
@@ -3123,7 +3571,83 @@
       "caseCount": 4,
       "loginCount": 7,
       "recommendedReach": 120,
-      "profileVisits": 84
+      "profileVisits": 84,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "工程",
+            "score": 88
+          },
+          {
+            "name": "商科与管理",
+            "score": 62
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 25
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "R 实用型",
+            "score": 88
+          },
+          {
+            "name": "C 常规型",
+            "score": 72
+          },
+          {
+            "name": "E 企业型",
+            "score": 68
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 93
+          },
+          {
+            "name": "工程",
+            "score": 88
+          },
+          {
+            "name": "项目管理",
+            "score": 90
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "YIN-R1-005",
+            "domain": "面试方法",
+            "title": "面试中诚恳与主动证据比吹大经历更重要",
+            "coreView": "Ying建议候选人不吹牛，真实承认没有做过的内容，并用学习、生活或工作中的主动行动与吃苦经历证明主观能动性。",
+            "applicableTo": "校招面试、自我介绍、不会的问题和短板表达。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "YIN-R1-034",
+            "domain": "招聘标准",
+            "title": "招聘首先看诚实、主观能动性和洞察力",
+            "coreView": "Ying概括自己面试候选人时优先看诚实、主观能动性、日常思考与洞察力，再结合岗位专业匹配。",
+            "applicableTo": "校招社招准备、面试官视角和候选人复盘。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "YIN-R1-056",
+            "domain": "项目管理",
+            "title": "时间成本风险人员质量五维框架",
+            "coreView": "Ying把项目管理概括为时间进度、成本、风险预防、人员与沟通、质量五个维度，并认为学生可在考试、论文和生活项目中练习。",
+            "applicableTo": "学习计划、个人项目、跨部门工作和复盘。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "面试怎么讲真实经历不吹牛",
+          "工作三年遇到晋升瓶颈怎么办",
+          "项目管理五维框架怎么落地"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "kevinyuan",
@@ -3567,7 +4091,87 @@
       "caseCount": 2,
       "loginCount": 9,
       "recommendedReach": 116,
-      "profileVisits": 88
+      "profileVisits": 88,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "医学与健康",
+            "score": 96
+          },
+          {
+            "name": "商科与管理",
+            "score": 72
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 22
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 76
+          },
+          {
+            "name": "S 社会型",
+            "score": 72
+          },
+          {
+            "name": "I 研究型",
+            "score": 58
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 88
+          },
+          {
+            "name": "医疗健康",
+            "score": 96
+          },
+          {
+            "name": "市场营销",
+            "score": 90
+          },
+          {
+            "name": "产品管理",
+            "score": 82
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "KEV-R1-002",
+            "domain": "个人经历 · 岗位选择",
+            "title": "培训转Marketing：让医学背景进入商业决策",
+            "coreView": "Kevin从医学培训相关岗位转向marketing，扩大了医学背景在commercial决策中的作用；第一次转换是在与直属领导沟通、确认内部暂时没有合适岗位后，通过外部机会完成。",
+            "applicableTo": "转岗；marketing；跳槽",
+            "demoInferred": true
+          },
+          {
+            "cardId": "KEV-R1-003",
+            "domain": "岗位认知",
+            "title": "医院思维与企业思维的角色转换",
+            "coreView": "医疗企业既考虑患者价值，也考虑成本、利润和组织协作；临床转企业还需要适应与医生沟通时的角色变化。",
+            "applicableTo": "医院转企业；利益相关方分析",
+            "demoInferred": true
+          },
+          {
+            "cardId": "KEV-R1-018",
+            "domain": "学生建议 · 行动清单",
+            "title": "进入医疗行业的三件准备",
+            "coreView": "进入医疗行业前，应向从业者了解行业与岗位、补齐医学或产品基础，并尽可能通过实习观察组织与岗位；非医疗背景候选人可用同科室或同类产品经验建立相关性。",
+            "applicableTo": "应届生准备；医疗行业求职",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "临床医学背景怎么转医疗企业市场",
+          "医院思维转企业思维怎么适应",
+          "非医疗背景如何进入医疗行业"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "sophialiu",
@@ -4011,7 +4615,79 @@
       "caseCount": 2,
       "loginCount": 6,
       "recommendedReach": 134,
-      "profileVisits": 86
+      "profileVisits": 86,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "法律",
+            "score": 76
+          },
+          {
+            "name": "数据与量化",
+            "score": 69
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 63
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "人力资源与招聘",
+            "score": 94
+          },
+          {
+            "name": "客户成功与客户管理",
+            "score": 86
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "R 实用型",
+            "score": 85
+          },
+          {
+            "name": "A 艺术型",
+            "score": 76
+          },
+          {
+            "name": "E 企业型",
+            "score": 72
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "SOPH-DEMO-001",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘场景的避坑清单",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合面临方向性选择、需要判断框架的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "SOPH-DEMO-002",
+            "domain": "客户成功与客户管理",
+            "title": "从0到1建立客户成功与客户管理核心能力",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "SOPH-DEMO-003",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘中的优先级排序方法",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "小城市有没有客户成功与客户管理相关机会",
+          "客户成功与客户管理岗位面试会被重点问什么",
+          "人力资源与招聘工作强度与真实回报"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "emilychen",
@@ -4455,7 +5131,83 @@
       "caseCount": 2,
       "loginCount": 4,
       "recommendedReach": 130,
-      "profileVisits": 58
+      "profileVisits": 58,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "农林",
+            "score": 92
+          },
+          {
+            "name": "食品",
+            "score": 81
+          },
+          {
+            "name": "工程",
+            "score": 69
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "政府与公共服务",
+            "score": 92
+          },
+          {
+            "name": "供应链与物流",
+            "score": 91
+          },
+          {
+            "name": "数据与分析",
+            "score": 89
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "A 艺术型",
+            "score": 83
+          },
+          {
+            "name": "I 研究型",
+            "score": 71
+          },
+          {
+            "name": "E 企业型",
+            "score": 57
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "EMIL-DEMO-001",
+            "domain": "政府与公共服务",
+            "title": "政府与公共服务高频沟通话术",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "EMIL-DEMO-002",
+            "domain": "供应链与物流",
+            "title": "供应链与物流场景的避坑清单",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "EMIL-DEMO-003",
+            "domain": "数据与分析",
+            "title": "从0到1建立数据与分析核心能力",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "进入政府与公共服务领域需要补哪些能力",
+          "政府与公共服务岗位35岁以后怎么发展",
+          "小城市有没有供应链与物流相关机会"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "oliviawu",
@@ -4906,7 +5658,75 @@
       "caseCount": 2,
       "loginCount": 25,
       "recommendedReach": 76,
-      "profileVisits": 35
+      "profileVisits": 35,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "金融",
+            "score": 69
+          },
+          {
+            "name": "畜牧兽医与水产",
+            "score": 55
+          },
+          {
+            "name": "计算机与信息技术",
+            "score": 44
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "供应链与物流",
+            "score": 89
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "A 艺术型",
+            "score": 74
+          },
+          {
+            "name": "C 常规型",
+            "score": 62
+          },
+          {
+            "name": "I 研究型",
+            "score": 57
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "OLIV-DEMO-001",
+            "domain": "供应链与物流",
+            "title": "用结构化思维拆解供应链与物流问题",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "OLIV-DEMO-002",
+            "domain": "供应链与物流",
+            "title": "供应链与物流新手最常踩的三个误区",
+            "coreView": "把大目标切成两周内可验证的小步，用真实反馈持续修正方向，比一次性规划更可靠。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "OLIV-DEMO-003",
+            "domain": "供应链与物流",
+            "title": "从0到1建立供应链与物流核心能力",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "小城市有没有供应链与物流相关机会",
+          "想转行做供应链与物流但没有相关经历",
+          "供应链与物流工作强度与真实回报"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "ameliazhao",
@@ -5350,7 +6170,83 @@
       "caseCount": 2,
       "loginCount": 14,
       "recommendedReach": 69,
-      "profileVisits": 37
+      "profileVisits": 37,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "工程",
+            "score": 94
+          },
+          {
+            "name": "金融",
+            "score": 85
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 75
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "人力资源与招聘",
+            "score": 94
+          },
+          {
+            "name": "设计与用户体验",
+            "score": 89
+          },
+          {
+            "name": "项目管理",
+            "score": 87
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "R 实用型",
+            "score": 73
+          },
+          {
+            "name": "E 企业型",
+            "score": 69
+          },
+          {
+            "name": "A 艺术型",
+            "score": 59
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "AMEL-DEMO-001",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘关键决策框架",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "AMEL-DEMO-002",
+            "domain": "设计与用户体验",
+            "title": "设计与用户体验场景的避坑清单",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "AMEL-DEMO-003",
+            "domain": "项目管理",
+            "title": "项目管理新手最常踩的三个误区",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "小城市有没有设计与用户体验相关机会",
+          "做人力资源与招聘两三年看不到成长路径",
+          "人力资源与招聘岗位面试会被重点问什么"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "isabellali",
@@ -5794,7 +6690,79 @@
       "caseCount": 2,
       "loginCount": 15,
       "recommendedReach": 60,
-      "profileVisits": 37
+      "profileVisits": 37,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "医学与健康",
+            "score": 87
+          },
+          {
+            "name": "社会科学与公共管理",
+            "score": 74
+          },
+          {
+            "name": "农林",
+            "score": 60
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "供应链与物流",
+            "score": 82
+          },
+          {
+            "name": "零售与消费品",
+            "score": 81
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 71
+          },
+          {
+            "name": "A 艺术型",
+            "score": 63
+          },
+          {
+            "name": "C 常规型",
+            "score": 55
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "ISAB-DEMO-001",
+            "domain": "供应链与物流",
+            "title": "从0到1建立供应链与物流核心能力",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "ISAB-DEMO-002",
+            "domain": "零售与消费品",
+            "title": "零售与消费品中的优先级排序方法",
+            "coreView": "把大目标切成两周内可验证的小步，用真实反馈持续修正方向，比一次性规划更可靠。",
+            "applicableTo": "适合面临方向性选择、需要判断框架的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "ISAB-DEMO-003",
+            "domain": "供应链与物流",
+            "title": "供应链与物流中的资源整合思路",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合面临方向性选择、需要判断框架的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "供应链与物流岗位面试会被重点问什么",
+          "供应链与物流岗位35岁以后怎么发展",
+          "想转行做零售与消费品但没有相关经历"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "chloewang",
@@ -6238,7 +7206,83 @@
       "caseCount": 2,
       "loginCount": 19,
       "recommendedReach": 56,
-      "profileVisits": 31
+      "profileVisits": 31,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "法律",
+            "score": 84
+          },
+          {
+            "name": "计算机与信息技术",
+            "score": 76
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 68
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "网络安全",
+            "score": 95
+          },
+          {
+            "name": "市场营销",
+            "score": 89
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 88
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 82
+          },
+          {
+            "name": "I 研究型",
+            "score": 75
+          },
+          {
+            "name": "A 艺术型",
+            "score": 70
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "CHLO-DEMO-001",
+            "domain": "网络安全",
+            "title": "网络安全中的资源整合思路",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "CHLO-DEMO-002",
+            "domain": "市场营销",
+            "title": "市场营销中的优先级排序方法",
+            "coreView": "把大目标切成两周内可验证的小步，用真实反馈持续修正方向，比一次性规划更可靠。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "CHLO-DEMO-003",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘新手最常踩的三个误区",
+            "coreView": "先对齐相关方预期再推进，多数问题源于角色、目标与评价标准没有提前澄清。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "网络安全和当前方向之间怎么取舍",
+          "想转行做网络安全但没有相关经历",
+          "网络安全工作强度与真实回报"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "miasun",
@@ -6689,7 +7733,75 @@
       "caseCount": 1,
       "loginCount": 18,
       "recommendedReach": 53,
-      "profileVisits": 34
+      "profileVisits": 34,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "畜牧兽医与水产",
+            "score": 96
+          },
+          {
+            "name": "教育与社会服务",
+            "score": 91
+          },
+          {
+            "name": "数据与量化",
+            "score": 87
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "咨询与战略",
+            "score": 84
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "C 常规型",
+            "score": 92
+          },
+          {
+            "name": "E 企业型",
+            "score": 81
+          },
+          {
+            "name": "I 研究型",
+            "score": 73
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "MIAS-DEMO-001",
+            "domain": "咨询与战略",
+            "title": "咨询与战略新手最常踩的三个误区",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "MIAS-DEMO-002",
+            "domain": "咨询与战略",
+            "title": "用结构化思维拆解咨询与战略问题",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "MIAS-DEMO-003",
+            "domain": "咨询与战略",
+            "title": "咨询与战略中的资源整合思路",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "进入咨询与战略领域需要补哪些能力",
+          "咨询与战略岗位35岁以后怎么发展",
+          "做咨询与战略两三年看不到成长路径"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "lucyzheng",
@@ -7133,7 +8245,83 @@
       "caseCount": 2,
       "loginCount": 8,
       "recommendedReach": 57,
-      "profileVisits": 39
+      "profileVisits": 39,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "自然科学",
+            "score": 78
+          },
+          {
+            "name": "应急与公共安全",
+            "score": 69
+          },
+          {
+            "name": "金融",
+            "score": 64
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "销售",
+            "score": 87
+          },
+          {
+            "name": "人力资源与招聘",
+            "score": 86
+          },
+          {
+            "name": "保险",
+            "score": 86
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "C 常规型",
+            "score": 89
+          },
+          {
+            "name": "R 实用型",
+            "score": 83
+          },
+          {
+            "name": "E 企业型",
+            "score": 76
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "LUCY-DEMO-001",
+            "domain": "销售",
+            "title": "从0到1建立销售核心能力",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LUCY-DEMO-002",
+            "domain": "人力资源与招聘",
+            "title": "用结构化思维拆解人力资源与招聘问题",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LUCY-DEMO-003",
+            "domain": "保险",
+            "title": "保险中的资源整合思路",
+            "coreView": "把大目标切成两周内可验证的小步，用真实反馈持续修正方向，比一次性规划更可靠。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "保险和当前方向之间怎么取舍",
+          "小城市有没有销售相关机会",
+          "进入保险领域需要补哪些能力"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "gracexu",
@@ -7577,7 +8765,75 @@
       "caseCount": 1,
       "loginCount": 23,
       "recommendedReach": 53,
-      "profileVisits": 27
+      "profileVisits": 27,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "食品",
+            "score": 74
+          },
+          {
+            "name": "数据与量化",
+            "score": 65
+          },
+          {
+            "name": "法律",
+            "score": 59
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "人力资源与招聘",
+            "score": 84
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "S 社会型",
+            "score": 62
+          },
+          {
+            "name": "C 常规型",
+            "score": 57
+          },
+          {
+            "name": "R 实用型",
+            "score": 51
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "GRAC-DEMO-001",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘新手最常踩的三个误区",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "GRAC-DEMO-002",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘高频沟通话术",
+            "coreView": "先对齐相关方预期再推进，多数问题源于角色、目标与评价标准没有提前澄清。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "GRAC-DEMO-003",
+            "domain": "人力资源与招聘",
+            "title": "人力资源与招聘中的优先级排序方法",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "想转行做人力资源与招聘但没有相关经历",
+          "做人力资源与招聘两三年看不到成长路径",
+          "人力资源与招聘岗位面试会被重点问什么"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "lilyhuang",
@@ -8021,7 +9277,79 @@
       "caseCount": 2,
       "loginCount": 25,
       "recommendedReach": 58,
-      "profileVisits": 27
+      "profileVisits": 27,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "法律",
+            "score": 83
+          },
+          {
+            "name": "自然科学",
+            "score": 77
+          },
+          {
+            "name": "食品",
+            "score": 69
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "军队与军工",
+            "score": 86
+          },
+          {
+            "name": "产品管理",
+            "score": 81
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 55
+          },
+          {
+            "name": "S 社会型",
+            "score": 42
+          },
+          {
+            "name": "R 实用型",
+            "score": 37
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "LILY-DEMO-001",
+            "domain": "军队与军工",
+            "title": "从0到1建立军队与军工核心能力",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LILY-DEMO-002",
+            "domain": "产品管理",
+            "title": "产品管理关键决策框架",
+            "coreView": "先对齐相关方预期再推进，多数问题源于角色、目标与评价标准没有提前澄清。",
+            "applicableTo": "适合带小团队、需要把个人经验沉淀为方法的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "LILY-DEMO-003",
+            "domain": "军队与军工",
+            "title": "军队与军工新手最常踩的三个误区",
+            "coreView": "资深从业者与新手的差异，在于把隐性经验显性化，用可复用的框架替代临场发挥。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "做军队与军工两三年看不到成长路径",
+          "军队与军工和当前方向之间怎么取舍",
+          "产品管理岗位面试会被重点问什么"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "annzhou",
@@ -8465,7 +9793,75 @@
       "caseCount": 1,
       "loginCount": 6,
       "recommendedReach": 43,
-      "profileVisits": 28
+      "profileVisits": 28,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "自然科学",
+            "score": 72
+          },
+          {
+            "name": "法律",
+            "score": 58
+          },
+          {
+            "name": "畜牧兽医与水产",
+            "score": 52
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "职业发展与面试技巧",
+            "score": 82
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "C 常规型",
+            "score": 59
+          },
+          {
+            "name": "A 艺术型",
+            "score": 45
+          },
+          {
+            "name": "I 研究型",
+            "score": 38
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "ANNZ-DEMO-001",
+            "domain": "职业发展与面试技巧",
+            "title": "职业发展与面试技巧新手最常踩的三个误区",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合跨领域迁移、需要快速补齐行业认知的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "ANNZ-DEMO-002",
+            "domain": "职业发展与面试技巧",
+            "title": "职业发展与面试技巧中的优先级排序方法",
+            "coreView": "关键不是信息不够，而是缺少取舍标准；先明确不可妥协项，剩余空间自然清晰。",
+            "applicableTo": "适合有1-3年相关经验、正在处理具体瓶颈的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "ANNZ-DEMO-003",
+            "domain": "职业发展与面试技巧",
+            "title": "职业发展与面试技巧中的资源整合思路",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "进入职业发展与面试技巧领域需要补哪些能力",
+          "想转行做职业发展与面试技巧但没有相关经历",
+          "小城市有没有职业发展与面试技巧相关机会"
+        ],
+        "demoInferred": true
+      }
     },
     {
       "id": "helenma",
@@ -8909,7 +10305,79 @@
       "caseCount": 1,
       "loginCount": 17,
       "recommendedReach": 51,
-      "profileVisits": 33
+      "profileVisits": 33,
+      "knowledgeMatch": {
+        "majorTop3": [
+          {
+            "name": "金融",
+            "score": 91
+          },
+          {
+            "name": "医学与健康",
+            "score": 82
+          },
+          {
+            "name": "工程",
+            "score": 74
+          }
+        ],
+        "careerHits": [
+          {
+            "name": "咨询与战略",
+            "score": 91
+          },
+          {
+            "name": "会计与审计",
+            "score": 85
+          }
+        ],
+        "riasecTop3": [
+          {
+            "name": "E 企业型",
+            "score": 66
+          },
+          {
+            "name": "A 艺术型",
+            "score": 60
+          },
+          {
+            "name": "S 社会型",
+            "score": 55
+          }
+        ],
+        "topCards": [
+          {
+            "cardId": "HELE-DEMO-001",
+            "domain": "咨询与战略",
+            "title": "咨询与战略中的优先级排序方法",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合面临方向性选择、需要判断框架的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "HELE-DEMO-002",
+            "domain": "会计与审计",
+            "title": "会计与审计场景的避坑清单",
+            "coreView": "核心是先界定问题边界，再按影响与成本排序行动，避免在低价值环节平均用力。",
+            "applicableTo": "适合面临方向性选择、需要判断框架的用户。",
+            "demoInferred": true
+          },
+          {
+            "cardId": "HELE-DEMO-003",
+            "domain": "咨询与战略",
+            "title": "咨询与战略中的资源整合思路",
+            "coreView": "把大目标切成两周内可验证的小步，用真实反馈持续修正方向，比一次性规划更可靠。",
+            "applicableTo": "适合刚进入该领域、希望少走弯路的用户。",
+            "demoInferred": true
+          }
+        ],
+        "topThemes": [
+          "会计与审计岗位面试会被重点问什么",
+          "咨询与战略岗位35岁以后怎么发展",
+          "进入咨询与战略领域需要补哪些能力"
+        ],
+        "demoInferred": true
+      }
     }
   ]
 }

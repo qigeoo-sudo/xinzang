@@ -37,9 +37,7 @@ export function PagesView() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-stone-400">
-        数据区间：{data.dateRange.start} 至 {data.dateRange.end} · 离开率 = 以该页结束访问的比例
-      </p>
+      <p className="text-xs text-stone-400">离开率 = 以该页结束访问的比例</p>
 
       <div className="space-y-2">
         {data.pages.map((p) => (

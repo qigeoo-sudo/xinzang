@@ -1,9 +1,17 @@
 'use client';
 
-/** 行为链：抽样用户的逐次访问行为流 — 看到从哪进、点了什么、在哪离开、订阅前最后看了哪页 */
+/** 行为链：全体用户拓扑路由图 + 抽样用户的逐次访问行为流 */
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useAdminApi } from './use-admin-api';
 import { ViewState } from '@/components/mentor-console/stat-card';
+import { maskName, maskPhone } from '@/lib/privacy-mask';
+
+// React Flow 依赖较重且依赖 DOM，仅客户端加载
+const JourneyTopology = dynamic(
+  () => import('./journey-topology').then((m) => m.JourneyTopology),
+  { ssr: false, loading: () => <div className="rounded-2xl bg-white p-6 text-center text-xs text-stone-400 ring-1 ring-stone-900/[0.06]">拓扑图加载中…</div> },
+);
 
 interface JourneyEvent {
   offset: number;
@@ -25,6 +33,8 @@ interface JourneySession {
 
 interface JourneyUser {
   id: string;
+  phone: string;
+  name: string;
   state: string;
   stateLabel: string;
   registeredAt: string | null;
@@ -168,9 +178,8 @@ export function JourneysView() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-stone-400">
-        {data.note} · 数据区间：{data.dateRange.start} 至 {data.dateRange.end}
-      </p>
+      {/* 全体用户行为拓扑图（树状/星状，数据按页面/按钮 tab 锚定） */}
+      <JourneyTopology />
 
       {/* 状态筛选 */}
       <div className="flex flex-wrap gap-1.5">
@@ -206,7 +215,8 @@ export function JourneysView() {
             >
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-stone-800">{u.id}</span>
+                  <span className="text-sm font-semibold text-stone-800">{maskName(u.name)}</span>
+                  <span className="font-mono text-xs tabular-nums text-stone-500">{maskPhone(u.phone)}</span>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs ${STATE_BADGE[u.state] ?? 'bg-stone-200 text-stone-500'}`}
                   >

@@ -10,8 +10,11 @@ const DEMO_URL_MAP: Record<string, string> = {
   '/api/admin/pages': '/demo/admin/pages.json',
   '/api/admin/ctas': '/demo/admin/ctas.json',
   '/api/admin/journeys': '/demo/admin/journeys.json',
+  '/api/admin/journey-graph': '/demo/admin/journey-graph.json',
   '/api/admin/retention': '/demo/admin/retention.json',
   '/api/admin/mentors': '/demo/admin/mentors.json',
+  '/api/admin/users': '/demo/admin/users.json',
+  '/api/admin/channels-summary': '/demo/admin/channels-summary.json',
 };
 
 export function useAdminApi<T>(url: string | null) {

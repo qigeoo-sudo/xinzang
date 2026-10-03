@@ -1,0 +1,170 @@
+{
+  "dateRange": {
+    "start": "2026-07-09",
+    "end": "2026-10-01"
+  },
+  "summary": {
+    "channelCount": 14,
+    "mentorChannelCount": 8,
+    "orgChannelCount": 6,
+    "totalRegistrations": 1891,
+    "totalPaid": 356,
+    "totalRevenueYuan": 51754
+  },
+  "rows": [
+    {
+      "code": "edu_szu",
+      "name": "高校合作-深大",
+      "partner": "深圳大学学生发展部",
+      "kind": "org",
+      "registrations": 417,
+      "paidUsers": 55,
+      "subRevenueYuan": 4565,
+      "creditRevenueYuan": 660,
+      "lastRegisteredAt": "2026-09-20"
+    },
+    {
+      "code": "direct",
+      "name": "官网直接访问",
+      "partner": "心章科技（官方）",
+      "kind": "official",
+      "registrations": 352,
+      "paidUsers": 66,
+      "subRevenueYuan": 10758,
+      "creditRevenueYuan": 462,
+      "lastRegisteredAt": "2026-09-19"
+    },
+    {
+      "code": "dy_official",
+      "name": "抖音官方号",
+      "partner": "心章科技（官方）",
+      "kind": "official",
+      "registrations": 243,
+      "paidUsers": 29,
+      "subRevenueYuan": 1972,
+      "creditRevenueYuan": 203,
+      "lastRegisteredAt": "2026-10-01"
+    },
+    {
+      "code": "edu_ecnu",
+      "name": "高校合作-华东师大",
+      "partner": "华东师范大学就业指导中心",
+      "kind": "org",
+      "registrations": 219,
+      "paidUsers": 32,
+      "subRevenueYuan": 4896,
+      "creditRevenueYuan": 416,
+      "lastRegisteredAt": "2026-09-24"
+    },
+    {
+      "code": "bili_ad",
+      "name": "B站合作投放",
+      "partner": "广州橙光营销策划有限公司",
+      "kind": "org",
+      "registrations": 199,
+      "paidUsers": 20,
+      "subRevenueYuan": 1960,
+      "creditRevenueYuan": 220,
+      "lastRegisteredAt": "2026-09-11"
+    },
+    {
+      "code": "xhs_lydia01",
+      "name": "小红书-Lydia Chen",
+      "partner": "Lydia Chen",
+      "kind": "mentor",
+      "registrations": 137,
+      "paidUsers": 49,
+      "subRevenueYuan": 10513,
+      "creditRevenueYuan": 927,
+      "lastRegisteredAt": "2026-09-23"
+    },
+    {
+      "code": "xhs_official",
+      "name": "小红书官方号",
+      "partner": "心章科技（官方）",
+      "kind": "official",
+      "registrations": 83,
+      "paidUsers": 11,
+      "subRevenueYuan": 1672,
+      "creditRevenueYuan": 110,
+      "lastRegisteredAt": "2026-09-23"
+    },
+    {
+      "code": "xhs_tinaz01",
+      "name": "小红书-Tina Zhang",
+      "partner": "Tina Zhang",
+      "kind": "mentor",
+      "registrations": 57,
+      "paidUsers": 21,
+      "subRevenueYuan": 1992,
+      "creditRevenueYuan": 297,
+      "lastRegisteredAt": "2026-10-01"
+    },
+    {
+      "code": "xhs_winni01",
+      "name": "小红书-Winnie Ni",
+      "partner": "Winnie Ni",
+      "kind": "mentor",
+      "registrations": 45,
+      "paidUsers": 18,
+      "subRevenueYuan": 2545,
+      "creditRevenueYuan": 228,
+      "lastRegisteredAt": "2026-09-27"
+    },
+    {
+      "code": "xhs_freya01",
+      "name": "小红书-Freya Gao",
+      "partner": "Freya Gao",
+      "kind": "mentor",
+      "registrations": 40,
+      "paidUsers": 15,
+      "subRevenueYuan": 2150,
+      "creditRevenueYuan": 311,
+      "lastRegisteredAt": "2026-09-24"
+    },
+    {
+      "code": "xhs_freya01",
+      "name": "小红书-Freya Ren",
+      "partner": "Freya Ren",
+      "kind": "mentor",
+      "registrations": 28,
+      "paidUsers": 9,
+      "subRevenueYuan": 936,
+      "creditRevenueYuan": 126,
+      "lastRegisteredAt": "2026-09-30"
+    },
+    {
+      "code": "xhs_yingw01",
+      "name": "小红书-Ying Wang",
+      "partner": "Ying Wang",
+      "kind": "mentor",
+      "registrations": 26,
+      "paidUsers": 11,
+      "subRevenueYuan": 1055,
+      "creditRevenueYuan": 240,
+      "lastRegisteredAt": "2026-09-23"
+    },
+    {
+      "code": "xhs_phyll01",
+      "name": "小红书-Phyllis Chi",
+      "partner": "Phyllis Chi",
+      "kind": "mentor",
+      "registrations": 25,
+      "paidUsers": 11,
+      "subRevenueYuan": 1245,
+      "creditRevenueYuan": 212,
+      "lastRegisteredAt": "2026-09-19"
+    },
+    {
+      "code": "xhs_kevin01",
+      "name": "小红书-Kevin Yuan",
+      "partner": "Kevin Yuan",
+      "kind": "mentor",
+      "registrations": 20,
+      "paidUsers": 9,
+      "subRevenueYuan": 909,
+      "creditRevenueYuan": 174,
+      "lastRegisteredAt": "2026-09-29"
+    }
+  ]
+}

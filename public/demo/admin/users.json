@@ -1,0 +1,940 @@
+{
+  "dateRange": {
+    "start": "2026-07-09",
+    "end": "2026-10-01"
+  },
+  "summary": {
+    "total": 2933,
+    "newInRange": 438,
+    "paid": 521,
+    "active7d": 612,
+    "byRole": [
+      {
+        "label": "普通用户",
+        "count": 2923
+      },
+      {
+        "label": "真人导师",
+        "count": 8
+      },
+      {
+        "label": "管理员",
+        "count": 2
+      }
+    ],
+    "byStatus": [
+      {
+        "label": "在职",
+        "count": 1268
+      },
+      {
+        "label": "在校",
+        "count": 758
+      },
+      {
+        "label": "待业",
+        "count": 187
+      }
+    ],
+    "payFunnel": [
+      {
+        "label": "订阅用户",
+        "count": 452
+      },
+      {
+        "label": "加榨包用户",
+        "count": 96
+      },
+      {
+        "label": "免费试用",
+        "count": 1047
+      },
+      {
+        "label": "未付费",
+        "count": 1692
+      }
+    ]
+  },
+  "rows": [
+    {
+      "id": "u_demo_10068",
+      "phone": "199****9934",
+      "name": "黄思远",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-09-30",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10057",
+      "phone": "186****9505",
+      "name": "于半夏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-29",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10048",
+      "phone": "177****8141",
+      "name": "黄一诺",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-29",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10047",
+      "phone": "135****5859",
+      "name": "李安然",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-26",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10055",
+      "phone": "158****7976",
+      "name": "周砚秋",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-25",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10052",
+      "phone": "177****2279",
+      "name": "马南乔",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-09-25",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10035",
+      "phone": "158****1257",
+      "name": "高梦琪",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "待业",
+      "payState": "免费试用",
+      "registeredAt": "2026-09-25",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10014",
+      "phone": "138****1941",
+      "name": "徐半夏",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-24",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10011",
+      "phone": "158****8938",
+      "name": "王一诺",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-09-24",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10045",
+      "phone": "199****1522",
+      "name": "韩亦可",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "免费试用",
+      "registeredAt": "2026-09-22",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10012",
+      "phone": "158****0896",
+      "name": "刘半夏",
+      "role": "USER",
+      "boundMentor": "Phyllis Chi",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-21",
+      "channel": "Phyllis Chi 专属渠道"
+    },
+    {
+      "id": "u_demo_10073",
+      "phone": "158****9749",
+      "name": "马思远",
+      "role": "USER",
+      "boundMentor": "Phyllis Chi",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-20",
+      "channel": "Phyllis Chi 专属渠道"
+    },
+    {
+      "id": "u_demo_10041",
+      "phone": "199****0284",
+      "name": "徐半夏",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "在校",
+      "payState": "订阅中",
+      "registeredAt": "2026-09-17",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10056",
+      "phone": "135****5727",
+      "name": "于扶苏",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-14",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10044",
+      "phone": "199****6534",
+      "name": "何半夏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-09-14",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10053",
+      "phone": "158****9317",
+      "name": "李一诺",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-13",
+      "channel": "抖音官方号"
+    },
+    {
+      "id": "u_demo_10043",
+      "phone": "135****1101",
+      "name": "冯怀瑾",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "免费试用",
+      "registeredAt": "2026-09-13",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10079",
+      "phone": "177****5635",
+      "name": "张浩然",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "订阅中",
+      "registeredAt": "2026-09-12",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10059",
+      "phone": "138****2347",
+      "name": "胡听澜",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-11",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10021",
+      "phone": "138****8986",
+      "name": "高思远",
+      "role": "USER",
+      "boundMentor": "Freya Gao",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-10",
+      "channel": "Freya Gao 专属渠道"
+    },
+    {
+      "id": "u_demo_10075",
+      "phone": "135****7806",
+      "name": "曹扶苏",
+      "role": "USER",
+      "boundMentor": "Winnie Ni",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-08",
+      "channel": "Winnie Ni 专属渠道"
+    },
+    {
+      "id": "u_demo_10046",
+      "phone": "177****7879",
+      "name": "胡北屿",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-08",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10054",
+      "phone": "158****4973",
+      "name": "郭一诺",
+      "role": "USER",
+      "boundMentor": "Tina Zhang",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-09-06",
+      "channel": "Tina Zhang 专属渠道"
+    },
+    {
+      "id": "u_demo_10060",
+      "phone": "199****6376",
+      "name": "冯梓萱",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-09-04",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10074",
+      "phone": "158****2802",
+      "name": "朱半夏",
+      "role": "USER",
+      "boundMentor": "Winnie Ni",
+      "status": "在校",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-27",
+      "channel": "Winnie Ni 专属渠道"
+    },
+    {
+      "id": "u_demo_10064",
+      "phone": "135****0473",
+      "name": "梁星野",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-08-27",
+      "channel": "抖音官方号"
+    },
+    {
+      "id": "u_demo_10071",
+      "phone": "158****4226",
+      "name": "高沐阳",
+      "role": "USER",
+      "boundMentor": "Tina Zhang",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-26",
+      "channel": "Tina Zhang 专属渠道"
+    },
+    {
+      "id": "u_demo_10019",
+      "phone": "199****0982",
+      "name": "张砚秋",
+      "role": "USER",
+      "boundMentor": "Phyllis Chi",
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-08-26",
+      "channel": "Phyllis Chi 专属渠道"
+    },
+    {
+      "id": "u_demo_10018",
+      "phone": "186****4520",
+      "name": "何沐阳",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-26",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10042",
+      "phone": "177****8465",
+      "name": "王半夏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-25",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10037",
+      "phone": "135****9350",
+      "name": "黄诗涵",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-25",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10077",
+      "phone": "186****9731",
+      "name": "黄星野",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-08-23",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10029",
+      "phone": "158****7450",
+      "name": "朱沐阳",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-23",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10017",
+      "phone": "177****3093",
+      "name": "林之琳",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-23",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10065",
+      "phone": "135****9635",
+      "name": "马望舒",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "仅加榨包",
+      "registeredAt": "2026-08-20",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10034",
+      "phone": "158****8962",
+      "name": "梁嘉怡",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-08-20",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10015",
+      "phone": "135****7579",
+      "name": "董梦琪",
+      "role": "USER",
+      "boundMentor": "Ying Wang",
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-20",
+      "channel": "Ying Wang 专属渠道"
+    },
+    {
+      "id": "u_demo_10076",
+      "phone": "135****5676",
+      "name": "程梦琪",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-08-17",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10072",
+      "phone": "186****5484",
+      "name": "梁怀瑾",
+      "role": "USER",
+      "boundMentor": "Winnie Ni",
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-08-16",
+      "channel": "Winnie Ni 专属渠道"
+    },
+    {
+      "id": "u_demo_10039",
+      "phone": "199****8090",
+      "name": "何南乔",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-16",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10066",
+      "phone": "177****0410",
+      "name": "萧子涵",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-08-14",
+      "channel": "B站合作投放"
+    },
+    {
+      "id": "u_demo_10027",
+      "phone": "177****3254",
+      "name": "高南乔",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-11",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10025",
+      "phone": "186****4836",
+      "name": "郑书瑶",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-08-11",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10058",
+      "phone": "135****4749",
+      "name": "罗子涵",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-10",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10033",
+      "phone": "177****0145",
+      "name": "韩南乔",
+      "role": "USER",
+      "boundMentor": "Tina Zhang",
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-08-08",
+      "channel": "Tina Zhang 专属渠道"
+    },
+    {
+      "id": "u_demo_10022",
+      "phone": "158****3338",
+      "name": "林子涵",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-08-08",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10049",
+      "phone": "186****5562",
+      "name": "郑南乔",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-07",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10040",
+      "phone": "186****9067",
+      "name": "刘安然",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "仅加榨包",
+      "registeredAt": "2026-08-06",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10013",
+      "phone": "138****1959",
+      "name": "孙知许",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-08-06",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10028",
+      "phone": "199****3606",
+      "name": "宋半夏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-08-05",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10020",
+      "phone": "135****1051",
+      "name": "韩扶苏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-08-04",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10067",
+      "phone": "199****9223",
+      "name": "刘书瑶",
+      "role": "USER",
+      "boundMentor": "Freya Gao",
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-07-31",
+      "channel": "Freya Gao 专属渠道"
+    },
+    {
+      "id": "u_demo_10062",
+      "phone": "177****1201",
+      "name": "吴星野",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-31",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_demo_10026",
+      "phone": "186****7188",
+      "name": "罗梦琪",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-31",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10036",
+      "phone": "186****2603",
+      "name": "刘扶苏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-29",
+      "channel": "官网直接访问"
+    },
+    {
+      "id": "u_demo_10023",
+      "phone": "186****8357",
+      "name": "萧未晞",
+      "role": "USER",
+      "boundMentor": "Freya Gao",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-28",
+      "channel": "Freya Gao 专属渠道"
+    },
+    {
+      "id": "u_demo_10010",
+      "phone": "138****5526",
+      "name": "徐嘉怡",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-28",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10032",
+      "phone": "186****2780",
+      "name": "唐诗涵",
+      "role": "USER",
+      "boundMentor": "Freya Gao",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-25",
+      "channel": "Freya Gao 专属渠道"
+    },
+    {
+      "id": "u_demo_10016",
+      "phone": "177****0151",
+      "name": "王扶苏",
+      "role": "USER",
+      "boundMentor": "Winnie Ni",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-25",
+      "channel": "Winnie Ni 专属渠道"
+    },
+    {
+      "id": "u_demo_10078",
+      "phone": "138****2323",
+      "name": "郑半夏",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-07-24",
+      "channel": "抖音官方号"
+    },
+    {
+      "id": "u_demo_10024",
+      "phone": "138****0438",
+      "name": "谢知许",
+      "role": "USER",
+      "boundMentor": "Winnie Ni",
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-07-22",
+      "channel": "Winnie Ni 专属渠道"
+    },
+    {
+      "id": "u_demo_10030",
+      "phone": "158****0772",
+      "name": "徐嘉怡",
+      "role": "USER",
+      "boundMentor": "Freya Ren",
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-07-21",
+      "channel": "Freya Ren 专属渠道"
+    },
+    {
+      "id": "u_demo_10061",
+      "phone": "199****3266",
+      "name": "萧扶苏",
+      "role": "USER",
+      "boundMentor": "Freya Gao",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-20",
+      "channel": "Freya Gao 专属渠道"
+    },
+    {
+      "id": "u_demo_10031",
+      "phone": "135****4727",
+      "name": "董望舒",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-20",
+      "channel": "高校合作-深大"
+    },
+    {
+      "id": "u_mentor_kevinyuan",
+      "phone": "138****2959",
+      "name": "袁宁宁",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Kevin Yuan",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-20",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_demo_10069",
+      "phone": "177****5420",
+      "name": "徐知许",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "待业",
+      "payState": "未付费",
+      "registeredAt": "2026-07-19",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_demo_10050",
+      "phone": "135****7140",
+      "name": "郭扶苏",
+      "role": "USER",
+      "boundMentor": "Kevin Yuan",
+      "status": "在校",
+      "payState": "订阅中",
+      "registeredAt": "2026-07-19",
+      "channel": "Kevin Yuan 专属渠道"
+    },
+    {
+      "id": "u_demo_10051",
+      "phone": "199****6094",
+      "name": "韩书瑶",
+      "role": "USER",
+      "boundMentor": "Tina Zhang",
+      "status": "在校",
+      "payState": "未付费",
+      "registeredAt": "2026-07-18",
+      "channel": "Tina Zhang 专属渠道"
+    },
+    {
+      "id": "u_mentor_yingwang",
+      "phone": "138****2822",
+      "name": "王颖",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Ying Wang",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-18",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_freyaren",
+      "phone": "138****2685",
+      "name": "任懿冰",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Freya Ren",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-15",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_demo_10070",
+      "phone": "177****0961",
+      "name": "唐梦琪",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "订阅中",
+      "registeredAt": "2026-07-14",
+      "channel": "抖音官方号"
+    },
+    {
+      "id": "u_admin_2",
+      "phone": "139****0821",
+      "name": "运营小王",
+      "role": "ADMIN",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-12",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_phyllischi",
+      "phone": "138****2548",
+      "name": "池娟",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Phyllis Chi",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-12",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_demo_10063",
+      "phone": "199****3205",
+      "name": "曹南乔",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "免费试用",
+      "registeredAt": "2026-07-11",
+      "channel": "小红书官方号"
+    },
+    {
+      "id": "u_demo_10038",
+      "phone": "135****3990",
+      "name": "周嘉怡",
+      "role": "USER",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-10",
+      "channel": "高校合作-华东师大"
+    },
+    {
+      "id": "u_admin_1",
+      "phone": "158****1617",
+      "name": "管理员",
+      "role": "ADMIN_FULL",
+      "boundMentor": null,
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-09",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_freyagao",
+      "phone": "138****2411",
+      "name": "高兰生",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Freya Gao",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-08",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_tinazhang",
+      "phone": "138****2274",
+      "name": "张惠琼",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Tina Zhang",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-05",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_winnieni",
+      "phone": "138****2137",
+      "name": "倪慧逸",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Winnie Ni",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-03",
+      "channel": "内部开通"
+    },
+    {
+      "id": "u_mentor_lydiachen",
+      "phone": "138****2000",
+      "name": "陈初效",
+      "role": "MENTOR_HUMAN",
+      "boundMentor": "Lydia Chen",
+      "status": "在职",
+      "payState": "未付费",
+      "registeredAt": "2026-07-01",
+      "channel": "内部开通"
+    }
+  ]
+}

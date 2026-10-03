@@ -3,6 +3,8 @@
 /**
  * 管理员数据后台 app shell — 与导师真身后台同语言：面包屑身份 + 模块导航。
  * 底托：肉粉底 + 金屑（GoldFlakes）+ PaperCredits 版权。
+ * 全局数据区间：起止日期均可编辑，结束日默认今天；最长跨度 3 年。
+ * demo 阶段各视图为固定区间快照，真实接口接入后按区间查询。
  */
 import { useState } from 'react';
 import Link from 'next/link';
@@ -13,6 +15,9 @@ import { PagesView } from './pages-view';
 import { CtasView } from './ctas-view';
 import { JourneysView } from './journeys-view';
 import { RetentionView } from './retention-view';
+import { MentorsView } from './mentors-view';
+import { UsersView } from './users-view';
+import { ChannelsView } from './channels-view';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 
 const TABS = [
@@ -21,12 +26,40 @@ const TABS = [
   { key: 'ctas', label: '按钮' },
   { key: 'journeys', label: '行为链' },
   { key: 'retention', label: '留存' },
+  { key: 'mentors', label: '导师' },
+  { key: 'users', label: '用户' },
+  { key: 'channels', label: '渠道' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
 
+const DEMO_START = '2026-07-09';
+const MAX_SPAN_MS = 3 * 365.25 * 86_400_000;
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 export function AdminConsole({ accountName }: { accountName: string }) {
   const [tab, setTab] = useState<TabKey>('overview');
+  // 已生效的合法区间；输入框临时值允许非法态（仅提示，不生效）
+  const [range, setRange] = useState({ start: DEMO_START, end: todayStr() });
+  const [draft, setDraft] = useState(range);
+  const [rangeError, setRangeError] = useState('');
+
+  function commit(next: { start: string; end: string }) {
+    if (!next.start || !next.end) return; // 留空时等用户填完
+    if (next.start > next.end) {
+      setRangeError('开始日期不能晚于结束日期');
+      return;
+    }
+    if (new Date(`${next.end}T00:00:00`).getTime() - new Date(`${next.start}T00:00:00`).getTime() > MAX_SPAN_MS) {
+      setRangeError('区间跨度最长为 3 年');
+      return;
+    }
+    setRangeError('');
+    setRange(next);
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg">
@@ -53,7 +86,7 @@ export function AdminConsole({ accountName }: { accountName: string }) {
                 priority
                 className="h-10 w-10"
               />
-              <span className="text-base font-medium text-stone-600">AI Career Companion</span>
+              <span className="hidden text-base font-medium text-stone-600 sm:inline">AI Career Companion</span>
             </Link>
             <Link
               href="/admin-console/mentors"
@@ -96,6 +129,35 @@ export function AdminConsole({ accountName }: { accountName: string }) {
           ))}
         </div>
 
+        {/* 全局数据区间：起止均可编辑，结束日默认今天，最长跨度 3 年 */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-xl bg-white/70 px-3 py-1.5 ring-1 ring-stone-900/5">
+          <span className="text-xs text-stone-400">数据区间</span>
+          <input
+            type="date"
+            value={draft.start}
+            max={draft.end || todayStr()}
+            onChange={(e) => { const next = { ...draft, start: e.target.value }; setDraft(next); commit(next); }}
+            aria-label="开始日期"
+            className={`rounded-lg border px-2 py-1 text-xs text-stone-700 outline-none focus:ring-2 focus:ring-[#55734B]/30 ${
+              rangeError ? 'border-rose-300 bg-rose-50' : 'border-stone-200 bg-white'
+            }`}
+          />
+          <span className="text-xs text-stone-400">至</span>
+          <input
+            type="date"
+            value={draft.end}
+            max={todayStr()}
+            onChange={(e) => { const next = { ...draft, end: e.target.value }; setDraft(next); commit(next); }}
+            aria-label="结束日期"
+            className={`rounded-lg border px-2 py-1 text-xs text-stone-700 outline-none focus:ring-2 focus:ring-[#55734B]/30 ${
+              rangeError ? 'border-rose-300 bg-rose-50' : 'border-stone-200 bg-white'
+            }`}
+          />
+          {rangeError
+            ? <span className="text-xs text-rose-600">{rangeError}</span>
+            : <span className="text-xs text-stone-400">已生效：{range.start} 至 {range.end} · demo 为固定区间快照</span>}
+        </div>
+
         {/* 视图 */}
         <div className="mt-4">
           {tab === 'overview' && <OverviewView />}
@@ -103,6 +165,9 @@ export function AdminConsole({ accountName }: { accountName: string }) {
           {tab === 'ctas' && <CtasView />}
           {tab === 'journeys' && <JourneysView />}
           {tab === 'retention' && <RetentionView />}
+          {tab === 'mentors' && <MentorsView />}
+          {tab === 'users' && <UsersView />}
+          {tab === 'channels' && <ChannelsView />}
         </div>
       </div>
 

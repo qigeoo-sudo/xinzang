@@ -28,6 +28,19 @@ interface DialogueStats {
   durationMin: number;
 }
 interface NameCount { label: string; count: number }
+/** 知识卡匹配：≥80% 命中项（专业/职业/RIASEC），分数为匹配度 0-100 */
+interface KmHit { name: string; score: number }
+/** 命中知识卡（命中分布 Top3） */
+interface KmCard {
+  cardId: string; domain: string; title: string;
+  coreView: string; applicableTo: string; demoInferred?: boolean;
+}
+/** 知识卡匹配 tab 数据契约（demo 阶段由生成脚本产出；真实版命中卡/主题来自问答日志）
+ * 专业/兴趣展示匹配度前 3 名（不设门槛）；职业方向仅列 ≥80% 命中 */
+interface KnowledgeMatch {
+  majorTop3: KmHit[]; riasecTop3: KmHit[]; careerHits: KmHit[];
+  topCards: KmCard[]; topThemes: string[]; demoInferred?: boolean;
+}
 /** 用户画像：各维度 Top3（状态为固定三项），契约对齐 UserProfile / InterestAssessment */
 interface AudienceStats {
   status: NameCount[];          // 在校/在职/待业（合计=帮助人数）
@@ -58,6 +71,7 @@ interface MentorRow {
   loginCount: number;
   dialogue: DialogueStats & { paid: DialogueStats; free: DialogueStats };
   audience: AudienceStats & { paid: AudienceStats; free: AudienceStats };
+  knowledgeMatch?: KnowledgeMatch;
   review: Review;
 }
 interface MentorsResponse { dateRange: { start: string | null; end: string }; mentors: MentorRow[] }
@@ -163,6 +177,19 @@ const AUD_TABLE_W = AUD_FROZEN_W[0] + AUD_FROZEN_W[1] + AUD_COLUMNS.reduce((s, c
 /** 冻结列不透明底色（表头/白行/斑马行各一份，滚动时盖住下方内容） */
 const AUD_HEAD_BG = '#efeeeb';
 const AUD_ROW_BG = ['#ffffff', '#f6f5f2'];
+
+/** 知识卡匹配表列宽：冻结 导师称呼/知识卡数量 + 专业Top3/兴趣Top3/职业≥80 + 命中分布 + 匹配分析
+ *  top3=取匹配度前三（无门槛）；hits=仅 ≥80% 命中（可能为空） */
+const KM_FROZEN_W = [148, 92];
+type KmColKey = 'majorTop3' | 'riasecTop3' | 'careerHits';
+const KM_HIT_COLS: { key: KmColKey; label: string; w: number; variant: 'top3' | 'hits' }[] = [
+  { key: 'majorTop3', label: '专业分类 Top3', w: 196, variant: 'top3' },
+  { key: 'riasecTop3', label: '兴趣测试 Top3', w: 176, variant: 'top3' },
+  { key: 'careerHits', label: '职业方向 ≥80%', w: 212, variant: 'hits' },
+];
+const KM_CARDS_W = 264;
+const KM_THEMES_W = 224;
+const KM_TABLE_W = KM_FROZEN_W[0] + KM_FROZEN_W[1] + KM_HIT_COLS.reduce((s, c) => s + c.w, 0) + KM_CARDS_W + KM_THEMES_W;
 
 /** 入库天数（入库日期 → 数据区间末日） */
 function daysSince(date: string, end: string): number {
@@ -386,6 +413,251 @@ function PieWithZoom({ arcs, items, denom, w }: {
   );
 }
 
+/** 知识卡匹配：≥80% 命中项配色（命中块可能 1-4 个，循环取色） */
+const KM_COLORS = ['#0e7490', '#b45309', '#7c5c93', '#9d3b55'];
+
+/** 命中饼图：块面积按匹配度归一化分摊整圆，块上文字标注原始匹配度分数（非份额） */
+function KmDonut({ segs, size }: {
+  segs: { name: string; score: number; share: number; color: string }[];
+  size: number;
+}) {
+  let acc = -Math.PI / 2;
+  const arcs = segs.map((s) => {
+    const a0 = acc;
+    const a1 = acc + s.share * Math.PI * 2;
+    acc = a1;
+    return { ...s, a0, a1 };
+  });
+  return (
+    <svg viewBox="0 0 100 100" style={{ width: size, height: size }} className="shrink-0">
+      {arcs.map((s) => (
+        <path key={s.name} d={donutArc(50, 50, 35, 20, s.a0, s.a1)} fill={s.color} stroke="#ffffff" strokeWidth={0.8} />
+      ))}
+      {arcs.map((s) => {
+        const mid = (s.a0 + s.a1) / 2;
+        // 仅一块命中时文字放圆心
+        const r = segs.length === 1 ? 0 : 27;
+        return (
+          <text
+            key={`t-${s.name}`}
+            x={50 + r * Math.cos(mid)}
+            y={50 + r * Math.sin(mid)}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={size > 100 ? 7 : 7.5}
+            fontWeight="700"
+            fill="#ffffff"
+          >
+            {s.score}%
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
+/** 命中饼图 + 悬停放大浮窗（3.2 倍），fixed 定位避免被滚动容器裁剪 */
+function KmPieZoom({ segs, w, footer }: {
+  segs: { name: string; score: number; share: number; color: string }[];
+  w: number;
+  footer: string;
+}) {
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const [placed, setPlaced] = useState<{ x: number; y: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!anchor || !popRef.current) return;
+    const el = popRef.current;
+    const pw = el.offsetWidth;
+    const ph = el.offsetHeight;
+    const x = Math.min(window.innerWidth - pw - 8, Math.max(8, anchor.left + anchor.width / 2 - pw / 2));
+    const below = anchor.bottom + 10 + ph < window.innerHeight;
+    const y = below ? anchor.bottom + 10 : Math.max(8, anchor.top - ph - 10);
+    setPlaced({ x, y });
+  }, [anchor]);
+
+  useEffect(() => {
+    if (!anchor) return;
+    const close = () => setAnchor(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [anchor]);
+
+  return (
+    <div
+      className="inline-flex cursor-default items-center gap-1.5"
+      style={{ width: w }}
+      onMouseEnter={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}
+      onMouseLeave={() => setAnchor(null)}
+    >
+      <KmDonut segs={segs} size={56} />
+      <div className="min-w-0 flex-1 space-y-0.5">
+        {segs.map((s) => (
+          <div key={s.name} className="flex items-center gap-1 text-[11px] leading-4 text-stone-600">
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: s.color }} />
+            <span className="truncate">{s.name}</span>
+          </div>
+        ))}
+      </div>
+      {anchor && (
+        <div
+          ref={popRef}
+          className="fixed z-50 w-max max-w-[calc(100vw-16px)] rounded-2xl bg-white p-3.5 opacity-0 shadow-2xl ring-1 ring-stone-900/10"
+          style={placed ? { left: placed.x, top: placed.y, opacity: 1, pointerEvents: 'none' } : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <KmDonut segs={segs} size={179} />
+            <div className="space-y-1 pr-1">
+              {segs.map((s) => (
+                <div key={s.name} className="flex items-center justify-between gap-4 whitespace-nowrap text-xs leading-5">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: s.color }} />
+                    <span className="font-medium text-stone-700">{s.name}</span>
+                  </span>
+                  <span className="tabular-nums text-stone-500">{s.score}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-2 border-t border-stone-100 pt-1.5 text-[10px] text-stone-400">{footer}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * 知识卡匹配置信格：
+ * - variant=top3：固定取匹配度前 3 名（不设 80 门槛），饼/柱/文字都展示三项
+ * - variant=hits：仅 ≥80% 命中项，可能为空（显示空态）
+ * - pie（默认）：各项按分数归一化画饼，块上标原始匹配度
+ * - bar：满格=100 分，柱长即匹配度
+ * - text：面包屑「名称 88%」
+ */
+function KmHitCell({ hits, mode, w, variant }: {
+  hits: KmHit[]; mode: 'pie' | 'bar' | 'text'; w: number; variant: 'top3' | 'hits';
+}) {
+  const footer = variant === 'top3'
+    ? '匹配度前 3 名 · 饼块按匹配度归一化'
+    : '仅列 ≥80% 命中项 · 饼块按匹配度归一化';
+  if (hits.length === 0) {
+    return <div style={{ width: w }} className="text-xs text-stone-300">无 ≥80% 匹配</div>;
+  }
+  if (mode === 'text') {
+    return (
+      <span className="inline-block text-xs leading-5 text-stone-600" style={{ width: w }}>
+        {hits.map((x, i) => (
+          <span key={x.name}>
+            {i > 0 && <span className="mx-1 text-stone-300">·</span>}
+            {x.name}
+            <b className="ml-0.5 font-semibold text-stone-800">{x.score}%</b>
+          </span>
+        ))}
+      </span>
+    );
+  }
+  if (mode === 'bar') {
+    return (
+      <div className="space-y-1" style={{ width: w }}>
+        {hits.map((x, i) => (
+          <div key={x.name}>
+            <div className="flex items-baseline justify-between gap-2 text-[11px] leading-4">
+              <span className="truncate text-stone-600">{x.name}</span>
+              <span className="shrink-0 font-semibold tabular-nums text-stone-800">{x.score}%</span>
+            </div>
+            <div className="mt-0.5 h-1.5 w-full rounded-full bg-stone-100">
+              <div
+                className="h-full rounded-full"
+                style={{ width: `${x.score}%`, backgroundColor: KM_COLORS[i % KM_COLORS.length] }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  const total = hits.reduce((s, x) => s + x.score, 0);
+  const segs = hits.map((x, i) => ({ ...x, share: x.score / total, color: KM_COLORS[i % KM_COLORS.length] }));
+  return <KmPieZoom segs={segs} w={w} footer={footer} />;
+}
+
+/** 命中分布 Top3：单元格列摘要，点击浮窗看知识卡四要素全文 */
+function TopCardsCell({ cards, w }: { cards: KmCard[]; w: number }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ width: w }}>
+      <div className="space-y-0.5">
+        {cards.map((c, i) => (
+          <button
+            key={c.cardId}
+            onClick={() => setOpen(true)}
+            title="点击查看知识卡全文"
+            className="block w-full rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-stone-100"
+          >
+            <div className="text-[10px] leading-4 tabular-nums text-stone-400">
+              {i + 1} · {c.cardId} · {c.domain}
+            </div>
+            <div className="truncate text-[11px] leading-4 text-stone-700">{c.title}</div>
+          </button>
+        ))}
+      </div>
+      {open && <CardsModal cards={cards} onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+function CardsModal({ cards, onClose }: { cards: KmCard[]; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4" onClick={onClose}>
+      <div
+        className="max-h-[80vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-stone-800">命中分布 Top3 · 知识卡全文</p>
+            <p className="mt-0.5 text-[11px] text-stone-400">demo 阶段依据知识卡推断，正式版按问答检索命中次数排序</p>
+          </div>
+          <button onClick={onClose} className="text-xs text-stone-400 hover:text-stone-600">关闭</button>
+        </div>
+        <div className="mt-3 space-y-3">
+          {cards.map((c, i) => (
+            <div key={c.cardId} className="rounded-xl bg-stone-50 p-3 ring-1 ring-stone-900/5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-[#0e7490]">#{i + 1}</span>
+                <span className="rounded bg-stone-200 px-1.5 py-0.5 text-[10px] tabular-nums text-stone-600">{c.cardId}</span>
+                <span className="rounded bg-cyan-50 px-1.5 py-0.5 text-[10px] text-cyan-800">{c.domain}</span>
+              </div>
+              <p className="mt-1.5 text-sm font-medium text-stone-800">{c.title}</p>
+              <p className="mt-1 text-xs leading-5 text-stone-600">{c.coreView}</p>
+              <p className="mt-1 text-[11px] leading-5 text-stone-400">适用：{c.applicableTo}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 匹配分析 Top3：高频提问主题（纯文本，无图） */
+function TopThemesCell({ themes, w }: { themes: string[]; w: number }) {
+  return (
+    <ol className="space-y-1 text-[11px] leading-4 text-stone-700" style={{ width: w }}>
+      {themes.map((t, i) => (
+        <li key={t} className="flex gap-1.5">
+          <span className="shrink-0 font-semibold tabular-nums text-stone-400">{i + 1}</span>
+          <span>{t}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function ReviewCell({ review, onOpen }: { review: Review; onOpen: () => void }) {
   if (review.status === 'PENDING') {
     return (
@@ -510,7 +782,7 @@ function ReviewModal({
 
 export default function MentorsAdminPage() {
   const { data, loading, error } = useAdminApi<MentorsResponse>('/api/admin/mentors');
-  const [tab, setTab] = useState<'list' | 'dialogue' | 'audience'>('list');
+  const [tab, setTab] = useState<'list' | 'dialogue' | 'audience' | 'knowledge'>('list');
   const [sortKey, setSortKey] = useState<SortKey>('revenue');
   const [dir, setDir] = useState<'desc' | 'asc'>('desc');
   const [equity, setEquity] = useState<EquityMode>('paid');
@@ -529,6 +801,15 @@ export default function MentorsAdminPage() {
   const audBodyRef = useRef<HTMLDivElement>(null);
   const audTopRef = useRef<HTMLDivElement>(null);
   const [audScrollW, setAudScrollW] = useState(0);
+  // 知识卡匹配：单列排序（仅导师称呼/知识卡数量）+ 全局方向；饼/柱/文字；分页
+  const [kmSortKey, setKmSortKey] = useState<'mentorName' | 'cardCount'>('cardCount');
+  const [kmDir, setKmDir] = useState<1 | -1>(-1);
+  const [kmMode, setKmMode] = useState<'pie' | 'bar' | 'text'>('pie');
+  const [kmPage, setKmPage] = useState(1);
+  const [kmPageSize, setKmPageSize] = useState(20);
+  const kmBodyRef = useRef<HTMLDivElement>(null);
+  const kmTopRef = useRef<HTMLDivElement>(null);
+  const [kmScrollW, setKmScrollW] = useState(0);
   const [reviewOverrides, setReviewOverrides] = useState<Record<string, Review>>({});
   const [modalMentorId, setModalMentorId] = useState<string | null>(null);
   const [showTierRule, setShowTierRule] = useState(false);
@@ -631,6 +912,32 @@ export default function MentorsAdminPage() {
   const audPageCur = Math.min(audPage, audPageCount);
   const audPaged = audSorted.slice((audPageCur - 1) * audPageSize, audPageCur * audPageSize);
 
+  // 知识卡匹配：不区分权益；无 knowledgeMatch 的导师（真实 API 未接入时）不进表
+  const kmRows = useMemo(
+    () => mentors.filter((m) => m.knowledgeMatch).map((m) => ({ m, km: m.knowledgeMatch! })),
+    [mentors],
+  );
+  function selectKmCol(k: 'mentorName' | 'cardCount') {
+    setKmSortKey(k);
+    setKmPage(1);
+  }
+  const kmSorted = useMemo(() => {
+    return [...kmRows].sort((x, y) => {
+      if (kmSortKey === 'mentorName') {
+        return kmDir * compareMentorName(x.m.name, y.m.name) || x.m.id.localeCompare(y.m.id);
+      }
+      if (x.m.knowledgeCards !== y.m.knowledgeCards) {
+        return kmDir * (x.m.knowledgeCards > y.m.knowledgeCards ? 1 : -1);
+      }
+      return x.m.id.localeCompare(y.m.id);
+    });
+  }, [kmRows, kmSortKey, kmDir]);
+
+  useEffect(() => { setKmPage(1); }, [kmPageSize]);
+  const kmPageCount = Math.max(1, Math.ceil(kmSorted.length / kmPageSize));
+  const kmPageCur = Math.min(kmPage, kmPageCount);
+  const kmPaged = kmSorted.slice((kmPageCur - 1) * kmPageSize, kmPageCur * kmPageSize);
+
   // 顶部滚动条宽度=表格真实宽度；模式/页码/数据变化时重测
   useEffect(() => {
     if (tab !== 'audience') return;
@@ -644,6 +951,20 @@ export default function MentorsAdminPage() {
     if (table) ro.observe(table);
     return () => ro.disconnect();
   }, [tab, audPaged.length, audMode, audPageSize, data]);
+
+  // 知识卡匹配表：顶部滚动条宽度=表格真实宽度
+  useEffect(() => {
+    if (tab !== 'knowledge') return;
+    const body = kmBodyRef.current;
+    if (!body) return;
+    const measure = () => setKmScrollW(body.scrollWidth);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(body);
+    const table = body.querySelector('table');
+    if (table) ro.observe(table);
+    return () => ro.disconnect();
+  }, [tab, kmPaged.length, kmMode, kmPageSize, data]);
 
   // 当前口径总计：场均轮次=总轮次/总有效线程（加权，非各导师场均之和）
   const dlgTotal = useMemo(() => {
@@ -722,7 +1043,7 @@ export default function MentorsAdminPage() {
 
         {/* 子导航 */}
         <div className="mt-4 flex gap-1 overflow-x-auto rounded-2xl bg-white p-1 shadow-sm ring-1 ring-stone-900/5">
-          {([['list', '整体排序'], ['dialogue', '对话效果'], ['audience', '用户画像']] as const).map(([k, label]) => (
+          {([['list', '整体排序'], ['dialogue', '对话效果'], ['audience', '用户画像'], ['knowledge', '知识卡匹配']] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
@@ -735,8 +1056,8 @@ export default function MentorsAdminPage() {
           ))}
         </div>
 
-        {/* 权益口径切换（对话效果 / 用户画像共用，默认付费权益） */}
-        {data && tab !== 'list' && (
+        {/* 权益口径切换（对话效果 / 用户画像共用，默认付费权益；知识卡匹配不分权益） */}
+        {data && (tab === 'dialogue' || tab === 'audience') && (
           <div className="mt-3 flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="权益口径">
             <span className="text-xs text-stone-400">权益：</span>
             {EQUITY_OPTIONS.map((o) => (
@@ -784,6 +1105,34 @@ export default function MentorsAdminPage() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 知识卡匹配工具栏：饼图/柱图/文字 + 全局排序方向（仅导师称呼/知识卡数量） */}
+        {data && tab === 'knowledge' && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-stone-400">视图：</span>
+            <div className="flex overflow-hidden rounded-full border border-stone-200 bg-white text-xs">
+              {([['pie', '饼图'], ['bar', '柱图'], ['text', '文字']] as const).map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => setKmMode(v)}
+                  className={`px-3 py-1 transition-colors ${
+                    kmMode === v ? 'bg-stone-700 text-white' : 'text-stone-500 hover:bg-stone-100'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="ml-1 text-[11px] text-stone-400">专业/兴趣取匹配度前 3 名；职业方向仅列 ≥80% 命中；命中分布与提问主题为 demo 推断</span>
+            <button
+              onClick={() => setKmDir((d) => (d === -1 ? 1 : -1))}
+              title="统一切换导师称呼/知识卡数量的排序方向"
+              className="ml-auto rounded-full bg-[#0e7490] px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-[#0c627a]"
+            >
+              {kmDir === -1 ? '从高到低 ↓' : '从低到高 ↑'}
+            </button>
           </div>
         )}
 
@@ -1134,6 +1483,154 @@ export default function MentorsAdminPage() {
                     <button
                       onClick={() => setAudPage((p) => Math.min(audPageCount, p + 1))}
                       disabled={audPageCur >= audPageCount}
+                      className="rounded-md border border-stone-200 bg-white px-2.5 py-1 text-stone-600 transition-colors hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      下一页
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {data && tab === 'knowledge' && (
+            <div className="space-y-3">
+              <div className="rounded-2xl bg-white/90 p-2 shadow-sm ring-1 ring-stone-900/[0.06]">
+                {/* 顶部横向滚动条：与表格主体双向同步 */}
+                <div
+                  ref={kmTopRef}
+                  onScroll={(e) => { if (kmBodyRef.current) kmBodyRef.current.scrollLeft = e.currentTarget.scrollLeft; }}
+                  className="overflow-x-auto overflow-y-hidden"
+                  style={{ height: 10 }}
+                >
+                  <div style={{ width: kmScrollW || KM_TABLE_W, height: 1 }} />
+                </div>
+                <div
+                  ref={kmBodyRef}
+                  onScroll={(e) => { if (kmTopRef.current) kmTopRef.current.scrollLeft = e.currentTarget.scrollLeft; }}
+                  className="overflow-x-auto"
+                >
+                <table className="border-separate border-spacing-0 text-sm" style={{ minWidth: KM_TABLE_W }}>
+                  <thead>
+                    <tr>
+                      <th
+                        className="sticky z-20 rounded-l-lg px-3 py-3 text-left text-xs font-medium text-stone-500"
+                        style={{ left: 0, width: KM_FROZEN_W[0], minWidth: KM_FROZEN_W[0], maxWidth: KM_FROZEN_W[0], backgroundColor: AUD_HEAD_BG }}
+                      >
+                        <button
+                          onClick={() => selectKmCol('mentorName')}
+                          title="按英文字典序（先英文名再英文姓）"
+                          className={`inline-flex items-center gap-0.5 whitespace-nowrap transition-colors hover:text-cyan-800 ${
+                            kmSortKey === 'mentorName' ? 'font-semibold text-[#0e7490]' : 'text-stone-500'
+                          }`}
+                        >
+                          导师称呼
+                          {kmSortKey === 'mentorName' && (
+                            <span className="text-[10px]">{kmDir === -1 ? '↓' : '↑'}</span>
+                          )}
+                        </button>
+                      </th>
+                      <th
+                        className="sticky z-20 border-r border-stone-300/70 px-3 py-3 text-right text-xs font-medium text-stone-500"
+                        style={{ left: KM_FROZEN_W[0], width: KM_FROZEN_W[1], minWidth: KM_FROZEN_W[1], maxWidth: KM_FROZEN_W[1], backgroundColor: AUD_HEAD_BG }}
+                      >
+                        <button
+                          onClick={() => selectKmCol('cardCount')}
+                          className={`inline-flex items-center gap-0.5 whitespace-nowrap transition-colors hover:text-cyan-800 ${
+                            kmSortKey === 'cardCount' ? 'font-semibold text-[#0e7490]' : 'text-stone-500'
+                          }`}
+                        >
+                          知识卡数量
+                          {kmSortKey === 'cardCount' && (
+                            <span className="text-[10px]">{kmDir === -1 ? '↓' : '↑'}</span>
+                          )}
+                        </button>
+                      </th>
+                      {KM_HIT_COLS.map((c) => (
+                        <th
+                          key={c.key}
+                          className="whitespace-nowrap px-3 py-3 text-left text-xs font-medium text-stone-500"
+                          style={{ backgroundColor: AUD_HEAD_BG }}
+                        >
+                          {c.label}
+                        </th>
+                      ))}
+                      <th className="whitespace-nowrap px-3 py-3 text-left text-xs font-medium text-stone-500" style={{ backgroundColor: AUD_HEAD_BG }}>
+                        命中分布 Top3
+                      </th>
+                      <th
+                        className="whitespace-nowrap rounded-r-lg px-3 py-3 text-left text-xs font-medium text-stone-500"
+                        style={{ backgroundColor: AUD_HEAD_BG }}
+                      >
+                        匹配分析 Top3
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kmPaged.map(({ m, km }, idx) => (
+                      <tr key={m.id}>
+                        <td
+                          className="sticky z-10 whitespace-nowrap border-b border-stone-100 px-3 py-2.5"
+                          style={{ left: 0, width: KM_FROZEN_W[0], minWidth: KM_FROZEN_W[0], maxWidth: KM_FROZEN_W[0], backgroundColor: AUD_ROW_BG[idx % 2] }}
+                        >
+                          <Link href={`/admin-console/mentors/${m.id}`} className="font-medium text-stone-800 underline-offset-2 hover:underline">
+                            {m.name}
+                          </Link>
+                          <span className="ml-1.5 text-xs text-stone-400">{m.chineseName}</span>
+                        </td>
+                        <td
+                          className="sticky z-10 whitespace-nowrap border-b border-r border-stone-200 px-3 py-2.5 text-right font-medium tabular-nums"
+                          style={{ left: KM_FROZEN_W[0], width: KM_FROZEN_W[1], minWidth: KM_FROZEN_W[1], maxWidth: KM_FROZEN_W[1], backgroundColor: AUD_ROW_BG[idx % 2] }}
+                        >
+                          {m.knowledgeCards.toLocaleString()}
+                        </td>
+                        {KM_HIT_COLS.map((c) => (
+                          <td key={c.key} className={`border-b border-stone-100 px-3 py-2.5 align-top ${idx % 2 === 1 ? 'bg-[#f6f5f2]' : 'bg-white'}`}>
+                            <KmHitCell hits={km[c.key]} mode={kmMode} w={c.w} variant={c.variant} />
+                          </td>
+                        ))}
+                        <td className={`border-b border-stone-100 px-3 py-2.5 align-top ${idx % 2 === 1 ? 'bg-[#f6f5f2]' : 'bg-white'}`}>
+                          <TopCardsCell cards={km.topCards} w={KM_CARDS_W} />
+                        </td>
+                        <td className={`border-b border-stone-100 px-3 py-2.5 align-top ${idx % 2 === 1 ? 'bg-[#f6f5f2]' : 'bg-white'}`}>
+                          <TopThemesCell themes={km.topThemes} w={KM_THEMES_W} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                </div>
+                {/* 分页栏 */}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-1 pb-1 text-xs text-stone-500">
+                  <div className="flex items-center gap-1">
+                    <span>每页</span>
+                    {[20, 50, 100].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setKmPageSize(n)}
+                        className={`min-w-[2rem] rounded-md px-2 py-1 transition-colors ${
+                          kmPageSize === n
+                            ? 'bg-[#0e7490] font-medium text-white'
+                            : 'border border-stone-200 bg-white text-stone-600 hover:border-cyan-300'
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <span>条 · 共 {kmSorted.length} 位</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setKmPage((p) => Math.max(1, p - 1))}
+                      disabled={kmPageCur <= 1}
+                      className="rounded-md border border-stone-200 bg-white px-2.5 py-1 text-stone-600 transition-colors hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      上一页
+                    </button>
+                    <span className="tabular-nums">第 {kmPageCur} / {kmPageCount} 页</span>
+                    <button
+                      onClick={() => setKmPage((p) => Math.min(kmPageCount, p + 1))}
+                      disabled={kmPageCur >= kmPageCount}
                       className="rounded-md border border-stone-200 bg-white px-2.5 py-1 text-stone-600 transition-colors hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       下一页

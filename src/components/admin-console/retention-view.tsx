@@ -73,9 +73,7 @@ export function RetentionView() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-stone-400">
-        数据区间：{data.dateRange.start} 至 {data.dateRange.end} · 仅统计注册用户
-      </p>
+      <p className="text-xs text-stone-400">仅统计注册用户</p>
       {blocks.map((b, i) => (
         <DistCard key={b.key} block={b.block} barColor={BAR_COLORS[i % BAR_COLORS.length]} />
       ))}
