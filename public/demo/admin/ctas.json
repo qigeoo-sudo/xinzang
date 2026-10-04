@@ -35,10 +35,61 @@
   "others": [
     { "ctaId": "chat_send", "label": "对话发送", "clicks": 28600, "uniqueUsers": 1540, "topDestinations": [] },
     { "ctaId": "mentor_card_click", "label": "导师卡片（列表页）", "clicks": 4860, "uniqueUsers": 1980, "topDestinations": [{ "page": "/mentors/[id]", "count": 4860 }] },
+    { "ctaId": "juicer_start", "label": "榨汁机电源（成长实验室）", "clicks": 3400, "uniqueUsers": 1200, "topDestinations": [] },
     { "ctaId": "login_submit", "label": "登录提交", "clicks": 1980, "uniqueUsers": 1750, "topDestinations": [{ "page": "/dashboard", "count": 1100 }, { "page": "/chat", "count": 620 }] },
     { "ctaId": "register_submit", "label": "注册提交", "clicks": 1610, "uniqueUsers": 1490, "topDestinations": [{ "page": "/dashboard", "count": 980 }, { "page": "/", "count": 430 }] },
     { "ctaId": "assessment_submit", "label": "测评提交", "clicks": 1450, "uniqueUsers": 1450, "topDestinations": [{ "page": "/mentors", "count": 900 }, { "page": "/dashboard", "count": 380 }] },
-    { "ctaId": "subscribe_click", "label": "订阅按钮", "clicks": 980, "uniqueUsers": 720, "topDestinations": [{ "page": "/payment", "count": 890 }] },
-    { "ctaId": "buy_credit_pack", "label": "购买加榨包", "clicks": 210, "uniqueUsers": 130, "topDestinations": [{ "page": "/payment", "count": 210 }] }
+    { "ctaId": "optional_help_fill", "label": "选填·希望帮助方向（注册档案）", "clicks": 1240, "uniqueUsers": 1120, "topDestinations": [] },
+    { "ctaId": "optional_mentor_pref_fill", "label": "选填·深聊对象（注册档案）", "clicks": 1150, "uniqueUsers": 1040, "topDestinations": [] },
+    { "ctaId": "optional_anxiety_fill", "label": "选填·最大焦虑（注册档案）", "clicks": 1090, "uniqueUsers": 980, "topDestinations": [] },
+    { "ctaId": "subscription_monthly_select", "label": "订阅·月卡点击", "clicks": 720, "uniqueUsers": 640, "topDestinations": [{ "page": "支付弹窗", "count": 640 }] },
+    { "ctaId": "credit_pack_select", "label": "加榨包·档位点击", "clicks": 210, "uniqueUsers": 130, "topDestinations": [{ "page": "支付弹窗", "count": 176 }] },
+    { "ctaId": "subscription_quarterly_select", "label": "订阅·季卡点击", "clicks": 200, "uniqueUsers": 180, "topDestinations": [{ "page": "支付弹窗", "count": 168 }] },
+    { "ctaId": "assessment_retake", "label": "重新测评", "clicks": 420, "uniqueUsers": 300, "topDestinations": [{ "page": "/assessment", "count": 420 }] },
+    { "ctaId": "profile_edit", "label": "编辑个人档案", "clicks": 310, "uniqueUsers": 240, "topDestinations": [] },
+    { "ctaId": "register_edit_profile", "label": "注册流程·修改个人档案", "clicks": 260, "uniqueUsers": 210, "topDestinations": [] },
+    { "ctaId": "subscription_yearly_select", "label": "订阅·年卡点击", "clicks": 60, "uniqueUsers": 55, "topDestinations": [{ "page": "支付弹窗", "count": 46 }] }
+  ],
+  "funnels": [
+    {
+      "plan": "MONTHLY",
+      "label": "月卡",
+      "price": 29.9,
+      "stages": [
+        { "stage": "select", "label": "档位点击", "events": 720, "users": 640 },
+        { "stage": "order", "label": "创建订单（选定支付方式）", "events": 640, "users": 580 },
+        { "stage": "success", "label": "支付成功", "events": 560, "users": 520, "revenue": 16744 }
+      ]
+    },
+    {
+      "plan": "QUARTERLY",
+      "label": "季卡",
+      "price": 79.9,
+      "stages": [
+        { "stage": "select", "label": "档位点击", "events": 200, "users": 180 },
+        { "stage": "order", "label": "创建订单（选定支付方式）", "events": 168, "users": 150 },
+        { "stage": "success", "label": "支付成功", "events": 142, "users": 132, "revenue": 11345.8 }
+      ]
+    },
+    {
+      "plan": "YEARLY",
+      "label": "年卡",
+      "price": 269.9,
+      "stages": [
+        { "stage": "select", "label": "档位点击", "events": 60, "users": 55 },
+        { "stage": "order", "label": "创建订单（选定支付方式）", "events": 46, "users": 44 },
+        { "stage": "success", "label": "支付成功", "events": 40, "users": 38, "revenue": 10796 }
+      ]
+    },
+    {
+      "plan": "CREDIT_PACK",
+      "label": "加榨包",
+      "price": 19.9,
+      "stages": [
+        { "stage": "select", "label": "档位点击", "events": 210, "users": 130 },
+        { "stage": "order", "label": "创建订单（选定支付方式）", "events": 176, "users": 118 },
+        { "stage": "success", "label": "支付成功", "events": 150, "users": 104, "revenue": 2985 }
+      ]
+    }
   ]
 }

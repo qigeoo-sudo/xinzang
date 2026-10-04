@@ -272,6 +272,9 @@ export function SubscriptionFlow({
       setIsMock(data.mock || false);
       setPayState('paying');
 
+      // 下单环埋点：选定支付方式并成功创建订单，label 带档位用于付费漏斗聚合
+      track('cta.click', { props: { ctaId: 'payment_order_create', label: modalPlan.planId } });
+
       if (data.mock) {
         if (data.payUrl) {
           // 使用相对路径，避免 HTTPS 预览环境下 http:// 被浏览器拦截

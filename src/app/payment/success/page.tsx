@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { Header } from '@/components/header';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 import { PaymentSuccessActions } from '@/components/payment-success-actions';
+import { PaymentSuccessTrack, type PaymentSuccessInfo } from '@/components/payment-success-track';
 
 export default async function PaymentSuccessPage({
   searchParams,
@@ -55,9 +56,32 @@ export default async function PaymentSuccessPage({
   const metadata = order?.metadata ? JSON.parse(order.metadata) : {};
   const isCreditPackOrder = order?.paymentType === 'CREDIT_PACK';
 
+  // 支付成功埋点：仅订单确认为 PAID 时上报（同一订单号客户端去重）
+  let trackInfo: PaymentSuccessInfo | null = null;
+  if (order && order.status === 'PAID') {
+    const plan = isCreditPackOrder
+      ? 'CREDIT_PACK'
+      : ['MONTHLY', 'QUARTERLY', 'YEARLY'].includes(metadata.planId)
+        ? metadata.planId
+        : null;
+    const method = order.paymentMethod === 'wechat' || order.paymentMethod === 'alipay'
+      ? order.paymentMethod
+      : 'mock';
+    if (plan) {
+      trackInfo = {
+        orderNo: order.orderNo,
+        plan,
+        amountYuan: Number(order.amount) || 0,
+        method,
+        ...(metadata.quantity ? { quantity: Number(metadata.quantity) } : {}),
+      };
+    }
+  }
+
   return (
     <div className="relative min-h-screen flex flex-col bg-bg cream-foil overflow-hidden">
       <Header />
+      {trackInfo && <PaymentSuccessTrack info={trackInfo} />}
       <GoldFlakes />
 
       <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-8">

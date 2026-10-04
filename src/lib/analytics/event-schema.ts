@@ -12,6 +12,7 @@ export const EVENT_NAMES = [
   'mentor_profile.view',
   'paywall.view',
   'subscribe.click',
+  'payment.success',
   'cta.click',
 ] as const;
 
@@ -67,6 +68,15 @@ export const propsSchemas: Record<EventName, z.ZodTypeAny> = {
     .object({
       plan: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_PACK']),
       ctaId: shortId,
+    })
+    .strict(),
+  'payment.success': z
+    .object({
+      orderNo: shortId,
+      plan: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_PACK']),
+      amountYuan: z.number().min(0).max(100000),
+      method: z.enum(['wechat', 'alipay', 'mock']),
+      quantity: z.number().int().min(1).max(999).optional(),
     })
     .strict(),
   'cta.click': z

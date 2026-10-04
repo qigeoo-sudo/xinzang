@@ -36,6 +36,7 @@ import {
   clearPendingAssessment,
 } from '@/lib/riasec/storage';
 import type { AssessmentPayload } from '@/lib/register-v2';
+import { track } from '@/lib/analytics/tracker';
 
 type Identity = '' | 'student' | 'working' | 'jobless';
 type MonthFieldKey = 'birth' | 'enroll' | 'expected' | 'grad';
@@ -721,6 +722,19 @@ export function RegisterWizard({
     };
   };
 
+  // 选填区三项填写统计：提交成功后对「确实填了」的项各发一次（后台按用户去重即填写人数）
+  const trackOptionalFills = () => {
+    if (careerAnxiety.trim()) {
+      track('cta.click', { props: { ctaId: 'optional_anxiety_fill', label: '最大焦虑' } });
+    }
+    if (helpChoice) {
+      track('cta.click', { props: { ctaId: 'optional_help_fill', label: '希望帮助方向' } });
+    }
+    if (mentorPreference.length > 0 || mentorPrefOther.trim()) {
+      track('cta.click', { props: { ctaId: 'optional_mentor_pref_fill', label: '深聊对象' } });
+    }
+  };
+
   const handleRegister = async () => {
     if (submitting) return;
     setSubmitting(true);
@@ -766,6 +780,7 @@ export function RegisterWizard({
       });
       setAutoLoginFailed(!!result?.error);
       setDone(true);
+      trackOptionalFills();
     } catch {
       setError('网络不太通，注册没完成，请稍后再试');
     } finally {
@@ -789,6 +804,7 @@ export function RegisterWizard({
       }
       router.refresh();
       setDone(true);
+      trackOptionalFills();
     } catch {
       setError('网络不太通，保存没完成，请稍后再试');
     } finally {
