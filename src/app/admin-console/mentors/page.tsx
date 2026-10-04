@@ -15,6 +15,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from 'next-auth/react';
 import { useAdminApi } from '@/components/admin-console/use-admin-api';
+import { Pagination, paginate } from '@/components/admin-console/pagination';
 import { ViewState } from '@/components/mentor-console/stat-card';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 import { SUBSCRIPTION_PLANS } from '@/lib/plans';
@@ -785,6 +786,9 @@ export default function MentorsAdminPage() {
   const [tab, setTab] = useState<'list' | 'dialogue' | 'audience' | 'knowledge'>('list');
   const [sortKey, setSortKey] = useState<SortKey>('revenue');
   const [dir, setDir] = useState<'desc' | 'asc'>('desc');
+  // 整体排序分页
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(20);
   const [equity, setEquity] = useState<EquityMode>('paid');
   // 对话效果：单列排序（点表头选列）+ 全局统一方向；分页
   const [dlgSortKey, setDlgSortKey] = useState<DlgKey>('rounds');
@@ -849,6 +853,10 @@ export default function MentorsAdminPage() {
       return sign * cmp || b.revenueYuan - a.revenueYuan;
     });
   }, [mentors, sortKey, dir, data]);
+
+  // 整体排序分页（切换排序键/方向/页大小时回第 1 页）
+  useEffect(() => { setListPage(1); }, [sortKey, dir, listPageSize]);
+  const { paged: listPaged } = paginate(sorted, listPage, listPageSize);
 
   /** 对话效果：点表头只选列（方向由总计行右侧统一按钮控制） */
   function selectDlgCol(k: DlgKey) {
@@ -1196,7 +1204,7 @@ export default function MentorsAdminPage() {
                 </div>
               )}
 
-              {sorted.map((m) => (
+              {listPaged.map((m) => (
                 <div key={m.id} className="rounded-2xl bg-white/90 p-4 shadow-sm ring-1 ring-stone-900/[0.06]">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                     <div className="min-w-0">
@@ -1231,6 +1239,18 @@ export default function MentorsAdminPage() {
                   </div>
                 </div>
               ))}
+
+              {/* 底部分页 */}
+              <div className="rounded-2xl bg-white/90 px-3 py-2 shadow-sm ring-1 ring-stone-900/[0.06]">
+                <Pagination
+                  page={listPage}
+                  pageSize={listPageSize}
+                  total={sorted.length}
+                  totalUnit="位"
+                  onPageChange={setListPage}
+                  onPageSizeChange={setListPageSize}
+                />
+              </div>
             </div>
           )}
 

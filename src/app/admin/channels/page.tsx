@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from 'next-auth/react';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
+import { Pagination, paginate } from '@/components/admin-console/pagination';
 
 interface ChannelStat {
   registrations: number;
@@ -64,6 +65,10 @@ export default function AdminChannelsPage() {
   const [creating, setCreating] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [mentorNames, setMentorNames] = useState<string[]>([]);
+  // 页内分页：新建渠道 / 渠道列表
+  const [pageTab, setPageTab] = useState<'create' | 'list'>('create');
+  const [chPage, setChPage] = useState(1);
+  const [chPageSize, setChPageSize] = useState(20);
 
   useEffect(() => {
     fetch('/demo/admin/mentors.json', { cache: 'no-store' })
@@ -122,6 +127,8 @@ export default function AdminChannelsPage() {
       if (!res.ok) throw new Error(data.error || '创建失败');
       setForm(emptyForm);
       await load();
+      setChPage(1);
+      setPageTab('list');
     } catch (e) {
       setError(e instanceof Error ? e.message : '创建失败');
     } finally {
@@ -191,7 +198,29 @@ export default function AdminChannelsPage() {
             二维码链接指向 /r/渠道码，用户首次扫码锁定，注册时自动归因；停用后的旧链接按自然量处理。
           </p>
 
+          {/* 子导航：新建渠道 / 渠道列表 */}
+          <div className="mt-4 flex gap-1 rounded-2xl bg-white p-1 shadow-sm ring-1 ring-stone-900/5">
+            {([['create', '新建渠道'], ['list', `渠道列表${channels.length ? `（${channels.length}）` : ''}`]] as const).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setPageTab(k)}
+                className={`whitespace-nowrap rounded-xl px-3.5 py-2 text-sm transition-colors ${
+                  pageTab === k ? 'bg-[#55734B] text-white' : 'text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+        {error && <p className="mt-3 text-sm text-[#C9563F]">{error}</p>}
+        {forbidden && (
+          <p className="mt-10 text-center text-stone-500">无权访问，仅管理员可查看本页。</p>
+        )}
+        {loading && <p className="mt-6 text-stone-500">加载中…</p>}
+
         {/* 新建渠道 */}
+        {pageTab === 'create' && (
         <section className="mt-5 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
           <h2 className="mb-3 font-semibold">新建渠道</h2>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -277,18 +306,13 @@ export default function AdminChannelsPage() {
             {creating ? '创建中…' : '创建渠道'}
           </button>
         </section>
-
-        {error && <p className="mt-3 text-sm text-[#C9563F]">{error}</p>}
-        {forbidden && (
-          <p className="mt-10 text-center text-stone-500">无权访问，仅管理员可查看本页。</p>
         )}
-        {loading && <p className="mt-6 text-stone-500">加载中…</p>}
 
         {/* 渠道列表 */}
-        {!forbidden && !loading && (
-          <section className="mt-6 space-y-4">
-            {channels.length === 0 && <p className="text-stone-500">还没有渠道，先在上面创建一个。</p>}
-            {channels.map((ch) => (
+        {pageTab === 'list' && !forbidden && !loading && (
+          <section className="mt-5 space-y-4">
+            {channels.length === 0 && <p className="text-stone-500">还没有渠道，先在「新建渠道」创建一个。</p>}
+            {paginate(channels, chPage, chPageSize).paged.map((ch) => (
               <ChannelRow
                 key={ch.id}
                 channel={ch}
@@ -299,6 +323,18 @@ export default function AdminChannelsPage() {
                 mentorNames={mentorNames}
               />
             ))}
+            {channels.length > 0 && (
+              <div className="rounded-2xl bg-white/90 px-3 py-2 shadow-sm ring-1 ring-stone-900/[0.06]">
+                <Pagination
+                  page={chPage}
+                  pageSize={chPageSize}
+                  total={channels.length}
+                  totalUnit="个"
+                  onPageChange={setChPage}
+                  onPageSizeChange={(n) => { setChPageSize(n); setChPage(1); }}
+                />
+              </div>
+            )}
           </section>
         )}
       </main>

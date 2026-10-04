@@ -6,7 +6,7 @@
  *   导师主页按访问量排序、每 8 位叠成一组，点击组节点展开为导师小卡矩阵。
  * 星状（热力辐射）：首页居中，其余页面按图距分层向外辐射，暗底霓虹。
  * 复合口径：次数/人数 × 累计/日均；比例 1:N 折算后 <0.1 的边/按钮/页面折叠进「其他」。
- * 拖拽位置持久化到 localStorage，切走再回来仍保留；「参数布局」按交叉+弧线综合最优重排，「重置布局」恢复默认排布。
+ * 拖拽位置持久化到 localStorage，切走再回来仍保留；「参数布局」在当前所见位置上按交叉+弧线精修（无改善则维持原样），「重置布局」恢复默认排布。
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -26,6 +26,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAdminApi } from './use-admin-api';
+import { useDataRange, rangeDays } from './date-range-context';
 import { ViewState } from '@/components/mentor-console/stat-card';
 
 interface GraphPage { id: string; label: string; sub?: string; pv: number; uv: number; main?: boolean; tail?: boolean }
@@ -208,6 +209,7 @@ function treeLayout(
   expanded: Set<string>,
   optimize: boolean,
   opt: OptParams = DEFAULT_OPT,
+  initialPos?: Map<string, { x: number; y: number }>,
 ) {
   const { pages, btnsByPage, edges } = display;
   const stackOf = new Map<string, string>();
@@ -254,14 +256,6 @@ function treeLayout(
     arr.sort((a, b) => (entOrder.get(a) ?? 0) - (entOrder.get(b) ?? 0));
   }
   const nums = [...layers.keys()].sort((a, b) => a - b);
-
-  // 带权邻接表
-  const nbrs = new Map<string, [string, number][]>();
-  for (const e of entList) {
-    const w = Math.sqrt(e.w);
-    (nbrs.get(e.s) ?? nbrs.set(e.s, []).get(e.s)!).push([e.t, w]);
-    (nbrs.get(e.t) ?? nbrs.set(e.t, []).get(e.t)!).push([e.s, w]);
-  }
 
   const layerW = new Map<number, number>();
   for (const l of nums) layerW.set(l, NODE_W);
@@ -316,54 +310,23 @@ function treeLayout(
   const btnCount = new Map<string, number>();
   for (const [p, bs] of btnsByPage) btnCount.set(p, bs.length);
 
-  const entCenter = (pos: Map<string, { x: number; y: number }>, id: string) => {
-    if (isStack(id) && expanded.has(id)) {
-      const members = stacks.find((s) => s.id === id)!.members;
-      let sum = 0, cnt = 0;
-      for (const m of members) { const p = pos.get(m); if (p) { sum += p.y + miniNodeH(btnCount.get(m) ?? 0) / 2; cnt++; } }
-      if (cnt) return sum / cnt;
-    }
-    const p = pos.get(id);
-    if (!p) return 0;
-    const h = isStack(id) ? STACK_COLLAPSED_H : pageNodeH(btnCount.get(id) ?? 0);
-    return p.y + h / 2;
-  };
-  const centerMap = (pos: Map<string, { x: number; y: number }>) => {
-    const yc = new Map<string, number>();
-    for (const id of entOrder.keys()) yc.set(id, entCenter(pos, id));
-    return yc;
-  };
-
   const { crossCost: CROSSING_COST, ovlCost: OVERLAP_COST, compactW: COMPACT_W, gridN: GRID_N, stepStart: STEP_START, stepMin: STEP_MIN } = opt;
   const BOX_GAP = 16;
 
-  const score = (pos: Map<string, { x: number; y: number }>) => {
-    const yc = centerMap(pos);
-    let spanCost = 0;
-    for (const e of entList) {
-      const ls = layer.get(e.s) ?? 0, lt = layer.get(e.t) ?? 0;
-      const span = ls === lt ? 0.5 : Math.abs(ls - lt);
-      spanCost += Math.sqrt(e.w) * Math.abs((yc.get(e.s) ?? 0) - (yc.get(e.t) ?? 0)) * span;
-    }
-    let crossings = 0;
-    for (let i = 0; i < nums.length - 1; i++) {
-      const pa = new Map(layers.get(nums[i])!.map((id, j) => [id, j]));
-      const pb = new Map(layers.get(nums[i + 1])!.map((id, j) => [id, j]));
-      const es = entList.filter((e) => pa.has(e.s) && pb.has(e.t)).map((e) => [pa.get(e.s)!, pb.get(e.t)!] as const);
-      for (let a = 0; a < es.length; a++) for (let b = a + 1; b < es.length; b++) if ((es[a][0] - es[b][0]) * (es[a][1] - es[b][1]) < 0) crossings++;
-    }
-    return spanCost + crossings * CROSSING_COST;
-  };
-
-  const defaultScore = score(pack());
-  const defaultLayers = new Map([...layers].map(([l, arr]) => [l, [...arr]] as [number, string[]]));
-
   if (optimize && entList.length > 0) {
-    // 最优布局：拆掉行列矩阵，每个框拿独立 (x, y) 坐标，只保留连线拓扑约束；
-    // 爬山追求「线长 + 交叉罚 + 重叠罚 + 紧凑度」全局最小；护栏保证不劣于默认矩阵排布
+    // 参数布局：拆掉行列矩阵，每个框拿独立 (x, y) 坐标，只保留连线拓扑约束；
+    // 爬山追求「线长 + 交叉罚 + 重叠罚 + 紧凑度」全局最小。
+    // 起点优先用手工拖出的位置（交互优化：在当前所见上精修），没有手工位置才从默认矩阵出发；
+    // 护栏保证优化结果不劣于起点。
     const movable = [...entOrder.keys()];
 
     const pos = pack();
+    if (initialPos && initialPos.size > 0) {
+      for (const [id, p] of initialPos) {
+        // 仅接受当前布局里真实存在的实体/成员坐标（比例切换后旧 id 可能已失效）
+        if (pos.has(id)) pos.set(id, { x: p.x, y: p.y });
+      }
+    }
     // 安全取坐标：比例切换瞬间 display 变了但 pos 还是旧引用，防止 undefined
     const gp = (id: string) => pos.get(id) ?? { x: 0, y: 0 };
 
@@ -438,7 +401,11 @@ function treeLayout(
       return cost;
     };
 
+    // 起点快照与基准分（有手工位置则基准=手工布局，否则=默认矩阵）；
+    // 平移不改变边长度/交叉/重叠/两两距离，基准分平移前后等价
+    const basePos = new Map([...pos].map(([id, p]) => [id, { x: p.x, y: p.y }]));
     let curScore = freeScore();
+    const baseScore = curScore;
 
     // 试移动并评分；更优则落定，否则还原
     const tryMove = (id: string, nx: number, ny: number): number => {
@@ -518,10 +485,9 @@ function treeLayout(
       }
     }
 
-    // 护栏：优化结果不优于默认则回退
-    if (freeScore() >= defaultScore) {
-      for (const [l, arr] of defaultLayers) layers.set(l, arr);
-      return pack();
+    // 护栏：优化结果不优于起点（手工布局或默认矩阵）则回到起点
+    if (freeScore() >= baseScore) {
+      return basePos;
     }
     return pos;
   }
@@ -638,12 +604,14 @@ function TopologyInner() {
   const [memName, setMemName] = useState('');
   const [showMemInput, setShowMemInput] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [chartVisible, setChartVisible] = useState(true);
   const { fitView } = useReactFlow();
 
   const { data: graph, loading, error } = useAdminApi<JourneyGraph>('/api/admin/journey-graph');
-  const days = graph?.dateRange.start
-    ? Math.max(1, Math.round((Date.parse(graph.dateRange.end) - Date.parse(graph.dateRange.start)) / 86400000) + 1)
-    : 1;
+  // 天数跟随顶栏全局数据区间（demo 总量为固定快照，仅日均分母随区间变化）
+  const dataRange = useDataRange();
+  const days = rangeDays(dataRange) ?? 1;
 
   // 布局层 memo：只依赖数据与布局开关，悬停变化不重算布局
   const layout = useMemo(() => {
@@ -663,7 +631,10 @@ function TopologyInner() {
     }
     const memberStack = new Map<string, string>();
     stacks.forEach((s) => s.members.forEach((m) => memberStack.set(m, s.id)));
-    const pos = mode === 'tree' ? treeLayout(display, stacks, expanded, optNonce > 0, optParams) : starLayout(display.pages, display.edges);
+    // 参数布局以当前手工位置为起点精修（posRef 在 optNonce 变化触发重算时读取最新值）
+    const pos = mode === 'tree'
+      ? treeLayout(display, stacks, expanded, optNonce > 0, optParams, optNonce > 0 ? posRef.current : undefined)
+      : starLayout(display.pages, display.edges);
     return { display, stacks, memberStack, pos };
   }, [graph, metric, ratio, mode, expanded, optNonce, optParams]);
 
@@ -672,9 +643,6 @@ function TopologyInner() {
     if (!graph || !layout) return { nodes: [] as Node[], edges: [] as Edge[] };
     const { display, stacks, memberStack, pos } = layout;
     const showV = (raw: number) => { const s = raw / ratio; return span === 'avg' ? s / days : s; };
-    const days = graph.dateRange.start
-      ? Math.max(1, Math.round((Date.parse(graph.dateRange.end) - Date.parse(graph.dateRange.start)) / 86400000) + 1)
-      : 1;
 
     const nodeList: Node[] = [];
     const edgeList: Edge[] = [];
@@ -830,7 +798,7 @@ function TopologyInner() {
     }
 
     return { nodes: nodeList, edges: edgeList };
-  }, [graph, layout, metric, span, ratio, mode, expanded, hoverNode, hoverEdge, tick]);
+  }, [graph, layout, metric, span, ratio, days, mode, expanded, hoverNode, hoverEdge, tick]);
 
   // 模式/比例/展开/参数布局变化时重新自适应到最佳视野（手动拖拽不触发）
   useEffect(() => {
@@ -873,6 +841,14 @@ function TopologyInner() {
       localStorage.setItem(POS_KEY(mode), JSON.stringify(obj));
     } catch { /* ignore */ }
   }, [mode]);
+
+  // 参数布局算出的新位置回写到 posRef（渲染优先取 posRef），随后持久化
+  useEffect(() => {
+    if (mode !== 'tree' || optNonce === 0 || !layout) return;
+    for (const [id, p] of layout.pos) posRef.current.set(id, p);
+    persist();
+    bump();
+  }, [optNonce, layout, mode, persist]);
 
   const dragActiveRef = useRef(false);
 
@@ -955,9 +931,8 @@ function TopologyInner() {
     try { localStorage.removeItem(POS_KEY(mode)); } catch { /* ignore */ }
   };
 
-  // 参数布局：清掉手动拖拽位置，按当前参数重算
+  // 参数布局：在当前所见（含手工拖拽）位置上按当前参数精修，不清空手工位置
   const applyParamLayout = () => {
-    clearSavedPos();
     setOptNonce((n) => n + 1);
     setFitNonce((n) => n + 1);
   };
@@ -1117,6 +1092,21 @@ function TopologyInner() {
     </>
   );
 
+  // 隐藏图表：所有 hooks 已在上方声明完毕，此处条件返回安全
+  if (!chartVisible) {
+    return (
+      <div className="flex items-center justify-between rounded-2xl border border-stone-200/60 bg-white/80 px-4 py-3 shadow-sm">
+        <span className="text-sm text-stone-600">全体用户行为拓扑图（树状/星状）已隐藏</span>
+        <button
+          onClick={() => setChartVisible(true)}
+          className="rounded-full border border-stone-200 px-3 py-1 text-xs text-stone-500 hover:border-orange-300 hover:text-orange-600"
+        >
+          显示图表
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-stone-200/60 bg-white/80 p-4 shadow-sm">
       {/* 顶栏 */}
@@ -1177,6 +1167,13 @@ function TopologyInner() {
           <button onClick={resetLayout} className="rounded-full border border-stone-200 px-2.5 py-1 text-xs text-stone-500 hover:border-stone-300">
             重置布局
           </button>
+          <button
+            onClick={() => { setChartVisible(false); setFullscreen(false); }}
+            title="隐藏拓扑图（下方用户列表不受影响）"
+            className="rounded-full border border-stone-200 px-2.5 py-1 text-xs text-stone-500 hover:border-stone-300"
+          >
+            隐藏图表
+          </button>
         </div>
       </div>
 
@@ -1184,7 +1181,16 @@ function TopologyInner() {
       <div className="mt-2 rounded-xl border border-orange-200 bg-orange-50/60 p-3 text-[11px] text-stone-600">
         <div className="mb-2 flex items-center justify-between">
           <span className="font-medium text-orange-700">布局参数（点击「参数布局」生效）</span>
-          <button onClick={() => setOptParams(DEFAULT_OPT)} className="rounded border border-stone-200 bg-white px-2 py-0.5 text-[10px] text-stone-500 hover:border-stone-300">恢复默认</button>
+          <span className="flex items-center gap-2">
+            <button
+              onClick={() => setShowHelp(true)}
+              title="布局参数说明"
+              className="flex h-5 w-5 items-center justify-center rounded-full border border-orange-300 bg-white text-[10px] font-bold italic text-orange-600 hover:bg-orange-100"
+            >
+              i
+            </button>
+            <button onClick={() => setOptParams(DEFAULT_OPT)} className="rounded border border-stone-200 bg-white px-2 py-0.5 text-[10px] text-stone-500 hover:border-stone-300">恢复默认</button>
+          </span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
           {([
@@ -1231,8 +1237,61 @@ function TopologyInner() {
 
       {/* 底注 */}
       <p className="mt-2 text-[11px] text-stone-400">
-        {graph.note} 比例 1:N：折算后 &lt;0.1 的连线/按钮/页面并入「其他」；虚线组为折叠的导师页（每 8 位一组，按访问量排序），点击组节点就地展开为导师小卡矩阵；拖拽位置自动记忆，「参数布局」按当前参数重排（交叉/重叠/紧凑度可调），「存记忆」保存当前参数+位置为记忆位（最多5个，按当前口径组合隔离），「重置布局」恢复默认排布。
+        {graph.note} 比例 1:N：折算后 &lt;0.1 的连线/按钮/页面并入「其他」；虚线组为折叠的导师页（每 8 位一组，按访问量排序），点击组节点就地展开为导师小卡矩阵；拖拽位置自动记忆，「参数布局」在当前所见位置上按参数精修（交叉/重叠/紧凑度可调，无改善则维持原样），「存记忆」保存当前参数+位置为记忆位（最多5个，按当前口径组合隔离），「重置布局」恢复默认排布。
       </p>
+
+      {/* 参数说明弹窗 */}
+      {showHelp && createPortal(
+        <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowHelp(false)}>
+          <div
+            className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-stone-800">布局参数说明</h3>
+              <button
+                onClick={() => setShowHelp(false)}
+                className="flex h-6 w-6 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+              >
+                ×
+              </button>
+            </div>
+            <p className="mb-3 rounded-lg bg-orange-50 p-2 text-[11px] leading-relaxed text-stone-600">
+              点「参数布局」时，算法从你当前看到的位置（含手工拖拽）出发反复试摆每个框，每摆一次按下面的规则打分，总分越低越好。护栏保证结果不比当前布局差，没改善就原样保留。
+            </p>
+            <div className="space-y-3 text-[12px] leading-relaxed text-stone-700">
+              <div>
+                <p className="font-bold text-orange-700">交叉罚分（默认 20000）</p>
+                <p>每有两条连线互相交叉扣多少分。调大→不惜把框甩远也要消灭交叉；调小→允许交叉以换取连线更短、布局更整齐；设 0 等于不管交叉。</p>
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">重叠罚分（默认 50000）</p>
+                <p>每有两个框压住或贴得太近（小于 16px）扣多少分。默认比交叉罚分更重，意思是框叠框比线交叉更不能接受。框总莫名弹开、布局太散时可适当调小。</p>
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">紧凑度（默认 0，范围 0–10）</p>
+                <p>所有框两两中心距离之和乘以此系数。0=关闭，只管零交叉零重叠，图可能散得很开；调到 2–5 框会明显往中间聚拢、更省屏幕；太大又会把框挤到重叠，与重叠罚分互相拔河。</p>
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">粗扫网格（默认 9，范围 5–15）</p>
+                <p>开场在大画布上划 N×N 个候选落点，每个框挨个试，帮它跳出当前盆地。越密（15）越可能找到远处的好位置，但计算量约按平方增长、慢约 3 倍；越小（5）越快但容易困在局部。</p>
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">起始步长（默认 400）</p>
+                <p>粗扫后的第一大步：每个框尝试向 8 个方向移动这个距离，变好就落定，之后每轮步长减半。手工摆好大形后想原地精修就调小（100–200）；想让框跨区长距离搬位就调大（800–1000）。</p>
+              </div>
+              <div>
+                <p className="font-bold text-orange-700">最小步长（默认 16）</p>
+                <p>步长减半的下限，低于它就停止。调小（4–8）打磨更细、对齐更精确但更慢；调大（32–64）提前收手，快但十几像素级的小优化会被跳过。</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-lg bg-stone-50 p-2 text-[11px] leading-relaxed text-stone-500">
+              调参速查：图太散→加大紧凑度；线交叉多→加大交叉罚分或粗扫网格；框老弹开→降低重叠罚分；算法收太快没找到好位置→加大起始步长、调小最小步长。
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }

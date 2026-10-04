@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useAdminApi } from './use-admin-api';
+import { Pagination, paginate } from './pagination';
 import { ViewState } from '@/components/mentor-console/stat-card';
 import { maskName, maskPhone } from '@/lib/privacy-mask';
 
@@ -169,12 +170,15 @@ export function JourneysView() {
   const { data, loading, error } = useAdminApi<JourneysResponse>('/api/admin/journeys');
   const [filter, setFilter] = useState<string>('ALL');
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   if (loading && !data) return <ViewState loading />;
   if (error) return <ViewState error={error} />;
   if (!data) return null;
 
   const users = filter === 'ALL' ? data.users : data.users.filter((u) => u.state === filter);
+  const { paged } = paginate(users, page, pageSize);
 
   return (
     <div className="space-y-3">
@@ -186,7 +190,7 @@ export function JourneysView() {
         {FILTERS.map((f) => (
           <button
             key={f.key}
-            onClick={() => setFilter(f.key)}
+            onClick={() => { setFilter(f.key); setPage(1); }}
             className={`rounded-full px-3 py-1 text-xs transition-colors ${
               filter === f.key
                 ? 'bg-[#55734B] text-white'
@@ -202,7 +206,7 @@ export function JourneysView() {
         <p className="py-8 text-center text-sm text-stone-400">该状态下没有抽样用户</p>
       )}
 
-      {users.map((u) => {
+      {paged.map((u) => {
         const open = expanded === u.id;
         return (
           <div
@@ -244,6 +248,18 @@ export function JourneysView() {
           </div>
         );
       })}
+
+      {/* 底部分页 */}
+      <div className="rounded-2xl bg-white/90 px-3 py-2 shadow-sm ring-1 ring-stone-900/[0.06]">
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={users.length}
+          totalUnit="位"
+          onPageChange={setPage}
+          onPageSizeChange={(n) => { setPageSize(n); setPage(1); }}
+        />
+      </div>
     </div>
   );
 }

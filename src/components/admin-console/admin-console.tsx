@@ -19,6 +19,7 @@ import { MentorsView } from './mentors-view';
 import { UsersView } from './users-view';
 import { ChannelsView } from './channels-view';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
+import { DataRangeContext } from './date-range-context';
 
 const TABS = [
   { key: 'overview', label: '概览' },
@@ -155,20 +156,22 @@ export function AdminConsole({ accountName }: { accountName: string }) {
           />
           {rangeError
             ? <span className="text-xs text-rose-600">{rangeError}</span>
-            : <span className="text-xs text-stone-400">已生效：{range.start} 至 {range.end} · demo 为固定区间快照</span>}
+            : <span className="text-xs text-stone-400">已生效：{range.start} 至 {range.end} · demo 总量为固定快照，日均天数与真实接口按区间生效</span>}
         </div>
 
         {/* 视图 */}
-        <div className="mt-4">
-          {tab === 'overview' && <OverviewView />}
-          {tab === 'pages' && <PagesView />}
-          {tab === 'ctas' && <CtasView />}
-          {tab === 'journeys' && <JourneysView />}
-          {tab === 'retention' && <RetentionView />}
-          {tab === 'mentors' && <MentorsView />}
-          {tab === 'users' && <UsersView />}
-          {tab === 'channels' && <ChannelsView />}
-        </div>
+        <DataRangeContext.Provider value={range}>
+          <div className="mt-4">
+            {tab === 'overview' && <OverviewView />}
+            {tab === 'pages' && <PagesView />}
+            {tab === 'ctas' && <CtasView />}
+            {tab === 'journeys' && <JourneysView />}
+            {tab === 'retention' && <RetentionView />}
+            {tab === 'mentors' && <MentorsView />}
+            {tab === 'users' && <UsersView />}
+            {tab === 'channels' && <ChannelsView />}
+          </div>
+        </DataRangeContext.Provider>
       </div>
 
       <div className="relative z-10">
