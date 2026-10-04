@@ -1,5 +1,5 @@
 /**
- * 一次性给 journeys.json 的 32 位抽样用户补 phone（完整 11 位 demo 号）+ name。
+ * 一次性给 journeys.json 的抽样用户补 phone（完整 11 位 demo 号）+ name。
  * 确定性：同一 id 永远得到同一身份，与 gen-admin-entity-demo 同款 mulberry32。
  * 运行：node scripts/gen-journey-identity.mjs
  */

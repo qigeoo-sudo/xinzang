@@ -1,6 +1,6 @@
 /**
  * 生成 public/demo/admin/journey-graph.json —— 行为链拓扑图的大数量级演示数据。
- * 方法：以 journeys.json（32 位抽样用户）的事件流为「跳转结构骨架」，
+ * 方法：以 journeys.json（抽样用户）的事件流为「跳转结构骨架」，
  *       按 pages.json（各页 PV/UV）与 ctas.json（各按钮点击量）的总量锚定放大。
  * 确定性：mulberry32 固定种子，重复运行输出一致。
  * 运行：node scripts/gen-journey-graph.mjs
@@ -30,7 +30,7 @@ const rnd = mulberry32('journey-graph:v2');
 const jitter = (lo, hi) => lo + rnd() * (hi - lo);
 const rint = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1));
 
-// ---------- 1. 从 32 人抽样提取跳转结构（骨架） ----------
+// ---------- 1. 从抽样用户行为流提取跳转结构（骨架） ----------
 const patPV = new Map();        // path -> page.view 次数
 const patBtn = new Map();       // label -> Map<page, {count, landings: Map<target,count>}>
 const patEdge = new Map();      // `src|tgt` -> count（页面直连）
@@ -208,7 +208,7 @@ for (const [label] of patBtn) {
 // ---------- 5. 输出 ----------
 const out = {
   dateRange: pages.dateRange,
-  note: '以 32 位抽样用户的事件流为跳转结构骨架，按「页面」「按钮」两个 tab 的总量锚定放大合成；页面数值与页面 tab 一致，按钮点击与按钮 tab 一致，连线为站内跳转估计。',
+  note: '以抽样用户的事件流为跳转结构骨架，按「页面」「按钮」两个 tab 的总量锚定放大合成；页面数值与页面 tab 一致，按钮点击与按钮 tab 一致，连线为站内跳转估计。',
   pages: outPages,
   buttons: outButtons,
   edges: outEdges,

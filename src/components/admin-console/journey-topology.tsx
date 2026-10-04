@@ -3,12 +3,13 @@
 /**
  * 行为链 · 全体用户行为拓扑图（数据：/api/admin/journey-graph，按页面/按钮 tab 总量锚定）。
  * 树状（分层拓扑）：橙色方框=页面，绿色圆圈=按钮（在所属页面方框内）；
- *   导师主页按访问量排序、每 8 位叠成一组，点击组节点在下方展开为 4×2 小卡矩阵。
+ *   导师主页按访问量排序、每 8 位叠成一组，点击组节点展开为导师小卡矩阵。
  * 星状（热力辐射）：首页居中，其余页面按图距分层向外辐射，暗底霓虹。
  * 复合口径：次数/人数 × 累计/日均；比例 1:N 折算后 <0.1 的边/按钮/页面折叠进「其他」。
  * 拖拽位置持久化到 localStorage，切走再回来仍保留；「参数布局」按交叉+弧线综合最优重排，「重置布局」恢复默认排布。
  */
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -92,6 +93,17 @@ function lerpColor(a: string, b: string, t: string | any): string {
 }
 const isMentorPage = (id: string) => id.startsWith('/mentors/') && id !== '/mentors' && id !== OTHER_ID;
 const isStack = (id: string) => id.startsWith(STACK_PREFIX);
+
+// 导师英文名去姓：lydiachen→lydia、winnieni→winnie；x01/x22 等长尾 id 返回 null
+const MENTOR_SURNAMES = ['huang', 'zhou', 'zhang', 'wang', 'chen', 'yuan', 'gao', 'chi', 'ren', 'lin', 'liu', 'li', 'ni'];
+const mentorFirstName = (id: string): string | null => {
+  const slug = id.replace(/^\/mentors\//, '');
+  if (/^x\d+$/i.test(slug)) return null;
+  for (const sn of MENTOR_SURNAMES) {
+    if (slug.endsWith(sn) && slug.length > sn.length) return slug.slice(0, -sn.length);
+  }
+  return slug;
+};
 
 // ---------- 折算与折叠（比例 1:N，<0.1 进其他） ----------
 interface DisplayPage { id: string; label: string; sub?: string; raw: number; isOther?: boolean }
@@ -625,6 +637,7 @@ function TopologyInner() {
   const [memories, setMemories] = useState<MemSlot[]>([]);
   const [memName, setMemName] = useState('');
   const [showMemInput, setShowMemInput] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const { fitView } = useReactFlow();
 
   const { data: graph, loading, error } = useAdminApi<JourneyGraph>('/api/admin/journey-graph');
@@ -667,10 +680,12 @@ function TopologyInner() {
     const edgeList: Edge[] = [];
 
     if (mode === 'tree') {
+      // 渲染位置：手动拖过的框优先用拖后位置，否则用布局位置
+      const renderPos = (id: string) => posRef.current.get(id) ?? pos.get(id) ?? { x: 0, y: 0 };
       // 普通页面节点
       for (const p of display.pages) {
         if (isMentorPage(p.id)) continue;
-        const posP = pos.get(p.id) ?? { x: 0, y: 0 };
+        const posP = renderPos(p.id);
         const bs = display.btnsByPage.get(p.id) ?? [];
         nodeList.push({
           id: p.id,
@@ -690,7 +705,8 @@ function TopologyInner() {
       // 导师组节点（折叠）
       for (const s of stacks) {
         if (expanded.has(s.id)) continue;
-        const posS = pos.get(s.id) ?? { x: 0, y: 0 };
+        const posS = renderPos(s.id);
+        const names = s.members.map(mentorFirstName).filter((n): n is string => !!n);
         nodeList.push({
           id: s.id,
           type: 'stack',
@@ -698,7 +714,7 @@ function TopologyInner() {
           data: {
             label: `导师组 ${s.id.replace(STACK_PREFIX, '')}`,
             raw: showV(s.raw),
-            top: s.top.map((t) => ({ id: t.id, sub: t.sub, raw: showV(t.raw) })),
+            names: names.length ? names : ['长尾导师'],
             count: s.members.length,
             expanded: false,
             hoverNode,
@@ -709,7 +725,8 @@ function TopologyInner() {
       // 展开的导师组：组标题 + 成员小卡
       for (const s of stacks) {
         if (!expanded.has(s.id)) continue;
-        const posS = pos.get(s.id) ?? { x: 0, y: 0 };
+        const posS = renderPos(s.id);
+        const names = s.members.map(mentorFirstName).filter((n): n is string => !!n);
         nodeList.push({
           id: s.id,
           type: 'stack',
@@ -717,7 +734,7 @@ function TopologyInner() {
           data: {
             label: `导师组 ${s.id.replace(STACK_PREFIX, '')}`,
             raw: showV(s.raw),
-            top: s.top.map((t) => ({ id: t.id, sub: t.sub, raw: showV(t.raw) })),
+            names: names.length ? names : ['长尾导师'],
             count: s.members.length,
             expanded: true,
             hoverNode,
@@ -725,7 +742,7 @@ function TopologyInner() {
           },
         });
         for (const m of s.members) {
-          const posM = pos.get(m) ?? { x: 0, y: 0 };
+          const posM = renderPos(m);
           const p = display.pages.find((x) => x.id === m);
           if (!p) continue;
           const bs = display.btnsByPage.get(m) ?? [];
@@ -745,30 +762,40 @@ function TopologyInner() {
           });
         }
       }
-      // 边
+      // 边：导师成员页的边聚合到所属组节点（组节点只有 page:out 桩），同起点同终点合并
+      const agg = new Map<string, { src: string; handle: string; tgt: string; kind: DisplayEdge['kind']; raw: number }>();
       const maxRaw = Math.max(...display.edges.map((e) => e.raw), 1);
       for (const e of display.edges) {
+        const fromStack = isMentorPage(e.source) && memberStack.has(e.source);
         const src = memberStack.get(e.source) ?? e.source;
         const tgt = memberStack.get(e.target) ?? e.target;
         if (src === tgt) continue;
-        const active = hoverNode === e.source || hoverNode === e.target || hoverEdge === e.id;
-        const w = Math.max(1, Math.min(12, (e.raw / maxRaw) * 10));
+        const handle = fromStack ? 'page:out' : e.sourceHandle;
+        const k = `${src}|${handle}->${tgt}`;
+        const cur = agg.get(k);
+        if (cur) cur.raw += e.raw;
+        else agg.set(k, { src, handle, tgt, kind: fromStack ? 'page' : e.kind, raw: e.raw });
+      }
+      for (const [id, a] of agg) {
+        const active = hoverNode === a.src || hoverNode === a.tgt || hoverEdge === id;
+        const w = Math.max(1, Math.min(12, (a.raw / maxRaw) * 10));
         edgeList.push({
-          id: e.id,
-          source: src,
-          sourceHandle: e.sourceHandle,
-          target: tgt,
+          id,
+          source: a.src,
+          sourceHandle: a.handle,
+          target: a.tgt,
           animated: false,
-          style: { stroke: active ? '#be123c' : e.kind === 'btn' ? EDGE_BTN : e.kind === 'other' ? '#94a3b8' : EDGE_PAGE, strokeWidth: w, opacity: active ? 1 : 0.6 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: active ? '#be123c' : e.kind === 'btn' ? EDGE_BTN : e.kind === 'other' ? '#94a3b8' : EDGE_PAGE, width: 28, height: 28, markerUnits: 'userSpaceOnUse' },
-          data: { raw: showV(e.raw) },
+          style: { stroke: active ? '#be123c' : a.kind === 'btn' ? EDGE_BTN : a.kind === 'other' ? '#94a3b8' : EDGE_PAGE, strokeWidth: w, opacity: active ? 1 : 0.6 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: active ? '#be123c' : a.kind === 'btn' ? EDGE_BTN : a.kind === 'other' ? '#94a3b8' : EDGE_PAGE, width: 28, height: 28, markerUnits: 'userSpaceOnUse' },
+          data: { raw: showV(a.raw) },
         });
       }
     } else {
-      // 星状模式
+      // 星状模式（拖后位置本会话内生效，不持久化）
+      const renderPosStar = (id: string) => posRef.current.get(id) ?? pos.get(id) ?? { x: 0, y: 0 };
       const maxRaw = Math.max(...display.edges.map((e) => e.raw), 1);
       for (const p of display.pages) {
-        const posP = pos.get(p.id) ?? { x: 0, y: 0 };
+        const posP = renderPosStar(p.id);
         const bs = display.btnsByPage.get(p.id) ?? [];
         const isHome = p.id === '/';
         nodeList.push({
@@ -793,7 +820,6 @@ function TopologyInner() {
         edgeList.push({
           id: e.id,
           source: e.source,
-          sourceHandle: e.sourceHandle,
           target: e.target,
           animated: false,
           style: { stroke: active ? '#f472b6' : e.kind === 'btn' ? '#22d3ee' : '#a78bfa', strokeWidth: w, opacity: active ? 1 : 0.5 },
@@ -811,6 +837,14 @@ function TopologyInner() {
     const t = requestAnimationFrame(() => fitView({ padding: 0.12, duration: 350, minZoom: 0.15, maxZoom: 1 }));
     return () => cancelAnimationFrame(t);
   }, [fitView, mode, ratio, expanded, optNonce, fitNonce]);
+
+  // 全屏：ESC 退出；切换后等容器尺寸稳定再 fitView
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && fullscreen) setFullscreen(false); };
+    window.addEventListener('keydown', onKey);
+    const t = setTimeout(() => fitView({ padding: fullscreen ? 0.08 : 0.12, duration: 300, minZoom: 0.1, maxZoom: 1.5 }), 80);
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(t); };
+  }, [fullscreen, fitView]);
 
   // 切组合时加载当前记忆位
   useEffect(() => {
@@ -840,45 +874,55 @@ function TopologyInner() {
     } catch { /* ignore */ }
   }, [mode]);
 
+  const dragActiveRef = useRef(false);
+
   const onNodesChange = useCallback((changes: NodeChange<Node>[]) => {
     let moved = false;
     for (const c of changes) {
-      if (c.type === 'position' && c.position) {
+      if (c.type !== 'position' || !c.position) continue;
+      // 仅提交真实拖拽产生的位移（c.dragging 为 true 表示拖拽中/结束），过滤点击时的零位移抖动
+      if (c.dragging) {
         posRef.current.set(c.id, c.position);
         moved = true;
+        dragActiveRef.current = true;
       }
     }
     if (moved) {
       persist();
       bump();
-      // 拖动后反向估计参数：根据当前布局质量反推一组「能产生类似效果」的参数
-      // 交叉多→加大交叉罚分，重叠多→加大重叠罚分，框散→加大紧凑度
-      if (mode === 'tree' && layout) {
-        const { display } = layout;
-        const pos = new Map(posRef.current);
-        let cross = 0, ovl = 0;
-        const boxW = () => 220;
-        const boxH = () => 100;
-        const cs = [...pos.values()].map((p) => ({ x: p.x + boxW() / 2, y: p.y + boxH() / 2 }));
-        for (let i = 0; i < cs.length; i++) {
-          for (let j = i + 1; j < cs.length; j++) {
-            if (Math.abs(cs[i].x - cs[j].x) < boxW() + 16 && Math.abs(cs[i].y - cs[j].y) < boxH() + 16) ovl++;
-          }
+    }
+  }, [persist]);
+
+  const onNodeDragStart = useCallback(() => { dragActiveRef.current = true; }, []);
+  const onNodeDragStop = useCallback(() => {
+    // 拖拽结束：反向估计一次参数（交叉多→加大交叉罚分，重叠多→加大重叠罚分）
+    if (mode === 'tree' && layout) {
+      const { display, memberStack } = layout;
+      const pmap = posRef.current;
+      let cross = 0, ovl = 0;
+      const ids = [...pmap.keys()];
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const a = pmap.get(ids[i])!, b = pmap.get(ids[j])!;
+          if (Math.abs(a.x - b.x) < 220 + 16 && Math.abs(a.y - b.y) < 200 + 16) ovl++;
         }
-        // 粗略估计交叉：随机抽几对边检查
-        const edgeList = display.edges.slice(0, 20);
-        for (let i = 0; i < edgeList.length; i++) {
-          for (let j = i + 1; j < edgeList.length; j++) {
-            const a = pos.get(edgeList[i].source), b = pos.get(edgeList[i].target);
-            const c2 = pos.get(edgeList[j].source), d = pos.get(edgeList[j].target);
-            if (!a || !b || !c2 || !d) continue;
-            const d1 = (b.x - a.x) * (d.y - c2.y) - (b.y - a.y) * (d.x - c2.x);
-            if (d1 === 0) continue;
-            const t = ((c2.x - a.x) * (d.y - c2.y) - (c2.y - a.y) * (d.x - c2.x)) / d1;
-            const u = ((c2.x - a.x) * (b.y - a.y) - (c2.y - a.y) * (b.x - a.x)) / d1;
-            if (t > 0 && t < 1 && u > 0 && u < 1) cross++;
-          }
+      }
+      const sample = display.edges.slice(0, 24);
+      for (let i = 0; i < sample.length; i++) {
+        for (let j = i + 1; j < sample.length; j++) {
+          const a = pmap.get(memberStack.get(sample[i].source) ?? sample[i].source);
+          const b = pmap.get(memberStack.get(sample[i].target) ?? sample[i].target);
+          const c2 = pmap.get(memberStack.get(sample[j].source) ?? sample[j].source);
+          const d = pmap.get(memberStack.get(sample[j].target) ?? sample[j].target);
+          if (!a || !b || !c2 || !d) continue;
+          const den = (b.x - a.x) * (d.y - c2.y) - (b.y - a.y) * (d.x - c2.x);
+          if (den === 0) continue;
+          const t = ((c2.x - a.x) * (d.y - c2.y) - (c2.y - a.y) * (d.x - c2.x)) / den;
+          const u = ((c2.x - a.x) * (b.y - a.y) - (c2.y - a.y) * (b.x - a.x)) / den;
+          if (t > 0 && t < 1 && u > 0 && u < 1) cross++;
         }
+      }
+      if (cross > 0 || ovl > 0) {
         setOptParams((p) => ({
           ...p,
           crossCost: Math.min(100000, Math.max(1000, p.crossCost + cross * 5000)),
@@ -886,9 +930,13 @@ function TopologyInner() {
         }));
       }
     }
-  }, [persist, mode, layout]);
+    // 留一拍再解锁，让紧随其后的 click 能识别出「这是拖拽不是点击」
+    setTimeout(() => { dragActiveRef.current = false; }, 0);
+  }, [mode, layout]);
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
+    // 拖拽结束时浏览器仍可能补发 click，这里直接忽略，避免误触发展开/收起
+    if (dragActiveRef.current) return;
     if (isStack(node.id)) {
       setExpanded((prev) => {
         const next = new Set(prev);
@@ -959,6 +1007,116 @@ function TopologyInner() {
     saveSlots(mode, metric, span, ratio, next);
   };
 
+  // 画布内部元素（浮层 + ReactFlow）：原位与全屏弹窗共用，同一时间只渲染一份
+  const flowCanvas = (
+    <>
+      {/* 全屏切换：画布左上角 */}
+      <button
+        onClick={() => setFullscreen((v) => !v)}
+        title={fullscreen ? '退出全屏（ESC）' : '全屏画布'}
+        className={`absolute left-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm transition ${
+          fullscreen
+            ? 'border-orange-300 bg-orange-50 text-orange-600'
+            : 'border-stone-200 bg-white/90 text-stone-500 hover:border-orange-300 hover:text-orange-600'
+        }`}
+      >
+        {fullscreen ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M8 21v-3a2 2 0 0 0-2-2H3M16 21v-3a2 2 0 0 1 2-2h3" />
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 8V5a2 2 0 0 1 2-2h3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M21 16v3a2 2 0 0 1-2 2h-3" />
+          </svg>
+        )}
+      </button>
+      {/* 记忆位：画布右上角，最多5个 */}
+      <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+        {memories.map((m) => (
+          <span key={m.id} className="inline-flex items-center gap-0.5 rounded-full border border-stone-200 bg-white/90 px-2 py-0.5 text-[10px] text-stone-600 shadow-sm backdrop-blur-sm">
+            <button
+              onClick={() => applyMemory(m)}
+              className="hover:text-orange-600"
+              title={`应用记忆位：${m.name}（${new Date(m.time).toLocaleDateString()}）`}
+            >
+              {m.name}
+            </button>
+            <button
+              onClick={() => deleteMemory(m.id)}
+              className="text-stone-400 hover:text-red-500"
+              title="删除"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {memories.length < 5 && (
+          <button
+            onClick={saveMemory}
+            className="rounded-full border border-dashed border-stone-300 bg-white/80 px-2 py-0.5 text-[10px] text-stone-500 hover:border-orange-300 hover:text-orange-600"
+            title="保存当前参数+位置为记忆位"
+          >
+            +存记忆
+          </button>
+        )}
+      </div>
+
+      {/* 记忆位命名输入框 */}
+      {showMemInput && (
+        <div className="absolute right-3 top-12 z-20 rounded-xl border border-orange-200 bg-white p-3 shadow-lg">
+          <p className="mb-2 text-xs text-stone-600">记忆位名称</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={memName}
+              onChange={(e) => setMemName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && confirmSaveMemory()}
+              className="w-40 rounded border border-stone-200 px-2 py-1 text-xs outline-none focus:border-orange-300"
+              autoFocus
+            />
+            <button
+              onClick={confirmSaveMemory}
+              className="rounded bg-orange-500 px-3 py-1 text-xs text-white hover:bg-orange-600"
+            >
+              保存
+            </button>
+            <button
+              onClick={() => setShowMemInput(false)}
+              className="rounded border border-stone-200 px-3 py-1 text-xs text-stone-500 hover:border-stone-300"
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ReactFlow
+        key={mode}
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
+        minZoom={0.05}
+        maxZoom={2}
+        proOptions={{ hideAttribution: true }}
+        onNodesChange={onNodesChange}
+        onNodeClick={onNodeClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDragStop={onNodeDragStop}
+        onNodeMouseEnter={(_, n) => setHoverNode(n.id)}
+        onNodeMouseLeave={() => setHoverNode(null)}
+        onEdgeMouseEnter={(_, e) => setHoverEdge(e.id)}
+        onEdgeMouseLeave={() => setHoverEdge(null)}
+        nodesDraggable
+        zoomOnScroll
+        selectNodesOnDrag={false}
+      >
+        {mode === 'star' ? <Background gap={22} color="#1e293b" /> : <Background gap={16} color="#e7e5e4" />}
+        <Controls showInteractive={false} />
+      </ReactFlow>
+    </>
+  );
+
   return (
     <div className="rounded-2xl border border-stone-200/60 bg-white/80 p-4 shadow-sm">
       {/* 顶栏 */}
@@ -968,7 +1126,7 @@ function TopologyInner() {
             <button
               key={m}
               onClick={() => setMetric(m)}
-              className={`rounded-full px-3 py-1 text-xs transition ${metric === m ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`rounded-full px-3 py-1 text-xs transition ${metric === m ? 'bg-orange-500 text-white shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
             >
               {m === 'count' ? '次数' : '人数'}
             </button>
@@ -979,7 +1137,7 @@ function TopologyInner() {
             <button
               key={s}
               onClick={() => setSpan(s)}
-              className={`rounded-full px-3 py-1 text-xs transition ${span === s ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`rounded-full px-3 py-1 text-xs transition ${span === s ? 'bg-orange-500 text-white shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
             >
               {s === 'total' ? '累计' : '日均'}
             </button>
@@ -991,7 +1149,7 @@ function TopologyInner() {
             <button
               key={r}
               onClick={() => setRatio(r)}
-              className={`rounded-full px-2.5 py-1 text-xs transition ${ratio === r ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`rounded-full px-2.5 py-1 text-xs transition ${ratio === r ? 'bg-orange-500 text-white shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
             >
               1:{r}
             </button>
@@ -1002,7 +1160,7 @@ function TopologyInner() {
             <button
               key={m}
               onClick={() => setMode(m)}
-              className={`rounded-full px-3 py-1 text-xs transition ${mode === m ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`rounded-full px-3 py-1 text-xs transition ${mode === m ? 'bg-orange-500 text-white shadow-sm' : 'text-stone-500 hover:text-stone-700'}`}
             >
               {m === 'tree' ? '树状' : '星状'}
             </button>
@@ -1012,7 +1170,7 @@ function TopologyInner() {
           <button
             onClick={applyParamLayout}
             title="按当前参数重新计算布局"
-            className="rounded-full border border-orange-300 bg-orange-50 px-2.5 py-1 text-xs text-orange-600 hover:border-orange-400"
+            className={`rounded-full border px-2.5 py-1 text-xs ${optNonce > 0 ? 'border-orange-300 bg-orange-50 text-orange-600' : 'border-stone-200 text-stone-500 hover:border-stone-300'}`}
           >
             参数布局
           </button>
@@ -1056,96 +1214,24 @@ function TopologyInner() {
         </div>
       </div>
 
-      {/* 记忆位移到画布右上角，此处不再显示 */}
-
-      <div className={`relative mt-2 h-[600px] overflow-hidden rounded-xl ring-1 ${mode === 'star' ? 'bg-[#0b1120] ring-slate-700' : 'bg-stone-50/60 ring-stone-900/[0.06]'}`}>
-        {/* 记忆位：画布右上角，最多5个 */}
-        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
-          {memories.map((m) => (
-            <span key={m.id} className="inline-flex items-center gap-0.5 rounded-full border border-stone-200 bg-white/90 px-2 py-0.5 text-[10px] text-stone-600 shadow-sm backdrop-blur-sm">
-              <button
-                onClick={() => applyMemory(m)}
-                className="hover:text-orange-600"
-                title={`应用记忆位：${m.name}（${new Date(m.time).toLocaleDateString()}）`}
-              >
-                {m.name}
-              </button>
-              <button
-                onClick={() => deleteMemory(m.id)}
-                className="text-stone-400 hover:text-red-500"
-                title="删除"
-              >
-                ×
-              </button>
-            </span>
-          ))}
-          {memories.length < 5 && (
-            <button
-              onClick={saveMemory}
-              className="rounded-full border border-dashed border-stone-300 bg-white/80 px-2 py-0.5 text-[10px] text-stone-500 hover:border-orange-300 hover:text-orange-600"
-              title="保存当前参数+位置为记忆位"
-            >
-              +存记忆
-            </button>
-          )}
+      {/* 画布：非全屏时原位渲染；全屏时通过 Portal 挂到 body，彻底脱离父容器层叠上下文 */}
+      {!fullscreen && (
+        <div className={`relative mt-2 h-[600px] overflow-hidden rounded-xl ring-1 ${mode === 'star' ? 'bg-[#0b1120] ring-slate-700' : 'bg-stone-50/60 ring-stone-900/[0.06]'}`}>
+          {flowCanvas}
         </div>
-
-        {/* 记忆位命名输入框 */}
-        {showMemInput && (
-          <div className="absolute right-3 top-12 z-20 rounded-xl border border-orange-200 bg-white p-3 shadow-lg">
-            <p className="mb-2 text-xs text-stone-600">记忆位名称</p>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={memName}
-                onChange={(e) => setMemName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && confirmSaveMemory()}
-                className="w-40 rounded border border-stone-200 px-2 py-1 text-xs outline-none focus:border-orange-300"
-                autoFocus
-              />
-              <button
-                onClick={confirmSaveMemory}
-                className="rounded bg-orange-500 px-3 py-1 text-xs text-white hover:bg-orange-600"
-              >
-                保存
-              </button>
-              <button
-                onClick={() => setShowMemInput(false)}
-                className="rounded border border-stone-200 px-3 py-1 text-xs text-stone-500 hover:border-stone-300"
-              >
-                取消
-              </button>
-            </div>
+      )}
+      {fullscreen && createPortal(
+        <div className="fixed inset-0 z-[2000] bg-black/70 p-4">
+          <div className={`relative h-full w-full overflow-hidden rounded-xl ring-1 ${mode === 'star' ? 'bg-[#0b1120] ring-slate-700' : 'bg-stone-50 ring-stone-900/[0.06]'}`}>
+            {flowCanvas}
           </div>
-        )}
-
-        <ReactFlow
-          key={mode}
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
-          minZoom={0.05}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
-          onNodesChange={onNodesChange}
-          onNodeClick={onNodeClick}
-          onNodeMouseEnter={(_, n) => setHoverNode(n.id)}
-          onNodeMouseLeave={() => setHoverNode(null)}
-          onEdgeMouseEnter={(_, e) => setHoverEdge(e.id)}
-          onEdgeMouseLeave={() => setHoverEdge(null)}
-          nodesDraggable
-          zoomOnScroll
-          selectNodesOnDrag={false}
-        >
-          {mode === 'star' ? <Background gap={22} color="#1e293b" /> : <Background gap={16} color="#e7e5e4" />}
-          <Controls showInteractive={false} />
-        </ReactFlow>
-      </div>
+        </div>,
+        document.body,
+      )}
 
       {/* 底注 */}
       <p className="mt-2 text-[11px] text-stone-400">
-        {graph.note} 比例 1:N：折算后 &lt;0.1 的连线/按钮/页面并入「其他」；虚线组为折叠的导师页（每 8 位一组，按访问量排序），点击在下方展开为 4×2 矩阵；拖拽位置自动记忆，「参数布局」按当前参数重排（交叉/重叠/紧凑度可调），「存记忆」保存当前参数+位置为记忆位（最多5个，按当前口径组合隔离），「重置布局」恢复默认排布。
+        {graph.note} 比例 1:N：折算后 &lt;0.1 的连线/按钮/页面并入「其他」；虚线组为折叠的导师页（每 8 位一组，按访问量排序），点击组节点就地展开为导师小卡矩阵；拖拽位置自动记忆，「参数布局」按当前参数重排（交叉/重叠/紧凑度可调），「存记忆」保存当前参数+位置为记忆位（最多5个，按当前口径组合隔离），「重置布局」恢复默认排布。
       </p>
     </div>
   );
@@ -1176,21 +1262,24 @@ function PageNode({ data }: NodeProps) {
       }}
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-stone-400" />
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !bg-stone-400" />
-      <div className="border-b px-2.5 py-1.5 text-xs font-medium" style={{ borderColor: isOther ? '#cbd5e1' : '#fdba74' }}>
+      <div className="relative border-b px-2.5 py-1.5 text-xs font-medium" style={{ borderColor: isOther ? '#cbd5e1' : '#fdba74' }}>
         <div className="truncate">{label}</div>
         {sub && <div className="truncate text-[10px] font-normal text-stone-500">{sub}</div>}
         <div className="text-[10px] font-normal text-stone-500">{fmt(raw)}</div>
+        {/* 页面级跳转桩 */}
+        <Handle id="page:out" type="source" position={Position.Right} className="!h-2 !w-2 !bg-orange-500" />
       </div>
       <div className="px-2 py-1.5">
         {btns.map((b) => (
-          <div key={b.key} className="flex items-center gap-1.5 py-0.5 text-[11px]">
+          <div key={b.key} className="relative flex items-center gap-1.5 py-0.5 text-[11px]">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ background: lerpColor('#86efac', '#15803d', b.raw / maxBtn) }}
             />
             <span className="truncate flex-1">{b.label}</span>
             <span className="tabular-nums text-stone-500">{fmt(b.raw)}</span>
+            {/* 按钮级跳转桩：id 与数据 sourceHandle「btn:${key}」对应 */}
+            <Handle id={`btn:${b.key}`} type="source" position={Position.Right} className="!h-2 !w-2 !bg-emerald-500" />
           </div>
         ))}
       </div>
@@ -1199,8 +1288,8 @@ function PageNode({ data }: NodeProps) {
 }
 
 function StackNode({ data }: NodeProps) {
-  const { label, raw, top, count, expanded, hoverNode } = data as {
-    label: string; raw: number; top: { id: string; sub?: string; raw: number }[];
+  const { label, raw, names, count, expanded, hoverNode } = data as {
+    label: string; raw: number; names: string[];
     count: number; expanded: boolean; hoverNode: string | null; tick: number;
   };
   const active = hoverNode === null || hoverNode === label;
@@ -1210,28 +1299,20 @@ function StackNode({ data }: NodeProps) {
       style={{ borderColor: '#9a3412', background: '#fff7ed', opacity: active ? 1 : 0.3 }}
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-stone-400" />
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !bg-stone-400" />
-      <div className="border-b border-dashed px-2.5 py-1.5 text-xs font-medium" style={{ borderColor: '#fdba74' }}>
+      <Handle id="page:out" type="source" position={Position.Right} className="!h-2 !w-2 !bg-orange-500" />
+      <div className="relative border-b border-dashed px-2.5 py-1.5 text-xs font-medium" style={{ borderColor: '#fdba74' }}>
         <div className="flex items-center justify-between">
           <span>{label}</span>
           <span className="text-[10px] font-normal text-stone-500">{count}位</span>
         </div>
         <div className="text-[10px] font-normal text-stone-500">{fmt(raw)}</div>
       </div>
+      {/* 导师名横排 chips（只显示英文名的名，不显示姓；长尾 x## 不显示；展开后由小卡承载，此处隐藏） */}
       {!expanded && (
-        <div className="px-2 py-1.5">
-          {top.map((t) => (
-            <div key={t.id} className="flex items-center gap-1.5 py-0.5 text-[11px]">
-              <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-              <span className="truncate flex-1">{t.sub ?? t.id}</span>
-              <span className="tabular-nums text-stone-500">{fmt(t.raw)}</span>
-            </div>
+        <div className="flex flex-wrap gap-1 px-2 py-1.5">
+          {names.map((n) => (
+            <span key={n} className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800">{n}</span>
           ))}
-        </div>
-      )}
-      {expanded && (
-        <div className="px-2 py-1.5 text-[11px] text-stone-500">
-          点击展开 4×2 小卡矩阵
         </div>
       )}
     </div>

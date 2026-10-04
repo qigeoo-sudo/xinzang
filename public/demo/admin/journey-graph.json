@@ -1,2569 +1,2569 @@
 {
- "dateRange": {
-  "start": "2026-07-09",
-  "end": "2026-10-01"
- },
- "note": "以 32 位抽样用户的事件流为跳转结构骨架，按「页面」「按钮」两个 tab 的总量锚定放大合成；页面数值与页面 tab 一致，按钮点击与按钮 tab 一致，连线为站内跳转估计。",
- "pages": [
-  {
-   "id": "/",
-   "label": "首页",
-   "pv": 12836,
-   "uv": 2874,
-   "main": true
-  },
-  {
-   "id": "/chat",
-   "label": "对话页",
-   "pv": 7410,
-   "uv": 1540,
-   "main": true
-  },
-  {
-   "id": "/mentors",
-   "label": "导师列表",
-   "pv": 6230,
-   "uv": 2410,
-   "main": true
-  },
-  {
-   "id": "/assessment",
-   "label": "职业兴趣测试",
-   "pv": 2980,
-   "uv": 1660,
-   "main": true
-  },
-  {
-   "id": "/login",
-   "label": "登录",
-   "pv": 2210,
-   "uv": 1980,
-   "main": true
-  },
-  {
-   "id": "/search",
-   "label": "搜索结果",
-   "pv": 1830,
-   "uv": 980,
-   "main": true
-  },
-  {
-   "id": "/register-v2",
-   "label": "注册",
-   "pv": 1610,
-   "uv": 1490,
-   "main": true
-  },
-  {
-   "id": "/dashboard",
-   "label": "个人中心",
-   "pv": 1240,
-   "uv": 720,
-   "main": true
-  },
-  {
-   "id": "/payment",
-   "label": "支付页",
-   "pv": 890,
-   "uv": 610,
-   "main": true
-  },
-  {
-   "id": "/history",
-   "label": "历史记录",
-   "pv": 640,
-   "uv": 410,
-   "main": true
-  },
-  {
-   "id": "/growth-lab",
-   "label": "成长实验室",
-   "pv": 320,
-   "uv": 260,
-   "main": true
-  },
-  {
-   "id": "/mentors/freyagao",
-   "label": "导师主页",
-   "sub": "freyagao",
-   "pv": 887,
-   "uv": 309,
-   "main": false
-  },
-  {
-   "id": "/mentors/freyaren",
-   "label": "导师主页",
-   "sub": "freyaren",
-   "pv": 279,
-   "uv": 104,
-   "main": false
-  },
-  {
-   "id": "/mentors/kevinyuan",
-   "label": "导师主页",
-   "sub": "kevinyuan",
-   "pv": 476,
-   "uv": 172,
-   "main": false
-  },
-  {
-   "id": "/mentors/lydiachen",
-   "label": "导师主页",
-   "sub": "lydiachen",
-   "pv": 793,
-   "uv": 304,
-   "main": false
-  },
-  {
-   "id": "/mentors/phyllischi",
-   "label": "导师主页",
-   "sub": "phyllischi",
-   "pv": 407,
-   "uv": 155,
-   "main": false
-  },
-  {
-   "id": "/mentors/tinazhang",
-   "label": "导师主页",
-   "sub": "tinazhang",
-   "pv": 489,
-   "uv": 182,
-   "main": false
-  },
-  {
-   "id": "/mentors/winnieni",
-   "label": "导师主页",
-   "sub": "winnieni",
-   "pv": 637,
-   "uv": 202,
-   "main": false
-  },
-  {
-   "id": "/mentors/yingwang",
-   "label": "导师主页",
-   "sub": "yingwang",
-   "pv": 297,
-   "uv": 104,
-   "main": false
-  },
-  {
-   "id": "/mentors/x01",
-   "label": "导师主页",
-   "sub": "x01",
-   "pv": 50,
-   "uv": 15,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x02",
-   "label": "导师主页",
-   "sub": "x02",
-   "pv": 35,
-   "uv": 11,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x03",
-   "label": "导师主页",
-   "sub": "x03",
-   "pv": 28,
-   "uv": 8,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x04",
-   "label": "导师主页",
-   "sub": "x04",
-   "pv": 49,
-   "uv": 14,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x05",
-   "label": "导师主页",
-   "sub": "x05",
-   "pv": 43,
-   "uv": 16,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x06",
-   "label": "导师主页",
-   "sub": "x06",
-   "pv": 16,
-   "uv": 5,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x07",
-   "label": "导师主页",
-   "sub": "x07",
-   "pv": 53,
-   "uv": 20,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x08",
-   "label": "导师主页",
-   "sub": "x08",
-   "pv": 37,
-   "uv": 15,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x09",
-   "label": "导师主页",
-   "sub": "x09",
-   "pv": 17,
-   "uv": 6,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x10",
-   "label": "导师主页",
-   "sub": "x10",
-   "pv": 16,
-   "uv": 5,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x11",
-   "label": "导师主页",
-   "sub": "x11",
-   "pv": 35,
-   "uv": 12,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x12",
-   "label": "导师主页",
-   "sub": "x12",
-   "pv": 36,
-   "uv": 14,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x13",
-   "label": "导师主页",
-   "sub": "x13",
-   "pv": 33,
-   "uv": 12,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x14",
-   "label": "导师主页",
-   "sub": "x14",
-   "pv": 34,
-   "uv": 11,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x15",
-   "label": "导师主页",
-   "sub": "x15",
-   "pv": 26,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x16",
-   "label": "导师主页",
-   "sub": "x16",
-   "pv": 40,
-   "uv": 14,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x17",
-   "label": "导师主页",
-   "sub": "x17",
-   "pv": 52,
-   "uv": 17,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x18",
-   "label": "导师主页",
-   "sub": "x18",
-   "pv": 38,
-   "uv": 14,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x19",
-   "label": "导师主页",
-   "sub": "x19",
-   "pv": 41,
-   "uv": 16,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x20",
-   "label": "导师主页",
-   "sub": "x20",
-   "pv": 55,
-   "uv": 16,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x21",
-   "label": "导师主页",
-   "sub": "x21",
-   "pv": 39,
-   "uv": 13,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x22",
-   "label": "导师主页",
-   "sub": "x22",
-   "pv": 18,
-   "uv": 6,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x23",
-   "label": "导师主页",
-   "sub": "x23",
-   "pv": 48,
-   "uv": 18,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x24",
-   "label": "导师主页",
-   "sub": "x24",
-   "pv": 17,
-   "uv": 6,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x25",
-   "label": "导师主页",
-   "sub": "x25",
-   "pv": 20,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x26",
-   "label": "导师主页",
-   "sub": "x26",
-   "pv": 35,
-   "uv": 11,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x27",
-   "label": "导师主页",
-   "sub": "x27",
-   "pv": 54,
-   "uv": 22,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x28",
-   "label": "导师主页",
-   "sub": "x28",
-   "pv": 21,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x29",
-   "label": "导师主页",
-   "sub": "x29",
-   "pv": 52,
-   "uv": 22,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x30",
-   "label": "导师主页",
-   "sub": "x30",
-   "pv": 29,
-   "uv": 9,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x31",
-   "label": "导师主页",
-   "sub": "x31",
-   "pv": 17,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x32",
-   "label": "导师主页",
-   "sub": "x32",
-   "pv": 30,
-   "uv": 9,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x33",
-   "label": "导师主页",
-   "sub": "x33",
-   "pv": 49,
-   "uv": 16,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x34",
-   "label": "导师主页",
-   "sub": "x34",
-   "pv": 33,
-   "uv": 10,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x35",
-   "label": "导师主页",
-   "sub": "x35",
-   "pv": 55,
-   "uv": 18,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x36",
-   "label": "导师主页",
-   "sub": "x36",
-   "pv": 23,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x37",
-   "label": "导师主页",
-   "sub": "x37",
-   "pv": 24,
-   "uv": 7,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x38",
-   "label": "导师主页",
-   "sub": "x38",
-   "pv": 18,
-   "uv": 6,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x39",
-   "label": "导师主页",
-   "sub": "x39",
-   "pv": 16,
-   "uv": 5,
-   "main": false,
-   "tail": true
-  },
-  {
-   "id": "/mentors/x40",
-   "label": "导师主页",
-   "sub": "x40",
-   "pv": 25,
-   "uv": 8,
-   "main": false,
-   "tail": true
-  }
- ],
- "buttons": [
-  {
-   "key": "b1",
-   "label": "看所有导师分身",
-   "page": "/",
-   "clicks": 5633,
-   "users": 2494
-  },
-  {
-   "key": "b2",
-   "label": "返回列表",
-   "page": "/mentors/lydiachen",
-   "clicks": 136,
-   "users": 81
-  },
-  {
-   "key": "b3",
-   "label": "登录提交",
-   "page": "/login",
-   "clicks": 1849,
-   "users": 1541
-  },
-  {
-   "key": "b4",
-   "label": "开始对话",
-   "page": "/mentors/lydiachen",
-   "clicks": 558,
-   "users": 352
-  },
-  {
-   "key": "b5",
-   "label": "开始对话",
-   "page": "/mentors/tinazhang",
-   "clicks": 332,
-   "users": 228
-  },
-  {
-   "key": "b6",
-   "label": "开始对话",
-   "page": "/mentors/winnieni",
-   "clicks": 463,
-   "users": 260
-  },
-  {
-   "key": "b7",
-   "label": "开始对话",
-   "page": "/mentors/freyagao",
-   "clicks": 481,
-   "users": 247
-  },
-  {
-   "key": "b8",
-   "label": "开始对话",
-   "page": "/mentors/yingwang",
-   "clicks": 283,
-   "users": 172
-  },
-  {
-   "key": "b9",
-   "label": "开始对话",
-   "page": "/mentors/phyllischi",
-   "clicks": 436,
-   "users": 270
-  },
-  {
-   "key": "b10",
-   "label": "开始对话",
-   "page": "/mentors/kevinyuan",
-   "clicks": 328,
-   "users": 182
-  },
-  {
-   "key": "b11",
-   "label": "开始对话",
-   "page": "/mentors/freyaren",
-   "clicks": 281,
-   "users": 176
-  },
-  {
-   "key": "b12",
-   "label": "订阅按钮",
-   "page": "/mentors/lydiachen",
-   "clicks": 184,
-   "users": 125
-  },
-  {
-   "key": "b13",
-   "label": "订阅按钮",
-   "page": "/assessment",
-   "clicks": 180,
-   "users": 133
-  },
-  {
-   "key": "b14",
-   "label": "订阅按钮",
-   "page": "/chat",
-   "clicks": 203,
-   "users": 164
-  },
-  {
-   "key": "b15",
-   "label": "订阅按钮",
-   "page": "/search",
-   "clicks": 181,
-   "users": 123
-  },
-  {
-   "key": "b16",
-   "label": "订阅按钮",
-   "page": "/mentors/freyagao",
-   "clicks": 197,
-   "users": 156
-  },
-  {
-   "key": "b17",
-   "label": "确认支付 · 月卡",
-   "page": "/payment",
-   "clicks": 126,
-   "users": 67
-  },
-  {
-   "key": "b18",
-   "label": "做职业兴趣测试",
-   "page": "/",
-   "clicks": 3044,
-   "users": 1715
-  },
-  {
-   "key": "b19",
-   "label": "测评提交",
-   "page": "/assessment",
-   "clicks": 1490,
-   "users": 1600
-  },
-  {
-   "key": "b20",
-   "label": "确认支付 · 季卡",
-   "page": "/payment",
-   "clicks": 59,
-   "users": 41
-  },
-  {
-   "key": "b21",
-   "label": "搜索提交",
-   "page": "/",
-   "clicks": 2346,
-   "users": 1538
-  },
-  {
-   "key": "b22",
-   "label": "确认支付 · 年卡",
-   "page": "/payment",
-   "clicks": 107,
-   "users": 78
-  },
-  {
-   "key": "b23",
-   "label": "注册提交",
-   "page": "/register-v2",
-   "clicks": 1750,
-   "users": 1644
-  },
-  {
-   "key": "b24",
-   "label": "购买加榨包",
-   "page": "/payment",
-   "clicks": 200,
-   "users": 125
-  },
-  {
-   "key": "b25",
-   "label": "导师卡片（列表页）",
-   "page": "/mentors",
-   "clicks": 4860,
-   "users": 1980
-  },
-  {
-   "key": "b26",
-   "label": "开始对话",
-   "page": "/mentors/x01",
-   "clicks": 11,
-   "users": 9
-  },
-  {
-   "key": "b27",
-   "label": "订阅按钮",
-   "page": "/mentors/x01",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b28",
-   "label": "开始对话",
-   "page": "/mentors/x02",
-   "clicks": 6,
-   "users": 5
-  },
-  {
-   "key": "b29",
-   "label": "订阅按钮",
-   "page": "/mentors/x02",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b30",
-   "label": "开始对话",
-   "page": "/mentors/x03",
-   "clicks": 7,
-   "users": 4
-  },
-  {
-   "key": "b31",
-   "label": "订阅按钮",
-   "page": "/mentors/x03",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b32",
-   "label": "开始对话",
-   "page": "/mentors/x04",
-   "clicks": 11,
-   "users": 9
-  },
-  {
-   "key": "b33",
-   "label": "订阅按钮",
-   "page": "/mentors/x04",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b34",
-   "label": "开始对话",
-   "page": "/mentors/x05",
-   "clicks": 8,
-   "users": 6
-  },
-  {
-   "key": "b35",
-   "label": "订阅按钮",
-   "page": "/mentors/x05",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b36",
-   "label": "开始对话",
-   "page": "/mentors/x06",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b37",
-   "label": "订阅按钮",
-   "page": "/mentors/x06",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b38",
-   "label": "开始对话",
-   "page": "/mentors/x07",
-   "clicks": 10,
-   "users": 8
-  },
-  {
-   "key": "b39",
-   "label": "订阅按钮",
-   "page": "/mentors/x07",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b40",
-   "label": "开始对话",
-   "page": "/mentors/x08",
-   "clicks": 7,
-   "users": 4
-  },
-  {
-   "key": "b41",
-   "label": "订阅按钮",
-   "page": "/mentors/x08",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b42",
-   "label": "开始对话",
-   "page": "/mentors/x09",
-   "clicks": 4,
-   "users": 2
-  },
-  {
-   "key": "b43",
-   "label": "订阅按钮",
-   "page": "/mentors/x09",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b44",
-   "label": "开始对话",
-   "page": "/mentors/x10",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b45",
-   "label": "订阅按钮",
-   "page": "/mentors/x10",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b46",
-   "label": "开始对话",
-   "page": "/mentors/x11",
-   "clicks": 8,
-   "users": 5
-  },
-  {
-   "key": "b47",
-   "label": "订阅按钮",
-   "page": "/mentors/x11",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b48",
-   "label": "开始对话",
-   "page": "/mentors/x12",
-   "clicks": 9,
-   "users": 6
-  },
-  {
-   "key": "b49",
-   "label": "订阅按钮",
-   "page": "/mentors/x12",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b50",
-   "label": "开始对话",
-   "page": "/mentors/x13",
-   "clicks": 5,
-   "users": 3
-  },
-  {
-   "key": "b51",
-   "label": "订阅按钮",
-   "page": "/mentors/x13",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b52",
-   "label": "开始对话",
-   "page": "/mentors/x14",
-   "clicks": 8,
-   "users": 6
-  },
-  {
-   "key": "b53",
-   "label": "订阅按钮",
-   "page": "/mentors/x14",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b54",
-   "label": "开始对话",
-   "page": "/mentors/x15",
-   "clicks": 5,
-   "users": 3
-  },
-  {
-   "key": "b55",
-   "label": "订阅按钮",
-   "page": "/mentors/x15",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b56",
-   "label": "开始对话",
-   "page": "/mentors/x16",
-   "clicks": 7,
-   "users": 6
-  },
-  {
-   "key": "b57",
-   "label": "订阅按钮",
-   "page": "/mentors/x16",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b58",
-   "label": "开始对话",
-   "page": "/mentors/x17",
-   "clicks": 12,
-   "users": 9
-  },
-  {
-   "key": "b59",
-   "label": "订阅按钮",
-   "page": "/mentors/x17",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b60",
-   "label": "开始对话",
-   "page": "/mentors/x18",
-   "clicks": 6,
-   "users": 4
-  },
-  {
-   "key": "b61",
-   "label": "订阅按钮",
-   "page": "/mentors/x18",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b62",
-   "label": "开始对话",
-   "page": "/mentors/x19",
-   "clicks": 10,
-   "users": 8
-  },
-  {
-   "key": "b63",
-   "label": "订阅按钮",
-   "page": "/mentors/x19",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b64",
-   "label": "开始对话",
-   "page": "/mentors/x20",
-   "clicks": 9,
-   "users": 7
-  },
-  {
-   "key": "b65",
-   "label": "订阅按钮",
-   "page": "/mentors/x20",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b66",
-   "label": "开始对话",
-   "page": "/mentors/x21",
-   "clicks": 7,
-   "users": 5
-  },
-  {
-   "key": "b67",
-   "label": "订阅按钮",
-   "page": "/mentors/x21",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b68",
-   "label": "开始对话",
-   "page": "/mentors/x22",
-   "clicks": 4,
-   "users": 3
-  },
-  {
-   "key": "b69",
-   "label": "订阅按钮",
-   "page": "/mentors/x22",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b70",
-   "label": "开始对话",
-   "page": "/mentors/x23",
-   "clicks": 8,
-   "users": 6
-  },
-  {
-   "key": "b71",
-   "label": "订阅按钮",
-   "page": "/mentors/x23",
-   "clicks": 2,
-   "users": 1
-  },
-  {
-   "key": "b72",
-   "label": "开始对话",
-   "page": "/mentors/x24",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b73",
-   "label": "订阅按钮",
-   "page": "/mentors/x24",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b74",
-   "label": "开始对话",
-   "page": "/mentors/x25",
-   "clicks": 5,
-   "users": 4
-  },
-  {
-   "key": "b75",
-   "label": "订阅按钮",
-   "page": "/mentors/x25",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b76",
-   "label": "开始对话",
-   "page": "/mentors/x26",
-   "clicks": 9,
-   "users": 7
-  },
-  {
-   "key": "b77",
-   "label": "订阅按钮",
-   "page": "/mentors/x26",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b78",
-   "label": "开始对话",
-   "page": "/mentors/x27",
-   "clicks": 12,
-   "users": 10
-  },
-  {
-   "key": "b79",
-   "label": "订阅按钮",
-   "page": "/mentors/x27",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b80",
-   "label": "开始对话",
-   "page": "/mentors/x28",
-   "clicks": 4,
-   "users": 3
-  },
-  {
-   "key": "b81",
-   "label": "订阅按钮",
-   "page": "/mentors/x28",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b82",
-   "label": "开始对话",
-   "page": "/mentors/x29",
-   "clicks": 9,
-   "users": 7
-  },
-  {
-   "key": "b83",
-   "label": "订阅按钮",
-   "page": "/mentors/x29",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b84",
-   "label": "开始对话",
-   "page": "/mentors/x30",
-   "clicks": 5,
-   "users": 4
-  },
-  {
-   "key": "b85",
-   "label": "订阅按钮",
-   "page": "/mentors/x30",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b86",
-   "label": "开始对话",
-   "page": "/mentors/x31",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b87",
-   "label": "订阅按钮",
-   "page": "/mentors/x31",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b88",
-   "label": "开始对话",
-   "page": "/mentors/x32",
-   "clicks": 7,
-   "users": 6
-  },
-  {
-   "key": "b89",
-   "label": "订阅按钮",
-   "page": "/mentors/x32",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b90",
-   "label": "开始对话",
-   "page": "/mentors/x33",
-   "clicks": 11,
-   "users": 9
-  },
-  {
-   "key": "b91",
-   "label": "订阅按钮",
-   "page": "/mentors/x33",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b92",
-   "label": "开始对话",
-   "page": "/mentors/x34",
-   "clicks": 6,
-   "users": 4
-  },
-  {
-   "key": "b93",
-   "label": "订阅按钮",
-   "page": "/mentors/x34",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b94",
-   "label": "开始对话",
-   "page": "/mentors/x35",
-   "clicks": 10,
-   "users": 8
-  },
-  {
-   "key": "b95",
-   "label": "订阅按钮",
-   "page": "/mentors/x35",
-   "clicks": 2,
-   "users": 2
-  },
-  {
-   "key": "b96",
-   "label": "开始对话",
-   "page": "/mentors/x36",
-   "clicks": 5,
-   "users": 3
-  },
-  {
-   "key": "b97",
-   "label": "订阅按钮",
-   "page": "/mentors/x36",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b98",
-   "label": "开始对话",
-   "page": "/mentors/x37",
-   "clicks": 5,
-   "users": 3
-  },
-  {
-   "key": "b99",
-   "label": "订阅按钮",
-   "page": "/mentors/x37",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b100",
-   "label": "开始对话",
-   "page": "/mentors/x38",
-   "clicks": 4,
-   "users": 3
-  },
-  {
-   "key": "b101",
-   "label": "订阅按钮",
-   "page": "/mentors/x38",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b102",
-   "label": "开始对话",
-   "page": "/mentors/x39",
-   "clicks": 3,
-   "users": 2
-  },
-  {
-   "key": "b103",
-   "label": "订阅按钮",
-   "page": "/mentors/x39",
-   "clicks": 1,
-   "users": 1
-  },
-  {
-   "key": "b104",
-   "label": "开始对话",
-   "page": "/mentors/x40",
-   "clicks": 6,
-   "users": 5
-  },
-  {
-   "key": "b105",
-   "label": "订阅按钮",
-   "page": "/mentors/x40",
-   "clicks": 1,
-   "users": 1
-  }
- ],
- "edges": [
-  {
-   "source": "/",
-   "sourceHandle": "btn:b1",
-   "kind": "btn",
-   "target": "/mentors",
-   "count": 4747,
-   "users": 2804
-  },
-  {
-   "source": "/mentors/lydiachen",
-   "sourceHandle": "btn:b2",
-   "kind": "btn",
-   "target": "/mentors",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/login",
-   "sourceHandle": "btn:b3",
-   "kind": "btn",
-   "target": "/dashboard",
-   "count": 1101,
-   "users": 720
-  },
-  {
-   "source": "/login",
-   "sourceHandle": "btn:b3",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 680,
-   "users": 379
-  },
-  {
-   "source": "/mentors/lydiachen",
-   "sourceHandle": "btn:b4",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 4,
-   "users": 3
-  },
-  {
-   "source": "/mentors/lydiachen",
-   "sourceHandle": "btn:b4",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/tinazhang",
-   "sourceHandle": "btn:b5",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/tinazhang",
-   "sourceHandle": "btn:b5",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/winnieni",
-   "sourceHandle": "btn:b6",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/winnieni",
-   "sourceHandle": "btn:b6",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/freyagao",
-   "sourceHandle": "btn:b7",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/freyagao",
-   "sourceHandle": "btn:b7",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/yingwang",
-   "sourceHandle": "btn:b8",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/yingwang",
-   "sourceHandle": "btn:b8",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/phyllischi",
-   "sourceHandle": "btn:b9",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/phyllischi",
-   "sourceHandle": "btn:b9",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/kevinyuan",
-   "sourceHandle": "btn:b10",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/kevinyuan",
-   "sourceHandle": "btn:b10",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/freyaren",
-   "sourceHandle": "btn:b11",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/freyaren",
-   "sourceHandle": "btn:b11",
-   "kind": "btn",
-   "target": "/register-v2",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/lydiachen",
-   "sourceHandle": "btn:b12",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 163,
-   "users": 96
-  },
-  {
-   "source": "/assessment",
-   "sourceHandle": "btn:b13",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 194,
-   "users": 125
-  },
-  {
-   "source": "/chat",
-   "sourceHandle": "btn:b14",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 193,
-   "users": 122
-  },
-  {
-   "source": "/search",
-   "sourceHandle": "btn:b15",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 167,
-   "users": 106
-  },
-  {
-   "source": "/mentors/freyagao",
-   "sourceHandle": "btn:b16",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 172,
-   "users": 114
-  },
-  {
-   "source": "/payment",
-   "sourceHandle": "btn:b17",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/",
-   "sourceHandle": "btn:b18",
-   "kind": "btn",
-   "target": "/assessment",
-   "count": 3045,
-   "users": 1689
-  },
-  {
-   "source": "/assessment",
-   "sourceHandle": "btn:b19",
-   "kind": "btn",
-   "target": "/mentors",
-   "count": 974,
-   "users": 542
-  },
-  {
-   "source": "/assessment",
-   "sourceHandle": "btn:b19",
-   "kind": "btn",
-   "target": "/dashboard",
-   "count": 379,
-   "users": 277
-  },
-  {
-   "source": "/payment",
-   "sourceHandle": "btn:b20",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/",
-   "sourceHandle": "btn:b21",
-   "kind": "btn",
-   "target": "/search",
-   "count": 2372,
-   "users": 1240
-  },
-  {
-   "source": "/payment",
-   "sourceHandle": "btn:b22",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/register-v2",
-   "sourceHandle": "btn:b23",
-   "kind": "btn",
-   "target": "/dashboard",
-   "count": 1011,
-   "users": 563
-  },
-  {
-   "source": "/register-v2",
-   "sourceHandle": "btn:b23",
-   "kind": "btn",
-   "target": "/",
-   "count": 427,
-   "users": 284
-  },
-  {
-   "source": "/payment",
-   "sourceHandle": "btn:b24",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 204,
-   "users": 137
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/freyagao",
-   "count": 540,
-   "users": 432
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/freyaren",
-   "count": 348,
-   "users": 226
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/kevinyuan",
-   "count": 497,
-   "users": 336
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/lydiachen",
-   "count": 781,
-   "users": 587
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/phyllischi",
-   "count": 581,
-   "users": 329
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/tinazhang",
-   "count": 514,
-   "users": 311
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/winnieni",
-   "count": 741,
-   "users": 541
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/yingwang",
-   "count": 334,
-   "users": 244
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x01",
-   "count": 20,
-   "users": 13
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x02",
-   "count": 22,
-   "users": 13
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x03",
-   "count": 11,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x04",
-   "count": 8,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x05",
-   "count": 23,
-   "users": 14
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x06",
-   "count": 8,
-   "users": 5
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x07",
-   "count": 7,
-   "users": 5
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x08",
-   "count": 16,
-   "users": 12
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x09",
-   "count": 9,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x10",
-   "count": 18,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x11",
-   "count": 10,
-   "users": 7
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x12",
-   "count": 20,
-   "users": 12
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x13",
-   "count": 20,
-   "users": 14
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x14",
-   "count": 18,
-   "users": 13
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x15",
-   "count": 22,
-   "users": 12
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x16",
-   "count": 7,
-   "users": 5
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x17",
-   "count": 10,
-   "users": 7
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x18",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x19",
-   "count": 16,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x20",
-   "count": 18,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x21",
-   "count": 6,
-   "users": 3
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x22",
-   "count": 13,
-   "users": 9
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x23",
-   "count": 13,
-   "users": 8
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x24",
-   "count": 21,
-   "users": 14
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x25",
-   "count": 17,
-   "users": 11
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x26",
-   "count": 11,
-   "users": 7
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x27",
-   "count": 14,
-   "users": 8
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x28",
-   "count": 11,
-   "users": 7
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x29",
-   "count": 11,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x30",
-   "count": 16,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x31",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x32",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x33",
-   "count": 8,
-   "users": 4
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x34",
-   "count": 18,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x35",
-   "count": 18,
-   "users": 10
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x36",
-   "count": 10,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x37",
-   "count": 7,
-   "users": 5
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x38",
-   "count": 10,
-   "users": 6
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x39",
-   "count": 13,
-   "users": 8
-  },
-  {
-   "source": "/mentors",
-   "sourceHandle": "btn:b25",
-   "kind": "btn",
-   "target": "/mentors/x40",
-   "count": 9,
-   "users": 5
-  },
-  {
-   "source": "/mentors/x01",
-   "sourceHandle": "btn:b26",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 11,
-   "users": 8
-  },
-  {
-   "source": "/mentors/x01",
-   "sourceHandle": "btn:b27",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x02",
-   "sourceHandle": "btn:b28",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x02",
-   "sourceHandle": "btn:b29",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x03",
-   "sourceHandle": "btn:b30",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 7,
-   "users": 5
-  },
-  {
-   "source": "/mentors/x03",
-   "sourceHandle": "btn:b31",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x04",
-   "sourceHandle": "btn:b32",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 11,
-   "users": 9
-  },
-  {
-   "source": "/mentors/x04",
-   "sourceHandle": "btn:b33",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x05",
-   "sourceHandle": "btn:b34",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 8,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x05",
-   "sourceHandle": "btn:b35",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x06",
-   "sourceHandle": "btn:b36",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x06",
-   "sourceHandle": "btn:b37",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x07",
-   "sourceHandle": "btn:b38",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 10,
-   "users": 8
-  },
-  {
-   "source": "/mentors/x07",
-   "sourceHandle": "btn:b39",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x08",
-   "sourceHandle": "btn:b40",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 7,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x08",
-   "sourceHandle": "btn:b41",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x09",
-   "sourceHandle": "btn:b42",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 4,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x09",
-   "sourceHandle": "btn:b43",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x10",
-   "sourceHandle": "btn:b44",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x10",
-   "sourceHandle": "btn:b45",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x11",
-   "sourceHandle": "btn:b46",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 8,
-   "users": 5
-  },
-  {
-   "source": "/mentors/x11",
-   "sourceHandle": "btn:b47",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x12",
-   "sourceHandle": "btn:b48",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 9,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x12",
-   "sourceHandle": "btn:b49",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x13",
-   "sourceHandle": "btn:b50",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x13",
-   "sourceHandle": "btn:b51",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x14",
-   "sourceHandle": "btn:b52",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 8,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x14",
-   "sourceHandle": "btn:b53",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x15",
-   "sourceHandle": "btn:b54",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x15",
-   "sourceHandle": "btn:b55",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x16",
-   "sourceHandle": "btn:b56",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 7,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x16",
-   "sourceHandle": "btn:b57",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x17",
-   "sourceHandle": "btn:b58",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 12,
-   "users": 8
-  },
-  {
-   "source": "/mentors/x17",
-   "sourceHandle": "btn:b59",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x18",
-   "sourceHandle": "btn:b60",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x18",
-   "sourceHandle": "btn:b61",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x19",
-   "sourceHandle": "btn:b62",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 10,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x19",
-   "sourceHandle": "btn:b63",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x20",
-   "sourceHandle": "btn:b64",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 9,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x20",
-   "sourceHandle": "btn:b65",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x21",
-   "sourceHandle": "btn:b66",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 7,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x21",
-   "sourceHandle": "btn:b67",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x22",
-   "sourceHandle": "btn:b68",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 4,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x22",
-   "sourceHandle": "btn:b69",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x23",
-   "sourceHandle": "btn:b70",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 8,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x23",
-   "sourceHandle": "btn:b71",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x24",
-   "sourceHandle": "btn:b72",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x24",
-   "sourceHandle": "btn:b73",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x25",
-   "sourceHandle": "btn:b74",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x25",
-   "sourceHandle": "btn:b75",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x26",
-   "sourceHandle": "btn:b76",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 9,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x26",
-   "sourceHandle": "btn:b77",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x27",
-   "sourceHandle": "btn:b78",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 12,
-   "users": 7
-  },
-  {
-   "source": "/mentors/x27",
-   "sourceHandle": "btn:b79",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x28",
-   "sourceHandle": "btn:b80",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 4,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x28",
-   "sourceHandle": "btn:b81",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x29",
-   "sourceHandle": "btn:b82",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 9,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x29",
-   "sourceHandle": "btn:b83",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x30",
-   "sourceHandle": "btn:b84",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x30",
-   "sourceHandle": "btn:b85",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x31",
-   "sourceHandle": "btn:b86",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x31",
-   "sourceHandle": "btn:b87",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x32",
-   "sourceHandle": "btn:b88",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 7,
-   "users": 6
-  },
-  {
-   "source": "/mentors/x32",
-   "sourceHandle": "btn:b89",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x33",
-   "sourceHandle": "btn:b90",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 11,
-   "users": 9
-  },
-  {
-   "source": "/mentors/x33",
-   "sourceHandle": "btn:b91",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x34",
-   "sourceHandle": "btn:b92",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x34",
-   "sourceHandle": "btn:b93",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x35",
-   "sourceHandle": "btn:b94",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 10,
-   "users": 7
-  },
-  {
-   "source": "/mentors/x35",
-   "sourceHandle": "btn:b95",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 2,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x36",
-   "sourceHandle": "btn:b96",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x36",
-   "sourceHandle": "btn:b97",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x37",
-   "sourceHandle": "btn:b98",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 5,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x37",
-   "sourceHandle": "btn:b99",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x38",
-   "sourceHandle": "btn:b100",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 4,
-   "users": 3
-  },
-  {
-   "source": "/mentors/x38",
-   "sourceHandle": "btn:b101",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x39",
-   "sourceHandle": "btn:b102",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 3,
-   "users": 2
-  },
-  {
-   "source": "/mentors/x39",
-   "sourceHandle": "btn:b103",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/mentors/x40",
-   "sourceHandle": "btn:b104",
-   "kind": "btn",
-   "target": "/chat",
-   "count": 6,
-   "users": 4
-  },
-  {
-   "source": "/mentors/x40",
-   "sourceHandle": "btn:b105",
-   "kind": "btn",
-   "target": "/payment",
-   "count": 1,
-   "users": 1
-  },
-  {
-   "source": "/chat",
-   "sourceHandle": "page:out",
-   "kind": "page",
-   "target": "/payment",
-   "count": 754,
-   "users": 425
-  },
-  {
-   "source": "/history",
-   "sourceHandle": "page:out",
-   "kind": "page",
-   "target": "/chat",
-   "count": 657,
-   "users": 405
-  }
- ]
+  "dateRange": {
+    "start": "2026-07-09",
+    "end": "2026-10-01"
+  },
+  "note": "以抽样用户的事件流为跳转结构骨架，按「页面」「按钮」两个 tab 的总量锚定放大合成；页面数值与页面 tab 一致，按钮点击与按钮 tab 一致，连线为站内跳转估计。",
+  "pages": [
+    {
+      "id": "/",
+      "label": "首页",
+      "pv": 12836,
+      "uv": 2874,
+      "main": true
+    },
+    {
+      "id": "/chat",
+      "label": "对话页",
+      "pv": 7410,
+      "uv": 1540,
+      "main": true
+    },
+    {
+      "id": "/mentors",
+      "label": "导师列表",
+      "pv": 6230,
+      "uv": 2410,
+      "main": true
+    },
+    {
+      "id": "/assessment",
+      "label": "职业兴趣测试",
+      "pv": 2980,
+      "uv": 1660,
+      "main": true
+    },
+    {
+      "id": "/login",
+      "label": "登录",
+      "pv": 2210,
+      "uv": 1980,
+      "main": true
+    },
+    {
+      "id": "/search",
+      "label": "搜索结果",
+      "pv": 1830,
+      "uv": 980,
+      "main": true
+    },
+    {
+      "id": "/register-v2",
+      "label": "注册",
+      "pv": 1610,
+      "uv": 1490,
+      "main": true
+    },
+    {
+      "id": "/dashboard",
+      "label": "个人中心",
+      "pv": 1240,
+      "uv": 720,
+      "main": true
+    },
+    {
+      "id": "/payment",
+      "label": "支付页",
+      "pv": 890,
+      "uv": 610,
+      "main": true
+    },
+    {
+      "id": "/history",
+      "label": "历史记录",
+      "pv": 640,
+      "uv": 410,
+      "main": true
+    },
+    {
+      "id": "/growth-lab",
+      "label": "成长实验室",
+      "pv": 320,
+      "uv": 260,
+      "main": true
+    },
+    {
+      "id": "/mentors/freyagao",
+      "label": "导师主页",
+      "sub": "freyagao",
+      "pv": 887,
+      "uv": 309,
+      "main": false
+    },
+    {
+      "id": "/mentors/freyaren",
+      "label": "导师主页",
+      "sub": "freyaren",
+      "pv": 279,
+      "uv": 104,
+      "main": false
+    },
+    {
+      "id": "/mentors/kevinyuan",
+      "label": "导师主页",
+      "sub": "kevinyuan",
+      "pv": 476,
+      "uv": 172,
+      "main": false
+    },
+    {
+      "id": "/mentors/lydiachen",
+      "label": "导师主页",
+      "sub": "lydiachen",
+      "pv": 793,
+      "uv": 304,
+      "main": false
+    },
+    {
+      "id": "/mentors/phyllischi",
+      "label": "导师主页",
+      "sub": "phyllischi",
+      "pv": 407,
+      "uv": 155,
+      "main": false
+    },
+    {
+      "id": "/mentors/tinazhang",
+      "label": "导师主页",
+      "sub": "tinazhang",
+      "pv": 489,
+      "uv": 182,
+      "main": false
+    },
+    {
+      "id": "/mentors/winnieni",
+      "label": "导师主页",
+      "sub": "winnieni",
+      "pv": 637,
+      "uv": 202,
+      "main": false
+    },
+    {
+      "id": "/mentors/yingwang",
+      "label": "导师主页",
+      "sub": "yingwang",
+      "pv": 297,
+      "uv": 104,
+      "main": false
+    },
+    {
+      "id": "/mentors/x01",
+      "label": "导师主页",
+      "sub": "x01",
+      "pv": 50,
+      "uv": 15,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x02",
+      "label": "导师主页",
+      "sub": "x02",
+      "pv": 35,
+      "uv": 11,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x03",
+      "label": "导师主页",
+      "sub": "x03",
+      "pv": 28,
+      "uv": 8,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x04",
+      "label": "导师主页",
+      "sub": "x04",
+      "pv": 49,
+      "uv": 14,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x05",
+      "label": "导师主页",
+      "sub": "x05",
+      "pv": 43,
+      "uv": 16,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x06",
+      "label": "导师主页",
+      "sub": "x06",
+      "pv": 16,
+      "uv": 5,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x07",
+      "label": "导师主页",
+      "sub": "x07",
+      "pv": 53,
+      "uv": 20,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x08",
+      "label": "导师主页",
+      "sub": "x08",
+      "pv": 37,
+      "uv": 15,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x09",
+      "label": "导师主页",
+      "sub": "x09",
+      "pv": 17,
+      "uv": 6,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x10",
+      "label": "导师主页",
+      "sub": "x10",
+      "pv": 16,
+      "uv": 5,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x11",
+      "label": "导师主页",
+      "sub": "x11",
+      "pv": 35,
+      "uv": 12,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x12",
+      "label": "导师主页",
+      "sub": "x12",
+      "pv": 36,
+      "uv": 14,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x13",
+      "label": "导师主页",
+      "sub": "x13",
+      "pv": 33,
+      "uv": 12,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x14",
+      "label": "导师主页",
+      "sub": "x14",
+      "pv": 34,
+      "uv": 11,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x15",
+      "label": "导师主页",
+      "sub": "x15",
+      "pv": 26,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x16",
+      "label": "导师主页",
+      "sub": "x16",
+      "pv": 40,
+      "uv": 14,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x17",
+      "label": "导师主页",
+      "sub": "x17",
+      "pv": 52,
+      "uv": 17,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x18",
+      "label": "导师主页",
+      "sub": "x18",
+      "pv": 38,
+      "uv": 14,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x19",
+      "label": "导师主页",
+      "sub": "x19",
+      "pv": 41,
+      "uv": 16,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x20",
+      "label": "导师主页",
+      "sub": "x20",
+      "pv": 55,
+      "uv": 16,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x21",
+      "label": "导师主页",
+      "sub": "x21",
+      "pv": 39,
+      "uv": 13,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x22",
+      "label": "导师主页",
+      "sub": "x22",
+      "pv": 18,
+      "uv": 6,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x23",
+      "label": "导师主页",
+      "sub": "x23",
+      "pv": 48,
+      "uv": 18,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x24",
+      "label": "导师主页",
+      "sub": "x24",
+      "pv": 17,
+      "uv": 6,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x25",
+      "label": "导师主页",
+      "sub": "x25",
+      "pv": 20,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x26",
+      "label": "导师主页",
+      "sub": "x26",
+      "pv": 35,
+      "uv": 11,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x27",
+      "label": "导师主页",
+      "sub": "x27",
+      "pv": 54,
+      "uv": 22,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x28",
+      "label": "导师主页",
+      "sub": "x28",
+      "pv": 21,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x29",
+      "label": "导师主页",
+      "sub": "x29",
+      "pv": 52,
+      "uv": 22,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x30",
+      "label": "导师主页",
+      "sub": "x30",
+      "pv": 29,
+      "uv": 9,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x31",
+      "label": "导师主页",
+      "sub": "x31",
+      "pv": 17,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x32",
+      "label": "导师主页",
+      "sub": "x32",
+      "pv": 30,
+      "uv": 9,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x33",
+      "label": "导师主页",
+      "sub": "x33",
+      "pv": 49,
+      "uv": 16,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x34",
+      "label": "导师主页",
+      "sub": "x34",
+      "pv": 33,
+      "uv": 10,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x35",
+      "label": "导师主页",
+      "sub": "x35",
+      "pv": 55,
+      "uv": 18,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x36",
+      "label": "导师主页",
+      "sub": "x36",
+      "pv": 23,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x37",
+      "label": "导师主页",
+      "sub": "x37",
+      "pv": 24,
+      "uv": 7,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x38",
+      "label": "导师主页",
+      "sub": "x38",
+      "pv": 18,
+      "uv": 6,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x39",
+      "label": "导师主页",
+      "sub": "x39",
+      "pv": 16,
+      "uv": 5,
+      "main": false,
+      "tail": true
+    },
+    {
+      "id": "/mentors/x40",
+      "label": "导师主页",
+      "sub": "x40",
+      "pv": 25,
+      "uv": 8,
+      "main": false,
+      "tail": true
+    }
+  ],
+  "buttons": [
+    {
+      "key": "b1",
+      "label": "看所有导师分身",
+      "page": "/",
+      "clicks": 5633,
+      "users": 2494
+    },
+    {
+      "key": "b2",
+      "label": "返回列表",
+      "page": "/mentors/lydiachen",
+      "clicks": 136,
+      "users": 81
+    },
+    {
+      "key": "b3",
+      "label": "登录提交",
+      "page": "/login",
+      "clicks": 1849,
+      "users": 1541
+    },
+    {
+      "key": "b4",
+      "label": "开始对话",
+      "page": "/mentors/lydiachen",
+      "clicks": 558,
+      "users": 352
+    },
+    {
+      "key": "b5",
+      "label": "开始对话",
+      "page": "/mentors/tinazhang",
+      "clicks": 332,
+      "users": 228
+    },
+    {
+      "key": "b6",
+      "label": "开始对话",
+      "page": "/mentors/winnieni",
+      "clicks": 463,
+      "users": 260
+    },
+    {
+      "key": "b7",
+      "label": "开始对话",
+      "page": "/mentors/freyagao",
+      "clicks": 481,
+      "users": 247
+    },
+    {
+      "key": "b8",
+      "label": "开始对话",
+      "page": "/mentors/yingwang",
+      "clicks": 283,
+      "users": 172
+    },
+    {
+      "key": "b9",
+      "label": "开始对话",
+      "page": "/mentors/phyllischi",
+      "clicks": 436,
+      "users": 270
+    },
+    {
+      "key": "b10",
+      "label": "开始对话",
+      "page": "/mentors/kevinyuan",
+      "clicks": 328,
+      "users": 182
+    },
+    {
+      "key": "b11",
+      "label": "开始对话",
+      "page": "/mentors/freyaren",
+      "clicks": 281,
+      "users": 176
+    },
+    {
+      "key": "b12",
+      "label": "订阅按钮",
+      "page": "/mentors/lydiachen",
+      "clicks": 184,
+      "users": 125
+    },
+    {
+      "key": "b13",
+      "label": "订阅按钮",
+      "page": "/assessment",
+      "clicks": 180,
+      "users": 133
+    },
+    {
+      "key": "b14",
+      "label": "订阅按钮",
+      "page": "/chat",
+      "clicks": 203,
+      "users": 164
+    },
+    {
+      "key": "b15",
+      "label": "订阅按钮",
+      "page": "/search",
+      "clicks": 181,
+      "users": 123
+    },
+    {
+      "key": "b16",
+      "label": "订阅按钮",
+      "page": "/mentors/freyagao",
+      "clicks": 197,
+      "users": 156
+    },
+    {
+      "key": "b17",
+      "label": "确认支付 · 月卡",
+      "page": "/payment",
+      "clicks": 126,
+      "users": 67
+    },
+    {
+      "key": "b18",
+      "label": "做职业兴趣测试",
+      "page": "/",
+      "clicks": 3044,
+      "users": 1715
+    },
+    {
+      "key": "b19",
+      "label": "测评提交",
+      "page": "/assessment",
+      "clicks": 1490,
+      "users": 1600
+    },
+    {
+      "key": "b20",
+      "label": "确认支付 · 季卡",
+      "page": "/payment",
+      "clicks": 59,
+      "users": 41
+    },
+    {
+      "key": "b21",
+      "label": "搜索提交",
+      "page": "/",
+      "clicks": 2346,
+      "users": 1538
+    },
+    {
+      "key": "b22",
+      "label": "确认支付 · 年卡",
+      "page": "/payment",
+      "clicks": 107,
+      "users": 78
+    },
+    {
+      "key": "b23",
+      "label": "注册提交",
+      "page": "/register-v2",
+      "clicks": 1750,
+      "users": 1644
+    },
+    {
+      "key": "b24",
+      "label": "购买加榨包",
+      "page": "/payment",
+      "clicks": 200,
+      "users": 125
+    },
+    {
+      "key": "b25",
+      "label": "导师卡片（列表页）",
+      "page": "/mentors",
+      "clicks": 4860,
+      "users": 1980
+    },
+    {
+      "key": "b26",
+      "label": "开始对话",
+      "page": "/mentors/x01",
+      "clicks": 11,
+      "users": 9
+    },
+    {
+      "key": "b27",
+      "label": "订阅按钮",
+      "page": "/mentors/x01",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b28",
+      "label": "开始对话",
+      "page": "/mentors/x02",
+      "clicks": 6,
+      "users": 5
+    },
+    {
+      "key": "b29",
+      "label": "订阅按钮",
+      "page": "/mentors/x02",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b30",
+      "label": "开始对话",
+      "page": "/mentors/x03",
+      "clicks": 7,
+      "users": 4
+    },
+    {
+      "key": "b31",
+      "label": "订阅按钮",
+      "page": "/mentors/x03",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b32",
+      "label": "开始对话",
+      "page": "/mentors/x04",
+      "clicks": 11,
+      "users": 9
+    },
+    {
+      "key": "b33",
+      "label": "订阅按钮",
+      "page": "/mentors/x04",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b34",
+      "label": "开始对话",
+      "page": "/mentors/x05",
+      "clicks": 8,
+      "users": 6
+    },
+    {
+      "key": "b35",
+      "label": "订阅按钮",
+      "page": "/mentors/x05",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b36",
+      "label": "开始对话",
+      "page": "/mentors/x06",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b37",
+      "label": "订阅按钮",
+      "page": "/mentors/x06",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b38",
+      "label": "开始对话",
+      "page": "/mentors/x07",
+      "clicks": 10,
+      "users": 8
+    },
+    {
+      "key": "b39",
+      "label": "订阅按钮",
+      "page": "/mentors/x07",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b40",
+      "label": "开始对话",
+      "page": "/mentors/x08",
+      "clicks": 7,
+      "users": 4
+    },
+    {
+      "key": "b41",
+      "label": "订阅按钮",
+      "page": "/mentors/x08",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b42",
+      "label": "开始对话",
+      "page": "/mentors/x09",
+      "clicks": 4,
+      "users": 2
+    },
+    {
+      "key": "b43",
+      "label": "订阅按钮",
+      "page": "/mentors/x09",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b44",
+      "label": "开始对话",
+      "page": "/mentors/x10",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b45",
+      "label": "订阅按钮",
+      "page": "/mentors/x10",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b46",
+      "label": "开始对话",
+      "page": "/mentors/x11",
+      "clicks": 8,
+      "users": 5
+    },
+    {
+      "key": "b47",
+      "label": "订阅按钮",
+      "page": "/mentors/x11",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b48",
+      "label": "开始对话",
+      "page": "/mentors/x12",
+      "clicks": 9,
+      "users": 6
+    },
+    {
+      "key": "b49",
+      "label": "订阅按钮",
+      "page": "/mentors/x12",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b50",
+      "label": "开始对话",
+      "page": "/mentors/x13",
+      "clicks": 5,
+      "users": 3
+    },
+    {
+      "key": "b51",
+      "label": "订阅按钮",
+      "page": "/mentors/x13",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b52",
+      "label": "开始对话",
+      "page": "/mentors/x14",
+      "clicks": 8,
+      "users": 6
+    },
+    {
+      "key": "b53",
+      "label": "订阅按钮",
+      "page": "/mentors/x14",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b54",
+      "label": "开始对话",
+      "page": "/mentors/x15",
+      "clicks": 5,
+      "users": 3
+    },
+    {
+      "key": "b55",
+      "label": "订阅按钮",
+      "page": "/mentors/x15",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b56",
+      "label": "开始对话",
+      "page": "/mentors/x16",
+      "clicks": 7,
+      "users": 6
+    },
+    {
+      "key": "b57",
+      "label": "订阅按钮",
+      "page": "/mentors/x16",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b58",
+      "label": "开始对话",
+      "page": "/mentors/x17",
+      "clicks": 12,
+      "users": 9
+    },
+    {
+      "key": "b59",
+      "label": "订阅按钮",
+      "page": "/mentors/x17",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b60",
+      "label": "开始对话",
+      "page": "/mentors/x18",
+      "clicks": 6,
+      "users": 4
+    },
+    {
+      "key": "b61",
+      "label": "订阅按钮",
+      "page": "/mentors/x18",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b62",
+      "label": "开始对话",
+      "page": "/mentors/x19",
+      "clicks": 10,
+      "users": 8
+    },
+    {
+      "key": "b63",
+      "label": "订阅按钮",
+      "page": "/mentors/x19",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b64",
+      "label": "开始对话",
+      "page": "/mentors/x20",
+      "clicks": 9,
+      "users": 7
+    },
+    {
+      "key": "b65",
+      "label": "订阅按钮",
+      "page": "/mentors/x20",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b66",
+      "label": "开始对话",
+      "page": "/mentors/x21",
+      "clicks": 7,
+      "users": 5
+    },
+    {
+      "key": "b67",
+      "label": "订阅按钮",
+      "page": "/mentors/x21",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b68",
+      "label": "开始对话",
+      "page": "/mentors/x22",
+      "clicks": 4,
+      "users": 3
+    },
+    {
+      "key": "b69",
+      "label": "订阅按钮",
+      "page": "/mentors/x22",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b70",
+      "label": "开始对话",
+      "page": "/mentors/x23",
+      "clicks": 8,
+      "users": 6
+    },
+    {
+      "key": "b71",
+      "label": "订阅按钮",
+      "page": "/mentors/x23",
+      "clicks": 2,
+      "users": 1
+    },
+    {
+      "key": "b72",
+      "label": "开始对话",
+      "page": "/mentors/x24",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b73",
+      "label": "订阅按钮",
+      "page": "/mentors/x24",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b74",
+      "label": "开始对话",
+      "page": "/mentors/x25",
+      "clicks": 5,
+      "users": 4
+    },
+    {
+      "key": "b75",
+      "label": "订阅按钮",
+      "page": "/mentors/x25",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b76",
+      "label": "开始对话",
+      "page": "/mentors/x26",
+      "clicks": 9,
+      "users": 7
+    },
+    {
+      "key": "b77",
+      "label": "订阅按钮",
+      "page": "/mentors/x26",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b78",
+      "label": "开始对话",
+      "page": "/mentors/x27",
+      "clicks": 12,
+      "users": 10
+    },
+    {
+      "key": "b79",
+      "label": "订阅按钮",
+      "page": "/mentors/x27",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b80",
+      "label": "开始对话",
+      "page": "/mentors/x28",
+      "clicks": 4,
+      "users": 3
+    },
+    {
+      "key": "b81",
+      "label": "订阅按钮",
+      "page": "/mentors/x28",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b82",
+      "label": "开始对话",
+      "page": "/mentors/x29",
+      "clicks": 9,
+      "users": 7
+    },
+    {
+      "key": "b83",
+      "label": "订阅按钮",
+      "page": "/mentors/x29",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b84",
+      "label": "开始对话",
+      "page": "/mentors/x30",
+      "clicks": 5,
+      "users": 4
+    },
+    {
+      "key": "b85",
+      "label": "订阅按钮",
+      "page": "/mentors/x30",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b86",
+      "label": "开始对话",
+      "page": "/mentors/x31",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b87",
+      "label": "订阅按钮",
+      "page": "/mentors/x31",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b88",
+      "label": "开始对话",
+      "page": "/mentors/x32",
+      "clicks": 7,
+      "users": 6
+    },
+    {
+      "key": "b89",
+      "label": "订阅按钮",
+      "page": "/mentors/x32",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b90",
+      "label": "开始对话",
+      "page": "/mentors/x33",
+      "clicks": 11,
+      "users": 9
+    },
+    {
+      "key": "b91",
+      "label": "订阅按钮",
+      "page": "/mentors/x33",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b92",
+      "label": "开始对话",
+      "page": "/mentors/x34",
+      "clicks": 6,
+      "users": 4
+    },
+    {
+      "key": "b93",
+      "label": "订阅按钮",
+      "page": "/mentors/x34",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b94",
+      "label": "开始对话",
+      "page": "/mentors/x35",
+      "clicks": 10,
+      "users": 8
+    },
+    {
+      "key": "b95",
+      "label": "订阅按钮",
+      "page": "/mentors/x35",
+      "clicks": 2,
+      "users": 2
+    },
+    {
+      "key": "b96",
+      "label": "开始对话",
+      "page": "/mentors/x36",
+      "clicks": 5,
+      "users": 3
+    },
+    {
+      "key": "b97",
+      "label": "订阅按钮",
+      "page": "/mentors/x36",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b98",
+      "label": "开始对话",
+      "page": "/mentors/x37",
+      "clicks": 5,
+      "users": 3
+    },
+    {
+      "key": "b99",
+      "label": "订阅按钮",
+      "page": "/mentors/x37",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b100",
+      "label": "开始对话",
+      "page": "/mentors/x38",
+      "clicks": 4,
+      "users": 3
+    },
+    {
+      "key": "b101",
+      "label": "订阅按钮",
+      "page": "/mentors/x38",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b102",
+      "label": "开始对话",
+      "page": "/mentors/x39",
+      "clicks": 3,
+      "users": 2
+    },
+    {
+      "key": "b103",
+      "label": "订阅按钮",
+      "page": "/mentors/x39",
+      "clicks": 1,
+      "users": 1
+    },
+    {
+      "key": "b104",
+      "label": "开始对话",
+      "page": "/mentors/x40",
+      "clicks": 6,
+      "users": 5
+    },
+    {
+      "key": "b105",
+      "label": "订阅按钮",
+      "page": "/mentors/x40",
+      "clicks": 1,
+      "users": 1
+    }
+  ],
+  "edges": [
+    {
+      "source": "/",
+      "sourceHandle": "btn:b1",
+      "kind": "btn",
+      "target": "/mentors",
+      "count": 4747,
+      "users": 2804
+    },
+    {
+      "source": "/mentors/lydiachen",
+      "sourceHandle": "btn:b2",
+      "kind": "btn",
+      "target": "/mentors",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/login",
+      "sourceHandle": "btn:b3",
+      "kind": "btn",
+      "target": "/dashboard",
+      "count": 1101,
+      "users": 720
+    },
+    {
+      "source": "/login",
+      "sourceHandle": "btn:b3",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 680,
+      "users": 379
+    },
+    {
+      "source": "/mentors/lydiachen",
+      "sourceHandle": "btn:b4",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 4,
+      "users": 3
+    },
+    {
+      "source": "/mentors/lydiachen",
+      "sourceHandle": "btn:b4",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/tinazhang",
+      "sourceHandle": "btn:b5",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/tinazhang",
+      "sourceHandle": "btn:b5",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/winnieni",
+      "sourceHandle": "btn:b6",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/winnieni",
+      "sourceHandle": "btn:b6",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/freyagao",
+      "sourceHandle": "btn:b7",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/freyagao",
+      "sourceHandle": "btn:b7",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/yingwang",
+      "sourceHandle": "btn:b8",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/yingwang",
+      "sourceHandle": "btn:b8",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/phyllischi",
+      "sourceHandle": "btn:b9",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/phyllischi",
+      "sourceHandle": "btn:b9",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/kevinyuan",
+      "sourceHandle": "btn:b10",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/kevinyuan",
+      "sourceHandle": "btn:b10",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/freyaren",
+      "sourceHandle": "btn:b11",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/freyaren",
+      "sourceHandle": "btn:b11",
+      "kind": "btn",
+      "target": "/register-v2",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/lydiachen",
+      "sourceHandle": "btn:b12",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 163,
+      "users": 96
+    },
+    {
+      "source": "/assessment",
+      "sourceHandle": "btn:b13",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 194,
+      "users": 125
+    },
+    {
+      "source": "/chat",
+      "sourceHandle": "btn:b14",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 193,
+      "users": 122
+    },
+    {
+      "source": "/search",
+      "sourceHandle": "btn:b15",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 167,
+      "users": 106
+    },
+    {
+      "source": "/mentors/freyagao",
+      "sourceHandle": "btn:b16",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 172,
+      "users": 114
+    },
+    {
+      "source": "/payment",
+      "sourceHandle": "btn:b17",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/",
+      "sourceHandle": "btn:b18",
+      "kind": "btn",
+      "target": "/assessment",
+      "count": 3045,
+      "users": 1689
+    },
+    {
+      "source": "/assessment",
+      "sourceHandle": "btn:b19",
+      "kind": "btn",
+      "target": "/mentors",
+      "count": 974,
+      "users": 542
+    },
+    {
+      "source": "/assessment",
+      "sourceHandle": "btn:b19",
+      "kind": "btn",
+      "target": "/dashboard",
+      "count": 379,
+      "users": 277
+    },
+    {
+      "source": "/payment",
+      "sourceHandle": "btn:b20",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/",
+      "sourceHandle": "btn:b21",
+      "kind": "btn",
+      "target": "/search",
+      "count": 2372,
+      "users": 1240
+    },
+    {
+      "source": "/payment",
+      "sourceHandle": "btn:b22",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/register-v2",
+      "sourceHandle": "btn:b23",
+      "kind": "btn",
+      "target": "/dashboard",
+      "count": 1011,
+      "users": 563
+    },
+    {
+      "source": "/register-v2",
+      "sourceHandle": "btn:b23",
+      "kind": "btn",
+      "target": "/",
+      "count": 427,
+      "users": 284
+    },
+    {
+      "source": "/payment",
+      "sourceHandle": "btn:b24",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 204,
+      "users": 137
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/freyagao",
+      "count": 540,
+      "users": 432
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/freyaren",
+      "count": 348,
+      "users": 226
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/kevinyuan",
+      "count": 497,
+      "users": 336
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/lydiachen",
+      "count": 781,
+      "users": 587
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/phyllischi",
+      "count": 581,
+      "users": 329
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/tinazhang",
+      "count": 514,
+      "users": 311
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/winnieni",
+      "count": 741,
+      "users": 541
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/yingwang",
+      "count": 334,
+      "users": 244
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x01",
+      "count": 20,
+      "users": 13
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x02",
+      "count": 22,
+      "users": 13
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x03",
+      "count": 11,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x04",
+      "count": 8,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x05",
+      "count": 23,
+      "users": 14
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x06",
+      "count": 8,
+      "users": 5
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x07",
+      "count": 7,
+      "users": 5
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x08",
+      "count": 16,
+      "users": 12
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x09",
+      "count": 9,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x10",
+      "count": 18,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x11",
+      "count": 10,
+      "users": 7
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x12",
+      "count": 20,
+      "users": 12
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x13",
+      "count": 20,
+      "users": 14
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x14",
+      "count": 18,
+      "users": 13
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x15",
+      "count": 22,
+      "users": 12
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x16",
+      "count": 7,
+      "users": 5
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x17",
+      "count": 10,
+      "users": 7
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x18",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x19",
+      "count": 16,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x20",
+      "count": 18,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x21",
+      "count": 6,
+      "users": 3
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x22",
+      "count": 13,
+      "users": 9
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x23",
+      "count": 13,
+      "users": 8
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x24",
+      "count": 21,
+      "users": 14
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x25",
+      "count": 17,
+      "users": 11
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x26",
+      "count": 11,
+      "users": 7
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x27",
+      "count": 14,
+      "users": 8
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x28",
+      "count": 11,
+      "users": 7
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x29",
+      "count": 11,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x30",
+      "count": 16,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x31",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x32",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x33",
+      "count": 8,
+      "users": 4
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x34",
+      "count": 18,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x35",
+      "count": 18,
+      "users": 10
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x36",
+      "count": 10,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x37",
+      "count": 7,
+      "users": 5
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x38",
+      "count": 10,
+      "users": 6
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x39",
+      "count": 13,
+      "users": 8
+    },
+    {
+      "source": "/mentors",
+      "sourceHandle": "btn:b25",
+      "kind": "btn",
+      "target": "/mentors/x40",
+      "count": 9,
+      "users": 5
+    },
+    {
+      "source": "/mentors/x01",
+      "sourceHandle": "btn:b26",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 11,
+      "users": 8
+    },
+    {
+      "source": "/mentors/x01",
+      "sourceHandle": "btn:b27",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x02",
+      "sourceHandle": "btn:b28",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x02",
+      "sourceHandle": "btn:b29",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x03",
+      "sourceHandle": "btn:b30",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 7,
+      "users": 5
+    },
+    {
+      "source": "/mentors/x03",
+      "sourceHandle": "btn:b31",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x04",
+      "sourceHandle": "btn:b32",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 11,
+      "users": 9
+    },
+    {
+      "source": "/mentors/x04",
+      "sourceHandle": "btn:b33",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x05",
+      "sourceHandle": "btn:b34",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 8,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x05",
+      "sourceHandle": "btn:b35",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x06",
+      "sourceHandle": "btn:b36",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x06",
+      "sourceHandle": "btn:b37",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x07",
+      "sourceHandle": "btn:b38",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 10,
+      "users": 8
+    },
+    {
+      "source": "/mentors/x07",
+      "sourceHandle": "btn:b39",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x08",
+      "sourceHandle": "btn:b40",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 7,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x08",
+      "sourceHandle": "btn:b41",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x09",
+      "sourceHandle": "btn:b42",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 4,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x09",
+      "sourceHandle": "btn:b43",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x10",
+      "sourceHandle": "btn:b44",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x10",
+      "sourceHandle": "btn:b45",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x11",
+      "sourceHandle": "btn:b46",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 8,
+      "users": 5
+    },
+    {
+      "source": "/mentors/x11",
+      "sourceHandle": "btn:b47",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x12",
+      "sourceHandle": "btn:b48",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 9,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x12",
+      "sourceHandle": "btn:b49",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x13",
+      "sourceHandle": "btn:b50",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x13",
+      "sourceHandle": "btn:b51",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x14",
+      "sourceHandle": "btn:b52",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 8,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x14",
+      "sourceHandle": "btn:b53",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x15",
+      "sourceHandle": "btn:b54",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x15",
+      "sourceHandle": "btn:b55",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x16",
+      "sourceHandle": "btn:b56",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 7,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x16",
+      "sourceHandle": "btn:b57",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x17",
+      "sourceHandle": "btn:b58",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 12,
+      "users": 8
+    },
+    {
+      "source": "/mentors/x17",
+      "sourceHandle": "btn:b59",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x18",
+      "sourceHandle": "btn:b60",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x18",
+      "sourceHandle": "btn:b61",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x19",
+      "sourceHandle": "btn:b62",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 10,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x19",
+      "sourceHandle": "btn:b63",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x20",
+      "sourceHandle": "btn:b64",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 9,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x20",
+      "sourceHandle": "btn:b65",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x21",
+      "sourceHandle": "btn:b66",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 7,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x21",
+      "sourceHandle": "btn:b67",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x22",
+      "sourceHandle": "btn:b68",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 4,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x22",
+      "sourceHandle": "btn:b69",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x23",
+      "sourceHandle": "btn:b70",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 8,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x23",
+      "sourceHandle": "btn:b71",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x24",
+      "sourceHandle": "btn:b72",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x24",
+      "sourceHandle": "btn:b73",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x25",
+      "sourceHandle": "btn:b74",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x25",
+      "sourceHandle": "btn:b75",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x26",
+      "sourceHandle": "btn:b76",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 9,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x26",
+      "sourceHandle": "btn:b77",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x27",
+      "sourceHandle": "btn:b78",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 12,
+      "users": 7
+    },
+    {
+      "source": "/mentors/x27",
+      "sourceHandle": "btn:b79",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x28",
+      "sourceHandle": "btn:b80",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 4,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x28",
+      "sourceHandle": "btn:b81",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x29",
+      "sourceHandle": "btn:b82",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 9,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x29",
+      "sourceHandle": "btn:b83",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x30",
+      "sourceHandle": "btn:b84",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x30",
+      "sourceHandle": "btn:b85",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x31",
+      "sourceHandle": "btn:b86",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x31",
+      "sourceHandle": "btn:b87",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x32",
+      "sourceHandle": "btn:b88",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 7,
+      "users": 6
+    },
+    {
+      "source": "/mentors/x32",
+      "sourceHandle": "btn:b89",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x33",
+      "sourceHandle": "btn:b90",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 11,
+      "users": 9
+    },
+    {
+      "source": "/mentors/x33",
+      "sourceHandle": "btn:b91",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x34",
+      "sourceHandle": "btn:b92",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x34",
+      "sourceHandle": "btn:b93",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x35",
+      "sourceHandle": "btn:b94",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 10,
+      "users": 7
+    },
+    {
+      "source": "/mentors/x35",
+      "sourceHandle": "btn:b95",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 2,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x36",
+      "sourceHandle": "btn:b96",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x36",
+      "sourceHandle": "btn:b97",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x37",
+      "sourceHandle": "btn:b98",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 5,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x37",
+      "sourceHandle": "btn:b99",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x38",
+      "sourceHandle": "btn:b100",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 4,
+      "users": 3
+    },
+    {
+      "source": "/mentors/x38",
+      "sourceHandle": "btn:b101",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x39",
+      "sourceHandle": "btn:b102",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 3,
+      "users": 2
+    },
+    {
+      "source": "/mentors/x39",
+      "sourceHandle": "btn:b103",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/mentors/x40",
+      "sourceHandle": "btn:b104",
+      "kind": "btn",
+      "target": "/chat",
+      "count": 6,
+      "users": 4
+    },
+    {
+      "source": "/mentors/x40",
+      "sourceHandle": "btn:b105",
+      "kind": "btn",
+      "target": "/payment",
+      "count": 1,
+      "users": 1
+    },
+    {
+      "source": "/chat",
+      "sourceHandle": "page:out",
+      "kind": "page",
+      "target": "/payment",
+      "count": 754,
+      "users": 425
+    },
+    {
+      "source": "/history",
+      "sourceHandle": "page:out",
+      "kind": "page",
+      "target": "/chat",
+      "count": 657,
+      "users": 405
+    }
+  ]
 }
