@@ -22,7 +22,7 @@ import {
   saveConfig,
   saveProcessed,
 } from './config.mjs';
-import { DEFAULT_CONTENT_ROOT } from './filer.mjs';
+import { DEFAULT_CONTENT_ROOT, listMentorDirs } from './filer.mjs';
 import { probeAll } from './probe.mjs';
 
 function parseArgs(argv) {
@@ -87,7 +87,10 @@ async function tick(cfg, processed, busy) {
   busy.current = true;
   let activeCommands = 0;
   try {
-    const probes = await probeAll();
+    const [probes, dirs] = await Promise.all([
+      probeAll(),
+      listMentorDirs(cfg.contentRoot).catch((err) => ({ error: err.message })),
+    ]);
     const reachSummary = Object.entries(probes.endpoints)
       .map(([k, v]) => `${k}${v.reachable ? '●' : '○'}`)
       .join(' ');
@@ -96,12 +99,15 @@ async function tick(cfg, processed, busy) {
     const hb = await apiHeartbeat(
       cfg.baseUrl,
       cfg.runnerToken,
+      cfg.runnerId,
       {
         runnerId: cfg.runnerId,
         machineKey: cfg.machineKey,
         version: RUNNER_VERSION,
         name: cfg.runnerName,
+        contentRoot: cfg.contentRoot,
         probes,
+        dirs: Array.isArray(dirs) ? dirs : null,
         activeCommands,
       },
     );
@@ -122,7 +128,7 @@ async function tick(cfg, processed, busy) {
       const startedAt = Date.now();
       try {
         const result = await handleCommand(command, cfg.contentRoot);
-        await reportResult(cfg.baseUrl, cfg.runnerToken, {
+        await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
           stepId,
           idempotencyKey,
           status: 'done',
@@ -138,7 +144,7 @@ async function tick(cfg, processed, busy) {
         log('OK', `指令完成 type=${type} key=${idempotencyKey}（${Date.now() - startedAt}ms）`);
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        await reportResult(cfg.baseUrl, cfg.runnerToken, {
+        await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
           stepId,
           idempotencyKey,
           status: 'failed',

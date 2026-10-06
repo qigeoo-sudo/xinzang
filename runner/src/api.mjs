@@ -24,10 +24,11 @@ function assertSafeBaseUrl(baseUrl) {
   return u;
 }
 
-async function postJson(baseUrl, urlPath, body, token) {
+async function postJson(baseUrl, urlPath, body, token, runnerId) {
   assertSafeBaseUrl(baseUrl);
   const headers = { 'content-type': 'application/json' };
   if (token) headers.authorization = `Bearer ${token}`;
+  if (runnerId) headers['x-runner-id'] = runnerId;
   const res = await fetch(new URL(urlPath, baseUrl), {
     method: 'POST',
     headers,
@@ -53,10 +54,10 @@ export function register(baseUrl, registrationToken, machineKey, name, version) 
   });
 }
 
-export function heartbeat(baseUrl, token, body) {
-  return postJson(baseUrl, '/api/content-ops/runner/heartbeat', body, token);
+export function heartbeat(baseUrl, token, runnerId, body) {
+  return postJson(baseUrl, '/api/content-ops/runner/heartbeat', body, token, runnerId);
 }
 
-export function reportResult(baseUrl, token, body) {
-  return postJson(baseUrl, '/api/content-ops/runner/commands/result', body, token);
+export function reportResult(baseUrl, token, runnerId, body) {
+  return postJson(baseUrl, '/api/content-ops/runner/commands/result', body, token, runnerId);
 }

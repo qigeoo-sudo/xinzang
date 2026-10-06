@@ -227,6 +227,7 @@ export const { handlers, auth } = NextAuth({
         '/api/growth', // 成长追踪 API 自身做 401 校验
         '/api/events', // 行为事件批量上报（匿名可达，接口自行限流与身份补写）
         '/api/feedback', // 消息反馈（接口自行 401/403 校验）
+        '/api/content-ops/runner', // 龙虾工作台 Runner 端点（注册令牌/Bearer 自行鉴权，非 session）
       ];
       const isPublicPath = publicPaths.some(
         (p) => logicalPath === p || logicalPath.startsWith(p + '/')
