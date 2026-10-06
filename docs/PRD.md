@@ -1,9 +1,9 @@
 # AI Career Companion — 产品需求文档（PRD）
 
-**版本：** v3.2（评审稿）
-**日期：** 2026-09-28
-**当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离；后台管理系统部分以 `docs/admin-mentor-system-v1.md`（评审稿）为准
-**历史版本：** v3.0（2026-09-20）、v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
+**版本：** v3.3（评审稿）
+**日期：** 2026-10-06
+**当前状态：** 生产已部署公网（aihr.top），数据库已迁移至火山引擎 RDS MySQL，测试端（CloudBase）与本地 Docker 三库分离；admin/mentor/channel 三个后台代码侧基本建成，进入真机环境验证与调整阶段；导师内容运营工作台（content.aihr.top）设计已定稿、尚未开工
+**历史版本：** v3.2（2026-09-28）、v3.0（2026-09-20）、v2.0（2026-08-15，已废弃）、v1.0（ChatGPT 编写，已废弃）
 
 > 本次重写基于 2026-09-20 实际代码状态。旧版 PRD 中 CloudBase PostgreSQL 迁移路线已被火山引擎 RDS MySQL 取代，旧导师分身三表设计已被 MentorKnowledgeCard 单表取代。详见 [docs/AICCloudBase_PG_v1.1.md](./AICCloudBase_PG_v1.1.md)（已 archived）。
 
@@ -158,7 +158,9 @@ docs/
 
 ## 五、数据库设计
 
-### 5.1 当前模型（14 个，MySQL）
+### 5.1 当前模型（23 个，MySQL）
+
+下表为核心业务模型（14 个）：
 
 | 模型 | 用途 |
 |------|------|
@@ -176,6 +178,8 @@ docs/
 | `ChatSession` | 聊天会话（含 summary 滚动摘要、crossConsent 跨导师授权） |
 | `ChatMessage` | 聊天消息（含 tokensUsed、modelUsed、hitCardIds 知识卡命中） |
 | `MentorKnowledgeCard` | 导师知识卡（4 知识分类 + 3 披露方式，详见 5.3） |
+
+另有埋点与后台运营模型 8 个（字段定义以 `docs/admin-mentor-system-v1.md` 为准）：`Event`、`MessageFeedback`、`DailyPlatformStats`、`DailyMentorStats`、`DailyJourneyStats`、`UserGroupHistory`、`MentorSubmission`、`AuditLog`；对话域另有 `ChatMilestone`（对话里程碑）。合计 23 个模型。
 
 ### 5.2 导师分身架构决策
 
@@ -622,7 +626,8 @@ docs/
 
 - crontab 冷备已删除，改用 RDS 自动备份 + 时间点恢复
 - Dockerfile 构建阶段不再需要 `prisma db push`（MySQL 迁移用部署脚本 03-migrate.sh 在运行中库执行）
-- 子域名 `channel.aihr.top`（渠道后台，已上线 2026-09-23）、`mentor.aihr.top`（导师区，待开发）和 `admin.aihr.top`（后台管理系统，待开发）通过 nginx Host 路由反代同一容器，SSL 证书 certbot --expand 并入 aihr.top
+- 子域名 `channel.aihr.top`（渠道后台，已上线 2026-09-23）、`admin.aihr.top`（平台数据后台）、`mentor.aihr.top`（导师后台）通过 nginx Host 路由反代同一容器，SSL 证书 certbot --expand 并入 aihr.top；admin 子域名 Host 路由与登录门已于 2026-10-06 上线（commit 102dd8b），三个后台页面与 API 代码侧基本建成，进入真机环境验证与调整阶段
+- 规划新增 `content.aihr.top`（导师内容运营工作台「导师访谈龙虾」）：设计已于 2026-10-06 定稿（见 `docs/mentor-content-operations-v1.md`），P1 尚未开工，域名与环境变量未配置
 - User 表新增 `importSource` + `externalId` 可空列（联合唯一索引），用于合作方用户导入与定期回传关联
 
 ### 12.5 迁移验收
@@ -730,16 +735,18 @@ docs/
 | 安全自检清单 | `docs/安全与质量自检清单.md` | 54 项可复用模板 |
 | 外包安全检查清单 | `docs/外包安全检查清单.md` | 安全工程师外包检查 |
 | 订阅套餐配置 | `src/lib/plans.ts` | 月/季/年 + 多榨包定价 |
-| Prisma Schema | `prisma/schema.prisma` | 14 个 model |
+| Prisma Schema | `prisma/schema.prisma` | 23 个 model |
 | 部署脚本 | `deploy-scripts/01-05*.sh, 20, 30` | 部署与备份 |
 | 安全头配置 | `next.config.js` | CSP/HSTS/X-Frame-Options |
 | Docker 构建 | `Dockerfile` | node:20-alpine 多阶段非 root |
 | 后台管理系统与数据采集规范 | `docs/admin-mentor-system-v1.md` | Admin/Mentor 后台产品定义、数据采集规范和指标口径主文档（评审稿），含 A/B 付费归因、page.active_duration 活跃采集、双阶段旅程回溯、用户群组历史等 |
+| 导师内容运营工作台设计 | `docs/mentor-content-operations-v1.md` | 「导师访谈龙虾」人机协作工作台（content.aihr.top）设计定稿：内容接收到两次人工门禁发布生产的状态机、连接器能力矩阵、Agent 分工硬规则、内容运营表族草案；P1 未开工 |
 
-**后台管理系统（待建设）：**
-- 将建设 `admin.aihr.top`（ADMIN_FULL 角色后台）和 `mentor.aihr.top`（MENTOR_HUMAN 角色后台）
+**后台管理系统（代码侧基本建成，待真机验证）：**
+- `admin.aihr.top`（ADMIN_FULL 角色后台）、`mentor.aihr.top`（MENTOR_HUMAN 角色后台）、`channel.aihr.top`（渠道后台）三个后台页面、API 与 8 张运营表已建成，进入真机环境验证与调整阶段
 - 采用全自研轻量埋点方案，事件语义化命名保证改版弹性
 - 详细产品方案、数据采集规范和指标口径见 `docs/admin-mentor-system-v1.md`
+- 规划新增 `content.aihr.top` 导师内容运营工作台（设计已定稿，见 `docs/mentor-content-operations-v1.md`，P1 未开工）
 
 **外部参考：**
 - Prisma migration 工作流：https://www.prisma.io/docs/orm/prisma-migrate/workflows/development-and-production
@@ -761,6 +768,13 @@ docs/
 ---
 
 ## 十七、变更日志
+
+### v3.3（2026-10-06）
+
+- admin/mentor/channel 三个后台代码侧基本建成（admin-console、mentor-console 页面与 API、8 张埋点与运营表全部落地），状态由「待建设」更新为「真机环境验证与调整阶段」；模型总数订正为 23 个
+- admin.aihr.top Host 路由与登录门 2026-10-06 上线（commit 102dd8b），第 12.4 节子域名现状同步订正
+- 新增规划子域名 content.aihr.top（导师内容运营工作台「导师访谈龙虾」），设计定稿见 `docs/mentor-content-operations-v1.md`；P1 未开工，域名与环境变量未配置
+- 本次仅文档现状订正，未产生新的已部署业务事实；导师名单、知识卡 398 张口径维持 v3.2
 
 ### v3.2（2026-09-28）
 
