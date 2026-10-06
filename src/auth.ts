@@ -153,24 +153,26 @@ export const { handlers, auth } = NextAuth({
 
     // 登录重定向控制
     redirect: ({ url, baseUrl }) => {
-      // 默认放行同源地址
-      if (url.startsWith(baseUrl)) return url;
-      // 白名单：已配置的后台子域名的绝对回调地址
-      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top、ADMIN_DOMAIN=admin.aihr.top；测试端不设则不生效
+      // 绝对地址：按 origin 精确比较，前缀匹配会放行 aihr.top.evil.com 这类形似域名
       try {
-        const u = new URL(url);
+        const target = new URL(url);
+        if (target.origin === new URL(baseUrl).origin) return url;
+        // 白名单：已配置的后台子域名的绝对回调地址
+        // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top、ADMIN_DOMAIN=admin.aihr.top；测试端不设则不生效
         if (
-          (process.env.CHANNEL_DOMAIN && u.hostname === process.env.CHANNEL_DOMAIN) ||
-          (process.env.MENTOR_DOMAIN && u.hostname === process.env.MENTOR_DOMAIN) ||
-          (process.env.ADMIN_DOMAIN && u.hostname === process.env.ADMIN_DOMAIN)
+          (process.env.CHANNEL_DOMAIN && target.hostname === process.env.CHANNEL_DOMAIN) ||
+          (process.env.MENTOR_DOMAIN && target.hostname === process.env.MENTOR_DOMAIN) ||
+          (process.env.ADMIN_DOMAIN && target.hostname === process.env.ADMIN_DOMAIN)
         ) {
           return url;
         }
       } catch {
         // 非绝对 URL，继续走相对路径处理
       }
-      // 相对路径按 baseUrl 解析
-      if (url.startsWith('/')) return new URL(url, baseUrl).toString();
+      // 相对路径按 baseUrl 解析；排除 // 开头的协议相对地址（会被解析成外域）
+      if (url.startsWith('/') && !url.startsWith('//')) {
+        return new URL(url, baseUrl).toString();
+      }
       return baseUrl;
     },
 
