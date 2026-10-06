@@ -46,3 +46,6 @@ next-env.d.ts
 
 # 评测/回归结果产物（本地留存，不入库）
 /results/
+
+# 龙虾工作台 Local Runner 本机状态（machineKey/runnerToken/幂等记录）
+/runner/.state/

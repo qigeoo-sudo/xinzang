@@ -16,3 +16,5 @@ src/generated
 db
 *.db*
 .DS_Store
+# Local Runner 是 Windows 本机组件，不进生产镜像
+runner

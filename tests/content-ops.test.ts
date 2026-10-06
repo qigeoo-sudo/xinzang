@@ -25,6 +25,7 @@ function snapshot(partial: Partial<VpnSnapshot['endpoints']>): VpnSnapshot {
       codex: reach(false),
       github: reach(false),
       vpnIndicator: reach(false),
+      cnBase: reach(true),
       ...Object.fromEntries(Object.entries(partial).map(([k, v]) => [k, reach(!!v)])),
     },
   };
@@ -152,6 +153,17 @@ test('探测快照过期 → 灰态，不拿旧数据冒充', () => {
   const hint = evaluateVpnHint(getStepDef('S4'), true, stale, NOW);
   assert.equal(hint.level, 'gray');
   assert.match(hint.title, /等待 Runner/);
+});
+
+test('国内参照点也不通 → 灰态提示本机断网，而不是误报开 VPN', () => {
+  const hint = evaluateVpnHint(
+    getStepDef('S4'),
+    true,
+    snapshot({ cnBase: false, claude: false }),
+    NOW,
+  );
+  assert.equal(hint.level, 'gray');
+  assert.match(hint.title, /本机网络可能未连接/);
 });
 
 test('无下一步且 Runner 在线 → 绿态但不声称网络已全部验证', () => {

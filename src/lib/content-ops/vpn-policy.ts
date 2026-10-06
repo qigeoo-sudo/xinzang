@@ -10,7 +10,7 @@
 
 import type { StepDef } from './state-machine';
 
-export type EndpointKey = 'feishu' | 'claude' | 'codex' | 'github' | 'vpnIndicator';
+export type EndpointKey = 'feishu' | 'claude' | 'codex' | 'github' | 'vpnIndicator' | 'cnBase';
 
 export interface EndpointProbe {
   reachable: boolean;
@@ -44,6 +44,7 @@ export const ENDPOINT_LABELS: Record<EndpointKey, string> = {
   codex: 'Codex',
   github: 'GitHub',
   vpnIndicator: 'VPN 指示点',
+  cnBase: '国内参照点',
 };
 
 /** 心跳间隔 30s；超过 3 个间隔无新探测视为过期 */
@@ -103,6 +104,15 @@ export function evaluateVpnHint(
   }
 
   const vpnOn = snapshot.endpoints.vpnIndicator.reachable;
+
+  // gray：国内参照点也不通 → 本机可能断网（比「请开 VPN」更准确，优先判定）
+  if (!snapshot.endpoints.cnBase.reachable) {
+    return {
+      level: 'gray',
+      title: '无法探测：国内参照点不可达，本机网络可能未连接，请检查网络后等待下一次心跳',
+      endpoints: statuses(['cnBase', 'feishu', 'claude', 'codex', 'github'], () => false),
+    };
+  }
 
   // 没有下一步（终态 / 无活动步骤）
   if (!step) {
