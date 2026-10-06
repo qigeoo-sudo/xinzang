@@ -156,12 +156,13 @@ export const { handlers, auth } = NextAuth({
       // 默认放行同源地址
       if (url.startsWith(baseUrl)) return url;
       // 白名单：已配置的后台子域名的绝对回调地址
-      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top；测试端不设则不生效
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top、ADMIN_DOMAIN=admin.aihr.top；测试端不设则不生效
       try {
         const u = new URL(url);
         if (
           (process.env.CHANNEL_DOMAIN && u.hostname === process.env.CHANNEL_DOMAIN) ||
-          (process.env.MENTOR_DOMAIN && u.hostname === process.env.MENTOR_DOMAIN)
+          (process.env.MENTOR_DOMAIN && u.hostname === process.env.MENTOR_DOMAIN) ||
+          (process.env.ADMIN_DOMAIN && u.hostname === process.env.ADMIN_DOMAIN)
         ) {
           return url;
         }
@@ -178,19 +179,23 @@ export const { handlers, auth } = NextAuth({
       const { pathname } = request.nextUrl;
 
       // 后台子域名：单应用 Host 路由——nginx 把各子域名流量代理到同一容器，此处按 Host 改写
-      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top；
+      // 生产设 CHANNEL_DOMAIN=channel.aihr.top、MENTOR_DOMAIN=mentor.aihr.top、ADMIN_DOMAIN=admin.aihr.top；
       // 测试端不设对应变量则 Host 判定恒为 false
       const host = request.headers.get('host') ?? '';
       const isChannelHost = !!process.env.CHANNEL_DOMAIN && host === process.env.CHANNEL_DOMAIN;
       const isMentorHost = !!process.env.MENTOR_DOMAIN && host === process.env.MENTOR_DOMAIN;
+      const isAdminHost = !!process.env.ADMIN_DOMAIN && host === process.env.ADMIN_DOMAIN;
       const isChannelRoot = isChannelHost && pathname === '/';
       const isMentorRoot = isMentorHost && pathname === '/';
+      const isAdminRoot = isAdminHost && pathname === '/';
       // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 对应后台）
       const logicalPath = isChannelRoot
         ? '/admin/channels'
         : isMentorRoot
           ? '/mentor-console'
-          : pathname;
+          : isAdminRoot
+            ? '/admin-console'
+            : pathname;
       // 请求头来源（NEXTAUTH_URL 会把 nextUrl 规范化到主域，子域场景必须按 Host 还原）
       const proto = request.headers.get('x-forwarded-proto') ?? 'https';
       const headerOrigin = `${proto}://${host}`;
@@ -240,7 +245,7 @@ export const { handlers, auth } = NextAuth({
       if (!isLoggedIn && !isPublicPath && !isDevPreview) {
         const loginUrl = new URL('/login', headerOrigin);
         // 子域名场景 callback 用绝对地址并经 redirect 白名单放行，保证登录后留在子域
-        const isSubHost = isChannelHost || isMentorHost;
+        const isSubHost = isChannelHost || isMentorHost || isAdminHost;
         const callback = isSubHost
           ? new URL(pathname + request.nextUrl.search, headerOrigin).toString()
           : pathname + request.nextUrl.search;
@@ -254,6 +259,9 @@ export const { handlers, auth } = NextAuth({
       }
       if (isMentorRoot) {
         return NextResponse.rewrite(new URL('/mentor-console', request.url));
+      }
+      if (isAdminRoot) {
+        return NextResponse.rewrite(new URL('/admin-console', request.url));
       }
 
       return true;
