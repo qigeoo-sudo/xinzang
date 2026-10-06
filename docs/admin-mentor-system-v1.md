@@ -1,8 +1,11 @@
-# AIHR 后台管理系统与数据采集规范 v1
+# AIHR 后台管理系统与数据采集规范 v1.1
 
-版本：v1（评审稿）
-日期：2026-09-28
-适用域名：`admin.aihr.top`、`mentor.aihr.top`
+版本：v1.1（第一期代码侧已实现，待真机验收；指标口径正文与 v1 一致，未改定义）
+原 v1 日期：2026-09-28
+状态更新日期：2026-10-06
+适用域名：`admin.aihr.top`、`mentor.aihr.top`、`channel.aihr.top`
+
+> v1.1 仅更新实现状态层（27.1A 状态核对、29.1 风险消除标注、29.2 验收说明），未修改任何指标定义、表结构与验收标准；指标字典作为不可变登记处继续有效。
 
 > 本文档整合自原三份文档（《AIHR 指标字典与埋点清单 v2》、《AIHR Admin 与 Mentor 后台管理系统产品方案 v0.2》、《AIHR Admin 与 Mentor 后台管理系统修订执行方案 v0.2》），是后台管理系统产品定义、数据采集规范和指标口径的唯一依据。
 >
@@ -888,6 +891,25 @@ AuditLog 表记录所有后台敏感操作：
 
 第一期确认不建 Campaign 表、不建活动管理模块。Event 的 props 中预留 `cmp` 字段位置、`User.attributionJson` 中预留活动码位置，旅程回溯切分维度中活动码字段保留但第一期不做有效性校验。完整 Campaign 管理（表、登记、活动码校验、效果分析）放第二期。
 
+#### 27.1A 第一期代码侧实现状态（2026-10-06 核对）
+
+仅表示代码与表结构是否落地，不代表 29.2 验收标准通过；真机验证与数据迁移核对另行进行。
+
+| 27.1 条目 | 代码侧状态 | 证据/说明 |
+|---|---|---|
+| 1. admin/mentor SSL 与 Host 路由 | 已实现（mentor 真机未验） | auth.ts 含 ADMIN_DOMAIN/MENTOR_DOMAIN Host 判定与 rewrite；admin 子域名 2026-10-06 上线（commit 102dd8b）；证书按 PRD 12.4 certbot --expand |
+| 2. User 补字段、entitlementSource、ADMIN→ADMIN_FULL | 已实现；数据迁移待真机核对 | schema 已有 role(ADMIN_FULL/MENTOR_HUMAN)、boundMentorId、userGroup、ChatMessage.entitlementSource；现有管理员是否已迁为 ADMIN_FULL、是否已建 MENTOR_HUMAN 账号需查库确认 |
+| 3. 新建 8 张表 | 已实现 | Event、MessageFeedback、DailyMentorStats、DailyPlatformStats、AuditLog、UserGroupHistory、MentorSubmission、DailyJourneyStats 均在 schema.prisma |
+| 4. track() SDK + 批量上报接口 | 已实现 | `src/lib/analytics/tracker.ts`、`event-schema.ts`、`/api/events`（eventId 去重、pageInstanceId、releaseVersion） |
+| 5. 全站布点 + 点赞/点踩/报错组件 | 已实现（布点完整性真机验） | `analytics-collector.tsx` 自动采集；`message-feedback-bar.tsx` 消息级反馈；data-track 覆盖范围需真机抽查 |
+| 6. 事件安全要求 | 已实现（安全行为真机验） | `/api/events` 含事件白名单与 props 校验；限流、拒收 userId/userGroup 等行为需测试验证 |
+| 7. 每日汇总脚本 | 部分实现 | `src/lib/aggregation.ts` 的 `runDailyAggregation` 已实现且可重复执行；未见独立定时任务入口与生产 cron 配置，正式上线前必须补齐（第 24 章第 7 条要求） |
+| 8. Mentor 端看板 | 已实现（真机验） | `/mentor-console` 页面与 `/api/mentor/*`（summary/trend/audience/profile/submissions） |
+| 9. Admin 端看板 | 已实现（真机验） | `/admin-console`（含导师管理子页）、旅程回溯、用户群组、MentorSubmission 审核、排除标记、审计等页面与 API |
+| 10. 子域名中间件 Host 路由 + 角色校验 | 已实现（真机验） | auth.ts Host 路由；接口层 role=ADMIN_FULL / boundMentorId 反查需真机确认 |
+
+「上线前基础条件」状态：登录回调、跨子域 Cookie 与退出闭环代码已随 2026-10-06 改造落地；一对一 MentorHuman 绑定的服务端校验代码存在，真实绑定账号尚未在库中确认。
+
 #### 27.2 第一期采集但部分暂不展示
 
 - page.active_duration 数据第一期完整采集。
@@ -948,7 +970,9 @@ AuditLog 表记录所有后台敏感操作：
 #### 29.1 风险与注意事项
 
 1. **子域名证书问题**：`admin.aihr.top`、`mentor.aihr.top` 当前存在证书域名不匹配，浏览器无法正常进入；须先修复 SSL、Host 路由、登录回调和跨子域 Cookie 策略，再开发页面。
+   - 【2026-10-06 状态更新】风险主体已消除：证书已 certbot --expand 并入 aihr.top；admin 子域名 Host 路由、登录回调白名单与跨子域 Cookie 已上线（commit 102dd8b，admin.aihr.top 可正常渲染登录门）；mentor 子域名同构代码已就位，真机登录闭环待 29.2 验收确认。
 2. **认证现状落后**：当前认证主要支持普通用户与单一 ADMIN 角色，尚未为两个子域名完成独立角色与权限闭环；数据库还没有 MentorHuman、细粒度 Admin 权限、事件表、消息反馈表、每日汇总表和完整后台审计表。
+   - 【2026-10-06 状态更新】代码与表结构已补齐（见 27.1A 第 2、3 项）：8 张运营表已建，角色枚举与 boundMentorId 已在 schema；剩余真机事项为查库确认现有管理员已迁移为 ADMIN_FULL、创建 MENTOR_HUMAN 绑定账号并验证权限闭环。
 3. **PRD 同步**：须同步更新 PRD 中导师数量、知识卡数量、导师后台范围和认证现状，确保与实际代码和本次产品决定一致。导师数量和知识卡数量必须动态读取，不能硬编码。
 4. **文档一致性**：开发前必须将本方案、指标字典和 PRD 放在同一版本中评审并提交，避免依据孤立、未提交的文档开发。
 5. **可关联标识风险**：匿名标识、设备标识和行为轨迹属于可关联标识，不能表述为"不含个人信息"；应最小化采集并限制访问。原始 User-Agent 应尽量解析后保存，避免长期保留不必要的完整原文。
@@ -958,6 +982,8 @@ AuditLog 表记录所有后台敏感操作：
 9. **关系稳定性**：即使进入第三期，也不自动改为"一名真人导师管理多个分身"，该关系变更需业务明确需要且单独评审。
 
 #### 29.2 验收标准
+
+> 【2026-10-06 说明】以下 26 条是真机验收项。代码侧实现状态见 27.1A；截至本更新日期，这些条目均尚未经真机逐条验收，因此不勾选、不视为通过。真机调整完成后按条勾选并记录验证证据。
 
 1. 普通用户不能访问 Admin 或 Mentor 后台。
 2. MentorHuman 只能读取自己绑定的 Mentor 数据，浏览器篡改 mentorId 无效。
