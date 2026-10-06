@@ -621,3 +621,221 @@ model AuditLog {
   @@index([actorId, createdAt])
   @@index([action, createdAt])
 }
+
+// ============================================================
+// 导师访谈龙虾工作台（content.aihr.top 控制平面）
+// 设计依据：docs/mentor-content-operations-v1.md §11-12
+// 说明：表族仅承载流水线状态/元数据/审计；不存储 Prompt 正文、
+// 知识卡内容、访谈原文；路径以相对路径为展示默认，完整路径仅展开可见。
+// Runner 指令不另建队列表，由 ContentOpsStep.command* 字段承载并幂等认领。
+// ============================================================
+
+/// Windows Local Runner 注册与心跳
+model ContentOpsRunner {
+  id          String   @id @default(cuid())
+  /// 机器标识（安装时生成并持久化），全局唯一
+  machineKey  String   @unique
+  /// 注册令牌的哈希；P1 使用共享注册令牌换取 runner token，公钥签名留待后续阶段
+  tokenHash   String   @db.Text
+  name        String
+  version     String
+  status      String   @default("offline") // online | offline
+  lastSeenAt  DateTime?
+  /// 最近一次心跳载荷（端点探测结果等公开信息，JSON）
+  lastHeartbeat String? @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  runs        ContentOpsRun[]
+  agentEvents ContentOpsAgentEvent[]
+
+  @@map("content_ops_runners")
+}
+
+/// 一位导师一次端到端流水线实例
+model ContentOpsRun {
+  id            String   @id @default(cuid())
+  /// 导师目录名，保留原始大小写
+  mentorDir     String
+  /// 不区分大小写/空格的匹配键，用于防重复建目录
+  mentorDirKey  String
+  /// 事件类型：lobster（导师访谈龙虾）
+  eventType     String   @default("lobster")
+  /// 试点副本标记（如 lydia chen pilot，验收后由人工删除）
+  isPilot       Boolean  @default(false)
+  /// 状态机状态（见 src/lib/content-ops/state-machine.ts）
+  status        String   @default("waiting_runner")
+  /// 当前责任方：human | runner | codex | claude | trae | control_plane
+  currentOwner  String   @default("control_plane")
+  /// 任务合同 JSON（范围、固定触发语、不可代办声明等）
+  taskContract  String?  @db.Text
+  /// S0 唯一确认的飞书群
+  feishuChatId   String?
+  feishuChatName String?
+  /// VPN 探测快照（红/绿/黄/灰 + 各端点可达性 + 时间，JSON）
+  vpnProbe      String?  @db.Text
+  runnerId      String?
+  runner        ContentOpsRunner? @relation(fields: [runnerId], references: [id])
+  lockedMainSha String? // 生产门禁锁定的已验收 main SHA
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  steps     ContentOpsStep[]
+  artifacts ContentOpsArtifact[]
+  events    ContentOpsAgentEvent[]
+  approvals ContentOpsApproval[]
+  messages  ContentOpsFeishuMessage[]
+
+  @@index([status])
+  @@index([mentorDirKey])
+  @@map("content_ops_runs")
+}
+
+/// 步骤记录（同时是 Runner 的指令工作单元）
+model ContentOpsStep {
+  id              String   @id @default(cuid())
+  runId           String
+  /// 步骤码 S0-S22
+  code            String
+  /// 轮次：0=准备/第一轮，1=第二轮；同码不同轮次可并存
+  round           Int      @default(0)
+  /// pending | running | done | failed | blocked | waiting_human | skipped
+  status          String   @default("pending")
+  /// 操作者：human | runner | codex | claude | trae | control_plane
+  actor           String
+  title           String
+  /// 幂等键，防止重复执行/重复发送
+  idempotencyKey  String   @unique
+  failureReason   String?  @db.Text
+  /// 证据指针 JSON（产物 id、哈希、消息 id、外部引用）
+  evidence        String?  @db.Text
+  /// 下发给 Runner 的指令载荷 JSON；非 runner 步骤为 null
+  commandPayload  String?  @db.Text
+  /// none | queued | dispatched | done | failed
+  commandStatus   String   @default("none")
+  /// Runner 回报结果 JSON（公开报告，不含模型私有思维链）
+  commandResult   String?  @db.Text
+  dispatchedAt    DateTime?
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  run ContentOpsRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, code, round])
+  @@index([runId, status])
+  @@index([commandStatus])
+  @@map("content_ops_steps")
+}
+
+/// 产物登记（只登记元数据与哈希，不存正文）
+model ContentOpsArtifact {
+  id          String   @id @default(cuid())
+  runId       String
+  /// source_audio | source_transcript | merged_audio | normalized_md |
+  /// claude_output | codex_work_package | review_doc | review_reply |
+  /// final_handoff | app_integration_backup | deployment_record
+  kind        String
+  /// 绝对路径（仅登记，前端默认不展示）；VarChar(500) 以满足 MySQL 复合唯一索引长度限制
+  path        String   @db.VarChar(500)
+  /// 展示用相对路径（相对 D:\database 约定根）
+  displayPath String   @db.Text
+  sha256      String
+  bytes       BigInt
+  version     Int      @default(1)
+  /// primary | secondary | generated
+  sourceType  String   @default("generated")
+  /// 原始名、上传人、消息 ID、下载时间、合并源清单等（JSON）
+  provenance  String?  @db.Text
+  /// pending | verified | failed
+  validationStatus String @default("pending")
+  /// unset | approved | rejected
+  approvalStatus   String @default("unset")
+  /// 原始材料与已发布 Final Handoff 为 true，禁止覆盖
+  immutable   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  run ContentOpsRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, path])
+  @@index([runId, kind])
+  @@map("content_ops_artifacts")
+}
+
+/// Agent 事件流（心跳、公开阶段、探测、状态更新；禁止写入模型私有思维链）
+model ContentOpsAgentEvent {
+  id        String   @id @default(cuid())
+  runId     String?
+  runnerId  String?
+  /// runner | feishu | claude | codex | trae
+  agent     String
+  /// heartbeat | stage | status | probe | result | note
+  type      String
+  /// 公开报告内容 JSON
+  payload   String   @db.Text
+  createdAt DateTime @default(now())
+
+  run    ContentOpsRun?    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  runner ContentOpsRunner? @relation(fields: [runnerId], references: [id])
+
+  @@index([runId, createdAt])
+  @@index([runnerId, createdAt])
+  @@map("content_ops_agent_events")
+}
+
+/// 门禁点击记录（授权必须具体到按钮与范围）
+model ContentOpsApproval {
+  id         String   @id @default(cuid())
+  runId      String
+  /// G1-G8（见设计文档 §13）
+  gate       String
+  stepCode   String
+  buttonName String
+  /// 实际授权范围
+  scope      String   @db.Text
+  /// 证据核对勾选项结果 JSON（勾选的是证据核对动作）
+  checks     String   @db.Text
+  /// 生产发布时锁定的 main SHA
+  lockedSha  String?
+  /// requested | approved | rejected
+  status     String   @default("requested")
+  actorId    String
+  createdAt  DateTime @default(now())
+
+  run ContentOpsRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, gate])
+  @@map("content_ops_approvals")
+}
+
+/// 飞书发送与下载登记（dedup 键唯一，防重复发送）
+model ContentOpsFeishuMessage {
+  id          String   @id @default(cuid())
+  runId       String
+  /// 防重发幂等键，全局唯一
+  dedupKey    String   @unique
+  chatId      String
+  /// outbound | inbound
+  direction   String
+  /// 固定文案模板标识；自由内容禁止发送
+  templateId  String?
+  /// 关联文件哈希列表 JSON
+  fileHashes  String?  @db.Text
+  messageId   String?
+  /// pending | sent | failed | received
+  status      String   @default("pending")
+  failureReason String? @db.Text
+  /// human | runner
+  createdBy   String   @default("human")
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  run ContentOpsRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, status])
+  @@map("content_ops_feishu_messages")
+}
