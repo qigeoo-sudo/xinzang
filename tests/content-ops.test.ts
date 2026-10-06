@@ -10,25 +10,25 @@ import {
   normalizeMentorDirKey,
   mentorDirStatus,
   canTransition,
-} from '../src/lib/content-ops/state-machine.ts';
-import { evaluateVpnHint, type VpnSnapshot } from '../src/lib/content-ops/vpn-policy.ts';
+} from '../src/lib/content-ops/state-machine';
+import { evaluateVpnHint, type EndpointKey, type VpnSnapshot } from '../src/lib/content-ops/vpn-policy';
 
 const NOW = Date.parse('2026-10-07T10:00:00.000Z');
 
-function snapshot(partial: Partial<VpnSnapshot['endpoints']>): VpnSnapshot {
+function snapshot(overrides: Partial<Record<EndpointKey, boolean>> = {}): VpnSnapshot {
   const reach = (v: boolean) => ({ reachable: v, latencyMs: 20 });
-  return {
-    checkedAt: new Date(NOW - 5_000).toISOString(),
-    endpoints: {
-      feishu: reach(true),
-      claude: reach(false),
-      codex: reach(false),
-      github: reach(false),
-      vpnIndicator: reach(false),
-      cnBase: reach(true),
-      ...Object.fromEntries(Object.entries(partial).map(([k, v]) => [k, reach(!!v)])),
-    },
+  const endpoints: VpnSnapshot['endpoints'] = {
+    feishu: reach(true),
+    claude: reach(false),
+    codex: reach(false),
+    github: reach(false),
+    vpnIndicator: reach(false),
+    cnBase: reach(true),
   };
+  for (const key of Object.keys(overrides) as EndpointKey[]) {
+    endpoints[key] = reach(Boolean(overrides[key]));
+  }
+  return { checkedAt: new Date(NOW - 5_000).toISOString(), endpoints };
 }
 
 // ---------------- 步骤定义完整性 ----------------

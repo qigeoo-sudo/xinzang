@@ -119,31 +119,20 @@ async function tick(cfg, processed, busy) {
         log('WARN', `指令缺少 idempotencyKey（step=${stepId}），拒绝执行`);
         continue;
       }
-      if (processed[idempotencyKey]) {
-        log('INFO', `跳过重复指令 type=${type} key=${idempotencyKey}（已处理）`);
+      // 幂等去重带指令类型维度：同一幂等键的链式指令（如 S7 scan→hash 复用 :S7:0）类型不同，应放行
+      if (processed[idempotencyKey] && processed[idempotencyKey].type === type) {
+        log('INFO', `跳过重复指令 type=${type} step=${stepId} key=${idempotencyKey}（已处理）`);
         continue;
       }
       activeCommands += 1;
       log('INFO', `执行指令 type=${type} step=${stepId} key=${idempotencyKey}`);
       const startedAt = Date.now();
+      let result;
       try {
-        const result = await handleCommand(command, cfg.contentRoot);
-        await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
-          stepId,
-          idempotencyKey,
-          status: 'done',
-          result,
-        });
-        processed[idempotencyKey] = {
-          status: 'done',
-          at: new Date().toISOString(),
-          ms: Date.now() - startedAt,
-          resultDigest: digestResult(result),
-        };
-        await saveProcessed(processed);
-        log('OK', `指令完成 type=${type} key=${idempotencyKey}（${Date.now() - startedAt}ms）`);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
+        result = await handleCommand(command, cfg.contentRoot);
+      } catch (execErr) {
+        // 仅本地执行失败才回报 failed；失败不写 processed，允许控制平面重新入队
+        const message = execErr instanceof Error ? execErr.message : String(execErr);
         await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
           stepId,
           idempotencyKey,
@@ -152,8 +141,30 @@ async function tick(cfg, processed, busy) {
         }).catch((reportErr) => {
           log('ERROR', `失败结果回报也失败 type=${type}: ${reportErr.message}`);
         });
-        // 失败不写 processed：允许修复后下发同一幂等键重试（由控制平面重新入队）
-        log('ERROR', `指令失败 type=${type} key=${idempotencyKey}: ${message}`);
+        log('ERROR', `指令执行失败 type=${type} key=${idempotencyKey}: ${message}`);
+        activeCommands -= 1;
+        continue;
+      }
+      try {
+        await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
+          stepId,
+          idempotencyKey,
+          status: 'done',
+          result,
+        });
+        processed[idempotencyKey] = {
+          type,
+          status: 'done',
+          at: new Date().toISOString(),
+          ms: Date.now() - startedAt,
+          resultDigest: digestResult(result),
+        };
+        await saveProcessed(processed);
+        log('OK', `指令完成 type=${type} key=${idempotencyKey}（${Date.now() - startedAt}ms）`);
+      } catch (reportErr) {
+        // 指令在本机确实执行成功，仅回报被服务端拒绝：不反向标记 failed、不写 processed，
+        // 留待人工在工作台重试/重新发起，避免用失败信号污染已成功的产物
+        log('ERROR', `指令已执行但结果回报被拒 type=${type} key=${idempotencyKey}: ${reportErr.message}`);
       } finally {
         activeCommands -= 1;
       }

@@ -540,9 +540,10 @@ async function handleScanResult(
     { relPath: relStartHere, kind: 'codex_work_package', sourceType: 'generated', note: chosen },
   ];
   const paths = [`${contentRoot}\\${relStartHere.replace(/\//g, '\\')}`];
-  // 链式指令：scan 已 done，同一步骤重新置 queued 下发 START_HERE 哈希
+  // 链式指令：scan 刚回报（commandStatus=dispatched），同一步骤重新置 queued 下发 START_HERE 哈希
+  // 兼容已落 done 的场景；queued/done(hash) 不匹配，天然防重复入队
   const updated = await prisma.contentOpsStep.updateMany({
-    where: { id: step.id, commandStatus: 'done' },
+    where: { id: step.id, commandStatus: { in: ['dispatched', 'done'] } },
     data: {
       commandStatus: 'queued',
       commandPayload: JSON.stringify({ type: COMMAND.HASH_FILES, payload: { files, paths } }),
@@ -853,6 +854,7 @@ export async function listRunners() {
   return runners.map((r) => {
     const online = (r.lastSeenAt?.getTime() ?? 0) > Date.now() - RUNNER_ONLINE_MS;
     const hb = parseHeartbeat(r.lastHeartbeat);
+    const dirs = parseHeartbeatDirs(r.lastHeartbeat);
     return {
       id: r.id,
       name: r.name,
@@ -861,8 +863,21 @@ export async function listRunners() {
       lastSeenAt: r.lastSeenAt?.toISOString() ?? null,
       contentRoot: hb.contentRoot,
       probes: online ? hb.probes : null,
+      dirs: online ? dirs : [],
     };
   });
+}
+
+function parseHeartbeatDirs(raw: string | null): Array<{ name: string; status: string }> {
+  if (!raw) return [];
+  try {
+    const j = JSON.parse(raw) as { dirs?: Array<{ name: string; status: string }> };
+    return Array.isArray(j.dirs)
+      ? j.dirs.map((d) => ({ name: String(d.name), status: String(d.status) }))
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 // ------------------------------------------------------------------

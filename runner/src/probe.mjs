@@ -1,6 +1,7 @@
 /**
  * 端点探测：只判断「能否建立连接拿到响应」，不推论 VPN 软件状态。
  * 任何 HTTP 响应（含 403/405/重定向）都算可达；仅网络层失败算不可达。
+ * 单次失败立即重试一次（二次确认），避免偶发抖动把 S3 闸门误判为失败。
  */
 
 export const ENDPOINTS = {
@@ -39,11 +40,15 @@ export async function probeOnce(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
   }
 }
 
-/** 并发探测全部端点 */
+/** 并发探测全部端点；失败端点二次确认 */
 export async function probeAll(timeoutMs = DEFAULT_TIMEOUT_MS) {
   const keys = Object.keys(ENDPOINTS);
   const results = await Promise.all(
-    keys.map(async (key) => [key, await probeOnce(ENDPOINTS[key].url, timeoutMs)]),
+    keys.map(async (key) => {
+      const first = await probeOnce(ENDPOINTS[key].url, timeoutMs);
+      if (first.reachable) return [key, first];
+      return [key, await probeOnce(ENDPOINTS[key].url, timeoutMs)];
+    }),
   );
   return {
     checkedAt: new Date().toISOString(),

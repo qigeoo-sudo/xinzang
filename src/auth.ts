@@ -162,7 +162,8 @@ export const { handlers, auth } = NextAuth({
         if (
           (process.env.CHANNEL_DOMAIN && target.hostname === process.env.CHANNEL_DOMAIN) ||
           (process.env.MENTOR_DOMAIN && target.hostname === process.env.MENTOR_DOMAIN) ||
-          (process.env.ADMIN_DOMAIN && target.hostname === process.env.ADMIN_DOMAIN)
+          (process.env.ADMIN_DOMAIN && target.hostname === process.env.ADMIN_DOMAIN) ||
+          (process.env.CONTENT_DOMAIN && target.hostname === process.env.CONTENT_DOMAIN)
         ) {
           return url;
         }
@@ -187,9 +188,11 @@ export const { handlers, auth } = NextAuth({
       const isChannelHost = !!process.env.CHANNEL_DOMAIN && host === process.env.CHANNEL_DOMAIN;
       const isMentorHost = !!process.env.MENTOR_DOMAIN && host === process.env.MENTOR_DOMAIN;
       const isAdminHost = !!process.env.ADMIN_DOMAIN && host === process.env.ADMIN_DOMAIN;
+      const isContentHost = !!process.env.CONTENT_DOMAIN && host === process.env.CONTENT_DOMAIN;
       const isChannelRoot = isChannelHost && pathname === '/';
       const isMentorRoot = isMentorHost && pathname === '/';
       const isAdminRoot = isAdminHost && pathname === '/';
+      const isContentRoot = isContentHost && pathname === '/';
       // 鉴权与公开性判断使用「逻辑路径」（子域名根 = 对应后台）
       const logicalPath = isChannelRoot
         ? '/admin/channels'
@@ -197,7 +200,9 @@ export const { handlers, auth } = NextAuth({
           ? '/mentor-console'
           : isAdminRoot
             ? '/admin-console'
-            : pathname;
+            : isContentRoot
+              ? '/content-ops'
+              : pathname;
       // 请求头来源（NEXTAUTH_URL 会把 nextUrl 规范化到主域，子域场景必须按 Host 还原）
       const proto = request.headers.get('x-forwarded-proto') ?? 'https';
       const headerOrigin = `${proto}://${host}`;
@@ -228,6 +233,7 @@ export const { handlers, auth } = NextAuth({
         '/api/events', // 行为事件批量上报（匿名可达，接口自行限流与身份补写）
         '/api/feedback', // 消息反馈（接口自行 401/403 校验）
         '/api/content-ops/runner', // 龙虾工作台 Runner 端点（注册令牌/Bearer 自行鉴权，非 session）
+        '/content-ops', // 龙虾工作台入口（未登录由 page.tsx 渲染登录 gate，不走 /login）
       ];
       const isPublicPath = publicPaths.some(
         (p) => logicalPath === p || logicalPath.startsWith(p + '/')
@@ -248,7 +254,7 @@ export const { handlers, auth } = NextAuth({
       if (!isLoggedIn && !isPublicPath && !isDevPreview) {
         const loginUrl = new URL('/login', headerOrigin);
         // 子域名场景 callback 用绝对地址并经 redirect 白名单放行，保证登录后留在子域
-        const isSubHost = isChannelHost || isMentorHost || isAdminHost;
+        const isSubHost = isChannelHost || isMentorHost || isAdminHost || isContentHost;
         const callback = isSubHost
           ? new URL(pathname + request.nextUrl.search, headerOrigin).toString()
           : pathname + request.nextUrl.search;
@@ -265,6 +271,9 @@ export const { handlers, auth } = NextAuth({
       }
       if (isAdminRoot) {
         return NextResponse.rewrite(new URL('/admin-console', request.url));
+      }
+      if (isContentRoot) {
+        return NextResponse.rewrite(new URL('/content-ops', request.url));
       }
 
       return true;
