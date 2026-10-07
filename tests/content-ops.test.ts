@@ -4,7 +4,8 @@ import {
   RUN_STATE,
   STEP_STATUS,
   STEP_DEFS,
-  P1_ACTIVE_CODES,
+  ACTIVE_CODES,
+  ROUND1_QC_ITEMS,
   getStepDef,
   nextStepCode,
   normalizeMentorDirKey,
@@ -12,6 +13,7 @@ import {
   canTransition,
 } from '../src/lib/content-ops/state-machine';
 import { evaluateVpnHint, type EndpointKey, type VpnSnapshot } from '../src/lib/content-ops/vpn-policy';
+import { COMPARE_DIMENSIONS, COMPARE_PASS_LINE, belowLine, allDocsPass, type DocCompareResult } from '../src/lib/content-ops/ai-compare';
 
 const NOW = Date.parse('2026-10-07T10:00:00.000Z');
 
@@ -33,19 +35,19 @@ function snapshot(overrides: Partial<Record<EndpointKey, boolean>> = {}): VpnSna
 
 // ---------------- 步骤定义完整性 ----------------
 
-test('S0-S22 共 23 步，P1 边界恰好是 S0-S7', () => {
+test('S0-S22 共 23 步，已开放边界随试点推进（P1=S0-S7，P2a=S8-S9）', () => {
   assert.equal(STEP_DEFS.length, 23);
-  assert.deepEqual(P1_ACTIVE_CODES, ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7']);
+  assert.deepEqual(ACTIVE_CODES, ['S0', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9']);
   assert.equal(getStepDef('S0').owner, 'control_plane');
   assert.equal(nextStepCode('S7'), 'S8');
   assert.equal(nextStepCode('S22'), null);
 });
 
-test('P1 之外的步骤不允许出现激活标记', () => {
+test('未开放步骤不允许出现激活标记', () => {
   for (const def of STEP_DEFS) {
-    if (!def.p1Active) {
+    if (!def.active) {
       const n = parseInt(def.code.slice(1), 10);
-      assert.ok(n >= 8, `${def.code} 不应在 P1 激活`);
+      assert.ok(n >= 10, `${def.code} 不应激活`);
     }
   }
 });
@@ -182,4 +184,28 @@ test('步骤状态枚举与 Schema 注释口径一致（防误改字符串）', 
     'skipped',
     'waiting_human',
   ]);
+});
+
+// ---------------- S8 AI 四维比对 ----------------
+
+test('AI 比对四维 key 与面板/状态机 ROUND1_QC_ITEMS 完全一致', () => {
+  assert.deepEqual(COMPARE_DIMENSIONS.map((d) => d.key), ROUND1_QC_ITEMS.map((i) => i.key));
+});
+
+test('及格线固定 80：79 不及格、80 及格', () => {
+  assert.equal(COMPARE_PASS_LINE, 80);
+  assert.deepEqual(belowLine(scoredDoc({ duty: 79 })), ['duty']);
+  assert.deepEqual(belowLine(scoredDoc({})), []);
+  assert.deepEqual(belowLine(scoredDoc({ structure: 80, density: 80 })), []);
+});
+
+function scoredDoc(over: Partial<Record<string, number>>): DocCompareResult {
+  const scores = { structure: 80, duty: 80, density: 80, readability: 80, ...over };
+  return { docType: 'style_analysis', relPath: 'x.md', scores, reasons: {}, findings: [], summary: '', model: 'test' };
+}
+
+test('两份文件全部维度 ≥80 → aiPass=true；任一维 79 → false', () => {
+  assert.equal(allDocsPass([scoredDoc({}), scoredDoc({ readability: 95 })]), true);
+  assert.equal(allDocsPass([scoredDoc({}), scoredDoc({ duty: 79 })]), false);
+  assert.equal(allDocsPass([scoredDoc({ structure: 60 })]), false);
 });

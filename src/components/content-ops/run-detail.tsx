@@ -16,6 +16,8 @@ import {
   CodexPanelB,
   VerifyAssemblyCard,
   TraePanelC,
+  Round1DocsQcPanel,
+  Round1SendApprovalPanel,
 } from './panels';
 import {
   RUN_STATUS_LABELS,
@@ -36,6 +38,8 @@ const TIMELINE: Array<{ code: string; short: string }> = [
   { code: 'S5', short: '产物归档' },
   { code: 'S6', short: 'Codex' },
   { code: 'S7', short: '核验' },
+  { code: 'S8', short: '阅览比对' },
+  { code: 'S9', short: '批准发送' },
 ];
 
 const AGENT_TABS = [
@@ -47,7 +51,7 @@ const AGENT_TABS = [
 ] as const;
 
 const EMPTY_AGENT_NOTE: Record<string, string> = {
-  feishu: 'P1 飞书收发由人工在群内完成，Runner 做登记制；自动连接器在后续阶段接入。',
+  feishu: 'S9 批准发送后这里展示飞书连接器事件（探测/发送回执，仅元数据不含正文）。',
   claude: 'Claude 永久 manual_only，没有自动信号；人工动作在面板 A 登记，见审计摘要。',
   codex: '尚无 Codex 侧信号。S6 开始后这里展示投递/开始等事件。',
   trae: 'Trae 合同区在 S20 第一次门禁前锁定，P1（S0-S7）无活动。',
@@ -152,12 +156,17 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       panels.push(<VerifyAssemblyCard key="S7" run={run} onAction={onAction} canWrite={canWrite} />);
     }
   }
-  if (st === 'round1_docs_qc') {
-    panels.push(
-      <section key="p1done" className="rounded-[18px] border-2 border-emerald-200 bg-emerald-50/50 p-4 text-sm text-emerald-900">
-        S0-S7 已走通：Assembly 核验通过，Run 到达第一轮阅览文件比对位。S8 及之后属于下一阶段（P2），P1 试点到此为止。
-      </section>,
-    );
+  if (
+    ['round1_docs_qc', 'round1_docs_qc_failed', 'awaiting_send_approval_round1_docs'].includes(st) ||
+    (stepByCode.S8 && !['pending', 'done'].includes(stepByCode.S8.status))
+  ) {
+    panels.push(<Round1DocsQcPanel key="S8" run={run} onAction={onAction} canWrite={canWrite} />);
+  }
+  if (
+    ['awaiting_send_approval_round1_docs', 'round1_docs_sent'].includes(st) ||
+    (stepByCode.S9 && !['pending', 'done'].includes(stepByCode.S9.status))
+  ) {
+    panels.push(<Round1SendApprovalPanel key="S9" run={run} onAction={onAction} canWrite={canWrite} />);
   }
   panels.push(<TraePanelC key="C" />);
 

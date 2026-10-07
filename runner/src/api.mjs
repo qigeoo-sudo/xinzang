@@ -24,7 +24,7 @@ function assertSafeBaseUrl(baseUrl) {
   return u;
 }
 
-async function postJson(baseUrl, urlPath, body, token, runnerId) {
+async function postJson(baseUrl, urlPath, body, token, runnerId, timeoutMs = 60_000) {
   assertSafeBaseUrl(baseUrl);
   const headers = { 'content-type': 'application/json' };
   if (token) headers.authorization = `Bearer ${token}`;
@@ -33,6 +33,8 @@ async function postJson(baseUrl, urlPath, body, token, runnerId) {
     method: 'POST',
     headers,
     body: JSON.stringify(body),
+    // 结果上报可能触发服务端 AI 评分（S8，两份文件并行调用约 30-60 秒），给 180 秒
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await res.text();
   let parsed;
@@ -59,5 +61,5 @@ export function heartbeat(baseUrl, token, runnerId, body) {
 }
 
 export function reportResult(baseUrl, token, runnerId, body) {
-  return postJson(baseUrl, '/api/content-ops/runner/commands/result', body, token, runnerId);
+  return postJson(baseUrl, '/api/content-ops/runner/commands/result', body, token, runnerId, 180_000);
 }

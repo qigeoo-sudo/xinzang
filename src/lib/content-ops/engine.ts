@@ -9,11 +9,13 @@
  * - Trae 不代做 Claude/Codex 内容：本引擎没有任何"生成内容"的函数
  */
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import path from 'node:path';
 import type { Prisma } from '@/generated/prisma';
 import { prisma } from '@/lib/prisma';
 import {
   ACTOR,
-  P1_ACTIVE_CODES,
+  ACTIVE_CODES,
+  G1_ROUND1_DOCS_TEXT,
   RUN_STATE,
   STEP_DEFS,
   STEP_STATUS,
@@ -24,6 +26,7 @@ import {
   nextStepCode,
 } from './state-machine';
 import { evaluateVpnHint, type VpnSnapshot } from './vpn-policy';
+import { allDocsPass, scoreViewDoc, type DocCompareResult } from './ai-compare';
 
 export class EngineError extends Error {
   status: number;
@@ -40,6 +43,9 @@ export const COMMAND = {
   LIST_WORK_FILES: 'list_work_files',
   PREPARE_CLAUDE_OUTPUTS: 'prepare_claude_outputs',
   CODEX_PROBE: 'codex_probe',
+  LOCATE_VIEW_DOCS: 'locate_view_docs',
+  READ_VIEW_DOCS: 'read_view_docs',
+  FEISHU_SEND_MESSAGE: 'feishu_send_message',
 } as const;
 
 const RUNNER_ONLINE_MS = 90_000;
@@ -397,6 +403,15 @@ export async function handleCommandResult(runnerId: string, body: {
         },
       });
       break;
+    case COMMAND.LOCATE_VIEW_DOCS:
+      await handleLocateViewDocsResult(step, payload as { payload: Record<string, unknown> }, result);
+      break;
+    case COMMAND.READ_VIEW_DOCS:
+      await handleReadViewDocsResult(step, result);
+      break;
+    case COMMAND.FEISHU_SEND_MESSAGE:
+      await handleFeishuSendMessageResult(step, payload as { payload: Record<string, unknown> }, result);
+      break;
     default:
       await prisma.contentOpsStep.update({
         where: { id: step.id },
@@ -701,6 +716,634 @@ async function handlePrepareClaudeOutputsResult(
   });
 }
 
+// ------------------------------------------------------------------
+// S8 / S9：第一轮阅览文件定位比对 + G1 批准发送（P2a）
+// ------------------------------------------------------------------
+
+/** 旧 Run 的步骤行按需补建（P1 建 Run 时只造了 S0-S7 行，P2a 激活 S8/S9） */
+async function ensureStepRows(runId: string, codes: string[]) {
+  for (const code of codes) {
+    const existing = await prisma.contentOpsStep.findFirst({ where: { runId, code } });
+    if (existing) continue;
+    const def = getStepDef(code);
+    await prisma.contentOpsStep.create({
+      data: {
+        runId,
+        code,
+        actor: def.actor,
+        title: def.title,
+        status: STEP_STATUS.PENDING,
+        idempotencyKey: `${runId}:${code}:init:${randomBytes(4).toString('hex')}`,
+      },
+    });
+  }
+}
+
+export async function startRound1DocsQc(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId }, include: { runner: true } });
+  const allowed: string[] = [RUN_STATE.ROUND1_DOCS_QC, RUN_STATE.ROUND1_DOCS_QC_FAILED];
+  if (!allowed.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能发起第一轮阅览文件比对`);
+  }
+  await ensureStepRows(runId, ['S8', 'S9']);
+  const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+  if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+
+  const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S8' } });
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: step.id, commandStatus: { in: ['none', 'failed', 'done'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: step.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({ type: COMMAND.LOCATE_VIEW_DOCS, payload: { mentorDir: run.mentorDir } }),
+      idempotencyKey: `${runId}:S8:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, 'S8 已有指令在执行中，请等待完成或失败后再试');
+
+  if (run.status === RUN_STATE.ROUND1_DOCS_QC_FAILED) {
+    // 干预态恢复主线（比对未通过后重扫）
+    await transitionRun(prisma, run, RUN_STATE.ROUND1_DOCS_QC, '重新发起第一轮阅览文件定位比对');
+  }
+  await audit(userId, 'content_ops.start_round1_docs_qc', runId, { mentorDir: run.mentorDir });
+  return { queued: true };
+}
+
+/** 定位结果：唯一确定的两份登记为 review_doc 产物，其余（歧义/参考）只进证据 */
+async function handleLocateViewDocsResult(
+  step: { id: string; runId: string; code: string; evidence: string | null; run: { id: string; status: string } },
+  payload: { payload: Record<string, unknown> },
+  result: Record<string, unknown>,
+) {
+  const mentorDir = typeof payload.payload.mentorDir === 'string' ? payload.payload.mentorDir : null;
+  const prefix = `mentors/${mentorDir ?? 'unknown'}/`.toLowerCase();
+  const shapeDoc = (d: Record<string, unknown>) => {
+    const rel = typeof d.relPath === 'string' ? d.relPath.replace(/\\/g, '/') : null;
+    if (!rel) return null;
+    return {
+      relPath: rel,
+      absPath: typeof d.absPath === 'string' ? d.absPath : null,
+      docType: d.docType === 'review_checklist' ? 'review_checklist' : 'style_analysis',
+      version: typeof d.version === 'string' ? d.version : null,
+      bytes: Number(d.bytes ?? 0) || 0,
+      sha256: typeof d.sha256 === 'string' ? d.sha256 : null,
+      refMentor: typeof d.refMentor === 'string' ? d.refMentor : null,
+    };
+  };
+  type LocatedDoc = NonNullable<ReturnType<typeof shapeDoc>>;
+  const allDocs = ((Array.isArray(result.docs) ? result.docs : []) as Record<string, unknown>[]).map(shapeDoc).filter(Boolean) as LocatedDoc[];
+  const refs = ((Array.isArray(result.refs) ? result.refs : []) as Record<string, unknown>[]).map(shapeDoc).filter(Boolean) as LocatedDoc[];
+  const docs = allDocs.filter((d) => d.relPath.toLowerCase().startsWith(prefix));
+  const styleDocs = docs.filter((d) => d.docType === 'style_analysis');
+  const checklistDocs = docs.filter((d) => d.docType === 'review_checklist');
+  const missing = [styleDocs.length === 0 ? '语言人格风格分析' : null, checklistDocs.length === 0 ? '第一轮审核清单' : null].filter(Boolean) as string[];
+  const ambiguous = styleDocs.length > 1 || checklistDocs.length > 1;
+  // 重新定位意味着候选/参考可能已修订：旧 AI 评分与裁决一律作废，不与新 locate 共存
+  const evidence = {
+    locate: { docs, refs, missing, ambiguous, locatedAt: new Date().toISOString() },
+  };
+
+  if (missing.length > 0) {
+    // S8 不通过 → round1_docs_qc_failed（显示差异项），可重扫或回滚 Assembly
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: step.id },
+        data: {
+          commandStatus: 'failed',
+          commandResult: JSON.stringify({ docCount: docs.length, refCount: refs.length }),
+          status: STEP_STATUS.FAILED,
+          finishedAt: new Date(),
+          failureReason: `未在 work 目录定位到：${missing.join('、')}（命名约定 <Display_Name>_语言人格风格分析/第一轮审核清单_v<版本>.md）`,
+          evidence: JSON.stringify(evidence),
+        },
+      });
+      const run = await tx.contentOpsRun.findUnique({ where: { id: step.runId } });
+      if (run && run.status === RUN_STATE.ROUND1_DOCS_QC) {
+        await transitionRun(tx, run, RUN_STATE.ROUND1_DOCS_QC_FAILED, `S8 阅览文件缺失：${missing.join('、')}`);
+      }
+    });
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    if (!ambiguous) {
+      for (const doc of [...styleDocs, ...checklistDocs]) {
+        if (!doc.absPath || !doc.sha256) continue;
+        const existing = await tx.contentOpsArtifact.findUnique({
+          where: { runId_path: { runId: step.runId, path: doc.absPath } },
+        });
+        if (existing) {
+          if (existing.sha256 !== doc.sha256) {
+            throw new EngineError(409, `文件内容已变化且曾被登记，禁止覆盖：${doc.relPath}`);
+          }
+          continue;
+        }
+        await tx.contentOpsArtifact.create({
+          data: {
+            runId: step.runId,
+            kind: 'review_doc',
+            path: doc.absPath,
+            displayPath: doc.relPath,
+            sha256: doc.sha256,
+            bytes: BigInt(doc.bytes),
+            sourceType: 'generated',
+            provenance: JSON.stringify({ registeredByStep: 'S8', docType: doc.docType, docVersion: doc.version }),
+            validationStatus: 'verified',
+          },
+        });
+      }
+    }
+    await tx.contentOpsStep.update({
+      where: { id: step.id },
+      data: {
+        commandStatus: 'done',
+        commandResult: JSON.stringify({ docCount: docs.length, refCount: refs.length, ambiguous }),
+        status: STEP_STATUS.WAITING_HUMAN,
+        finishedAt: new Date(),
+        evidence: JSON.stringify(evidence),
+        ...(ambiguous ? { failureReason: '候选文件歧义（多于一份），请人工确认后重新发起' } : {}),
+      },
+    });
+  });
+}
+
+/**
+ * S8 第二跳：发起 AI 比对。Runner 读回 2 份待审 + 6 份参考正文，
+ * 控制平面调 DeepSeek 按四维 rubric 评分（方案 C）。
+ */
+export async function startAiCompare(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId }, include: { runner: true } });
+  const allowed: string[] = [RUN_STATE.ROUND1_DOCS_QC, RUN_STATE.ROUND1_DOCS_QC_FAILED];
+  if (!allowed.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能发起 AI 比对`);
+  }
+  const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S8' } });
+  const ev = safeParse(step.evidence);
+  const locate = ev.locate as
+    | {
+        docs?: Array<{ absPath: string; sha256: string; docType: string; refMentor?: string | null }>;
+        refs?: Array<{ absPath: string; sha256: string; docType: string; refMentor?: string | null }>;
+        ambiguous?: boolean;
+      }
+    | undefined;
+  if (!locate || locate.ambiguous || !Array.isArray(locate.docs) || locate.docs.length !== 2) {
+    throw new EngineError(409, '定位未完成、仍有歧义或待审文件不是 2 份，不能发起 AI 比对');
+  }
+  // 参考集必须是 3 位参考导师 × 2 类共 6 份（旧定位证据可能是参考集定型前的 5 份，必须重扫）
+  const refs = locate.refs ?? [];
+  const refPairs = new Set(refs.map((r) => `${r.refMentor ?? ''}::${r.docType}`));
+  if (refs.length !== 6 || refPairs.size !== 6) {
+    throw new EngineError(409, `参考集不是 6 份定型参考（当前 ${refs.length} 份），请重新发起定位后再做 AI 比对`);
+  }
+  const runnerOnline = (run.runner?.lastSeenAt?.getTime() ?? 0) > Date.now() - RUNNER_ONLINE_MS;
+  if (!runnerOnline) throw new EngineError(409, 'Runner 离线，无法读取文件正文');
+
+  const items = [...locate.docs, ...refs].map((d) => ({
+    absPath: d.absPath,
+    sha256: d.sha256,
+    docType: d.docType,
+    refMentor: d.refMentor ?? null,
+  }));
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: step.id, commandStatus: { in: ['done', 'failed'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: step.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({ type: COMMAND.READ_VIEW_DOCS, payload: { items } }),
+      idempotencyKey: `${runId}:S8AI:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, 'AI 比对指令已在执行中，请等待结果');
+
+  if (run.status === RUN_STATE.ROUND1_DOCS_QC_FAILED) {
+    await transitionRun(prisma, run, RUN_STATE.ROUND1_DOCS_QC, '重新发起 S8 AI 比对');
+  }
+  await audit(userId, 'content_ops.start_ai_compare', runId, { itemCount: items.length });
+  return { queued: true, itemCount: items.length };
+}
+
+type ReadDocResultItem = {
+  absPath: string;
+  relPath: string;
+  docType: string;
+  refMentor?: string | null;
+  sha256: string;
+  bytes?: number;
+  content: string;
+};
+
+/** read_view_docs 结果：校验 → 两份待审并行 AI 评分 → 分数入证据（正文绝不落库）→ 等人工裁决 */
+async function handleReadViewDocsResult(
+  step: { id: string; runId: string; code: string; evidence: string | null; run: { id: string; status: string } },
+  result: Record<string, unknown>,
+) {
+  const evidence = safeParse(step.evidence);
+  const failCompare = async (reason: string) => {
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: step.id },
+        data: {
+          commandStatus: 'failed',
+          commandResult: JSON.stringify({ error: reason }),
+          status: STEP_STATUS.FAILED,
+          finishedAt: new Date(),
+          failureReason: reason,
+        },
+      });
+      const fresh = await tx.contentOpsRun.findUnique({ where: { id: step.runId } });
+      if (fresh && fresh.status === RUN_STATE.ROUND1_DOCS_QC) {
+        await transitionRun(tx, fresh, RUN_STATE.ROUND1_DOCS_QC_FAILED, `S8 AI 比对失败：${reason}`);
+      }
+    });
+  };
+
+  const locate = evidence.locate as
+    | {
+        docs?: Array<{ absPath: string; relPath: string; sha256: string; docType: string }>;
+        refs?: Array<{ absPath: string; relPath: string; sha256: string; docType: string; refMentor?: string | null }>;
+        ambiguous?: boolean;
+      }
+    | undefined;
+  if (!locate || locate.ambiguous || !Array.isArray(locate.docs)) {
+    await failCompare('定位证据缺失或仍有歧义');
+    return;
+  }
+  const items = (Array.isArray(result.results) ? result.results : []) as ReadDocResultItem[];
+  const expected = [...(locate.docs ?? []), ...(locate.refs ?? [])];
+  if (items.length !== expected.length) {
+    await failCompare(`回传文件数量不符（${items.length}/${expected.length}）`);
+    return;
+  }
+  const byAbs = new Map(items.map((i) => [i.absPath, i]));
+  for (const d of expected) {
+    const it = byAbs.get(d.absPath);
+    if (!it || typeof it.content !== 'string') {
+      await failCompare(`缺少文件正文：${d.relPath}`);
+      return;
+    }
+    if (it.sha256 !== d.sha256) {
+      await failCompare(`正文哈希与定位登记不一致：${d.relPath}`);
+      return;
+    }
+  }
+  const candidates = items.filter((i) => !i.refMentor);
+  const refs = items.filter((i) => i.refMentor);
+  if (candidates.length !== 2) {
+    await failCompare(`待审文件应为 2 份，实际 ${candidates.length}`);
+    return;
+  }
+
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: step.runId } });
+  let scored: DocCompareResult[];
+  try {
+    scored = await Promise.all(
+      candidates.map((it) =>
+        scoreViewDoc({
+          docType: it.docType === 'review_checklist' ? 'review_checklist' : 'style_analysis',
+          mentorDir: run.mentorDir,
+          isPilot: Boolean(run.isPilot),
+          candidate: { relPath: it.relPath, content: it.content },
+          refs: refs
+            .filter((r) => r.docType === it.docType)
+            .map((r) => ({ refMentor: r.refMentor ?? '', relPath: r.relPath, content: r.content })),
+        }),
+      ),
+    );
+  } catch (e) {
+    await failCompare(e instanceof Error ? e.message : 'AI 评分失败');
+    return;
+  }
+
+  const aiPass = allDocsPass(scored);
+  await prisma.contentOpsStep.update({
+    where: { id: step.id },
+    data: {
+      commandStatus: 'done',
+      // 只落评分摘要，绝不落文件正文
+      commandResult: JSON.stringify({ files: scored.map((s) => ({ relPath: s.relPath, scores: s.scores })) }),
+      status: STEP_STATUS.WAITING_HUMAN,
+      finishedAt: new Date(),
+      failureReason: aiPass ? null : 'AI 比对存在低于 80% 的维度，等待人工裁决',
+      evidence: JSON.stringify({
+        ...evidence,
+        compare: { results: scored, aiPass, at: new Date().toISOString() },
+      }),
+    },
+  });
+}
+
+/**
+ * S8 人工裁决（AI 评分为证据，决定权在人）：
+ * - pass：AI 全过时直接放行；有维度 <80 仍允许人工 override，但必须填 ≥10 字说明留痕
+ * - reject：必须填 ≥5 字原因，该原因带回 Codex 对话要求修订（Trae 不改正文）
+ */
+export async function submitRound1Qc(
+  userId: string,
+  runId: string,
+  input: { decision?: string; note?: string },
+) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+  if (run.status !== RUN_STATE.ROUND1_DOCS_QC) {
+    throw new EngineError(409, `当前状态（${run.status}）不能提交比对裁决`);
+  }
+  const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S8' } });
+  const evidence = safeParse(step.evidence);
+  const compare = evidence.compare as
+    | { results: DocCompareResult[]; aiPass: boolean; at: string }
+    | undefined;
+  if (!compare) throw new EngineError(409, '尚未完成 AI 比对，不能提交裁决');
+  const note = typeof input.note === 'string' ? input.note.trim().slice(0, 500) : '';
+  const decision = input.decision;
+
+  if (decision === 'reject') {
+    if (note.length < 5) {
+      throw new EngineError(400, '驳回必须填写具体原因（至少 5 个字），用于在 Codex 对话中要求修订');
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: step.id },
+        data: {
+          status: STEP_STATUS.FAILED,
+          finishedAt: new Date(),
+          failureReason: `人工驳回：${note}`,
+          evidence: JSON.stringify({
+            ...evidence,
+            qc: { decision: 'reject', note, decidedBy: userId, decidedAt: new Date().toISOString() },
+          }),
+        },
+      });
+      const fresh = await tx.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+      await transitionRun(tx, fresh, RUN_STATE.ROUND1_DOCS_QC_FAILED, `S8 人工驳回：${note}`);
+    });
+    await audit(userId, 'content_ops.submit_round1_qc', runId, { verdict: 'reject' });
+    return { ok: true, verdict: 'reject' };
+  }
+
+  if (decision !== 'pass') throw new EngineError(400, '裁决结论必须是 pass 或 reject');
+  const overridden = !compare.aiPass;
+  if (overridden && note.length < 10) {
+    throw new EngineError(400, 'AI 评定有维度低于 80%，人工放行必须填写依据说明（至少 10 个字）');
+  }
+  await prisma.$transaction(async (tx) => {
+    await tx.contentOpsStep.update({
+      where: { id: step.id },
+      data: {
+        status: STEP_STATUS.DONE,
+        finishedAt: new Date(),
+        failureReason: null,
+        evidence: JSON.stringify({
+          ...evidence,
+          qc: {
+            decision: 'pass',
+            aiPass: compare.aiPass,
+            overridden,
+            note: note || null,
+            decidedBy: userId,
+            decidedAt: new Date().toISOString(),
+          },
+        }),
+      },
+    });
+    const fresh = await tx.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+    if (fresh.status !== RUN_STATE.AWAITING_SEND_APPROVAL_ROUND1_DOCS) {
+      await transitionRun(tx, fresh, RUN_STATE.AWAITING_SEND_APPROVAL_ROUND1_DOCS, overridden ? 'S8 人工 override AI 结论放行' : 'S8 AI 比对通过');
+    }
+  });
+  await audit(userId, 'content_ops.submit_round1_qc', runId, { verdict: 'pass', overridden });
+  return { ok: true, verdict: 'pass', overridden };
+}
+
+/** S9 发送清单：①风格分析（浏览用）→②审核清单（需回复）→③G1 固定文案；幂等键按内容+序号确定，重试去重 */
+async function buildS9SendPayload(runId: string, chatId: string, index: number, dedupBase: string) {
+  const idempotencyKey = `${runId}:S9:${sha256Text(dedupBase).slice(0, 8)}:${index}`.slice(0, 50);
+  if (index >= 2) {
+    return { chatId, kind: 'text', text: G1_ROUND1_DOCS_TEXT, sendIndex: 2, idempotencyKey };
+  }
+  const docs = await prisma.contentOpsArtifact.findMany({ where: { runId, kind: 'review_doc' }, orderBy: { createdAt: 'asc' } });
+  const ordered = [...docs].sort(
+    (a, b) => Number(String(b.provenance ?? '').includes('review_checklist')) - Number(String(a.provenance ?? '').includes('review_checklist')),
+  );
+  const doc = ordered[index];
+  if (!doc) throw new EngineError(409, `S9 发送清单缺少第 ${index + 1} 份阅览文件`);
+  return {
+    chatId,
+    kind: 'file',
+    srcDirAbs: path.dirname(doc.path),
+    fileName: path.basename(doc.path),
+    expectedSha: doc.sha256,
+    label: doc.displayPath,
+    sendIndex: index,
+    idempotencyKey,
+  };
+}
+
+export async function approveSendRound1Docs(
+  userId: string,
+  runId: string,
+  input: { confirm?: { filesRead?: boolean; qcSeen?: boolean; chatConfirmed?: boolean; copyUnchanged?: boolean } },
+) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId }, include: { runner: true } });
+  if (run.status !== RUN_STATE.AWAITING_SEND_APPROVAL_ROUND1_DOCS) {
+    throw new EngineError(409, `当前状态（${run.status}）不能批准发送第一轮阅览文件`);
+  }
+  const c = {
+    filesRead: input.confirm?.filesRead === true,
+    qcSeen: input.confirm?.qcSeen === true,
+    chatConfirmed: input.confirm?.chatConfirmed === true,
+    copyUnchanged: input.confirm?.copyUnchanged === true,
+  };
+  if (!Object.values(c).every(Boolean)) throw new EngineError(409, '证据核对勾未完成（四项须全部勾选）');
+  await ensureStepRows(runId, ['S9']);
+  const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+  if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+  if (!run.feishuChatId) throw new EngineError(409, 'Run 未绑定飞书群，禁止发送');
+
+  const docCount = await prisma.contentOpsArtifact.count({ where: { runId, kind: 'review_doc' } });
+  if (docCount !== 2) throw new EngineError(409, `第一轮阅览文件应为 2 份（当前登记 ${docCount} 份），禁止发送`);
+
+  const reviewDocs = await prisma.contentOpsArtifact.findMany({ where: { runId, kind: 'review_doc' }, orderBy: { createdAt: 'asc' } });
+  const dedupBase = `g1:${run.feishuChatId}:${reviewDocs.map((d) => d.sha256.slice(0, 12)).sort().join(':')}`;
+  const dup = await prisma.contentOpsFeishuMessage.findFirst({
+    where: { dedupKey: { startsWith: dedupBase }, status: 'sent' },
+  });
+  if (dup) throw new EngineError(409, `该内容已发送过（dedup=${dedupBase}），禁止重复发送`);
+
+  const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S9' } });
+  const firstPayload = await buildS9SendPayload(runId, run.feishuChatId, 0, dedupBase);
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: step.id, commandStatus: { in: ['none', 'failed'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: step.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({ type: COMMAND.FEISHU_SEND_MESSAGE, payload: firstPayload }),
+      idempotencyKey: `${runId}:S9:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+      evidence: JSON.stringify({
+        ...safeParse(step.evidence),
+        sendPlan: [
+          { kind: 'file', label: '语言人格风格分析（浏览用）' },
+          { kind: 'file', label: '第一轮审核清单（需回复）' },
+          { kind: 'text', label: 'G1 固定文案' },
+        ],
+        dedupKeyBase: dedupBase,
+        approvedBy: userId,
+        approvedAt: new Date().toISOString(),
+        sendLog: [],
+      }),
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, 'S9 已有发送指令在执行中');
+
+  await prisma.contentOpsApproval.create({
+    data: {
+      runId,
+      gate: 'G1',
+      stepCode: 'S9',
+      buttonName: '批准发送：第一轮阅览文件',
+      scope: `仅本次向群 ${run.feishuChatName ?? run.feishuChatId} 发送 2 份阅览文件 + 1 条 G1 固定文案`,
+      checks: JSON.stringify(c),
+      status: 'approved',
+      actorId: userId,
+    },
+  });
+  for (let i = 0; i < 3; i += 1) {
+    await prisma.contentOpsFeishuMessage.create({
+      data: {
+        runId,
+        dedupKey: `${dedupBase}#${i}`,
+        chatId: run.feishuChatId,
+        direction: 'outbound',
+        templateId: i === 2 ? 'g1_round1_docs_text' : null,
+        status: 'pending',
+        createdBy: 'runner',
+      },
+    });
+  }
+  await audit(userId, 'content_ops.approve_send_round1_docs', runId, { gate: 'G1', dedupBase });
+  return { queued: true };
+}
+
+async function handleFeishuSendMessageResult(
+  step: { id: string; runId: string; code: string; evidence: string | null; run: { id: string; status: string } },
+  payload: { payload: Record<string, unknown> },
+  result: Record<string, unknown>,
+) {
+  const idx = Number(payload.payload.sendIndex ?? 0);
+  const kind = typeof payload.payload.kind === 'string' ? payload.payload.kind : 'unknown';
+  const fileName = typeof payload.payload.fileName === 'string' ? payload.payload.fileName : null;
+  const evidence = safeParse(step.evidence) as {
+    sendLog?: Array<Record<string, unknown>>;
+    dedupKeyBase?: string;
+  };
+  const sendLog = Array.isArray(evidence.sendLog) ? evidence.sendLog : [];
+  sendLog.push({
+    index: idx,
+    kind,
+    label: kind === 'text' ? 'G1 固定文案' : fileName,
+    messageId: typeof result.messageId === 'string' ? result.messageId : null,
+    at: new Date().toISOString(),
+  });
+
+  await prisma.contentOpsStep.update({
+    where: { id: step.id },
+    data: {
+      commandStatus: 'done',
+      commandResult: JSON.stringify(result),
+      evidence: JSON.stringify({ ...evidence, sendLog }),
+    },
+  });
+  if (evidence.dedupKeyBase) {
+    await prisma.contentOpsFeishuMessage.updateMany({
+      where: { runId: step.runId, dedupKey: `${evidence.dedupKeyBase}#${idx}` },
+      data: { status: 'sent', messageId: typeof result.messageId === 'string' ? result.messageId : null, sentAt: new Date() },
+    });
+  }
+
+  const nextIndex = idx + 1;
+  if (nextIndex >= 3 || !evidence.dedupKeyBase) {
+    await finishStepAndAdvance(step, getStepDef('S9').nextRunState, result);
+    return;
+  }
+  // 链式下发下一条（S7 模式）；发送内容按 dedup 键与序号重建，不依赖前序结果
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: step.runId } });
+  if (!run.feishuChatId) throw new EngineError(409, 'Run 未绑定飞书群，链式发送中断');
+  const nextPayload = await buildS9SendPayload(step.runId, run.feishuChatId, nextIndex, evidence.dedupKeyBase);
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: step.id, commandStatus: { in: ['dispatched', 'done'] } },
+    data: {
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({ type: COMMAND.FEISHU_SEND_MESSAGE, payload: nextPayload }),
+      idempotencyKey: `${step.runId}:S9:${randomBytes(6).toString('hex')}`,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, 'S9 链式下发冲突：指令状态已变化，请人工检查');
+}
+
+/** 发送失败的回退通道：禁止自动重发，人工在群内发送后在此登记 */
+export async function markRound1ManualSend(
+  userId: string,
+  runId: string,
+  input: { confirm?: { filesSent?: boolean; textSent?: boolean }; note?: string },
+) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+  const allowed = [RUN_STATE.AWAITING_SEND_APPROVAL_ROUND1_DOCS, 'failed'];
+  if (!allowed.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能登记人工发送`);
+  }
+  const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S9' } });
+  const c = { filesSent: input.confirm?.filesSent === true, textSent: input.confirm?.textSent === true };
+  if (!c.filesSent || !c.textSent) throw new EngineError(409, '请先勾选确认两份文件与固定文案均已人工发送');
+
+  const evidence = safeParse(step.evidence);
+  const base = (evidence.dedupKeyBase as string | undefined) ?? `g1:manual:${run.feishuChatId ?? 'unknown'}:${Date.now()}`;
+  await prisma.$transaction(async (tx) => {
+    await tx.contentOpsStep.update({
+      where: { id: step.id },
+      data: {
+        status: STEP_STATUS.DONE,
+        commandStatus: 'done',
+        finishedAt: new Date(),
+        failureReason: null,
+        evidence: JSON.stringify({
+          ...evidence,
+          manualSend: { by: userId, at: new Date().toISOString(), note: input.note?.slice(0, 300) ?? null, dedupKeyBase: base },
+        }),
+      },
+    });
+    const fresh = await tx.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+    if (fresh.status !== RUN_STATE.ROUND1_DOCS_SENT) {
+      await transitionRun(tx, fresh, RUN_STATE.ROUND1_DOCS_SENT, 'S9 人工发送登记');
+    }
+    for (let i = 0; i < 3; i += 1) {
+      const key = `${base}#${i}`;
+      const existing = await tx.contentOpsFeishuMessage.findUnique({ where: { dedupKey: key } });
+      if (existing) {
+        await tx.contentOpsFeishuMessage.update({ where: { dedupKey: key }, data: { status: 'sent', createdBy: 'human', sentAt: new Date() } });
+      } else {
+        await tx.contentOpsFeishuMessage.create({
+          data: {
+            runId,
+            dedupKey: key,
+            chatId: run.feishuChatId ?? 'unknown',
+            direction: 'outbound',
+            templateId: i === 2 ? 'g1_round1_docs_text' : null,
+            status: 'sent',
+            createdBy: 'human',
+            sentAt: new Date(),
+          },
+        });
+      }
+    }
+  });
+  await audit(userId, 'content_ops.mark_round1_manual_send', runId, { note: input.note?.slice(0, 300) ?? null });
+  return { ok: true };
+}
+
 async function finishStepAndAdvance(
   step: { id: string; runId: string; code: string; run: { id: string; status: string } },
   nextRunState: string,
@@ -823,7 +1466,7 @@ export async function createRun(userId: string, input: {
         startedAt: new Date(),
       },
     });
-    for (const def of STEP_DEFS.filter((d) => P1_ACTIVE_CODES.includes(d.code))) {
+    for (const def of STEP_DEFS.filter((d) => ACTIVE_CODES.includes(d.code))) {
       const isS0 = def.code === 'S0';
       await tx.contentOpsStep.create({
         data: {
@@ -996,7 +1639,7 @@ export async function getRunDetail(runId: string) {
 }
 
 function nextActiveStep(steps: Array<{ code: string; status: string }>) {
-  const ordered = STEP_DEFS.filter((d) => P1_ACTIVE_CODES.includes(d.code)).map((d) => {
+  const ordered = STEP_DEFS.filter((d) => ACTIVE_CODES.includes(d.code)).map((d) => {
     const s = steps.find((x) => x.code === d.code);
     return { def: d, status: s?.status ?? 'pending' };
   });

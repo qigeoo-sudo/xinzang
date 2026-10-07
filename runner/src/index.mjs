@@ -12,6 +12,9 @@
  * 安全：不打印令牌与指令载荷正文；文件操作限定 CONTENT_ROOT；codex 自动投递未验证前恒为 needs_validation。
  */
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { heartbeat as apiHeartbeat, register as apiRegister, reportResult } from './api.mjs';
 import { handleCommand } from './commands.mjs';
 import {
@@ -24,6 +27,29 @@ import {
 } from './config.mjs';
 import { DEFAULT_CONTENT_ROOT, listMentorDirs } from './filer.mjs';
 import { probeAll } from './probe.mjs';
+
+// 读取仓库根目录 .env.local（存在才生效），供本地手动启动时带上自建应用等配置；已设置的环境变量不覆盖
+function loadDotEnvLocal() {
+  try {
+    const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+    for (const line of readFileSync(join(repoRoot, '.env.local'), 'utf8').split(/\r?\n/)) {
+      const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+      if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].trim().replace(/^"(.*)"$/, '$1');
+    }
+  } catch {
+    // .env.local 不存在则跳过（生产用容器环境变量）
+  }
+}
+
+// 飞书身份切换：配置了自建应用（FEISHU_APP_ID/SECRET）则强制走应用（机器人）身份。
+// 用户身份令牌（Trae 注入）受商店应用无对外共享能力限制，无法在外部群发消息（230027）。
+function applyLarkIdentity() {
+  if (!process.env.FEISHU_APP_ID || !process.env.FEISHU_APP_SECRET) return null;
+  process.env.LARKSUITE_CLI_APP_ID = process.env.FEISHU_APP_ID;
+  process.env.LARKSUITE_CLI_APP_SECRET = process.env.FEISHU_APP_SECRET;
+  delete process.env.LARKSUITE_CLI_USER_ACCESS_TOKEN;
+  return process.env.FEISHU_APP_ID;
+}
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -178,6 +204,8 @@ async function tick(cfg, processed, busy) {
 
 async function main() {
   const args = parseArgs(process.argv);
+  loadDotEnvLocal();
+  const larkAppId = applyLarkIdentity();
 
   if (args.register) {
     await registerFlow(args);
@@ -194,7 +222,7 @@ async function main() {
 
   const processed = await loadProcessed();
   const busy = { current: false };
-  log('OK', `Runner 已启动 runnerId=${cfg.runnerId} root=${cfg.contentRoot} 间隔=${cfg.heartbeatMs}ms`);
+  log('OK', `Runner 已启动 runnerId=${cfg.runnerId} root=${cfg.contentRoot} 间隔=${cfg.heartbeatMs}ms 飞书身份=${larkAppId ? `自建应用(${larkAppId.slice(0, 6)}…)` : '用户令牌'}`);
 
   // 立即执行一次，之后按间隔递归调度（避免重入）
   await tick(cfg, processed, busy);

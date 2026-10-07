@@ -14,6 +14,8 @@ export const RUN_STATUS_LABELS: Record<string, string> = {
   codex_round1_assembly: 'Codex Assembly 执行中',
   round1_docs_qc: '第一轮阅览文件比对中',
   round1_docs_qc_failed: '第一轮比对未过',
+  awaiting_send_approval_round1_docs: '等待批准发送阅览文件',
+  round1_docs_sent: '阅览文件已发送',
   // 干预态/通用
   waiting_human_input: '等待人工处理',
   failed: '失败（可重试）',
@@ -64,6 +66,7 @@ export const ARTIFACT_KIND_LABELS: Record<string, string> = {
   claude_output: 'Claude 产物',
   codex_assembly: 'Codex Assembly',
   start_here: '00_START_HERE 索引',
+  review_doc: '第一轮阅览文件',
   other: '其他',
 };
 

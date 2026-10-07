@@ -5,7 +5,8 @@
  * 约定：
  * - Run 状态字符串与设计文档 §7.1 逐字一致，禁止在代码里另造状态名。
  * - 步骤 S0-S22 的操作者/责任方与 §8 表格逐字对应。
- * - P1 仅实现到 S7（P1_ACTIVE_CODES）；后续步骤只定义、不开放按钮。
+ * - 已开放步骤（active）：P1=S0-S7；P2a=S8-S9（飞书连接器）。后续步骤只定义、不开放按钮。
+ * - P2 依据：docs/mentor-content-operations-v1.md §543（P2 验收=验证报告+真实导师 S1/S9/S12 全链路）。
  */
 
 // ------------------------------------------------------------------
@@ -129,8 +130,8 @@ export interface StepDef {
   needsVpn: boolean;
   /** 该步骤是否走飞书直连（提示关 VPN） */
   isFeishu: boolean;
-  /** P1 是否实际开放（P1 试点验收边界：S0-S7） */
-  p1Active: boolean;
+  /** 是否已开放（试点推进逐步激活：P1=S0-S7，P2a=S8-S9） */
+  active: boolean;
 }
 
 export const STEP_DEFS: StepDef[] = [
@@ -138,143 +139,158 @@ export const STEP_DEFS: StepDef[] = [
     code: 'S0', title: 'Run 建立：确认导师身份、飞书群与环境',
     actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.WAITING_ROUND1_SUBMISSION,
-    needsVpn: false, isFeishu: false, p1Active: true,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S1', title: '第一轮材料定位与下载（Runner 登记制）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND1_MATERIAL_RECEIVED,
-    needsVpn: false, isFeishu: true, p1Active: true,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S2', title: '归并、规范化命名与 D 盘归档（人工批准后执行）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND1_ARCHIVED,
-    needsVpn: false, isFeishu: false, p1Active: true,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S3', title: 'VPN / 连通性探测',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.CLAUDE_MANUAL_STEP,
-    needsVpn: false, isFeishu: false, p1Active: true,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S4', title: 'Claude 人工提交（导师风格摹写对话，Sonnet 5.5 中等）',
     actor: ACTOR.HUMAN, owner: ACTOR.HUMAN,
     nextRunState: RUN_STATE.CLAUDE_MANUAL_STEP,
-    needsVpn: true, isFeishu: false, p1Active: true,
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S5', title: 'Claude 产物下载与 by sonnet 归档（R3 勾选门控）',
     actor: ACTOR.HUMAN, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.CLAUDE_OUTPUT_ARCHIVED,
-    needsVpn: false, isFeishu: false, p1Active: true,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S6', title: 'Codex 第一轮 Assembly（专属对话，固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND1_ASSEMBLY,
-    needsVpn: true, isFeishu: false, p1Active: true,
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S7', title: 'Assembly 完成核验（完成报告/00_START_HERE/验证结果）',
     actor: ACTOR.RUNNER, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.ROUND1_DOCS_QC,
-    needsVpn: false, isFeishu: false, p1Active: true,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S8', title: '第一轮阅览文件定位 + Ying 参考（v0.1）比对',
     actor: ACTOR.TRAE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.AWAITING_SEND_APPROVAL_ROUND1_DOCS,
-    needsVpn: false, isFeishu: false, p1Active: false,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S9', title: '人工批准 + 发送第一轮阅览文件（G1，固定文案）',
     actor: ACTOR.HUMAN, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND1_DOCS_SENT,
-    needsVpn: false, isFeishu: true, p1Active: false,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S10', title: '第一轮审核清单回复接收归档（_回复 命名）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND1_REPLY_RECEIVED,
-    needsVpn: false, isFeishu: true, p1Active: false,
+    needsVpn: false, isFeishu: true, active: false,
   },
   {
     code: 'S11', title: 'Codex 吸收第一轮回复（复用同一对话，固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND1_ABSORB,
-    needsVpn: true, isFeishu: false, p1Active: false,
+    needsVpn: true, isFeishu: false, active: false,
   },
   {
     code: 'S12', title: '人工批准 + 发送第二轮官方大纲（G2，固定链接+文案）',
     actor: ACTOR.HUMAN, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND2_OUTLINE_SENT,
-    needsVpn: false, isFeishu: true, p1Active: false,
+    needsVpn: false, isFeishu: true, active: false,
   },
   {
     code: 'S13', title: '第二轮材料识别与归档（歧义必须人工确认）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND2_MATERIAL_RECEIVED,
-    needsVpn: false, isFeishu: true, p1Active: false,
+    needsVpn: false, isFeishu: true, active: false,
   },
   {
     code: 'S14', title: 'Codex 第二轮候选更新（固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND2_UPDATE,
-    needsVpn: true, isFeishu: false, p1Active: false,
+    needsVpn: true, isFeishu: false, active: false,
   },
   {
     code: 'S15', title: '第二轮审核清单比对（v0.3）+ G3 批准 + 发送',
     actor: ACTOR.TRAE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.ROUND2_DOCS_SENT,
-    needsVpn: false, isFeishu: true, p1Active: false,
+    needsVpn: false, isFeishu: true, active: false,
   },
   {
     code: 'S16', title: '第二轮回复接收归档 + Codex 最终吸收',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_FINAL_ABSORB,
-    needsVpn: true, isFeishu: true, p1Active: false,
+    needsVpn: true, isFeishu: true, active: false,
   },
   {
     code: 'S17', title: 'Final Handoff 发现（最新有效不可变包）',
     actor: ACTOR.CONTROL_PLANE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.FINAL_HANDOFF_PREFLIGHT,
-    needsVpn: false, isFeishu: false, p1Active: false,
+    needsVpn: false, isFeishu: false, active: false,
   },
   {
     code: 'S18', title: 'Final Handoff 完整预检（AGENTS 第 16 节逐项）',
     actor: ACTOR.CONTROL_PLANE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.READY_FOR_INTEGRATION,
-    needsVpn: false, isFeishu: false, p1Active: false,
+    needsVpn: false, isFeishu: false, active: false,
   },
   {
     code: 'S19', title: 'pending 归零处置（Codex 逐张，Trae 无升级权）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.AWAITING_STAGING_INTEGRATION_APPROVAL,
-    needsVpn: false, isFeishu: false, p1Active: false,
+    needsVpn: false, isFeishu: false, active: false,
   },
   {
     code: 'S20', title: '第一次人工确认：确认交给Trae集成至main和测试端（G4）',
     actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.INTEGRATING_APPLICATION,
-    needsVpn: false, isFeishu: false, p1Active: false,
+    needsVpn: false, isFeishu: false, active: false,
   },
   {
     code: 'S21', title: 'Trae 集成：对账→备份→集成→八类测试→推main→部署测试端',
     actor: ACTOR.TRAE, owner: ACTOR.TRAE,
     nextRunState: RUN_STATE.AWAITING_STAGING_ACCEPTANCE,
-    needsVpn: true, isFeishu: false, p1Active: false,
+    needsVpn: true, isFeishu: false, active: false,
   },
   {
     code: 'S22', title: '测试端验收 + 验收通过并发布生产（main → master → aihr.top）（G5）',
     actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.COMPLETED,
-    needsVpn: true, isFeishu: false, p1Active: false,
+    needsVpn: true, isFeishu: false, active: false,
   },
 ];
 
-export const P1_ACTIVE_CODES = STEP_DEFS.filter((s) => s.p1Active).map((s) => s.code);
+export const ACTIVE_CODES = STEP_DEFS.filter((s) => s.active).map((s) => s.code);
+
+// ------------------------------------------------------------------
+// S9 G1 固定文案（D:\database\AGENTS.md 第 9 节逐字固定，禁止改写）
+// ------------------------------------------------------------------
+
+export const G1_ROUND1_DOCS_TEXT =
+  '@导师，这里有两份文件，其中语言人格风格分析文件是供浏览用，不需要回复，而第一轮审核清单文件，需要阅读并回复，感谢。';
+
+/** S8 四维比对项（§8：与 ying-v0.1 同类参考比结构/职责/密度/可读性） */
+export const ROUND1_QC_ITEMS = [
+  { key: 'structure', label: '结构', desc: '章节组织与使用说明结构与同类参考一致' },
+  { key: 'duty', label: '职责', desc: '导师需做什么/不需做什么表述清晰无歧义' },
+  { key: 'density', label: '密度', desc: '信息密度与同类参考相当（不臃肿不缺项）' },
+  { key: 'readability', label: '可读性', desc: '导师本人能独立读懂并知道如何回复' },
+] as const;
 
 const STEP_BY_CODE = new Map(STEP_DEFS.map((s) => [s.code, s]));
 

@@ -11,6 +11,7 @@
 import { useEffect, useState } from 'react';
 import type { RunDetail, RunStep, RunArtifact } from './types';
 import { COMMAND_STATUS_LABELS, STEP_STATUS_LABELS, ARTIFACT_KIND_LABELS, labelOf } from './display-labels';
+import { G1_ROUND1_DOCS_TEXT, ROUND1_QC_ITEMS } from '@/lib/content-ops/state-machine';
 
 type ActionFn = (subPath: string, body: Record<string, unknown>) => Promise<void>;
 
@@ -795,6 +796,526 @@ export function TraePanelC() {
         不接受「帮我改 Prompt / 知识卡」类请求。门禁后此处只读展示 TRAE_HANDOFF.md 集成合同摘要、
         八类测试结果、修改文件清单、Git SHA 与回滚点。P1 边界为 S0-S7，本区在本阶段全程锁定。
       </p>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------
+// S8：第一轮阅览文件定位 + AI 四维比对 + 人工裁决（P2a，方案 C）
+// ------------------------------------------------------------------
+
+type LocatedDoc = {
+  relPath: string;
+  absPath: string | null;
+  docType: string;
+  version: string | null;
+  bytes: number;
+  sha256: string | null;
+  refMentor?: string | null;
+};
+
+type CompareFinding = { severity: 'block' | 'warn' | 'info'; chapter: string; detail: string };
+
+type CompareResult = {
+  docType: string;
+  relPath: string;
+  scores: Record<string, number>;
+  reasons: Partial<Record<string, string>>;
+  findings: CompareFinding[];
+  summary: string;
+  model: string;
+};
+
+type StepEvidence = {
+  locate?: { docs: LocatedDoc[]; refs: LocatedDoc[]; missing?: string[]; ambiguous?: boolean; locatedAt: string };
+  compare?: { results: CompareResult[]; aiPass: boolean; at: string };
+  qc?: { decision: 'pass' | 'reject'; aiPass?: boolean; overridden?: boolean; note?: string | null; decidedAt: string };
+};
+
+function scoreColor(v: number): string {
+  if (v >= 80) return 'text-emerald-700';
+  if (v >= 60) return 'text-amber-600';
+  return 'text-red-600';
+}
+
+function barColor(v: number): string {
+  if (v >= 80) return 'bg-emerald-500';
+  if (v >= 60) return 'bg-amber-400';
+  return 'bg-red-500';
+}
+
+function CompareResultCard({ r }: { r: CompareResult }) {
+  return (
+    <div className="rounded-xl border border-stone-200 p-3">
+      <p className="truncate text-xs font-semibold text-stone-700" title={r.relPath}>
+        {r.relPath.split('/').pop()}
+      </p>
+      <div className="mt-2 space-y-1.5">
+        {ROUND1_QC_ITEMS.map((dim) => {
+          const v = r.scores[dim.key] ?? 0;
+          return (
+            <div key={dim.key}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-stone-600">
+                  {dim.label}
+                  <span className="ml-1 text-stone-400">{dim.desc}</span>
+                </span>
+                <span className={`font-semibold ${scoreColor(v)}`}>{v}%</span>
+              </div>
+              <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                <div className={`h-full ${barColor(v)}`} style={{ width: `${Math.max(2, v)}%` }} />
+              </div>
+              {v < 80 && r.reasons[dim.key] && (
+                <p className="mt-0.5 rounded bg-red-50 px-2 py-1 text-[11px] leading-4 text-red-700">
+                  低于 80%：{r.reasons[dim.key]}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {r.findings.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {r.findings.map((f, i) => (
+            <li
+              key={i}
+              className={`rounded px-2 py-1 text-[11px] leading-4 ${
+                f.severity === 'block'
+                  ? 'bg-red-50 text-red-700'
+                  : f.severity === 'warn'
+                    ? 'bg-amber-50 text-amber-800'
+                    : 'bg-stone-50 text-stone-500'
+              }`}
+            >
+              <span className="font-semibold">
+                {f.severity === 'block' ? '必改' : f.severity === 'warn' ? '建议' : '提示'}
+                {f.chapter ? ` · ${f.chapter}` : ''}：
+              </span>
+              {f.detail}
+            </li>
+          ))}
+        </ul>
+      )}
+      {r.summary && <p className="mt-2 text-[11px] leading-4 text-stone-500">AI 总评：{r.summary}</p>}
+    </div>
+  );
+}
+
+export function Round1DocsQcPanel({
+  run,
+  onAction,
+  canWrite,
+}: {
+  run: RunDetail;
+  onAction: ActionFn;
+  canWrite: boolean;
+}) {
+  const step = run.steps.find((s) => s.code === 'S8');
+  const evidence = (step?.evidence ?? {}) as StepEvidence;
+  const locate = evidence.locate;
+  const compare = evidence.compare;
+  const qc = evidence.qc;
+  const locateRunning =
+    !locate && (step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched');
+  const compareRunning =
+    !!locate && !compare && (step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [note, setNote] = useState('');
+
+  const act = async (subPath: string, body: Record<string, unknown>) => {
+    setBusy(true);
+    setError('');
+    try {
+      await onAction(subPath, body);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '操作失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const registered = new Set(run.artifacts.filter((a) => a.kind === 'review_doc').map((a) => a.displayPath));
+
+  // 需要显示面板的时机：状态进入比对中/比对失败/等待批准前，或 S8 行存在
+  if (!run.status.includes('round1_docs_qc') && !step) return null;
+
+  const locateReady = !!locate && !locate.ambiguous && (locate.missing?.length ?? 0) === 0;
+  const aiFailed = !!compare === false && step?.status === 'failed' && !!locate;
+
+  return (
+    <section className="letter-paper rounded-[18px] p-4">
+      <h3 className="text-sm font-bold text-stone-700">S8 · 第一轮阅览文件定位 + AI 四维比对</h3>
+      <p className="mt-0.5 text-xs text-stone-400">
+        步骤状态：{labelOf(STEP_STATUS_LABELS, step?.status)}
+        {step?.failureReason && <span className="ml-2 text-red-600">{step.failureReason}</span>}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-stone-500">
+        Runner 按命名约定定位两份阅览文件，读取本导师与 kevin yuan / phyllis chi / ying wang 共 8 份文件正文（正文只用于本次评分、不落库），
+        由系统按结构、职责、密度、可读性四维各打百分比；任一维低于 80% 给出章节级原因。AI 只提供证据，放行或驳回由你决定。
+      </p>
+
+      {!step && canWrite && (
+        <div className="mt-3">
+          <button type="button" onClick={() => act('start-round1-docs-qc', {})} disabled={busy || !run.runner?.online} className="btn-primary text-sm">
+            {busy ? '已入队…' : '开始定位阅览文件'}
+          </button>
+          {!run.runner?.online && <span className="ml-2 text-xs text-red-500">Runner 离线</span>}
+          {error && <span className="ml-2 text-xs text-red-600">{error}</span>}
+        </div>
+      )}
+
+      {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S8' })} />}
+
+      {locateRunning && <p className="mt-3 text-xs text-stone-500">正在定位 work 目录并计算哈希…</p>}
+
+      {locate && (
+        <div className="mt-3 space-y-3">
+          <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+            <p className="text-xs font-semibold text-stone-600">
+              定位到的阅览文件（{locate.locatedAt ? new Date(locate.locatedAt).toLocaleString('zh-CN') : ''}）
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {locate.docs.map((d) => (
+                <li key={d.relPath} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs">
+                  <span className="w-16 shrink-0 text-right text-stone-400">{formatBytes(d.bytes)}</span>
+                  <span className="min-w-0 flex-1 truncate text-stone-600" title={d.relPath}>
+                    {d.relPath}
+                  </span>
+                  <span className="shrink-0 text-stone-400">{d.version ?? '—'}</span>
+                  <span className="shrink-0 truncate text-stone-400" title={d.sha256 ?? ''}>
+                    sha256:{d.sha256 ? shortHash(d.sha256) : '—'}
+                  </span>
+                  {registered.has(d.relPath) && (
+                    <span className="shrink-0 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] text-stone-500">已登记</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {(locate.missing?.length ?? 0) > 0 && (
+              <p className="mt-1 text-xs text-red-600">未找到：{locate.missing!.join('、')}（命名约定：&lt;Display_Name&gt;_语言人格风格分析/第一轮审核清单_v&lt;版本&gt;.md）</p>
+            )}
+            {locate.ambiguous && <p className="mt-1 text-xs text-red-600">候选文件歧义（同版本多于一份），请人工确认后重新发起。</p>}
+          </div>
+
+          {locate.refs.length > 0 && (
+            <details className="rounded-xl border border-stone-200 px-3 py-2">
+              <summary className="cursor-pointer text-xs text-stone-500">
+                同类参考文档（{locate.refs.length} 份，每类每人取最新版：kevin yuan v0.1 / phyllis chi v0.2-v0.3 / ying wang v0.1）
+              </summary>
+              <ul className="mt-1 space-y-0.5">
+                {locate.refs.map((d) => (
+                  <li key={`${d.refMentor}/${d.relPath}`} className="flex items-center gap-2 px-2 py-0.5 text-xs text-stone-500">
+                    <span className="w-20 shrink-0">{d.refMentor}</span>
+                    <span className="min-w-0 flex-1 truncate" title={d.relPath}>
+                      {d.relPath}
+                    </span>
+                    <span className="shrink-0 text-stone-400">
+                      {d.docType === 'review_checklist' ? '审核清单' : '风格分析'} {d.version ?? ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+
+          {compareRunning && (
+            <div className="rounded-xl border border-cyan-200 bg-cyan-50/60 p-3 text-xs text-cyan-900">
+              AI 比对进行中：Runner 正在读取 {2 + locate.refs.length} 份文件正文，随后系统并行调用评分，通常 30-60 秒，本页会自动刷新。
+            </div>
+          )}
+
+          {compare && (
+            <div className="space-y-3">
+              <div
+                className={`rounded-xl border p-3 text-xs ${
+                  compare.aiPass ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900' : 'border-amber-200 bg-amber-50/60 text-amber-900'
+                }`}
+              >
+                {compare.aiPass
+                  ? `AI 评定 8 个维度全部 ≥80%，建议放行（${new Date(compare.at).toLocaleString('zh-CN')}）。你仍需通读两份文件后做最终裁决。`
+                  : `AI 评定存在低于 80% 的维度（${new Date(compare.at).toLocaleString('zh-CN')}）。若确认问题，驳回并把原因带到 Codex 对话修订；若你判断 AI 误判，可填依据后人工放行。`}
+              </div>
+              {compare.results.map((r) => (
+                <CompareResultCard key={r.relPath} r={r} />
+              ))}
+            </div>
+          )}
+
+          {qc && (
+            <div
+              className={`rounded-xl border p-3 text-xs ${
+                qc.decision === 'pass' ? 'border-emerald-200 bg-emerald-50/60 text-emerald-900' : 'border-red-200 bg-red-50/60 text-red-700'
+              }`}
+            >
+              已裁决：{qc.decision === 'pass' ? `放行进入 S9${qc.overridden ? '（人工 override AI 结论）' : ''}` : '驳回，交回 Codex 修订'}
+              {qc.note ? ` —— ${qc.note}` : ''}
+              <span className="ml-2 text-stone-400">{new Date(qc.decidedAt).toLocaleString('zh-CN')}</span>
+            </div>
+          )}
+
+          {canWrite && locateReady && !compareRunning && !qc && ['round1_docs_qc', 'round1_docs_qc_failed'].includes(run.status) && (
+            <div className="rounded-xl border border-stone-200 p-3">
+              {!compare ? (
+                <div className="flex items-center gap-2">
+                  {locate.refs.length !== 6 ? (
+                    <>
+                      <span className="text-xs text-amber-700">
+                        参考集已更新（当前定位到 {locate.refs.length} 份，应为 6 份定型参考），需重新定位。
+                      </span>
+                      <button type="button" onClick={() => act('start-round1-docs-qc', {})} disabled={busy || !run.runner?.online} className="btn-primary text-sm">
+                        {busy ? '已入队…' : '重新定位'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {aiFailed && <span className="text-xs text-red-600">上次 AI 比对失败，可重试；</span>}
+                      <button type="button" onClick={() => act('start-ai-compare', {})} disabled={busy || !run.runner?.online} className="btn-primary text-sm">
+                        {busy ? '已入队…' : '发起 AI 四维比对'}
+                      </button>
+                    </>
+                  )}
+                  {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线</span>}
+                  {error && <span className="text-xs text-red-600">{error}</span>}
+                  <ImpactNote>需要控制平面已配置 DeepSeek key；无 key 或网络不通时步骤失败，可在恢复后重试，不会产生任何内容改动。</ImpactNote>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-stone-600">人工裁决（AI 是证据，你是门禁）</p>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    rows={2}
+                    placeholder={
+                      compare.aiPass
+                        ? '裁决备注（可选）'
+                        : 'AI 有维度低于 80%：放行需填写判断依据（≥10 字）；驳回需填写带给 Codex 的修订原因（≥5 字）'
+                    }
+                    className="w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => act('round1-qc', { decision: 'pass', note })}
+                      disabled={busy || (!compare.aiPass && note.trim().length < 10)}
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+                    >
+                      {busy ? '提交中…' : '通过，进入 S9 发送批准'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => act('round1-qc', { decision: 'reject', note })}
+                      disabled={busy || note.trim().length < 5}
+                      className="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 disabled:opacity-40"
+                    >
+                      驳回，交回 Codex 修订
+                    </button>
+                    {error && <span className="text-xs text-red-600">{error}</span>}
+                  </div>
+                  <ImpactNote>驳回后 Run 进入「比对未过」，在 Codex 导师对话中说明问题要求修订，Trae 不自行改正文；修订后重新走定位与比对。</ImpactNote>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------
+// S9：G1 批准发送第一轮阅览文件（P2a，人工批准 + dedup + 失败回退人工）
+// ------------------------------------------------------------------
+
+type SendEvidence = {
+  sendPlan?: Array<{ kind: string; label: string }>;
+  sendLog?: Array<{ index: number; kind: string; label: string | null; messageId: string | null; at: string }>;
+  dedupKeyBase?: string;
+  manualSend?: { by: string; at: string; note?: string | null };
+};
+
+const G1_CONFIRM_ITEMS: Array<{ key: 'filesRead' | 'qcSeen' | 'chatConfirmed' | 'copyUnchanged'; label: string }> = [
+  { key: 'filesRead', label: '两份阅览文件已通读' },
+  { key: 'qcSeen', label: 'AI 四维比对评分与裁决结论已看过' },
+  { key: 'chatConfirmed', label: '目标群已确认（群名与 Run 绑定群一致）' },
+  { key: 'copyUnchanged', label: 'G1 固定文案未改动，按原文发送' },
+];
+
+export function Round1SendApprovalPanel({
+  run,
+  onAction,
+  canWrite,
+}: {
+  run: RunDetail;
+  onAction: ActionFn;
+  canWrite: boolean;
+}) {
+  const step = run.steps.find((s) => s.code === 'S9');
+  const ev = ((step?.evidence ?? {}) as SendEvidence);
+  const reviewDocs = run.artifacts.filter((a) => a.kind === 'review_doc');
+  const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [confirms, setConfirms] = useState<Record<string, boolean>>({});
+  const [manualConfirms, setManualConfirms] = useState<Record<string, boolean>>({});
+  const [manualNote, setManualNote] = useState('');
+
+  const showPanel =
+    run.status === 'awaiting_send_approval_round1_docs' ||
+    run.status === 'round1_docs_sent' ||
+    run.status === 'failed' ||
+    Boolean(step);
+  if (!showPanel) return null;
+
+  const approve = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await onAction('approve-send-round1-docs', { confirm: confirms });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '批准失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const markManual = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await onAction('mark-manual-send', { confirm: { filesSent: manualConfirms.filesSent, textSent: manualConfirms.textSent }, note: manualNote });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '登记失败');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendFailed = step?.failureReason && step.status === 'failed';
+
+  return (
+    <section className="letter-paper rounded-[18px] p-4">
+      <h3 className="text-sm font-bold text-stone-700">S9 · 批准发送第一轮阅览文件（G1）</h3>
+      <p className="mt-0.5 text-xs text-stone-400">
+        步骤状态：{labelOf(STEP_STATUS_LABELS, step?.status)}
+        {step?.failureReason && <span className="ml-2 text-red-600">{step.failureReason}</span>}
+      </p>
+
+      <div className="mt-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+        <p className="text-xs font-semibold text-stone-600">待发送内容（2 份文件 + 1 条固定文案）</p>
+        <ul className="mt-1 space-y-0.5">
+          {reviewDocs.map((a) => (
+            <ArtifactRow key={a.id} a={a} />
+          ))}
+          {reviewDocs.length === 0 && (
+            <li className="rounded-md px-2 py-1 text-xs text-stone-400">尚未定位登记阅览文件（先完成 S8）。</li>
+          )}
+        </ul>
+        <blockquote className="mt-2 border-l-2 border-stone-300 pl-2 text-xs leading-5 text-stone-600">{G1_ROUND1_DOCS_TEXT}</blockquote>
+        <p className="mt-1 text-[11px] text-stone-400">目标群：{run.feishuChatName || run.feishuChatId}（发送方为你的飞书账号）</p>
+      </div>
+
+      {run.status === 'awaiting_send_approval_round1_docs' && !running && canWrite && (
+        <div className="mt-3 rounded-xl border border-stone-200 p-3">
+          <p className="text-xs font-semibold text-stone-600">证据核对勾（全部勾选后按钮才可用）</p>
+          <div className="mt-2 space-y-1.5">
+            {G1_CONFIRM_ITEMS.map((item) => (
+              <label key={item.key} className="flex items-center gap-2 text-xs text-stone-600">
+                <input
+                  type="checkbox"
+                  checked={Boolean(confirms[item.key])}
+                  onChange={(e) => setConfirms((c) => ({ ...c, [item.key]: e.target.checked }))}
+                />
+                {item.label}
+              </label>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={approve}
+              disabled={busy || !G1_CONFIRM_ITEMS.every((i) => confirms[i.key]) || !run.runner?.online}
+              className="btn-primary text-sm"
+            >
+              {busy ? '已入队…' : '批准发送：第一轮阅览文件'}
+            </button>
+            {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线</span>}
+            {error && <span className="text-xs text-red-600">{error}</span>}
+          </div>
+          <ImpactNote>
+            授权范围：仅本次向群「{run.feishuChatName || run.feishuChatId}」发送 2 份文件 + 1 条固定文案；带 dedup 键与逐条幂等键，禁止自动重发。
+          </ImpactNote>
+        </div>
+      )}
+
+      {running && (
+        <div className="mt-3">
+          <p className="text-xs text-stone-500">发送指令执行中…（每条间隔一次心跳上报）</p>
+          <StepCommandLine step={step!} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S9' })} />
+        </div>
+      )}
+
+      {ev.sendLog && ev.sendLog.length > 0 && (
+        <div className="mt-2 rounded-xl border border-stone-200 bg-stone-50/70 p-3">
+          <p className="text-xs font-semibold text-stone-600">飞书发送记录（仅元数据）</p>
+          <ul className="mt-1 space-y-0.5">
+            {ev.sendLog.map((l) => (
+              <li key={l.at + String(l.index)} className="flex items-center gap-2 px-2 py-0.5 text-xs text-stone-500">
+                <span className="w-10 shrink-0 text-stone-400">#{l.index + 1}</span>
+                <span className="shrink-0 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] text-stone-500">{l.kind === 'text' ? '文案' : '文件'}</span>
+                <span className="min-w-0 flex-1 truncate" title={l.label ?? ''}>
+                  {l.label ?? '—'}
+                </span>
+                <span className="shrink-0 truncate text-stone-400">{l.messageId ? `om:${l.messageId.slice(0, 10)}…` : '已发送'}</span>
+                <span className="shrink-0 text-stone-400">{new Date(l.at).toLocaleTimeString('zh-CN')}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {sendFailed && (
+        <div className="mt-3 rounded-xl border border-red-200 bg-red-50/60 p-3">
+          <p className="text-xs text-red-600">Runner 发送失败（禁止自动重发）。可重试同队列指令，或人工在群里发送后登记：</p>
+          {canWrite && (
+            <div className="mt-2 space-y-1.5">
+              <label className="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" checked={Boolean(manualConfirms.filesSent)} onChange={(e) => setManualConfirms((c) => ({ ...c, filesSent: e.target.checked }))} />
+                我已人工在群内发送两份阅览文件
+              </label>
+              <label className="flex items-center gap-2 text-xs text-stone-600">
+                <input type="checkbox" checked={Boolean(manualConfirms.textSent)} onChange={(e) => setManualConfirms((c) => ({ ...c, textSent: e.target.checked }))} />
+                我已人工发送 G1 固定文案
+              </label>
+              <input
+                value={manualNote}
+                onChange={(e) => setManualNote(e.target.value)}
+                placeholder="备注（可选，例如群内消息链接）"
+                className="w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs"
+              />
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={markManual} disabled={busy || !manualConfirms.filesSent || !manualConfirms.textSent} className="btn-primary text-sm">
+                  标记人工已发送
+                </button>
+                <button type="button" onClick={() => onAction('retry-command', { stepCode: 'S9' })} className="rounded-md border border-stone-300 px-2 py-1 text-sm">
+                  重试发送
+                </button>
+              </div>
+              <ImpactNote>人工登记同样写入 dedup 键，防止后续重复发送。</ImpactNote>
+            </div>
+          )}
+        </div>
+      )}
+
+      {ev.manualSend && (
+        <p className="mt-2 text-xs text-stone-500">
+          已登记人工发送（{new Date(ev.manualSend.at).toLocaleString('zh-CN')}）{ev.manualSend.note ? ` · ${ev.manualSend.note}` : ''}
+        </p>
+      )}
+
+      {run.status === 'round1_docs_sent' && (
+        <p className="mt-2 text-xs text-emerald-700">阅览文件已发送。下一步 S10（审核回复抓取）将在后续阶段开放。</p>
+      )}
     </section>
   );
 }
