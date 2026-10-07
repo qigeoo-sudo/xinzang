@@ -89,31 +89,33 @@ export function FileRegisterCard({
 }) {
   const step = run.steps.find((s) => s.code === code)!;
   const kinds = STEP_FILE_KINDS[code];
-  const [kind, setKind] = useState(kinds[0].value);
-  const [pathsText, setPathsText] = useState('');
+  // 多行清单：每行一个相对路径 + 文件类型，一次提交全部（本步哈希全部成功才推进；
+  // 因此 P1 要求一次列全本步全部文件，避免步骤关闭后漏登）
+  const [rows, setRows] = useState<Array<{ relPath: string; kind: string }>>([
+    { relPath: '', kind: kinds[0].value },
+  ]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const acceptKinds = kinds.map((k) => k.value);
   const artifacts = run.artifacts.filter((a) => acceptKinds.includes(a.kind));
 
+  const setRow = (i: number, patch: Partial<{ relPath: string; kind: string }>) =>
+    setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
   const submit = async () => {
-    const relPaths = pathsText
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (relPaths.length === 0) {
-      setError('每行填一个相对路径（相对 CONTENT_ROOT，例如 mentors/lydia chen pilot/xxx.m4a）');
+    const files = rows
+      .map((r) => ({ relPath: r.relPath.trim(), kind: r.kind }))
+      .filter((r) => r.relPath.length > 0);
+    if (files.length === 0) {
+      setError('至少填一个相对路径（相对 CONTENT_ROOT，例如 mentors/ying wang pilot/…）');
       return;
     }
     setError('');
     setBusy(true);
     try {
-      await onAction('observe-files', {
-        step: code,
-        files: relPaths.map((relPath) => ({ relPath, kind })),
-      });
-      setPathsText('');
+      await onAction('observe-files', { step: code, files });
+      setRows([{ relPath: '', kind: kinds[0].value }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : '登记失败');
     } finally {
@@ -131,28 +133,53 @@ export function FileRegisterCard({
 
       {canWrite ? (
         <div className="mt-3 space-y-2">
-          <select value={kind} onChange={(e) => setKind(e.target.value)} className="input-field text-sm">
-            {kinds.map((k) => (
-              <option key={k.value} value={k.value}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-          <textarea
-            value={pathsText}
-            onChange={(e) => setPathsText(e.target.value)}
-            rows={3}
-            placeholder={
-              run.contentRoot
-                ? `相对 CONTENT_ROOT 的路径，每行一个。例如：\nmentors/${run.mentorDir}/round1/访谈录音.m4a`
-                : '等待 Runner 上报 CONTENT_ROOT…'
-            }
-            className="input-field text-xs"
-          />
+          <p className="text-[11px] leading-4 text-stone-500">
+            每行一个文件，类型逐行选择；请一次列全本步全部文件——清单整体入队由 Runner 逐个计算哈希，
+            全部成功本步才推进（任意一个路径错误整步失败，可改后重试，不会重复登记）。
+          </p>
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <select
+                value={row.kind}
+                onChange={(e) => setRow(i, { kind: e.target.value })}
+                className="w-32 shrink-0 rounded-lg border border-stone-300 px-2 py-1.5 text-xs"
+              >
+                {kinds.map((k) => (
+                  <option key={k.value} value={k.value}>
+                    {k.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={row.relPath}
+                onChange={(e) => setRow(i, { relPath: e.target.value })}
+                placeholder="mentors/ying wang pilot/…（相对 CONTENT_ROOT）"
+                className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs"
+              />
+              {rows.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setRows((rs) => rs.filter((_, idx) => idx !== i))}
+                  className="shrink-0 text-stone-400 hover:text-red-500"
+                  aria-label="删除该行"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => setRows((rs) => [...rs, { relPath: '', kind: kinds[0].value }])}
+            className="text-xs text-accent underline underline-offset-2"
+          >
+            + 再加一行
+          </button>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <button type="button" onClick={submit} disabled={busy || !run.runner?.online} className="btn-primary text-sm">
             {busy ? '已入队…' : '提交清单并由 Runner 计算哈希'}
           </button>
+          {!run.runner?.online && <span className="ml-2 text-xs text-red-500">Runner 离线</span>}
           <ImpactNote>
             仅让 Runner 对列出的本地文件计算字节数与 SHA-256 并登记元数据；不移动、不修改任何文件内容。
           </ImpactNote>
