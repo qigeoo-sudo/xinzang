@@ -87,6 +87,146 @@ export function hashFile(absPath) {
   });
 }
 
+/**
+ * 按扩展名判定文件在 S1 登记中的类型（纯函数，可单测）。
+ * 扩展名白名单内音频/文稿两类互斥，故直接按扩展名归类；
+ * 白名单外的文件在扫描阶段已被过滤，不会走到这里。
+ * @param {string} relPath 相对 CONTENT_ROOT、正斜杠路径
+ * @returns {'source_audio'|'source_transcript'|null}
+ */
+export function guessSourceKind(relPath) {
+  const lower = relPath.toLowerCase();
+  const AUDIO_EXT = ['.m4a', '.mp3', '.wav', '.aac', '.amr', '.ogg', '.flac'];
+  const TEXT_EXT = ['.md', '.txt', '.docx', '.doc'];
+  const ext = lower.slice(lower.lastIndexOf('.'));
+  if (AUDIO_EXT.includes(ext)) return 'source_audio';
+  if (TEXT_EXT.includes(ext)) return 'source_transcript';
+  return null;
+}
+
+/** 扫描候选文件时跳过的子目录（产物区/治理区，不属于导师提交材料） */
+const SCAN_SKIP_DIRS = new Set(['work', 'outputs', 'knowledge-governance', '.git', 'node_modules']);
+const SCAN_EXT_WHITELIST = new Set([
+  '.m4a', '.mp3', '.wav', '.aac', '.amr', '.ogg', '.flac',
+  '.md', '.txt', '.docx', '.doc',
+]);
+const SCAN_MAX_FILES = 300;
+
+/**
+ * 按扩展名判定文件在 S2 归档登记中的类型（纯函数）。
+ * 归并后音频 → merged_audio；规范化命名文字稿 → normalized_md。
+ * @param {string} relPath 相对 CONTENT_ROOT、正斜杠路径
+ * @returns {'merged_audio'|'normalized_md'|null}
+ */
+export function guessArchiveKind(relPath) {
+  const lower = relPath.toLowerCase();
+  const AUDIO_EXT = ['.m4a', '.mp3', '.wav', '.aac', '.amr', '.ogg', '.flac'];
+  const TEXT_EXT = ['.md', '.txt', '.docx', '.doc'];
+  const ext = lower.slice(lower.lastIndexOf('.'));
+  if (AUDIO_EXT.includes(ext)) return 'merged_audio';
+  if (TEXT_EXT.includes(ext)) return 'normalized_md';
+  return null;
+}
+
+/**
+ * 递归扫描某位导师目录下的候选材料文件（S1「扫描+勾选」）。
+ * 只返回元数据：相对路径/字节数/修改时间/预猜类型；不读文件内容、不进 work 产物区。
+ */
+export async function listMentorFiles(contentRoot, mentorDir) {
+  const mentorRoot = path.join(contentRoot, MENTORS_DIRNAME, mentorDir);
+  if (!isInsideContentRoot(mentorRoot, contentRoot)) {
+    throw new Error(`导师目录越界: ${mentorDir}`);
+  }
+  const out = [];
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (err) {
+      if (err.code === 'ENOENT') return;
+      throw err;
+    }
+    for (const entry of entries) {
+      if (out.length >= SCAN_MAX_FILES) return;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (SCAN_SKIP_DIRS.has(entry.name)) continue;
+        await walk(full);
+      } else if (entry.isFile()) {
+        const ext = entry.name.slice(entry.name.lastIndexOf('.')).toLowerCase();
+        if (!SCAN_EXT_WHITELIST.has(ext)) continue;
+        let s;
+        try {
+          s = await stat(full);
+        } catch {
+          continue;
+        }
+        const relPath = toDisplayPath(full, contentRoot);
+        if (!relPath) continue;
+        out.push({
+          relPath,
+          bytes: s.size,
+          mtimeMs: s.mtimeMs,
+          suggestedKind: guessSourceKind(relPath),
+        });
+      }
+    }
+  }
+  await walk(mentorRoot);
+  return out.sort((a, b) => a.relPath.localeCompare(b.relPath));
+}
+
+/**
+ * 扫描某位导师目录下的归档产物文件（S2「扫描+勾选」）。
+ * 递归扫描整个导师目录（不跳过子目录），但只返回文件名含 "full" 的文件
+ * （归并后的完整音频/完整文字稿命名约定带 full 字样，便于 Codex 后续优先调取）。
+ * 只返回元数据：相对路径/字节数/修改时间/预猜归档类型；不读文件内容。
+ */
+export async function listWorkFiles(contentRoot, mentorDir) {
+  const mentorRoot = path.join(contentRoot, MENTORS_DIRNAME, mentorDir);
+  if (!isInsideContentRoot(mentorRoot, contentRoot)) {
+    throw new Error(`导师目录越界: ${mentorDir}`);
+  }
+  const out = [];
+  async function walk(dir) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch (err) {
+      if (err.code === 'ENOENT') return;
+      throw err;
+    }
+    for (const entry of entries) {
+      if (out.length >= SCAN_MAX_FILES) return;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+      } else if (entry.isFile()) {
+        // 只取文件名含 "full" 的归并产物（大小写不敏感）
+        if (!entry.name.toLowerCase().includes('full')) continue;
+        const ext = entry.name.slice(entry.name.lastIndexOf('.')).toLowerCase();
+        if (!SCAN_EXT_WHITELIST.has(ext)) continue;
+        let s;
+        try {
+          s = await stat(full);
+        } catch {
+          continue;
+        }
+        const relPath = toDisplayPath(full, contentRoot);
+        if (!relPath) continue;
+        out.push({
+          relPath,
+          bytes: s.size,
+          mtimeMs: s.mtimeMs,
+          suggestedKind: guessArchiveKind(relPath),
+        });
+      }
+    }
+  }
+  await walk(mentorRoot);
+  return out.sort((a, b) => a.relPath.localeCompare(b.relPath));
+}
+
 /** 扫描某位导师 work 目录下的版本包：含 00_START_HERE.md 的一级子目录视为版本包 */
 export async function scanWorkPackages(contentRoot, mentorDir) {
   const mentorRoot = path.join(contentRoot, MENTORS_DIRNAME, mentorDir);

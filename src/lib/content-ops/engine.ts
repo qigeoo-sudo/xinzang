@@ -36,6 +36,9 @@ export class EngineError extends Error {
 export const COMMAND = {
   HASH_FILES: 'hash_files',
   SCAN_WORK_PACKAGES: 'scan_work_packages',
+  LIST_MENTOR_FILES: 'list_mentor_files',
+  LIST_WORK_FILES: 'list_work_files',
+  PREPARE_CLAUDE_OUTPUTS: 'prepare_claude_outputs',
   CODEX_PROBE: 'codex_probe',
 } as const;
 
@@ -375,6 +378,15 @@ export async function handleCommandResult(runnerId: string, body: {
     case COMMAND.SCAN_WORK_PACKAGES:
       await handleScanResult(step, result, runnerId);
       break;
+    case COMMAND.LIST_MENTOR_FILES:
+      await handleListMentorFilesResult(step, result);
+      break;
+    case COMMAND.LIST_WORK_FILES:
+      await handleListWorkFilesResult(step, result);
+      break;
+    case COMMAND.PREPARE_CLAUDE_OUTPUTS:
+      await handlePrepareClaudeOutputsResult(step, result);
+      break;
     case COMMAND.CODEX_PROBE:
       await prisma.contentOpsStep.update({
         where: { id: step.id },
@@ -415,6 +427,7 @@ function summarize(result: Record<string, unknown>): unknown {
     };
   }
   if (Array.isArray(result.packages)) return { packageCount: result.packages.length };
+  if (Array.isArray(result.files)) return { fileCount: result.files.length };
   return { keys: Object.keys(result) };
 }
 
@@ -425,6 +438,7 @@ async function handleHashFilesResult(
 ) {
   const rows = (result.results ?? []) as Array<{
     path: string;
+    finalPath?: string;
     displayPath?: string;
     sha256?: string;
     bytes?: string;
@@ -456,8 +470,10 @@ async function handleHashFilesResult(
     for (const f of files) {
       const row = rows.find((r) => r.displayPath === f.relPath || r.path.endsWith(f.relPath));
       if (!row?.sha256 || !row.bytes) throw new EngineError(400, `缺少哈希结果: ${f.relPath}`);
+      // by sonnet 规范命名后落库用最终路径（未重命名时 finalPath 与 path 相同/缺省）
+      const storedPath = row.finalPath ?? row.path;
       const existing = await tx.contentOpsArtifact.findUnique({
-        where: { runId_path: { runId: step.runId, path: row.path } },
+        where: { runId_path: { runId: step.runId, path: storedPath } },
       });
       if (existing) {
         if (existing.sha256 !== row.sha256) {
@@ -469,7 +485,7 @@ async function handleHashFilesResult(
         data: {
           runId: step.runId,
           kind: f.kind,
-          path: row.path,
+          path: storedPath,
           displayPath: row.displayPath ?? f.relPath,
           sha256: row.sha256,
           bytes: BigInt(row.bytes),
@@ -554,14 +570,14 @@ async function handleScanResult(
   const files = [
     { relPath: relStartHere, kind: 'codex_work_package', sourceType: 'generated', note: chosen },
   ];
-  const paths = [`${contentRoot}\\${relStartHere.replace(/\//g, '\\')}`];
+  const items = [{ path: `${contentRoot}\\${relStartHere.replace(/\//g, '\\')}` }];
   // 链式指令：scan 刚回报（commandStatus=dispatched），同一步骤重新置 queued 下发 START_HERE 哈希
   // 兼容已落 done 的场景；queued/done(hash) 不匹配，天然防重复入队
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['dispatched', 'done'] } },
     data: {
       commandStatus: 'queued',
-      commandPayload: JSON.stringify({ type: COMMAND.HASH_FILES, payload: { files, paths } }),
+      commandPayload: JSON.stringify({ type: COMMAND.HASH_FILES, payload: { files, items } }),
       evidence: JSON.stringify({ packages, chosenPackage: chosen, policy: 'name_sort_last_p1' }),
     },
   });
@@ -569,6 +585,120 @@ async function handleScanResult(
     throw new EngineError(409, 'S7 链式核验入队失败（指令状态异常）');
   }
   void runnerId;
+}
+
+/**
+ * S1「扫描+勾选」结果：候选文件清单只写入步骤 evidence 供页面勾选，
+ * 指令置 done 但步骤状态保持 running、Run 状态不推进——必须等用户勾选后走哈希登记。
+ * Runner 上报一律视为候选：这里只做路径边界与类型白名单的轻校验，
+ * 类型/勾选的最终权威在 observeFiles + 哈希成功。
+ */
+async function handleListMentorFilesResult(
+  step: { id: string; evidence: string | null; run: { mentorDir: string } },
+  result: Record<string, unknown>,
+) {
+  const prefix = `mentors/${step.run.mentorDir}/`.toLowerCase();
+  const allowedKinds = new Set(['source_audio', 'source_transcript']);
+  const raw = Array.isArray(result.files) ? result.files : [];
+  const files = raw
+    .map((f) => {
+      const r = (f ?? {}) as Record<string, unknown>;
+      const relPath = String(r.relPath ?? '').replace(/\\/g, '/');
+      const kind = String(r.suggestedKind ?? '');
+      return {
+        relPath,
+        bytes: Number.isFinite(Number(r.bytes)) ? Number(r.bytes) : 0,
+        mtimeMs: Number.isFinite(Number(r.mtimeMs)) ? Number(r.mtimeMs) : 0,
+        suggestedKind: allowedKinds.has(kind) ? kind : null,
+      };
+    })
+    .filter((f) => f.relPath.toLowerCase().startsWith(prefix) && !f.relPath.includes('/../'))
+    .slice(0, 300);
+
+  await prisma.contentOpsStep.update({
+    where: { id: step.id },
+    data: {
+      commandStatus: 'done',
+      commandResult: JSON.stringify({ count: files.length }),
+      evidence: JSON.stringify({
+        ...safeParse(step.evidence),
+        scanFiles: files,
+        scannedAt: new Date().toISOString(),
+      }),
+    },
+  });
+}
+
+async function handleListWorkFilesResult(
+  step: { id: string; evidence: string | null; run: { mentorDir: string } },
+  result: Record<string, unknown>,
+) {
+  const prefix = `mentors/${step.run.mentorDir}/`.toLowerCase();
+  const allowedKinds = new Set(['merged_audio', 'normalized_md']);
+  const raw = Array.isArray(result.files) ? result.files : [];
+  const files = raw
+    .map((f) => {
+      const r = (f ?? {}) as Record<string, unknown>;
+      const relPath = String(r.relPath ?? '').replace(/\\/g, '/');
+      const kind = String(r.suggestedKind ?? '');
+      return {
+        relPath,
+        bytes: Number.isFinite(Number(r.bytes)) ? Number(r.bytes) : 0,
+        mtimeMs: Number.isFinite(Number(r.mtimeMs)) ? Number(r.mtimeMs) : 0,
+        suggestedKind: allowedKinds.has(kind) ? kind : null,
+      };
+    })
+    .filter((f) => f.relPath.toLowerCase().startsWith(prefix) && !f.relPath.includes('/../'))
+    .slice(0, 300);
+
+  await prisma.contentOpsStep.update({
+    where: { id: step.id },
+    data: {
+      commandStatus: 'done',
+      commandResult: JSON.stringify({ count: files.length }),
+      evidence: JSON.stringify({
+        ...safeParse(step.evidence),
+        scanFiles: files,
+        scannedAt: new Date().toISOString(),
+      }),
+    },
+  });
+}
+
+async function handlePrepareClaudeOutputsResult(
+  step: { id: string; evidence: string | null; run: { mentorDir: string } },
+  result: Record<string, unknown>,
+) {
+  const prefix = `mentors/${step.run.mentorDir}/`.toLowerCase();
+  const raw = Array.isArray(result.files) ? result.files : [];
+  const files = raw
+    .map((f) => {
+      const r = (f ?? {}) as Record<string, unknown>;
+      const relPath = String(r.relPath ?? '').replace(/\\/g, '/');
+      return {
+        relPath,
+        bytes: Number.isFinite(Number(r.bytes)) ? Number(r.bytes) : 0,
+        mtimeMs: Number.isFinite(Number(r.mtimeMs)) ? Number(r.mtimeMs) : 0,
+        renamed: r.renamed === true,
+        suggestedKind: 'claude_output',
+      };
+    })
+    .filter((f) => f.relPath.toLowerCase().startsWith(prefix) && !f.relPath.includes('/../'))
+    .slice(0, 50);
+
+  // 只记候选不改步骤状态：S5 可能已在 waiting_human 等 R3，扫描仅补充/刷新候选
+  await prisma.contentOpsStep.update({
+    where: { id: step.id },
+    data: {
+      commandStatus: 'done',
+      commandResult: JSON.stringify({ count: files.length }),
+      evidence: JSON.stringify({
+        ...safeParse(step.evidence),
+        scanFiles: files,
+        scannedAt: new Date().toISOString(),
+      }),
+    },
+  });
 }
 
 async function finishStepAndAdvance(
@@ -613,17 +743,27 @@ async function enqueueHashFiles(
 ) {
   if (!contentRoot) throw new EngineError(409, 'Runner 尚未上报 CONTENT_ROOT，无法定位文件');
   // 统一为正斜杠相对路径，再由 Runner 侧校验越界
-  const paths = files.map((f) => `${contentRoot}\\${f.relPath.replace(/\//g, '\\')}`);
-  await prisma.contentOpsStep.updateMany({
-    where: { runId, code: stepCode, commandStatus: { in: ['none', 'failed'] } },
+  // Claude 产物（claude_output）附带 by_sonnet 规范命名标记：Runner 哈希前自动重命名为 `… by sonnet.<ext>`
+  const items = files.map((f) => ({
+    path: `${contentRoot}\\${f.relPath.replace(/\//g, '\\')}`,
+    ...(f.kind === 'claude_output' ? { normalize: 'by_sonnet' as const } : {}),
+  }));
+  // done 也允许再次入队：S1 扫描指令完成后接哈希登记、S5 等待 R3 期间补登记产物。
+  // 同一步骤重发同类指令时轮换幂等键，否则 Runner processed.json 按「键+类型」去重会跳过新指令。
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { runId, code: stepCode, commandStatus: { in: ['none', 'failed', 'done'] } },
     data: {
       status: STEP_STATUS.RUNNING,
       startedAt: new Date(),
       commandStatus: 'queued',
-      commandPayload: JSON.stringify({ type: COMMAND.HASH_FILES, payload: { files, paths } }),
+      commandPayload: JSON.stringify({ type: COMMAND.HASH_FILES, payload: { files, items } }),
+      idempotencyKey: `${runId}:${stepCode}:${randomBytes(6).toString('hex')}`,
       failureReason: null,
     },
   });
+  if (updated.count === 0) {
+    throw new EngineError(409, '该步骤已有指令在执行中，请等待当前哈希完成');
+  }
 }
 
 async function latestOnlineRunner() {
@@ -896,6 +1036,117 @@ function parseHeartbeatDirs(raw: string | null): Array<{ name: string; status: s
 }
 
 // ------------------------------------------------------------------
+// S1：Runner 扫描导师目录列候选文件（扫描+勾选确认的第一步）
+// ------------------------------------------------------------------
+
+export async function scanMentorFiles(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: { runner: true },
+  });
+  const allowedStates = [RUN_STATE.WAITING_ROUND1_SUBMISSION, RUN_STATE.ROUND1_MATERIAL_RECEIVED, 'failed'];
+  if (!allowedStates.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能扫描 S1 候选文件`);
+  }
+  const s1 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S1' } });
+  if (s1.status === STEP_STATUS.DONE) throw new EngineError(409, 'S1 已完成，无需再扫描');
+  if (s1.commandStatus === 'queued' || s1.commandStatus === 'dispatched') {
+    throw new EngineError(409, '已有指令在执行中，请稍候');
+  }
+  const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+  if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: s1.id, commandStatus: { in: ['none', 'failed', 'done'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: s1.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({
+        type: COMMAND.LIST_MENTOR_FILES,
+        payload: { mentorDir: run.mentorDir },
+      }),
+      // 重新扫描是同类型新指令，轮换幂等键，绕过 Runner「键+类型」去重
+      idempotencyKey: `${runId}:S1:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, '扫描指令入队失败（指令状态异常）');
+  await audit(userId, 'content_ops.scan_mentor_files', runId, { mentorDir: run.mentorDir });
+  return { queued: true };
+}
+
+export async function scanWorkFiles(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: { runner: true },
+  });
+  const allowedStates = [RUN_STATE.ROUND1_MATERIAL_RECEIVED, RUN_STATE.ROUND1_ARCHIVING, 'failed'];
+  if (!allowedStates.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能扫描 S2 归档产物`);
+  }
+  const s2 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S2' } });
+  if (s2.status === STEP_STATUS.DONE) throw new EngineError(409, 'S2 已完成，无需再扫描');
+  if (s2.commandStatus === 'queued' || s2.commandStatus === 'dispatched') {
+    throw new EngineError(409, '已有指令在执行中，请稍候');
+  }
+  const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+  if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: s2.id, commandStatus: { in: ['none', 'failed', 'done'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: s2.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({
+        type: COMMAND.LIST_WORK_FILES,
+        payload: { mentorDir: run.mentorDir },
+      }),
+      idempotencyKey: `${runId}:S2:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, '扫描指令入队失败（指令状态异常）');
+  await audit(userId, 'content_ops.scan_work_files', runId, { mentorDir: run.mentorDir });
+  return { queued: true };
+}
+
+export async function scanClaudeOutputs(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: { runner: true },
+  });
+  if (run.status !== RUN_STATE.CLAUDE_MANUAL_STEP && run.status !== 'failed') {
+    throw new EngineError(409, `当前状态（${run.status}）不能扫描 Claude 产物`);
+  }
+  const s5 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S5' } });
+  if (s5.status === STEP_STATUS.DONE) throw new EngineError(409, 'S5 已完成，无需再扫描');
+  if (s5.commandStatus === 'queued' || s5.commandStatus === 'dispatched') {
+    throw new EngineError(409, '已有指令在执行中，请稍候');
+  }
+  const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+  if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: s5.id, commandStatus: { in: ['none', 'failed', 'done'] } },
+    data: {
+      // 不动步骤状态：S5 可能已是 waiting_human（等 R3），扫描只是刷新候选清单
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({
+        type: COMMAND.PREPARE_CLAUDE_OUTPUTS,
+        payload: { mentorDir: run.mentorDir },
+      }),
+      idempotencyKey: `${runId}:S5:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, '扫描指令入队失败（指令状态异常）');
+  await audit(userId, 'content_ops.scan_claude_outputs', runId, { mentorDir: run.mentorDir });
+  return { queued: true };
+}
+
+// ------------------------------------------------------------------
 // S1/S2/S5：人工完成本地动作后，提交文件清单给 Runner 哈希登记
 // ------------------------------------------------------------------
 
@@ -1119,6 +1370,8 @@ export async function verifyAssembly(userId: string, runId: string) {
         type: COMMAND.SCAN_WORK_PACKAGES,
         payload: { mentorDir: run.mentorDir },
       }),
+      // 轮换幂等键：固定键会让 Runner processed.json 把重试的 scan 当重复跳过
+      idempotencyKey: `${runId}:S7:${randomBytes(6).toString('hex')}`,
       failureReason: null,
     },
   });
