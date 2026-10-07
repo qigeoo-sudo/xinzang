@@ -214,12 +214,27 @@ export async function ingestHeartbeat(
     return r;
   });
 
-  // waiting_runner 自动接上（Q14）
+  // waiting_runner 自动接上（Q14）：包含建 Run 时 Runner 离线（runnerId=null）的卡片——
+  // 首个上报心跳的 Runner 以 CAS 抢占绑定，防多 Runner 重复接
   const waiting = await prisma.contentOpsRun.findMany({
-    where: { runnerId, status: RUN_STATE.WAITING_RUNNER },
+    where: {
+      status: RUN_STATE.WAITING_RUNNER,
+      OR: [{ runnerId }, { runnerId: null }],
+    },
   });
   for (const run of waiting) {
     await prisma.$transaction(async (tx) => {
+      if (!run.runnerId) {
+        const claimed = await tx.contentOpsRun.updateMany({
+          where: { id: run.id, runnerId: null, status: RUN_STATE.WAITING_RUNNER },
+          data: { runnerId: runnerId, currentOwner: ACTOR.HUMAN },
+        });
+        if (claimed.count === 0) return; // 已被其他 Runner 接上
+        await appendEvent(
+          { runId: run.id, runnerId, agent: 'control_plane', type: 'runner_claimed', payload: { runnerId } },
+          tx,
+        );
+      }
       await transitionRun(tx, run, RUN_STATE.WAITING_ROUND1_SUBMISSION, 'runner heartbeat online');
     });
   }
