@@ -79,6 +79,7 @@ console.log(`校验通过：${mentorId} 共 ${cards.length} 张`);
 
 const prisma = new PrismaClient();
 
+async function main() {
 await prisma.$transaction(async (tx) => {
   const existing = await tx.mentorKnowledgeCard.findMany({
     where: { mentorId },
@@ -132,3 +133,9 @@ await prisma.$transaction(async (tx) => {
 const total = await prisma.mentorKnowledgeCard.count();
 console.log(`完成：${mentorId} ${cards.length} 张已同步；库内知识卡总数 ${total}`);
 await prisma.$disconnect();
+}
+
+main().catch((e) => {
+  console.error(e);
+  prisma.$disconnect().finally(() => process.exit(1));
+});
