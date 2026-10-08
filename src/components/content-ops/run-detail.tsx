@@ -7,8 +7,9 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import type { RunDetail, RunEvent } from './types';
+import type { RunDetail, RunEvent, RunListItem } from './types';
 import { VpnBanner } from './vpn-banner';
+import { mentorColor, MENTOR_TERMINAL } from './mentor-lights-bar';
 import { STEP_DEFS } from '@/lib/content-ops/state-machine';
 import {
   FileRegisterCard,
@@ -101,6 +102,7 @@ function EventLine({ e }: { e: RunEvent }) {
 
 export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWrite: boolean }) {
   const [run, setRun] = useState<RunDetail>(initial);
+  const [mentors, setMentors] = useState<RunListItem[]>([]);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<(typeof AGENT_TABS)[number]['key']>('runner');
   const [now, setNow] = useState(Date.now());
@@ -108,8 +110,16 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`/api/content-ops/runs/${initial.id}`, { cache: 'no-store' });
-      if (res.ok) setRun(await res.json());
+      const [runRes, runsRes] = await Promise.all([
+        fetch(`/api/content-ops/runs/${initial.id}`, { cache: 'no-store' }),
+        fetch('/api/content-ops/runs', { cache: 'no-store' }),
+      ]);
+      if (runRes.ok) setRun(await runRes.json());
+      if (runsRes.ok) {
+        const all = (await runsRes.json()).runs as RunListItem[];
+        // 含当前 run 自己：每条详情页的 bar 上都能看到所有导师（含自己）的灯位
+        setMentors(all.filter((r) => !MENTOR_TERMINAL.has(r.status)));
+      }
     } catch {
       /* 轮询失败保留下一次重试 */
     } finally {
@@ -140,6 +150,15 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   );
 
   const stepByCode = Object.fromEntries(run.steps.map((s) => [s.code, s]));
+
+  // 所有导师的进度彩灯：按 currentStepCode 分组，叠到对应节点上方
+  const mentorsByStep = new Map<string, RunListItem[]>();
+  for (const p of mentors) {
+    const key = p.currentStepCode ?? 'S0';
+    const arr = mentorsByStep.get(key) ?? [];
+    arr.push(p);
+    mentorsByStep.set(key, arr);
+  }
 
   // 阶段面板路由（P1 S0-S7 → P4a S17-S20）
   // 已完成步骤面板持续显示（只读），让用户下拉时能看到全流程进展
@@ -393,6 +412,17 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
               return (
                 <span key={node.code} className="flex flex-1 items-center last:flex-none">
                   <div className="flex flex-col items-center gap-0.5">
+                    {/* 其他导师彩灯：叠在节点上方 */}
+                    <div className="flex flex-wrap justify-center gap-0.5" style={{ minHeight: 10 }}>
+                      {(mentorsByStep.get(node.code) ?? []).map((p) => (
+                        <span
+                          key={p.id}
+                          title={`${p.mentorDir} · ${p.status}`}
+                          className="inline-block rounded-full ring-1 ring-white"
+                          style={{ width: 9, height: 9, backgroundColor: mentorColor(p.mentorDir) }}
+                        />
+                      ))}
+                    </div>
                     <span className={`relative inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${cls}`}>
                       {icon}
                       {needsVpn && (
@@ -458,6 +488,17 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
               return (
                 <span key={node.code} className="flex flex-1 items-center last:flex-none">
                   <div className="flex flex-col items-center gap-0.5">
+                    {/* 其他导师彩灯：叠在节点上方 */}
+                    <div className="flex flex-wrap justify-center gap-0.5" style={{ minHeight: 10 }}>
+                      {(mentorsByStep.get(node.code) ?? []).map((p) => (
+                        <span
+                          key={p.id}
+                          title={`${p.mentorDir} · ${p.status}`}
+                          className="inline-block rounded-full ring-1 ring-white"
+                          style={{ width: 9, height: 9, backgroundColor: mentorColor(p.mentorDir) }}
+                        />
+                      ))}
+                    </div>
                     <span className={`relative inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${cls}`}>
                       {icon}
                       {needsVpn && (
@@ -479,6 +520,29 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
             })}
           </li>
         </ol>
+
+        {/* 导师彩灯图例：色点 = 导师英文名，位置 = 当前进度步骤 */}
+        {mentors.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2">
+            <span className="text-[11px] font-semibold text-stone-500">导师进度</span>
+            {mentors.map((p) => (
+              <Link
+                key={p.id}
+                href={`/content-ops/runs/${p.id}`}
+                className="flex items-center gap-1.5 text-xs text-stone-700 hover:underline"
+                title={p.status}
+              >
+                <span
+                  className="inline-block rounded-full"
+                  style={{ width: 10, height: 10, backgroundColor: mentorColor(p.mentorDir) }}
+                />
+                <span className="font-medium">{p.mentorDir}</span>
+                <span className="text-stone-400">·</span>
+                <span className="text-stone-500">{p.currentStepCode ?? 'S0'}</span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* 阶段面板（左栏可滚动） + 右栏（sticky 始终可见） */}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">

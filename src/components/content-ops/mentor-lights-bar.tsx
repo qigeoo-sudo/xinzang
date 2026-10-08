@@ -43,6 +43,13 @@ function colorOf(mentorDir: string): string {
   return PALETTE[h % PALETTE.length];
 }
 
+/** 稳定定色：同一 mentorDir 永远映射到同一色点 */
+export function mentorColor(mentorDir: string): string {
+  return colorOf(mentorDir);
+}
+
+export const MENTOR_TERMINAL = new Set(['completed', 'cancelled']);
+
 const TERMINAL = new Set(['completed', 'cancelled']);
 
 export function MentorLightsBar({ runs }: { runs: RunListItem[] }) {
