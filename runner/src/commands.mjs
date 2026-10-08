@@ -43,6 +43,17 @@ import {
 } from './feishu.mjs';
 
 /**
+ * 从目标路径反推导师顶层目录（<contentRoot>/mentors/<mentorDir>）。
+ * 顶层目录必须由人工预先创建，Runner 只允许在其下创建子目录。
+ * @returns {string|null} 顶层目录绝对路径；若路径不在 mentors 下则返回 null
+ */
+function mentorTopDir(destDirAbs, contentRoot) {
+  const rel = path.relative(contentRoot, destDirAbs).split(path.sep);
+  if (rel[0] !== 'mentors' || !rel[1]) return null;
+  return path.join(contentRoot, 'mentors', rel[1]);
+}
+
+/**
  * S5 Claude 产物规范命名（docs/mentor-content-operations-v1.md Q17/归档约定）：
  * 确保文件基名含 ` by sonnet` 标记；已含（大小写不敏感）则跳过，否则就地重命名。
  * 只改文件名不碰内容，SHA-256 不受影响。
@@ -210,10 +221,16 @@ export async function handleCommand(command, contentRoot) {
 
     case 'feishu_download_resource': {
       // 下载消息资源落盘到导师目录；destDirAbs 必须在 CONTENT_ROOT 内。
-      // S13 第二轮 audio/word 子目录可能尚不存在：边界校验通过后允许就地递归创建（仍在 CONTENT_ROOT 内）。
+      // 顶层导师目录必须由人工预先创建；Runner 只允许在其下创建子目录（S13 第二轮 audio/word 等）。
       const destDirAbs = path.resolve(String(payload.destDirAbs || ''));
       if (!path.isAbsolute(destDirAbs) || !isInsideContentRoot(destDirAbs, contentRoot)) {
         throw new Error(`feishu_download_resource 目标目录越界: ${payload.destDirAbs}`);
+      }
+      const topDir = mentorTopDir(destDirAbs, contentRoot);
+      if (!topDir) throw new Error(`feishu_download_resource 目标不在 mentors 目录下: ${payload.destDirAbs}`);
+      const topStat = await stat(topDir).catch(() => null);
+      if (!topStat || !topStat.isDirectory()) {
+        throw new Error(`导师顶层目录不存在，请先由人工创建后再下载: ${topDir}`);
       }
       await mkdir(destDirAbs, { recursive: true });
       const r = await feishuDownloadResource(payload);
