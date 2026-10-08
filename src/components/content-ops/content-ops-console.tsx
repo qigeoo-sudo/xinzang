@@ -6,8 +6,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { RunListItem, RunnerInfo, VpnHint } from './types';
-import { VpnBanner } from './vpn-banner';
+import type { RunListItem, RunnerInfo } from './types';
 import { CreateRunWizard } from './create-run-wizard';
 import { MentorLightsBar } from './mentor-lights-bar';
 import { RUN_STATUS_LABELS, OWNER_LABELS, labelOf, timeAgo } from './display-labels';
@@ -22,35 +21,6 @@ const ATTENTION_STATES = new Set([
   'failed',
   'interrupted_resumable',
 ]);
-
-function overviewVpnHint(runner: RunnerInfo | null): VpnHint {
-  if (!runner || !runner.probes) {
-    return { level: 'gray', title: '无法探测：Runner 未启动', endpoints: [] };
-  }
-  const eps = runner.probes.endpoints;
-  const endpoints = [
-    { key: 'feishu', label: '飞书', reachable: !!eps.feishu?.reachable, required: false },
-    { key: 'claude', label: 'Claude', reachable: !!eps.claude?.reachable, required: false },
-    { key: 'codex', label: 'Codex', reachable: !!eps.codex?.reachable, required: false },
-    { key: 'github', label: 'GitHub', reachable: !!eps.github?.reachable, required: false },
-  ];
-  const vpnSitesOk = eps.claude?.reachable && eps.codex?.reachable && eps.github?.reachable;
-  if (vpnSitesOk && eps.feishu?.reachable) {
-    return { level: 'green', title: '各端点当前均可达', endpoints };
-  }
-  if (vpnSitesOk && !eps.feishu?.reachable) {
-    return {
-      level: 'amber',
-      title: 'VPN 侧可达但飞书不可达：下一步若要收发文件，建议检查飞书直连',
-      endpoints,
-    };
-  }
-  return {
-    level: 'red',
-    title: '需要 VPN 的端点当前有不可达（Claude/Codex/GitHub）',
-    endpoints,
-  };
-}
 
 export function ContentOpsConsole({
   accountName,
@@ -121,14 +91,6 @@ export function ContentOpsConsole({
             <span>{accountName}</span>
           </div>
         </header>
-
-        <div className="mb-4">
-          <VpnBanner
-            hint={overviewVpnHint(onlineRunner)}
-            onReprobe={refresh}
-            runnerGuide="请在 Windows 上启动本地 Runner（node runner/src/index.mjs）"
-          />
-        </div>
 
         {loadError && <p className="mb-3 text-xs text-red-600">{loadError}</p>}
 

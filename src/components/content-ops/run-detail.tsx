@@ -8,7 +8,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { RunDetail, RunEvent, RunListItem } from './types';
-import { VpnBanner } from './vpn-banner';
 import { mentorColor, MENTOR_TERMINAL } from './mentor-lights-bar';
 import { STEP_DEFS } from '@/lib/content-ops/state-machine';
 import {
@@ -385,10 +384,6 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
             <p className="mt-0.5 text-xs text-stone-400">当前责任方：{labelOf(OWNER_LABELS, run.currentOwner)}</p>
           </div>
         </header>
-
-        <div className="mb-4">
-          <VpnBanner hint={run.vpn.hint} onReprobe={refresh} />
-        </div>
 
         {error && <p className="mb-3 text-xs text-red-600">{error}</p>}
         {run.status === 'failed' && (
