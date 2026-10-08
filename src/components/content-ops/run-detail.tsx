@@ -151,6 +151,38 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
 
   const stepByCode = Object.fromEntries(run.steps.map((s) => [s.code, s]));
 
+  // 当前步索引：TIMELINE 中第一个非 done 的步骤（不存在的步骤视为 pending）；全部 done 时为 -1
+  const currentIdx = TIMELINE.findIndex((n) => {
+    const s = stepByCode[n.code];
+    return (s?.status ?? 'pending') !== 'done';
+  });
+  const vpnLevel = run.vpn?.hint?.level ?? 'gray';
+
+  // 计算某节点的 VPN 小灯是否该亮：
+  // 规则——需要 VPN 的节点，当它是「当前步 / 下一步」，或虽已 done 但后一个节点还没变绿时，亮灯；
+  // 后一个节点 done 后才变灰。颜色：VPN 开=亮绿，VPN 关=亮红，未知=灰。
+  function vpnLampOf(sIdx: number, status: string): { lit: boolean; color: string; title: string } {
+    const node = TIMELINE[sIdx];
+    const def = STEP_DEFS.find((d) => d.code === node?.code);
+    if (!def?.needsVpn) return { lit: false, color: '', title: '' };
+    const nextNode = TIMELINE[sIdx + 1];
+    const nextStatus = nextNode ? (stepByCode[nextNode.code]?.status ?? 'pending') : null;
+    const lit =
+      currentIdx !== -1 &&
+      sIdx <= currentIdx + 1 &&
+      (nextStatus === null ? status !== 'done' : nextStatus !== 'done');
+    if (!lit) {
+      return { lit: false, color: 'bg-stone-400 text-white', title: '该步骤的 VPN 要求已通过（后续步骤已完成）' };
+    }
+    if (vpnLevel === 'green' || vpnLevel === 'amber') {
+      return { lit: true, color: 'bg-emerald-500 text-white', title: '该步骤需要 VPN，当前已开启' };
+    }
+    if (vpnLevel === 'red') {
+      return { lit: true, color: 'bg-red-500 text-white', title: '该步骤需要 VPN，但当前未开启！' };
+    }
+    return { lit: true, color: 'bg-stone-400 text-white', title: '该步骤需要 VPN，状态无法探测' };
+  }
+
   // 所有导师的进度彩灯：按 currentStepCode 分组，叠到对应节点上方
   const mentorsByStep = new Map<string, RunListItem[]>();
   for (const p of mentors) {
@@ -372,31 +404,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
             {TIMELINE.slice(0, 12).map((node, i) => {
               const s = stepByCode[node.code];
               const status = s?.status ?? 'pending';
-              const def = STEP_DEFS.find((d) => d.code === node.code);
-              const needsVpn = def?.needsVpn ?? false;
-              const vpnLevel = run.vpn?.hint?.level ?? 'gray';
-              // VPN 小灯：只有当前活跃步骤（running/waiting_human/failed）才显示蓝/红；done 和 pending 都是灰
-              const stepActive = status === 'running' || status === 'waiting_human' || status === 'failed';
-              const lampColor = !needsVpn
-                ? ''
-                : !stepActive
-                  ? 'bg-stone-400 text-white'
-                  : (vpnLevel === 'green' || vpnLevel === 'amber')
-                    ? 'bg-blue-500 text-white'
-                    : vpnLevel === 'red'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-stone-400 text-white';
-              const lampTitle = !needsVpn
-                ? ''
-                : !stepActive
-                  ? status === 'done' ? '该步骤已完成（VPN 信号不再相关）' : '该步骤建议开启 VPN（尚未轮到）'
-                  : vpnLevel === 'green'
-                    ? 'VPN 已开启'
-                    : vpnLevel === 'red'
-                      ? '需要 VPN 但未开启'
-                      : vpnLevel === 'amber'
-                        ? 'VPN 已开（建议按需关闭）'
-                        : 'VPN 状态无法探测';
+              const { color: lampColor, title: lampTitle } = vpnLampOf(i, status);
               const icon =
                 status === 'done' ? '✓' : status === 'failed' ? '✕' : status === 'running' ? '…' : status === 'waiting_human' ? '✋' : i;
               const cls =
@@ -425,7 +433,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
                     </div>
                     <span className={`relative inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${cls}`}>
                       {icon}
-                      {needsVpn && (
+                      {lampColor && (
                         <span
                           className={`absolute -right-1 -top-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-white text-[8px] font-bold leading-none ${lampColor}`}
                           title={lampTitle}
@@ -448,31 +456,8 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
             {TIMELINE.slice(12).map((node, i) => {
               const s = stepByCode[node.code];
               const status = s?.status ?? 'pending';
-              const def = STEP_DEFS.find((d) => d.code === node.code);
-              const needsVpn = def?.needsVpn ?? false;
-              const vpnLevel = run.vpn?.hint?.level ?? 'gray';
-              const stepActive = status === 'running' || status === 'waiting_human' || status === 'failed';
-              const lampColor = !needsVpn
-                ? ''
-                : !stepActive
-                  ? 'bg-stone-400 text-white'
-                  : (vpnLevel === 'green' || vpnLevel === 'amber')
-                    ? 'bg-blue-500 text-white'
-                    : vpnLevel === 'red'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-stone-400 text-white';
-              const lampTitle = !needsVpn
-                ? ''
-                : !stepActive
-                  ? status === 'done' ? '该步骤已完成（VPN 信号不再相关）' : '该步骤建议开启 VPN（尚未轮到）'
-                  : vpnLevel === 'green'
-                    ? 'VPN 已开启'
-                    : vpnLevel === 'red'
-                      ? '需要 VPN 但未开启'
-                      : vpnLevel === 'amber'
-                        ? 'VPN 已开（建议按需关闭）'
-                        : 'VPN 状态无法探测';
               const absIdx = i + 12;
+              const { color: lampColor, title: lampTitle } = vpnLampOf(absIdx, status);
               const icon =
                 status === 'done' ? '✓' : status === 'failed' ? '✕' : status === 'running' ? '…' : status === 'waiting_human' ? '✋' : absIdx;
               const cls =
@@ -501,7 +486,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
                     </div>
                     <span className={`relative inline-flex h-7 w-7 items-center justify-center rounded-full text-xs ${cls}`}>
                       {icon}
-                      {needsVpn && (
+                      {lampColor && (
                         <span
                           className={`absolute -right-1 -top-1 inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-white text-[8px] font-bold leading-none ${lampColor}`}
                           title={lampTitle}
