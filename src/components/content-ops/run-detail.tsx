@@ -158,20 +158,15 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   const vpnLevel = run.vpn?.hint?.level ?? 'gray';
 
   // 计算某节点的 VPN 小灯是否该亮：
-  // 规则——需要 VPN 的节点，当它是「当前步 / 下一步」，或虽已 done 但后一个节点还没变绿时，亮灯；
-  // 后一个节点 done 后才变灰。颜色：VPN 开=亮绿，VPN 关=亮红，未知=灰。
+  // 规则——需要 VPN 的节点，当它是「当前步」或「下一步」时亮灯；一旦越过该步
+  // （currentIdx 后移）即变灰。颜色：VPN 开=亮绿，VPN 关=亮红，未知=灰。
   function vpnLampOf(sIdx: number, status: string): { lit: boolean; color: string; title: string } {
     const node = TIMELINE[sIdx];
     const def = STEP_DEFS.find((d) => d.code === node?.code);
     if (!def?.needsVpn) return { lit: false, color: '', title: '' };
-    const nextNode = TIMELINE[sIdx + 1];
-    const nextStatus = nextNode ? (stepByCode[nextNode.code]?.status ?? 'pending') : null;
-    const lit =
-      currentIdx !== -1 &&
-      sIdx <= currentIdx + 1 &&
-      (nextStatus === null ? status !== 'done' : nextStatus !== 'done');
+    const lit = currentIdx !== -1 && (sIdx === currentIdx || sIdx === currentIdx + 1);
     if (!lit) {
-      return { lit: false, color: 'bg-stone-400 text-white', title: '该步骤的 VPN 要求已通过（后续步骤已完成）' };
+      return { lit: false, color: 'bg-stone-400 text-white', title: '该步骤的 VPN 要求已通过' };
     }
     if (vpnLevel === 'green' || vpnLevel === 'amber') {
       return { lit: true, color: 'bg-lime-400 text-emerald-950', title: '该步骤需要 VPN，当前已开启' };

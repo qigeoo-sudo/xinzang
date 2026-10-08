@@ -237,13 +237,15 @@ export async function deployProduction(payload) {
   const host = typeof payload.ecsHost === 'string' ? payload.ecsHost : PROD_ECS_HOST;
   const user = typeof payload.ecsUser === 'string' ? payload.ecsUser : PROD_ECS_USER;
   const deployDir = typeof payload.deployDir === 'string' ? payload.deployDir : PROD_DEPLOY_DIR;
-  // SSH 到 ECS：在 release 目录 git pull + 执行部署脚本
-  const remoteCmd = `cd ${deployDir} && git fetch origin && git checkout master && git pull origin master && bash deploy.sh`;
+  // SSH 到 ECS：set -e 任一步失败即停；pull 用 --ff-only 避免意外 merge；
+  // 输出末尾截取，确保 deploy.sh 的真实报错可见（而非被 git pull 状态提示淹没）。
+  const remoteCmd = `set -e; cd ${deployDir} && git fetch origin && git checkout master && git pull --ff-only origin master && bash deploy.sh`;
   try {
     const { stdout, stderr } = await exec(`ssh ${user}@${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
     return { deployOk: true, scriptLog: (stdout + stderr).slice(-2000) };
   } catch (err) {
-    throw new Error(`生产部署失败：${String(err.stdout || err.stderr || err.message).slice(0, 2000)}`);
+    const tail = String(err.stdout || err.stderr || err.message).slice(-2000);
+    throw new Error(`生产部署失败：${tail}`);
   }
 }
 

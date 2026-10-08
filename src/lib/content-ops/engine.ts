@@ -4913,8 +4913,35 @@ export async function requestG5Approval(
     }
   });
   // S22 自动串联第一段：lock_sha（v1 直接进 promote，推送 main:master）
-  await enqueueS22Phase(runId, 'promote', { lockedMainSha });
-  await audit(userId, 'content_ops.g5_approve', runId, { lockedMainSha });
+  // Pilot 导师不进生产：G5 通过后直接标记 S22 完成（跳过 promote/deploy/verify），
+  // 避免把试点内容推到 master / 部署到生产 ECS。
+  if (run.isPilot) {
+    await prisma.$transaction(async (tx) => {
+      const step = await tx.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S22' } });
+      const ev = safeParse(step.evidence);
+      ev.s22Progress = {
+        promote: { ok: true, at: new Date().toISOString(), summary: { skipped: true, reason: 'pilot_run_no_production' } },
+        deploy_prod: { ok: true, at: new Date().toISOString(), summary: { skipped: true, reason: 'pilot_run_no_production' } },
+        verify: { ok: true, at: new Date().toISOString(), summary: { skipped: true, reason: 'pilot_run_no_production' } },
+      };
+      await tx.contentOpsStep.update({
+        where: { id: step.id },
+        data: {
+          commandStatus: 'done',
+          status: STEP_STATUS.DONE,
+          finishedAt: new Date(),
+          evidence: JSON.stringify(ev),
+        },
+      });
+      const fresh = await tx.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+      if (fresh.status !== RUN_STATE.COMPLETED && fresh.status !== 'failed') {
+        await transitionRun(tx, fresh, RUN_STATE.COMPLETED, 'S22 pilot 跳过生产发布（仅测试端验收）');
+      }
+    });
+  } else {
+    await enqueueS22Phase(runId, 'promote', { lockedMainSha });
+  }
+  await audit(userId, 'content_ops.g5_approve', runId, { lockedMainSha, pilotSkipped: run.isPilot });
   return { ok: true };
 }
 
