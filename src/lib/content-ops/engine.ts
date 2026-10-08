@@ -503,7 +503,7 @@ export async function handleCommandResult(runnerId: string, body: {
         },
       });
       break;
-    // P4b：S21 集成六段 + S22 生产发布四段（同一 step 行轮转）
+    // P4b：S21 集成七段 + S22 生产发布四段（同一 step 行轮转）
     case COMMAND.GIT_FETCH_STATUS:
       if (step.code === 'S21') await handleS21PhaseResult(step, payload as { payload: Record<string, unknown> }, result);
       else if (step.code === 'S22') await handleS22PhaseResult(step, payload as { payload: Record<string, unknown> }, result);
@@ -513,6 +513,7 @@ export async function handleCommandResult(runnerId: string, body: {
       break;
     case COMMAND.GIT_BACKUP_CREATE:
     case COMMAND.GIT_INTEGRATE_HANDOFF:
+    case COMMAND.ACTIVATE_MENTOR_STAGING:
     case COMMAND.RUN_REGRESSION_TESTS:
     case COMMAND.GIT_PUSH_MAIN:
     case COMMAND.DEPLOY_STAGING:
