@@ -9,6 +9,7 @@ import Link from 'next/link';
 import type { RunListItem, RunnerInfo, VpnHint } from './types';
 import { VpnBanner } from './vpn-banner';
 import { CreateRunWizard } from './create-run-wizard';
+import { MentorLightsBar } from './mentor-lights-bar';
 import { RUN_STATUS_LABELS, OWNER_LABELS, labelOf, timeAgo } from './display-labels';
 
 const POLL_MS = 15000;
@@ -130,6 +131,12 @@ export function ContentOpsConsole({
         </div>
 
         {loadError && <p className="mb-3 text-xs text-red-600">{loadError}</p>}
+
+        {runs && runs.length > 0 && (
+          <div className="mb-4">
+            <MentorLightsBar runs={runs} />
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-[1fr_340px]">
           {/* 左：流水线列表 */}

@@ -85,17 +85,17 @@ export async function gitIntegrateHandoff(payload, contentRoot) {
   await mkdir(targetDir, { recursive: true });
   // 复制包内知识卡 / prompt 等文件到 current/
   const entries = await readdir(handoffAbs, { withFileTypes: true });
-  let copiedFiles = 0;
+  const copiedFiles = [];
   for (const entry of entries) {
     if (entry.isDirectory()) {
       await cp(path.join(handoffAbs, entry.name), path.join(targetDir, entry.name), { recursive: true });
-      copiedFiles++;
+      copiedFiles.push(`content/knowledge-governance/current/${entry.name}`);
     } else {
       await cp(path.join(handoffAbs, entry.name), path.join(targetDir, entry.name));
-      copiedFiles++;
+      copiedFiles.push(`content/knowledge-governance/current/${entry.name}`);
     }
   }
-  return { copiedFiles, targetPaths: [targetDir] };
+  return { copiedFiles, copiedCount: copiedFiles.length, targetPaths: [targetDir] };
 }
 
 /**
@@ -128,11 +128,17 @@ export async function runRegressionTests(payload) {
 }
 
 /**
- * S21-5 推 main：git add + commit + push origin main
+ * S21-5 推 main：git add 仅本次集成产物清单 + commit + push origin HEAD:main
+ * stagedFiles 由 integrate 段（copiedFiles）+ activate_pilot 段（promptCopied）累积，
+ * 用清单选择性 add 可避免多 run 同时集成时互相收编对方未提交的产物文件。
  */
 export async function gitPushMain(payload) {
   const cwd = repoPath(payload);
-  await git('add -A', cwd);
+  const stagedFiles = Array.isArray(payload.stagedFiles) ? payload.stagedFiles.filter(Boolean) : [];
+  if (stagedFiles.length > 0) {
+    // 逐条 add，路径含特殊字符时也安全（用 -- 分隔符）
+    await git(`add -- ${stagedFiles.map((f) => `"${String(f).replace(/"/g, '\\"')}"`).join(' ')}`, cwd);
+  }
   const commitMsg = typeof payload.commitMessage === 'string' ? payload.commitMessage : `feat(content-ops): S21 集成 Final Handoff ${payload.handoffVersion ?? ''}`.trim();
   try {
     await git(`commit -m "${commitMsg.replace(/"/g, '\\"')}"`, cwd);
@@ -140,11 +146,10 @@ export async function gitPushMain(payload) {
     // nothing to commit 时 git 非零退出，但不算失败
     if (!/nothing to commit|no changes/i.test(String(err.stderr || err.stdout || ''))) throw err;
   }
-  // 工作区可能在开发分支（如 feat/content-ops-p1）：commit 落当前分支，推送到远程 main（快进）
-  // 语义：main=staging。远程 main 领先时非快进被拒属预期（需人工对齐）
+  // 工作区可能在开发分支：commit 落当前分支，推送到远程 main（快进）
   await git('push origin HEAD:main', cwd);
   const mainSha = (await git('rev-parse HEAD', cwd)).stdout;
-  return { mainSha, pushed: true, pushedTo: 'origin/main (HEAD:main)' };
+  return { mainSha, pushed: true, pushedTo: 'origin/main (HEAD:main)', stagedCount: stagedFiles.length };
 }
 
 /**

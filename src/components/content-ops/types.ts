@@ -30,6 +30,7 @@ export interface RunListItem {
   status: string;
   currentOwner: string;
   feishuChatName: string | null;
+  currentStepCode: string | null;
   createdAt: string;
   startedAt: string | null;
   runner: { name: string; status: string; lastSeenAt: string | null } | null;

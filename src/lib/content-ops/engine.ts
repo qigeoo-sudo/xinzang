@@ -2184,9 +2184,31 @@ export async function createRun(userId: string, input: {
 export async function listRuns() {
   const runs = await prisma.contentOpsRun.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { runner: { select: { name: true, lastSeenAt: true, status: true } } },
+    include: {
+      steps: { select: { code: true, status: true } },
+      runner: { select: { name: true, lastSeenAt: true, status: true } },
+    },
   });
   return runs.map(serializeRunListItem);
+}
+
+// S0-S22 主线步骤顺序（用于计算当前进度位置）
+const STEP_ORDER = [
+  'S0','S1','S2','S3','S4','S5','S6','S7','S8','S9','S10','S11',
+  'S12','S13','S14','S15','S16','S17','S18','S19','S20','S21','S22',
+];
+
+function currentStepCodeOf(steps: { code: string; status: string }[]): string | null {
+  const byCode = new Map(steps.map((s) => [s.code, s.status]));
+  const ordered = STEP_ORDER.filter((c) => byCode.has(c));
+  if (ordered.length === 0) return null;
+  const active = ordered.find((c) => {
+    const s = byCode.get(c);
+    return s === 'running' || s === 'waiting_human' || s === 'failed';
+  });
+  if (active) return active;
+  const done = [...ordered].reverse().find((c) => byCode.get(c) === 'done');
+  return done ?? ordered[0];
 }
 
 function serializeRunListItem(r: {
@@ -2198,6 +2220,7 @@ function serializeRunListItem(r: {
   feishuChatName: string | null;
   createdAt: Date;
   startedAt: Date | null;
+  steps: { code: string; status: string }[];
   runner: { name: string; lastSeenAt: Date | null; status: string } | null;
 }) {
   return {
@@ -2207,6 +2230,7 @@ function serializeRunListItem(r: {
     status: r.status,
     currentOwner: r.currentOwner,
     feishuChatName: r.feishuChatName,
+    currentStepCode: currentStepCodeOf(r.steps),
     createdAt: r.createdAt.toISOString(),
     startedAt: r.startedAt?.toISOString() ?? null,
     runner: r.runner
@@ -4642,7 +4666,7 @@ const S22_PHASE_RUNSTATE: Record<string, string> = {
 async function enqueueS21Phase(
   runId: string,
   phase: string,
-  context: { handoffPath: string | null; handoffVersion: string | null; hashBaseline: string[]; targetAppPaths?: string[] },
+  context: { handoffPath: string | null; handoffVersion: string | null; hashBaseline: string[]; targetAppPaths?: string[]; stagedFiles?: string[] },
 ) {
   const type = S21_PHASE_COMMAND[phase];
   if (!type) throw new EngineError(400, `S21 未知段：${phase}`);
@@ -4705,6 +4729,13 @@ async function handleS21PhaseResult(
   ev.s21Progress = progress;
   ev.handoffPath = payload.payload.handoffPath ?? ev.handoffPath ?? null;
   ev.handoffVersion = payload.payload.handoffVersion ?? ev.handoffVersion ?? null;
+  // 累积本次集成的产物清单（供 push_main 段选择性 git add，避免多 run 交叉收编）
+  if (phase === 'integrate' && Array.isArray(result.copiedFiles)) {
+    ev.integratedFiles = result.copiedFiles as string[];
+  }
+  if (phase === 'activate_pilot' && Array.isArray(result.promptCopied)) {
+    ev.promptCopied = result.promptCopied as string[];
+  }
 
   const next = S21_NEXT_PHASE[phase] ?? null;
   const targetState = S21_PHASE_RUNSTATE[phase];
@@ -4746,6 +4777,10 @@ async function handleS21PhaseResult(
       handoffVersion: (ev.handoffVersion as string | null) ?? null,
       hashBaseline: (Array.isArray(ev.hashBaseline) ? ev.hashBaseline : []) as string[],
       targetAppPaths: (Array.isArray(ev.targetAppPaths) ? ev.targetAppPaths : []) as string[],
+      stagedFiles: [
+        ...(Array.isArray(ev.integratedFiles) ? ev.integratedFiles : []),
+        ...(Array.isArray(ev.promptCopied) ? ev.promptCopied : []),
+      ],
     });
   }
 }
@@ -4803,7 +4838,7 @@ function summarizeS21Result(phase: string, result: Record<string, unknown>): unk
   switch (phase) {
     case 'reconcile': return { matched: result.matched, mismatched: result.mismatched, beforeSha: result.beforeSha };
     case 'backup': return { backupDir: result.backupDir, beforeSha: result.beforeSha };
-    case 'integrate': return { copiedFiles: result.copiedFiles, targetPaths: result.targetPaths };
+    case 'integrate': return { copiedCount: result.copiedCount ?? (Array.isArray(result.copiedFiles) ? result.copiedFiles.length : 0), targetPaths: result.targetPaths };
     case 'test': return { passed: result.passed, failed: result.failed, details: result.details };
     case 'activate_pilot': return { skipped: result.skipped, mentorId: result.mentorId, promptCopied: result.promptCopied, seeded: result.seeded, total: result.total };
     case 'push_main': return { mainSha: result.mainSha, pushed: result.pushed };
