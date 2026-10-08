@@ -12,9 +12,10 @@ import { readdir, stat } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
-export const CODEX_DELIVER_STATUS = 'needs_validation';
+export const CODEX_DELIVER_STATUS = 'ready';
 
 const VERSION_TIMEOUT_MS = 15_000;
+const EXEC_TIMEOUT_MS = 5 * 60 * 1000; // 5 分钟，留给模型回复
 
 /** 对单个 CLI 路径跑 --version；shell 仅在裸命令名（依赖 PATH 解析 .cmd shim）时开启 */
 function runVersion(cli, timeoutMs = VERSION_TIMEOUT_MS) {
@@ -127,11 +128,123 @@ export async function detectCodex(timeoutMs = VERSION_TIMEOUT_MS) {
 }
 
 /**
- * M5 验证点：非交互投递固定触发语到指定 Codex 对话。
- * 当前不实现真实驱动——返回 needs_validation，禁止在未验证时声称可投递。
- * P2 方向（已确认）：`codex exec -C <工作区> --json "<触发语>"` + 保存导师 session UUID，
- * 后续轮次用 queue/resume 续到同一任务；app-server/remote-control 实验特性不作为 v1 依赖。
+ * S6/S11/S14/S16：向 Codex 投递固定触发语。
+ * - 无 threadId：新开对话（`codex exec ... <prompt>`）
+ * - 有 threadId：复用同一对话（`codex exec resume <threadId> <prompt>`）
+ * 安全：用 spawn 参数数组传递中文触发语，绝不 shell 拼接，防止注入。
+ *
+ * @param {object} opts
+ * @param {string} opts.workspaceDir  导师工作目录绝对路径
+ * @param {string} opts.trigger        固定触发语
+ * @param {string} [opts.threadId]     已有对话 thread_id（续轮时传入）
+ * @returns {Promise<{ok:boolean, threadId?:string, output?:string, reason?:string}>}
  */
-export async function deliverTrigger() {
-  return { supported: false, status: CODEX_DELIVER_STATUS };
+export async function deliverTrigger({ workspaceDir, trigger, threadId }) {
+  if (!workspaceDir || !trigger) {
+    return { ok: false, reason: 'workspaceDir 和 trigger 必填' };
+  }
+  const detected = await detectCodex();
+  if (!detected.installed) {
+    return { ok: false, reason: `codex 未安装: ${detected.reason}` };
+  }
+  const codexExe = detected.path || 'codex';
+  const useShell = codexExe === 'codex';
+
+  // 组装参数：全局选项放在 exec 之后、子命令之前
+  const args = ['exec', '-C', workspaceDir, '--skip-git-repo-check', '--json'];
+  if (threadId) {
+    args.push('resume', threadId);
+  }
+  args.push(trigger);
+
+  const result = await runCodexExec(codexExe, args, useShell);
+  return result;
+}
+
+/**
+ * 执行 codex exec 并解析 --json 输出（JSONL）。
+ * 提取 thread.started.thread_id 和最终消息文本；捕获 error/turn.failed。
+ */
+function runCodexExec(exe, args, useShell) {
+  return new Promise((resolve) => {
+    const child = spawn(exe, args, {
+      windowsHide: true,
+      shell: useShell,
+    });
+    let stdout = '';
+    let stderr = '';
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        try { child.kill('SIGKILL'); } catch { /* ignore */ }
+        resolve({ ok: false, reason: `codex exec 超时（>${EXEC_TIMEOUT_MS / 1000}s）` });
+      }
+    }, EXEC_TIMEOUT_MS);
+
+    child.stdout.on('data', (d) => { stdout += d.toString(); });
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+
+    child.on('error', (err) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      resolve({ ok: false, reason: err.code === 'ENOENT' ? 'codex 可执行文件不存在' : err.message });
+    });
+
+    child.on('close', (code) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      const parsed = parseCodexJsonl(stdout);
+      // turn.failed 或 error 事件判定为失败
+      if (parsed.fatalError) {
+        resolve({ ok: false, threadId: parsed.threadId, reason: parsed.fatalError });
+        return;
+      }
+      if (code !== 0 && !parsed.threadId) {
+        resolve({
+          ok: false,
+          reason: `codex exec 退出码 ${code}${stderr ? `：${stderr.slice(0, 300)}` : ''}`,
+        });
+        return;
+      }
+      resolve({ ok: true, threadId: parsed.threadId, output: parsed.output });
+    });
+  });
+}
+
+/** 解析 codex --json 的 JSONL 输出，提取 thread_id 与最终文本 */
+function parseCodexJsonl(raw) {
+  const out = { threadId: null, output: '', fatalError: null };
+  const textParts = [];
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let ev;
+    try { ev = JSON.parse(line); } catch { continue; }
+    switch (ev.type) {
+      case 'thread.started':
+        out.threadId = ev.thread_id || null;
+        break;
+      case 'item.completed': {
+        const item = ev.item || {};
+        if (item.type === 'message' && Array.isArray(item.content)) {
+          for (const block of item.content) {
+            if (block && typeof block.text === 'string') textParts.push(block.text);
+          }
+        }
+        break;
+      }
+      case 'error':
+        if (!out.fatalError && ev.message) out.fatalError = String(ev.message);
+        break;
+      case 'turn.failed':
+        if (ev.error && ev.error.message) out.fatalError = String(ev.error.message);
+        break;
+      default:
+        break;
+    }
+  }
+  out.output = textParts.join('\n').trim();
+  return out;
 }

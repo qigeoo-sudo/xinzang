@@ -73,6 +73,7 @@ export const COMMAND = {
   LIST_WORK_FILES: 'list_work_files',
   PREPARE_CLAUDE_OUTPUTS: 'prepare_claude_outputs',
   CODEX_PROBE: 'codex_probe',
+  CODEX_DELIVER: 'codex_deliver',
   LOCATE_VIEW_DOCS: 'locate_view_docs',
   LOCATE_ROUND2_DOCS: 'locate_round2_docs',
   READ_VIEW_DOCS: 'read_view_docs',
@@ -454,6 +455,26 @@ export async function handleCommandResult(runnerId: string, body: {
         },
       });
       break;
+    case COMMAND.CODEX_DELIVER: {
+      const ev = safeParse(step.evidence);
+      const updateData: Record<string, unknown> = {
+        commandStatus: result.ok === false ? 'failed' : 'done',
+        commandResult: JSON.stringify(result),
+      };
+      if (result.ok) {
+        updateData.evidence = JSON.stringify({
+          ...ev,
+          codexThreadId: result.threadId ?? ev.codexThreadId ?? null,
+          codexOutput: result.output ?? null,
+          deliveredBy: 'runner',
+          deliveredAt: new Date().toISOString(),
+        });
+      } else {
+        updateData.evidence = JSON.stringify({ ...ev, codexError: result.reason ?? '未知错误' });
+      }
+      await prisma.contentOpsStep.update({ where: { id: step.id }, data: updateData });
+      break;
+    }
     case COMMAND.LOCATE_VIEW_DOCS:
       await handleLocateViewDocsResult(step, payload as { payload: Record<string, unknown> }, result);
       break;
@@ -2655,9 +2676,9 @@ export async function confirmArchive(
 export async function codexSubmission(
   userId: string,
   runId: string,
-  input: { action: 'copied' | 'started'; conversationName?: string },
+  input: { action: 'copied' | 'started' | 'deliver'; conversationName?: string },
 ) {
-  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId }, include: { runner: true } });
   const s6 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S6' } });
   const contract = safeParse(run.taskContract) as { r1Trigger?: string };
 
@@ -2667,6 +2688,43 @@ export async function codexSubmission(
       triggerPreview: contract.r1Trigger ?? null,
     });
     return { ok: true, trigger: contract.r1Trigger ?? null };
+  }
+
+  if (input.action === 'deliver') {
+    // 由 Runner 自动投递固定触发语到 Codex，省去人工复制粘贴
+    if (run.status !== RUN_STATE.CLAUDE_OUTPUT_ARCHIVED && run.status !== RUN_STATE.CODEX_ROUND1_ASSEMBLY) {
+      throw new EngineError(409, `当前状态（${run.status}）不能开始 Codex Assembly`);
+    }
+    const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
+    if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+    const trigger = contract.r1Trigger ?? triggerFor(run.mentorDir);
+    const workspaceDir = path.join(contentRoot, 'mentors', run.mentorDir);
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: s6.id },
+        data: {
+          status: STEP_STATUS.RUNNING,
+          startedAt: s6.startedAt ?? new Date(),
+          commandStatus: 'queued',
+          commandPayload: JSON.stringify({
+            type: COMMAND.CODEX_DELIVER,
+            payload: { workspaceDir, trigger },
+          }),
+          idempotencyKey: `${runId}:S6:deliver:${randomBytes(6).toString('hex')}`,
+          failureReason: null,
+          evidence: JSON.stringify({
+            ...safeParse(s6.evidence),
+            conversationName: `${run.mentorDir}（Runner 自动创建）`,
+            startedBy: userId,
+          }),
+        },
+      });
+      if (run.status === RUN_STATE.CLAUDE_OUTPUT_ARCHIVED) {
+        await transitionRun(tx, run, RUN_STATE.CODEX_ROUND1_ASSEMBLY, 'runner deliver codex trigger');
+      }
+    });
+    await audit(userId, 'content_ops.codex_deliver', runId, { triggerPreview: trigger });
+    return { ok: true, queued: true };
   }
 
   if (!input.conversationName?.trim()) {

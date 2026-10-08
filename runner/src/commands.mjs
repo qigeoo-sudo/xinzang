@@ -205,8 +205,18 @@ export async function handleCommand(command, contentRoot) {
     case 'codex_probe':
       return { codex: await detectCodex() };
 
-    case 'codex_deliver':
-      return deliverTrigger();
+    case 'codex_deliver': {
+      // S6/S11/S14/S16：向 Codex 投递固定触发语；workspaceDir 必须在 CONTENT_ROOT 内
+      const workspaceDir = path.resolve(String(payload.workspaceDir || ''));
+      if (!path.isAbsolute(workspaceDir) || !isInsideContentRoot(workspaceDir, contentRoot)) {
+        throw new Error(`codex_deliver 工作目录越界: ${payload.workspaceDir}`);
+      }
+      return deliverTrigger({
+        workspaceDir,
+        trigger: String(payload.trigger || ''),
+        threadId: payload.threadId ? String(payload.threadId) : undefined,
+      });
+    }
 
     case 'feishu_probe':
       return { feishu: await feishuWhoami() };

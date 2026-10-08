@@ -677,7 +677,13 @@ export function CodexPanelB({
   const s6 = run.steps.find((s) => s.code === 'S6')!;
   const contract = (run.taskContract ?? {}) as { r1Trigger?: string };
   const trigger = contract.r1Trigger ?? '（触发语未生成）';
-  const ev = (s6.evidence ?? {}) as { conversationName?: string; codex?: { detected?: boolean; version?: string } };
+  const ev = (s6.evidence ?? {}) as {
+    conversationName?: string;
+    codex?: { detected?: boolean; version?: string };
+    codexThreadId?: string;
+    codexOutput?: string;
+    codexError?: string;
+  };
   const [conversationName, setConversationName] = useState(ev.conversationName ?? '');
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -701,6 +707,19 @@ export function CodexPanelB({
   };
 
   const codexProbe = ev.codex as { installed?: boolean; version?: string; source?: string } | undefined;
+  const runnerOnline = Boolean(run.runner?.online);
+
+  const deliver = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await onAction('codex-submission', { action: 'deliver' });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '投递失败');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <section className="rounded-[18px] border-2 border-sky-200 bg-sky-50/40 p-4">
@@ -732,12 +751,29 @@ export function CodexPanelB({
             <button type="button" onClick={copy} disabled={busy || s6.status === 'done'} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
               {copied || s6.status === 'done' ? '已复制并登记 ✓' : '复制触发语（人工粘贴）'}
             </button>
-            <button type="button" disabled title="能力验证中（Q15），P1 期间不可点" className="cursor-not-allowed rounded-lg border border-stone-300 bg-stone-100 px-3 py-1.5 text-sm text-stone-400">
-              由 Runner 投递（验证中）
+            <button
+              type="button"
+              onClick={deliver}
+              disabled={busy || s6.status === 'done' || !runnerOnline || !codexProbe?.installed}
+              className="rounded-lg border border-sky-400 bg-sky-50 px-3 py-1.5 text-sm text-sky-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!runnerOnline ? 'Runner 离线' : !codexProbe?.installed ? '未检测到 Codex CLI' : '由 Runner 自动投递触发语到 Codex'}
+            >
+              {busy ? '投递中…' : s6.commandStatus === 'queued' || s6.commandStatus === 'running' ? '已入队，等待 Runner…' : '由 Runner 投递'}
             </button>
           </div>
         ) : (
           <p className="mt-2 text-xs text-stone-400">只读账号。</p>
+        )}
+        {ev.codexError && (
+          <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">Runner 投递失败：{ev.codexError}</p>
+        )}
+        {ev.codexThreadId && (
+          <p className="mt-2 text-[11px] text-stone-500">
+            Codex 对话 thread_id：<code className="select-all">{ev.codexThreadId}</code>
+            {ev.codexOutput && (
+              <span className="mt-1 block max-h-32 overflow-auto whitespace-pre-wrap rounded bg-stone-50 p-2 text-stone-600">{ev.codexOutput}</span>
+            )}
+          </p>
         )}
         <ImpactNote>复制只把固定文本放入剪贴板并登记复制时间；不会向任何对话发送内容。</ImpactNote>
       </div>
