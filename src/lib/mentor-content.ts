@@ -46,7 +46,8 @@ export function getGlobalSystemPolicy(): string {
 
 /**
  * 单导师人格 Prompt（缓存）。
- * 规范六位导师从 md 资产读取；其他（如 comingSoon 占位）允许回退到调用方提供的静态文本。
+ * prompts/ 下有资产文件即加载（含 pilot 影子导师等非规范导师）；
+ * 规范导师资产缺失视为部署错误（抛错）；其他导师回退到调用方提供的静态文本。
  */
 export function getMentorPersonaPrompt(
   mentorId: string,
@@ -56,8 +57,12 @@ export function getMentorPersonaPrompt(
   if (cached !== undefined) return cached;
 
   let prompt: string;
-  if ((CANONICAL_MENTOR_IDS as string[]).includes(mentorId)) {
-    prompt = stripHeading(readAsset(`prompts/${mentorId}_system_prompt.md`));
+  const assetRel = `prompts/${mentorId}_system_prompt.md`;
+  if (existsSync(resolve(CONTENT_DIR, assetRel))) {
+    prompt = stripHeading(readAsset(assetRel));
+  } else if ((CANONICAL_MENTOR_IDS as string[]).includes(mentorId)) {
+    // 规范导师必须有 md 资产，缺失时 readAsset 抛错（部署不完整）
+    prompt = stripHeading(readAsset(assetRel));
   } else if (fallback && fallback.trim()) {
     prompt = fallback.trim();
   } else {

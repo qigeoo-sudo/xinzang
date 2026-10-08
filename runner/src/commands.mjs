@@ -27,6 +27,7 @@ import {
   runRegressionTests,
   gitPushMain,
   deployStaging,
+  activateMentorStaging,
   gitPromoteMainToMaster,
   deployProduction,
   verifyProduction,
@@ -463,6 +464,8 @@ export async function handleCommand(command, contentRoot) {
       return await gitPushMain(payload);
     case 'deploy_staging':
       return await deployStaging(payload);
+    case 'activate_mentor_staging':
+      return await activateMentorStaging(payload);
     case 'git_promote_main_to_master':
       return await gitPromoteMainToMaster(payload);
     case 'deploy_production':

@@ -3331,9 +3331,9 @@ export function S21IntegrationPanel({
 
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-bold text-stone-800">S21 · Trae 集成：对账→备份→集成→八类测试→推 main→部署测试端</h3>
+      <h3 className="text-sm font-bold text-stone-800">S21 · Trae 集成：对账→备份→集成→激活导师→八类测试→推 main→部署测试端</h3>
       <p className="mt-1 text-xs text-stone-500">
-        G4 通过后 Runner 全自动串联六段；每段结果由控制平面记录，无需人工干预。
+        G4 通过后 Runner 全自动串联七段（无 pilot 激活配置的导师自动跳过激活段）；每段结果由控制平面记录，无需人工干预。
       </p>
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => {}} />}
 

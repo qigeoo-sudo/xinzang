@@ -91,6 +91,8 @@ export const COMMAND = {
   RUN_REGRESSION_TESTS: 'run_regression_tests',
   GIT_PUSH_MAIN: 'git_push_main',
   DEPLOY_STAGING: 'deploy_staging',
+  // S21 activate_pilot 段：pilot 导师上线（复制 prompt 资产 + 远程灌卡到测试库）
+  ACTIVATE_MENTOR_STAGING: 'activate_mentor_staging',
   GIT_PROMOTE_MAIN_TO_MASTER: 'git_promote_main_to_master',
   DEPLOY_PRODUCTION: 'deploy_production',
 } as const;
@@ -4562,19 +4564,30 @@ export async function rejectG4(userId: string, runId: string, input: { reason: s
 }
 
 // ------------------------------------------------------------------
-// P4b：S21 Trae 集成（六段自动串联）+ S22 生产发布（G5 门禁 + 四段自动）
+// P4b：S21 Trae 集成（七段自动串联）+ S22 生产发布（G5 门禁 + 四段自动）
 // 设计依据：用户确认方案（2026-10-08）
-//   - S21 全自动：G4 通过 → reconcile → backup → integrate → test → push_main → deploy_staging → AWAITING_STAGING_ACCEPTANCE
+//   - S21 全自动：G4 通过 → reconcile → backup → integrate → activate_pilot → test → push_main → deploy_staging → AWAITING_STAGING_ACCEPTANCE
+//     （activate_pilot：pilot 导师激活——prompt 资产落位 + 知识卡灌测试库；无 plan 的导师自动跳过）
 //   - S22 G5 人工门禁 → lock_sha → promote → deploy_prod → verify → COMPLETED
 //   - v1 过渡：deploy_staging = git push origin main（CloudBase 自动部署）；deploy_production = SSH ECS 执行部署脚本
 //   - 每段指令在 S21/S22 同一 step 行上轮转（commandPayload 覆盖、idempotencyKey 轮换、evidence 累积阶段进度）
 // ------------------------------------------------------------------
 
-/** S21 六段指令类型映射 */
+/** S21 activate_pilot 段：pilot 导师激活配置（mentorDirKey → 激活所需资产） */
+const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {
+  'ying wang pilot': {
+    mentorId: 'ying-pilot',
+    cardsSource: 'content/knowledge-governance/current/ying_pilot_r1_r2_knowledge_cards_v0.3.jsonl',
+    promptSource: 'content/knowledge-governance/current/prompt-system/mentors/ying-pilot/persona.md',
+  },
+};
+
+/** S21 七段指令类型映射 */
 const S21_PHASE_COMMAND: Record<string, string> = {
   reconcile: COMMAND.GIT_FETCH_STATUS,
   backup: COMMAND.GIT_BACKUP_CREATE,
   integrate: COMMAND.GIT_INTEGRATE_HANDOFF,
+  activate_pilot: COMMAND.ACTIVATE_MENTOR_STAGING,
   test: COMMAND.RUN_REGRESSION_TESTS,
   push_main: COMMAND.GIT_PUSH_MAIN,
   deploy_staging: COMMAND.DEPLOY_STAGING,
@@ -4584,7 +4597,8 @@ const S21_PHASE_COMMAND: Record<string, string> = {
 const S21_NEXT_PHASE: Record<string, string | null> = {
   reconcile: 'backup',
   backup: 'integrate',
-  integrate: 'test',
+  integrate: 'activate_pilot',
+  activate_pilot: 'test',
   test: 'push_main',
   push_main: 'deploy_staging',
   deploy_staging: null,
@@ -4595,6 +4609,7 @@ const S21_PHASE_RUNSTATE: Record<string, string> = {
   reconcile: RUN_STATE.INTEGRATION_BACKUP_CREATED,
   backup: RUN_STATE.INTEGRATING_APPLICATION,
   integrate: RUN_STATE.TESTING_STAGING,
+  activate_pilot: RUN_STATE.TESTING_STAGING, // 激活属于测试准备，runState 与 integrate 段共用
   test: RUN_STATE.PUSHING_MAIN,
   push_main: RUN_STATE.DEPLOYING_STAGING,
   deploy_staging: RUN_STATE.AWAITING_STAGING_ACCEPTANCE,
@@ -4630,13 +4645,23 @@ async function enqueueS21Phase(
 ) {
   const type = S21_PHASE_COMMAND[phase];
   if (!type) throw new EngineError(400, `S21 未知段：${phase}`);
+  // activate_pilot 段按 run 的 mentorDir 注入激活配置；无配置的导师注入 skipped 标记，Runner 原样跳过续段
+  let activatePlan: Record<string, unknown> | null = null;
+  if (phase === 'activate_pilot') {
+    const run = await prisma.contentOpsRun.findUniqueOrThrow({
+      where: { id: runId },
+      select: { mentorDir: true },
+    });
+    const plan = S21_ACTIVATE_PLAN[normalizeMentorDirKey(run.mentorDir)] ?? null;
+    activatePlan = plan ? { ...plan } : { skipped: true };
+  }
   const updated = await prisma.contentOpsStep.updateMany({
     where: { runId, code: 'S21', commandStatus: { in: ['none', 'failed', 'done', 'dispatched'] } },
     data: {
       status: STEP_STATUS.RUNNING,
       startedAt: new Date(),
       commandStatus: 'queued',
-      commandPayload: JSON.stringify({ type, payload: { phase, ...context } }),
+      commandPayload: JSON.stringify({ type, payload: { phase, ...(activatePlan ? { activatePlan } : {}), ...context } }),
       idempotencyKey: `${runId}:S21:${phase}:${randomBytes(6).toString('hex')}`,
       failureReason: null,
     },
@@ -4779,6 +4804,7 @@ function summarizeS21Result(phase: string, result: Record<string, unknown>): unk
     case 'backup': return { backupDir: result.backupDir, beforeSha: result.beforeSha };
     case 'integrate': return { copiedFiles: result.copiedFiles, targetPaths: result.targetPaths };
     case 'test': return { passed: result.passed, failed: result.failed, details: result.details };
+    case 'activate_pilot': return { skipped: result.skipped, mentorId: result.mentorId, promptCopied: result.promptCopied, seeded: result.seeded, total: result.total };
     case 'push_main': return { mainSha: result.mainSha, pushed: result.pushed };
     case 'deploy_staging': return { autoDeployed: result.autoDeployed, note: result.note };
     default: return { keys: Object.keys(result) };

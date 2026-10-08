@@ -318,11 +318,12 @@ export const G4_INTEGRATION_APPROVAL_SCOPE = '本按钮只授权应用集成、�
 export const G5_PRODUCTION_APPROVAL_BUTTON = '测试端验收通过并发布生产';
 export const G5_PRODUCTION_APPROVAL_SCOPE = '本按钮授权锁定当前 main SHA、推送 main→master、部署生产 ECS（aihr.top）并执行线上验证；完成后 Run 结束。';
 
-/** S21 六段集成阶段标签（与 RUN_STATE 链一致，供面板只读展示） */
+/** S21 七段集成阶段标签（与 RUN_STATE 链一致，供面板只读展示） */
 export const S21_PHASES = [
   { code: 'reconcile', label: '对账（Final Handoff vs 仓库哈希基线）', runState: RUN_STATE.RECONCILING_SNAPSHOTS },
   { code: 'backup', label: '备份（带时间戳目录 + before hash）', runState: RUN_STATE.INTEGRATION_BACKUP_CREATED },
   { code: 'integrate', label: '集成（复制包内容到 current/）', runState: RUN_STATE.INTEGRATING_APPLICATION },
+  { code: 'activate_pilot', label: '激活导师（prompt 落位 + 知识卡灌测试库）', runState: RUN_STATE.TESTING_STAGING },
   { code: 'test', label: '八类测试（AGENTS §16.5 回归）', runState: RUN_STATE.TESTING_STAGING },
   { code: 'push_main', label: '推 main（git commit + push origin main）', runState: RUN_STATE.PUSHING_MAIN },
   { code: 'deploy_staging', label: '部署测试端（CloudBase 自动部署）', runState: RUN_STATE.DEPLOYING_STAGING },

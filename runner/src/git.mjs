@@ -4,7 +4,7 @@
  * AGENTS.md：main=staging（CloudBase 自动部署），master=生产。
  */
 import { exec as execCb } from 'node:child_process';
-import { mkdir, cp, readdir, stat, access } from 'node:fs/promises';
+import { mkdir, cp, readdir, stat, access, copyFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import path from 'node:path';
 
@@ -151,6 +151,64 @@ export async function gitPushMain(payload) {
 export async function deployStaging(payload) {
   // v1：push main 自动触发 CloudBase 部署，无需额外操作
   return { autoDeployed: true, note: 'push origin main 已触发 CloudBase 自动部署测试端' };
+}
+
+/**
+ * S21-4b activate_pilot 段：pilot 导师激活（测试端）
+ * 1. plan.skipped（未配置激活的导师）原样跳过，链条继续
+ * 2. promptSource 存在则复制为 content/knowledge-governance/prompts/<mentorId>_system_prompt.md（runtime 加载入口）
+ * 3. 知识卡灌测试库：RDS 是内网地址本机不可达，须 SSH 到生产 ECS 远程执行 seed（与测试库同步方法一致）
+ *    连接串经 base64 传递，规避 cmd/bash 引号与特殊字符问题
+ */
+export async function activateMentorStaging(payload) {
+  const plan = payload.activatePlan;
+  if (!plan || plan.skipped) return { skipped: true };
+  const mentorId = String(plan.mentorId || '').trim();
+  if (!mentorId || !plan.cardsSource) throw new Error('activate_mentor_staging 的 activatePlan 缺少 mentorId/cardsSource');
+  const cwd = repoPath(payload);
+
+  // 1. prompt 资产落位
+  const copied = [];
+  if (plan.promptSource) {
+    const src = path.join(cwd, plan.promptSource);
+    const dest = path.join(cwd, 'content', 'knowledge-governance', 'prompts', `${mentorId}_system_prompt.md`);
+    await mkdir(path.dirname(dest), { recursive: true });
+    await copyFile(src, dest);
+    copied.push(path.relative(cwd, dest).replace(/\\/g, '/'));
+  }
+
+  // 2. 读生产容器连接串 → 库名换成测试库
+  const { stdout: prodUrl } = await exec(
+    `ssh ${PROD_ECS_USER}@${PROD_ECS_HOST} "docker exec xinzang printenv DATABASE_URL"`,
+    { timeout: 60_000 },
+  );
+  const prodDb = prodUrl.trim();
+  if (!prodDb) throw new Error('无法从生产容器读取 DATABASE_URL');
+  const testDb = prodDb.replace(/\/xinzang-mysql(\?|$)/, '/xinzang_test$1');
+  if (testDb === prodDb) throw new Error('生产连接串库名不含 xinzang-mysql，测试库地址生成失败');
+  const testDbB64 = Buffer.from(testDb, 'utf-8').toString('base64');
+
+  // 3. 传卡文件 + seed 脚本到 ECS，远程灌卡
+  const cardsAbs = path.join(cwd, plan.cardsSource);
+  const seedAbs = path.join(cwd, 'prisma', 'seed-mentor-cards.ts');
+  const host = `${PROD_ECS_USER}@${PROD_ECS_HOST}`;
+  await exec(`scp "${cardsAbs}" ${host}:/opt/xinzang/prisma/_activate_cards.jsonl`, { timeout: 120_000 });
+  await exec(`scp "${seedAbs}" ${host}:/opt/xinzang/prisma/seed-mentor-cards.ts`, { timeout: 120_000 });
+  // 连接串写入远程临时文件（base64 免引号），seed 完成后清理临时文件
+  await exec(`ssh ${host} "echo ${testDbB64} | base64 -d > /tmp/_activate_dburl"`, { timeout: 60_000 });
+  const remoteCmd = `cd /opt/xinzang && DATABASE_URL=$(cat /tmp/_activate_dburl) npx tsx prisma/seed-mentor-cards.ts --file prisma/_activate_cards.jsonl --mentor ${mentorId}; rc=$?; rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl; exit $rc`;
+  let seedOut = '';
+  try {
+    const { stdout } = await exec(`ssh ${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
+    seedOut = stdout;
+  } catch (err) {
+    // 失败时也清理远程临时文件，再抛出
+    await exec(`ssh ${host} "rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl"`, { timeout: 60_000 }).catch(() => {});
+    throw new Error(`远程灌卡失败：${String(err.stdout || err.stderr || err.message).slice(0, 2000)}`);
+  }
+  const m = seedOut.match(/完成：\S+\s+(\d+)\s+张已同步；库内知识卡总数\s+(\d+)/);
+  if (!m) throw new Error(`远程灌卡输出无法解析：${seedOut.slice(-500)}`);
+  return { mentorId, promptCopied: copied, seeded: parseInt(m[1], 10), total: parseInt(m[2], 10), cardsSource: plan.cardsSource };
 }
 
 /**
