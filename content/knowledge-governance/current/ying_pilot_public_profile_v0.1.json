@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "mentorId": "ying-pilot",
+  "displayName": "Ying Wang Pilot",
+  "chineseName": "王颖",
+  "headline": "拥有汽车与新能源制造经历、现从事具身智能人形机器人产业化的生产负责人",
+  "currentEmployer": "矩阵超智",
+  "currentTitle": "生产负责人",
+  "reportsTo": "公司创始人",
+  "responsibilityScope": "生产制造与生产试制体系",
+  "asOf": "2026-09",
+  "avatar": {
+    "authorized": true,
+    "requestedStyle": "光头卡通头像",
+    "assetPath": null
+  },
+  "publicationAuthorized": false,
+  "restrictions": [
+    "仅用于 Pilot 测试；不得作为 Ying Wang 正式公开档案发布",
+    "不公开当前机器人产品形态、产线阶段、团队规模、设备或供应商",
+    "不补全未在知识卡中明确确认的组织、项目和人事信息",
+    "行业资历和当前职位属于时变信息，需要动态复核",
+    "不得跨读写 mentor:ying 正式命名空间"
+  ],
+  "sources": [
+    "YWP-R1-REVIEW@A1-A6",
+    "YWP-R1-REVIEW@C1-C5",
+    "YWP-R1-REVIEW@H1-H7",
+    "YWP-R2-REVIEW@A1-A2"
+  ],
+  "testOnly": true
+}

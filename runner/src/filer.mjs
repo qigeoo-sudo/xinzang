@@ -258,3 +258,118 @@ export async function scanWorkPackages(contentRoot, mentorDir) {
   }
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/**
+ * S17 Final Handoff 发现：定位导师 work 目录下最新有效不可变包。
+ * 命名约定：<mentorId>-final-handoff-v<actual>（如 ying-final-handoff-v0.4）。
+ * 校验四件套：00_START_HERE.md / source_manifest_final.json / TRAE_HANDOFF.md / VALIDATION_REPORT.md。
+ * 计算核心文件 SHA-256 基线（防 Codex 归档后篡改）。
+ * 同名版本包出现多个时取 mtime 最新；若无合规包返回 null。
+ */
+export async function scanFinalHandoff(contentRoot, mentorDir) {
+  const mentorRoot = path.join(contentRoot, MENTORS_DIRNAME, mentorDir);
+  if (!isInsideContentRoot(mentorRoot, contentRoot)) {
+    throw new Error(`导师目录越界: ${mentorDir}`);
+  }
+  const workRoot = path.join(mentorRoot, 'work');
+  let entries;
+  try {
+    entries = await readdir(workRoot, { withFileTypes: true });
+  } catch (err) {
+    if (err.code === 'ENOENT') return null;
+    throw err;
+  }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.toLowerCase().includes('final-handoff-v')) continue;
+    const pkgDir = path.join(workRoot, entry.name);
+    let pkgStat;
+    try {
+      pkgStat = await stat(path.join(pkgDir, '00_START_HERE.md'));
+    } catch {
+      continue; // 无 00_START_HERE.md 视为非合规包
+    }
+    // 版本号：取 -v 后的部分（如 v0.4）
+    const versionMatch = entry.name.match(/-v([\w.-]+)$/i);
+    const version = versionMatch ? `v${versionMatch[1]}` : '';
+    candidates.push({ name: entry.name, pkgDir, mtime: pkgStat.mtime.toISOString(), version });
+  }
+  if (candidates.length === 0) return null;
+  // 取 mtime 最新
+  candidates.sort((a, b) => new Date(b.mtime).getTime() - new Date(a.mtime).getTime());
+  const latest = candidates[0];
+
+  // 校验四件套 + 计算哈希基线
+  const required = ['00_START_HERE.md', 'source_manifest_final.json', 'TRAE_HANDOFF.md', 'VALIDATION_REPORT.md'];
+  const coreFiles = [];
+  for (const name of required) {
+    const full = path.join(latest.pkgDir, name);
+    let exists = false;
+    let sha256 = null;
+    let bytes = null;
+    let mtime = null;
+    try {
+      const s = await stat(full);
+      if (s.isFile()) {
+        exists = true;
+        bytes = s.size;
+        mtime = s.mtime.toISOString();
+        const h = await hashFile(full);
+        sha256 = h.sha256;
+      }
+    } catch {
+      exists = false;
+    }
+    coreFiles.push({ name, relPath: toDisplayPath(full, contentRoot) ?? name, exists, sha256, bytes, mtime });
+  }
+  // 同时把可选 baseline/deployment-baseline/review-source/audio-analysis/prompt-system-snapshot 也收集进来
+  const optionalPatterns = ['baseline', 'deployment-baseline', 'review-source', 'audio-analysis', 'prompt-system'];
+  async function walkOptional(dir) {
+    let ents;
+    try {
+      ents = await readdir(dir, { withFileTypes: true });
+    } catch (err) {
+      if (err.code === 'ENOENT') return;
+      throw err;
+    }
+    for (const ent of ents) {
+      if (out_length(coreFiles) >= 50) return;
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        await walkOptional(full);
+      } else if (ent.isFile()) {
+        const rel = toDisplayPath(full, contentRoot) ?? ent.name;
+        const lowerRel = rel.toLowerCase();
+        // 检查完整相对路径（而非仅文件名），让 prompt-system/ 等子目录文件能被命中
+        if (optionalPatterns.some((p) => lowerRel.includes(p))) {
+          try {
+            const s = await stat(full);
+            if (s.isFile()) {
+              const h = await hashFile(full);
+              coreFiles.push({ name: ent.name, relPath: rel, exists: true, sha256: h.sha256, bytes: s.size, mtime: s.mtime.toISOString() });
+            }
+          } catch {
+            /* skip */
+          }
+        }
+      }
+    }
+  }
+  await walkOptional(latest.pkgDir);
+
+  const missing = required.filter((n) => !coreFiles.find((f) => f.name === n && f.exists));
+  return {
+    packagePath: toDisplayPath(latest.pkgDir, contentRoot) ?? latest.pkgDir,
+    packageName: latest.name,
+    version: latest.version,
+    mtime: latest.mtime,
+    coreFiles,
+    missing,
+  };
+}
+
+// 简易辅助：获取当前长度
+function out_length(arr) {
+  return arr.length;
+}

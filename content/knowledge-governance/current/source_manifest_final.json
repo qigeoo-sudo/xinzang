@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0",
+  "mentorId": "ying-pilot",
+  "round": 2,
+  "generatedAt": "2026-10-08",
+  "sourceRoot": "D:\\database\\mentors\\ying wang pilot",
+  "testClone": true,
+  "factPriority": [
+    "本人第二轮书面审核回复",
+    "本人第一轮书面审核回复",
+    "第二轮人工文字稿",
+    "第二轮原始音频",
+    "派生ASR与声学统计"
+  ],
+  "sources": [
+    {
+      "sourceId": "YWP-R1-REVIEW",
+      "sourceType": "mentor_review",
+      "relativePath": "Ying_Wang_第一轮审核清单_v0.1_回复.md",
+      "bytes": 10256,
+      "sha256": "0687AC1D02D8541BFBBBDEBFDFE4077C19886D5A71845A0E88B8E5B6436A5881"
+    },
+    {
+      "sourceId": "YWP-R2-REVIEW",
+      "sourceType": "mentor_review",
+      "relativePath": "Ying_Wang_第二轮审核清单_v0.2_回复.md",
+      "bytes": 6863,
+      "sha256": "A0036031C2658B15333F3F91E05F61994D23D5BD76F0801626DB53259221E34B"
+    },
+    {
+      "sourceId": "YWP-R2-Q1",
+      "sourceType": "transcript",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q1.txt",
+      "bytes": 9331,
+      "sha256": "B2CFBBC586C3E39F96C88F03E97D7DC95F41ED77F8D20130F342BE5D34313A38"
+    },
+    {
+      "sourceId": "YWP-R2-Q2Q3",
+      "sourceType": "transcript",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2_Q3.txt",
+      "bytes": 21087,
+      "sha256": "3EA81448BAAB29D746769DB40F5ADE76B0FF0F5F684DB2F9D52A9B29F1070347"
+    },
+    {
+      "sourceId": "YWP-R2-Q4Q6",
+      "sourceType": "transcript",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q4.txt",
+      "bytes": 19143,
+      "sha256": "E079D56A80A4D613B03896ACDE0FC2B2A85FC958D43EE7A3572011DBEDC0276E"
+    },
+    {
+      "sourceId": "YWP-R2-AUDIO-Q1",
+      "sourceType": "audio",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q1.m4a",
+      "bytes": 12028841,
+      "sha256": "307CE1247C536514347159D587DC0A28637CF6DF5C6A0A51E51232AEF5E8475B",
+      "durationSec": 806.9
+    },
+    {
+      "sourceId": "YWP-R2-AUDIO-Q2Q3",
+      "sourceType": "audio",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2_Q3.m4a",
+      "bytes": 26335152,
+      "sha256": "87EC4A7F5D094A60756EEC9D04F4484AF490D7DC8948B73418CFF979BA3EF0BF",
+      "durationSec": 1809.26
+    },
+    {
+      "sourceId": "YWP-R2-AUDIO-Q4Q6",
+      "sourceType": "audio",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q4.m4a",
+      "bytes": 24402964,
+      "sha256": "3FE7BBECCA3596AF6637D7D959B216F69E46E6F2B988FEFCD4C0C70363614026",
+      "durationSec": 1703.08
+    }
+  ],
+  "audioTotalDurationSec": 4319.24,
+  "notes": [
+    "本包为正式 final handoff 的隔离测试克隆。",
+    "人工文字稿为事实主源；音频与派生分析仅用于完整性和风格校对。",
+    "所有运行时检索必须限定于 mentor:ying-pilot。"
+  ]
+}

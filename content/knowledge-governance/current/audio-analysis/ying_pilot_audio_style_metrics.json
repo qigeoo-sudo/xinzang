@@ -1,0 +1,674 @@
+{
+  "method": {
+    "asrModel": "faster-whisper small / CPU int8 / local model",
+    "language": "zh",
+    "wordTimestamps": true,
+    "vad": true,
+    "acoustics": "Praat-Parselmouth; pitch 60-400Hz; intensity",
+    "notice": "Internal style and coverage analysis only. Supplied transcripts remain the factual source of record."
+  },
+  "totalDurationSec": 4284.87,
+  "aggregateAsrLexicon": {
+    "chineseCharCount": 14662,
+    "englishTokenCount": 0,
+    "englishTokensTop": [],
+    "chineseCharsPerAudioMinute": 205.3,
+    "fillerCounts": {
+      "我觉得": 2,
+      "我是这么想的": 0,
+      "其实": 39,
+      "怎么说呢": 0,
+      "就是说": 10,
+      "也就是说": 1,
+      "对吧": 0,
+      "可能": 58,
+      "那么": 29,
+      "然后": 17,
+      "所以": 35,
+      "这个": 64,
+      "我会觉得": 0,
+      "说句实在话": 0,
+      "打个比方": 1,
+      "简而言之": 0,
+      "首先": 11,
+      "其次": 1,
+      "最后": 4,
+      "反过来": 0,
+      "举个例子": 0,
+      "你会发现": 1
+    },
+    "emphasisCounts": {
+      "非常非常": 1,
+      "很多很多": 0,
+      "真正": 4,
+      "最重要": 1,
+      "很重要": 3,
+      "一定": 29,
+      "特别": 0,
+      "肯定": 5,
+      "千万不要": 3,
+      "完全": 13,
+      "绝对": 2,
+      "极其": 0,
+      "最核心": 2,
+      "务实": 0,
+      "踏踏实实": 0,
+      "拼命": 0
+    },
+    "pauseStats": {
+      "wordGapCount": 12466,
+      "countGte0_2": 822,
+      "countGte0_5": 578,
+      "countGte1_0": 236,
+      "medianGte0_2": 0.61,
+      "p90Gte0_2": 1.709,
+      "max": 13.32
+    }
+  },
+  "aggregateTranscriptLexicon": {
+    "chineseCharCount": 14679,
+    "englishTokenCount": 30,
+    "englishTokensTop": [
+      [
+        "ai",
+        15
+      ],
+      [
+        "yeah",
+        3
+      ],
+      [
+        "hr",
+        2
+      ],
+      [
+        "offer",
+        2
+      ],
+      [
+        "pc",
+        2
+      ],
+      [
+        "plc",
+        1
+      ],
+      [
+        "a",
+        1
+      ],
+      [
+        "sure",
+        1
+      ],
+      [
+        "ceo",
+        1
+      ],
+      [
+        "gdp",
+        1
+      ],
+      [
+        "boss",
+        1
+      ]
+    ],
+    "chineseCharsPerAudioMinute": 205.5,
+    "fillerCounts": {
+      "我觉得": 5,
+      "我是这么想的": 0,
+      "其实": 64,
+      "怎么说呢": 3,
+      "就是说": 10,
+      "也就是说": 0,
+      "对吧": 1,
+      "可能": 55,
+      "那么": 16,
+      "然后": 2,
+      "所以": 31,
+      "这个": 94,
+      "我会觉得": 0,
+      "说句实在话": 0,
+      "打个比方": 3,
+      "简而言之": 0,
+      "首先": 12,
+      "其次": 1,
+      "最后": 5,
+      "反过来": 0,
+      "举个例子": 2,
+      "你会发现": 1
+    },
+    "emphasisCounts": {
+      "非常非常": 0,
+      "很多很多": 1,
+      "真正": 4,
+      "最重要": 1,
+      "很重要": 3,
+      "一定": 30,
+      "特别": 2,
+      "肯定": 7,
+      "千万不要": 2,
+      "完全": 13,
+      "绝对": 2,
+      "极其": 0,
+      "最核心": 2,
+      "务实": 0,
+      "踏踏实实": 0,
+      "拼命": 0
+    },
+    "pauseStats": {
+      "wordGapCount": 0,
+      "countGte0_2": 0,
+      "countGte0_5": 0,
+      "countGte1_0": 0,
+      "medianGte0_2": null,
+      "p90Gte0_2": null,
+      "max": null
+    }
+  },
+  "aggregateTranscriptAsrCrosscheck": {
+    "n": 3,
+    "transcriptNormalizedChars": 15228,
+    "asrNormalizedChars": 14820,
+    "transcriptNgramRecall": 0.5152,
+    "asrToTranscriptLengthRatio": 0.9732,
+    "notice": "粗粒度完整性校验，不作为逐字准确率；原始文字稿仍是事实主源。"
+  },
+  "files": [
+    {
+      "index": 1,
+      "section": "R2-Q1",
+      "audio": "D:\\database\\mentors\\ying wang\\ying wang audio\\ying 第二轮 interview audio\\第二季Q1.m4a",
+      "transcript": "D:\\database\\mentors\\ying wang\\ying wang word\\ying 第二轮 interview word\\第二季Q1.txt",
+      "language": "zh",
+      "languageProbability": 1,
+      "durationSec": 800.51,
+      "segmentCount": 261,
+      "acoustics": {
+        "durationSec": 800.51,
+        "pitchHz": {
+          "median": 146.38,
+          "p10": 124.84,
+          "p90": 190.161,
+          "rangeP10P90": 65.32,
+          "voicedFrameRatio": 0.441
+        },
+        "intensityDb": {
+          "median": 60.097,
+          "p10": 27.751,
+          "p90": 70.833,
+          "rangeP10P90": 43.081
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 2711,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 203.2,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 9,
+          "怎么说呢": 0,
+          "就是说": 3,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 8,
+          "那么": 19,
+          "然后": 5,
+          "所以": 6,
+          "这个": 16,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 1,
+          "简而言之": 0,
+          "首先": 2,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 2,
+          "最重要": 0,
+          "很重要": 0,
+          "一定": 1,
+          "特别": 0,
+          "肯定": 0,
+          "千万不要": 0,
+          "完全": 4,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 2,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 2354,
+          "countGte0_2": 106,
+          "countGte0_5": 80,
+          "countGte1_0": 39,
+          "medianGte0_2": 0.8,
+          "p90Gte0_2": 2.08,
+          "max": 3.57
+        }
+      },
+      "transcriptLexicon": {
+        "chineseCharCount": 2780,
+        "englishTokenCount": 2,
+        "englishTokensTop": [
+          [
+            "plc",
+            1
+          ],
+          [
+            "a",
+            1
+          ]
+        ],
+        "chineseCharsPerAudioMinute": 208.4,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 9,
+          "怎么说呢": 0,
+          "就是说": 2,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 7,
+          "那么": 6,
+          "然后": 0,
+          "所以": 6,
+          "这个": 17,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 1,
+          "简而言之": 0,
+          "首先": 2,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 1,
+          "真正": 2,
+          "最重要": 0,
+          "很重要": 0,
+          "一定": 1,
+          "特别": 0,
+          "肯定": 1,
+          "千万不要": 0,
+          "完全": 4,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 2,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 0,
+          "countGte0_2": 0,
+          "countGte0_5": 0,
+          "countGte1_0": 0,
+          "medianGte0_2": null,
+          "p90Gte0_2": null,
+          "max": null
+        }
+      },
+      "transcriptAsrCrosscheck": {
+        "n": 3,
+        "transcriptNormalizedChars": 2871,
+        "asrNormalizedChars": 2737,
+        "transcriptNgramRecall": 0.7166,
+        "asrToTranscriptLengthRatio": 0.9533,
+        "notice": "粗粒度完整性校验，不作为逐字准确率；原始文字稿仍是事实主源。"
+      }
+    },
+    {
+      "index": 2,
+      "section": "R2-Q2-Q3",
+      "audio": "D:\\database\\mentors\\ying wang\\ying wang audio\\ying 第二轮 interview audio\\第二季Q2_Q3.m4a",
+      "transcript": "D:\\database\\mentors\\ying wang\\ying wang word\\ying 第二轮 interview word\\第二季Q2_Q3.txt",
+      "language": "zh",
+      "languageProbability": 1,
+      "durationSec": 1794.87,
+      "segmentCount": 764,
+      "acoustics": {
+        "durationSec": 1794.87,
+        "pitchHz": {
+          "median": 153.919,
+          "p10": 126.921,
+          "p90": 210.579,
+          "rangeP10P90": 83.658,
+          "voicedFrameRatio": 0.459
+        },
+        "intensityDb": {
+          "median": 65.536,
+          "p10": 4.436,
+          "p90": 74.806,
+          "rangeP10P90": 70.371
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 6523,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 218.1,
+        "fillerCounts": {
+          "我觉得": 0,
+          "我是这么想的": 0,
+          "其实": 0,
+          "怎么说呢": 0,
+          "就是说": 0,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 19,
+          "那么": 0,
+          "然后": 0,
+          "所以": 16,
+          "这个": 0,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 0,
+          "简而言之": 0,
+          "首先": 6,
+          "其次": 1,
+          "最后": 0,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 1,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 0,
+          "很重要": 2,
+          "一定": 23,
+          "特别": 0,
+          "肯定": 2,
+          "千万不要": 0,
+          "完全": 2,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 5525,
+          "countGte0_2": 335,
+          "countGte0_5": 273,
+          "countGte1_0": 91,
+          "medianGte0_2": 0.62,
+          "p90Gte0_2": 1.516,
+          "max": 7.66
+        }
+      },
+      "transcriptLexicon": {
+        "chineseCharCount": 6238,
+        "englishTokenCount": 11,
+        "englishTokensTop": [
+          [
+            "yeah",
+            3
+          ],
+          [
+            "hr",
+            2
+          ],
+          [
+            "offer",
+            2
+          ],
+          [
+            "sure",
+            1
+          ],
+          [
+            "ceo",
+            1
+          ],
+          [
+            "gdp",
+            1
+          ],
+          [
+            "boss",
+            1
+          ]
+        ],
+        "chineseCharsPerAudioMinute": 208.5,
+        "fillerCounts": {
+          "我觉得": 3,
+          "我是这么想的": 0,
+          "其实": 24,
+          "怎么说呢": 3,
+          "就是说": 3,
+          "也就是说": 0,
+          "对吧": 1,
+          "可能": 16,
+          "那么": 5,
+          "然后": 2,
+          "所以": 14,
+          "这个": 31,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 2,
+          "简而言之": 0,
+          "首先": 6,
+          "其次": 1,
+          "最后": 1,
+          "反过来": 0,
+          "举个例子": 2,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 0,
+          "很重要": 2,
+          "一定": 23,
+          "特别": 2,
+          "肯定": 3,
+          "千万不要": 0,
+          "完全": 2,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 0,
+          "countGte0_2": 0,
+          "countGte0_5": 0,
+          "countGte1_0": 0,
+          "medianGte0_2": null,
+          "p90Gte0_2": null,
+          "max": null
+        }
+      },
+      "transcriptAsrCrosscheck": {
+        "n": 3,
+        "transcriptNormalizedChars": 6477,
+        "asrNormalizedChars": 6588,
+        "transcriptNgramRecall": 0.2188,
+        "asrToTranscriptLengthRatio": 1.0171,
+        "notice": "粗粒度完整性校验，不作为逐字准确率；原始文字稿仍是事实主源。"
+      }
+    },
+    {
+      "index": 3,
+      "section": "R2-Q4-Q6",
+      "audio": "D:\\database\\mentors\\ying wang\\ying wang audio\\ying 第二轮 interview audio\\第二季Q4.m4a",
+      "transcript": "D:\\database\\mentors\\ying wang\\ying wang word\\ying 第二轮 interview word\\第二季Q4.txt",
+      "language": "zh",
+      "languageProbability": 1,
+      "durationSec": 1689.49,
+      "segmentCount": 363,
+      "acoustics": {
+        "durationSec": 1689.49,
+        "pitchHz": {
+          "median": 145.903,
+          "p10": 122.255,
+          "p90": 188.159,
+          "rangeP10P90": 65.904,
+          "voicedFrameRatio": 0.461
+        },
+        "intensityDb": {
+          "median": 65.285,
+          "p10": -0.173,
+          "p90": 74.634,
+          "rangeP10P90": 74.807
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 5428,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 192.8,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 30,
+          "怎么说呢": 0,
+          "就是说": 7,
+          "也就是说": 1,
+          "对吧": 0,
+          "可能": 31,
+          "那么": 10,
+          "然后": 12,
+          "所以": 13,
+          "这个": 48,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 0,
+          "简而言之": 0,
+          "首先": 3,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 1
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 1,
+          "很重要": 1,
+          "一定": 5,
+          "特别": 0,
+          "肯定": 3,
+          "千万不要": 3,
+          "完全": 7,
+          "绝对": 2,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 4586,
+          "countGte0_2": 382,
+          "countGte0_5": 224,
+          "countGte1_0": 105,
+          "medianGte0_2": 0.56,
+          "p90Gte0_2": 1.778,
+          "max": 7.22
+        }
+      },
+      "transcriptLexicon": {
+        "chineseCharCount": 5661,
+        "englishTokenCount": 17,
+        "englishTokensTop": [
+          [
+            "ai",
+            15
+          ],
+          [
+            "pc",
+            2
+          ]
+        ],
+        "chineseCharsPerAudioMinute": 201,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 31,
+          "怎么说呢": 0,
+          "就是说": 5,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 32,
+          "那么": 5,
+          "然后": 0,
+          "所以": 11,
+          "这个": 46,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 0,
+          "简而言之": 0,
+          "首先": 4,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 1
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 1,
+          "很重要": 1,
+          "一定": 6,
+          "特别": 0,
+          "肯定": 3,
+          "千万不要": 2,
+          "完全": 7,
+          "绝对": 2,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 0,
+          "countGte0_2": 0,
+          "countGte0_5": 0,
+          "countGte1_0": 0,
+          "medianGte0_2": null,
+          "p90Gte0_2": null,
+          "max": null
+        }
+      },
+      "transcriptAsrCrosscheck": {
+        "n": 3,
+        "transcriptNormalizedChars": 5880,
+        "asrNormalizedChars": 5495,
+        "transcriptNgramRecall": 0.7295,
+        "asrToTranscriptLengthRatio": 0.9345,
+        "notice": "粗粒度完整性校验，不作为逐字准确率；原始文字稿仍是事实主源。"
+      }
+    }
+  ],
+  "mentorId": "ying-pilot",
+  "testClone": true,
+  "analysisReusedFromApprovedFinalHandoff": true
+}

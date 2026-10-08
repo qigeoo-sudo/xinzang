@@ -26,7 +26,7 @@ export interface CompareFinding {
 }
 
 export interface DocCompareResult {
-  docType: 'style_analysis' | 'review_checklist';
+  docType: 'style_analysis' | 'review_checklist' | 'round2_review_checklist';
   relPath: string;
   scores: Record<CompareDimKey, number>;
   reasons: Partial<Record<CompareDimKey, string>>;
@@ -42,7 +42,7 @@ export interface CompareRef {
 }
 
 export interface CompareInput {
-  docType: 'style_analysis' | 'review_checklist';
+  docType: 'style_analysis' | 'review_checklist' | 'round2_review_checklist';
   mentorDir: string;
   isPilot: boolean;
   candidate: { relPath: string; content: string };
@@ -80,16 +80,28 @@ const CHECKLIST_RUBRIC = `候选与参考都是要发给导师本人书面回复
 - density 密度：题量与阅读密度和参考相当（参考约 45-65 题）；每块有足够问题覆盖该块风险；留白方式让导师能逐题作答。
 - readability 可读性：自然中文问句，导师看题就知道要确认什么、怎么答；没有内部黑话。`;
 
+const ROUND2_CHECKLIST_RUBRIC = `候选与参考都是要发给导师本人书面回复的「第二轮审核清单」（第二轮访谈之后的增量确认，不是第一轮的重复）。按 AGENTS 第 13 节评四维：
+- structure 结构：沿用第一轮导师友好的使用说明与回答口径、按主题分章、连续编号、结尾有最终确认门禁；并让导师一眼看出这是第二轮（版本/轮次标注清晰，不与第一轮混淆）。
+- duty 职责：聚焦第二轮新增信息与第一轮未决事项——第二轮访谈暴露出的新经历/新观点/边界变化、第一轮回复中仍需追问或更正的点、上一版清单已确认事项不重复发问；问题具体、带待确认口径。
+- density 密度：题量通常明显少于第一轮（参考为 ying-v0.3 的 Ying_Wang_第二轮审核清单_v0.2，以其实际密度为基准）；增量问题覆盖充分但不把第一轮已答内容再问一遍。
+- readability 可读性：自然中文问句，导师看题就知道要确认什么、怎么答；没有内部黑话。`;
+
 const PILOT_CLAUSE = `特别说明：本次候选属于同源试点副本（pilot）——候选导师与其中一位参考是同一人、同一轮访谈材料的复刻演练。
 因此事实、经历、人格结论与该参考相同属于预期，不得按「串用事实」扣分。
 你的职责改为抓「复制残留」：①引用了实际不存在的数据文件/音频文件名/知识卡数量等悬空引用；②对照章声称参考的侧写文件实际未重读却照抄旧结论；③标题、导师名、版本包语境有改头不彻底之处；④该声明「复用既有分析」而未声明。
 这些问题计入 duty 与 structure；候选中若已诚实声明复用且数据引用自洽，不因复用本身扣分。`;
 
 function buildSystemPrompt(docType: CompareInput['docType'], isPilot: boolean): string {
+  const rubric =
+    docType === 'style_analysis'
+      ? STYLE_RUBRIC
+      : docType === 'round2_review_checklist'
+        ? ROUND2_CHECKLIST_RUBRIC
+        : CHECKLIST_RUBRIC;
   return [
     '你是「AI 职业导师分身」生产线的正式文档质检评审，只依据给定规范与参考稿评分，标准严格、结论克制。',
     COMMON_RULES,
-    docType === 'style_analysis' ? STYLE_RUBRIC : CHECKLIST_RUBRIC,
+    rubric,
     isPilot ? PILOT_CLAUSE : '',
     '输出 JSON 结构：{"scores":{"structure":整数,"duty":整数,"density":整数,"readability":整数},"reasons":{"structure":"低于80时的具体原因，否则空字符串","duty":"","density":"","readability":""},"findings":[{"severity":"block|warn|info","chapter":"涉及章节名","detail":"问题描述与依据"}],"summary":"两句话总评"}',
   ]

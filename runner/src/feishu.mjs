@@ -100,6 +100,16 @@ const FILE_KEY_RE = /^(img|file)_[A-Za-z0-9_-]+$/;
 // 目标文件名白名单：单段路径（无目录分隔符/盘符/通配符/..），首字符不为点
 const UNSAFE_NAME_RE = /[\\/:*?"<>|]|\.\./;
 
+/**
+ * 群里"非导师"操作员 open_id（按用户与飞书后台确认的规则）：
+ * 每个榨职机群成员固定为：导师 + 陈初效 + 陆秉文 + 机器人。
+ * 排除后剩下的唯一 user open_id 即为该群导师。
+ */
+const EXCLUDED_OPERATOR_OPEN_IDS = new Set([
+  'ou_44e070298544e1650e1681773941d526', // 陈初效（lydiachen）
+  'ou_d984d6a0a7591b505c11c41901f71a1c', // 陆秉文
+]);
+
 /** 群消息 → 元数据级归一化；文件消息额外解析 key/文件名，文本正文一律不回传 */
 function normalizeMessage(m) {
   const msg = {
@@ -117,6 +127,15 @@ function normalizeMessage(m) {
     if (fm) {
       msg.fileKey = fm[1];
       msg.fileName = fm[2];
+    }
+  }
+  // 语音消息（S13 第二轮访谈若以语音条发送）：飞书 content 形如 <audio key="file_xxx" duration="…"/>，
+  // 语音没有文件名，合成占位名由引擎按消息识别；资源下载仍走 type=file
+  if (m.msg_type === 'audio' && typeof m.content === 'string') {
+    const am = m.content.match(/<audio\s+[^>]*(?:key|file_key)="(file_[^"]+)"/);
+    if (am) {
+      msg.fileKey = am[1];
+      msg.fileName = null;
     }
   }
   return msg;
@@ -156,6 +175,48 @@ export async function feishuChatMessages({ chatId, limit = 200, order = 'asc' } 
 }
 
 /**
+ * 群成员元数据（users/bots 分桶，只回传显示名，不回传完整 id），供机器人进群软提示。
+ * 响应形状异常时按失败处理，避免把「读不懂」误报成「机器人不在群」。
+ */
+export async function feishuChatInfo({ chatId }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  const { cli } = await resolveLarkCli();
+  const args = [
+    'im',
+    '+chat-members-list',
+    '--chat-id',
+    chatId,
+    '--member-id-type',
+    'open_id',
+    '--page-all',
+    '--format',
+    'json',
+  ];
+  const r = await runLark(cli, args, { timeoutMs: LIST_TIMEOUT_MS });
+  if (!r.ok) return { ok: false, reason: r.reason, raw: r.raw };
+  if (r.json && r.json.ok === false) {
+    return { ok: false, reason: r.json.error?.message || 'members_list_failed', raw: r.raw };
+  }
+  const d = r.json?.data ?? {};
+  if (!Array.isArray(d.users) && !Array.isArray(d.bots) && !Array.isArray(d.members)) {
+    return { ok: false, reason: 'unexpected_response_shape', raw: r.raw };
+  }
+  const toNames = (arr) =>
+    (Array.isArray(arr) ? arr : [])
+      .map((x) => ({
+        name: typeof x?.name === 'string' && x.name ? x.name : typeof x?.member_id === 'string' ? x.member_id.slice(0, 12) : null,
+        memberType: typeof x?.member_type === 'string' ? x.member_type : null,
+      }))
+      .slice(0, 100);
+  return {
+    ok: true,
+    users: toNames(d.users ?? d.members),
+    bots: toNames(d.bots),
+    truncated: Array.isArray(d.truncations) ? d.truncations.length > 0 : false,
+  };
+}
+
+/**
  * 下载消息内资源到指定目录（destDirAbs 必须已由调用方校验在 CONTENT_ROOT 内）。
  * lark-cli --output 拒绝绝对路径与 ..，因此 spawn cwd=destDirAbs、--output 只传文件名。
  * 目标同名非空文件已存在时拒绝（D 盘只增不改纪律），0 字节残留先清理再重试。
@@ -177,7 +238,8 @@ export async function feishuDownloadResource({ messageId, fileKey, type = 'file'
     /* 目标不存在，正常首次下载 */
   }
   if (existing && existing.isFile() && existing.size > 0) {
-    return { ok: false, reason: 'dest_exists', destAbs };
+    // 幂等重试：文件已落盘（上次回报可能被拒），直接复用，由调用方哈希校验
+    return { ok: true, destAbs, bytes: existing.size, reused: true };
   }
   if (existing) {
     try {
@@ -309,4 +371,93 @@ export async function feishuWhoami() {
     identity: j?.identity ?? null,
     name: j?.onBehalfOf?.userName ?? null,
   };
+}
+
+/**
+ * 定位群里导师的 open_id（排除法：每个群只有 导师+陈初效+陆秉文+机器人）。
+ * 调 +chat-members-list 拿完整 member_id，排除 EXCLUDED_OPERATOR_OPEN_IDS 与所有 bot 的 member_id，
+ * 剩下的唯一 user 即导师。不唯一时返回失败，交由控制平面回退人工。
+ */
+export async function feishuResolveMentorOpenId({ chatId }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  const { cli } = await resolveLarkCli();
+  const args = [
+    'im',
+    '+chat-members-list',
+    '--chat-id',
+    chatId,
+    '--member-id-type',
+    'open_id',
+    '--page-all',
+    '--format',
+    'json',
+  ];
+  const r = await runLark(cli, args, { timeoutMs: LIST_TIMEOUT_MS });
+  if (!r.ok) return { ok: false, reason: r.reason, raw: r.raw };
+  if (r.json && r.json.ok === false) {
+    return { ok: false, reason: r.json.error?.message || 'members_list_failed', raw: r.raw };
+  }
+  const d = r.json?.data ?? {};
+  const users = Array.isArray(d.users) ? d.users : Array.isArray(d.members) ? d.members : [];
+  const bots = Array.isArray(d.bots) ? d.bots : [];
+  const botIds = new Set(bots.map((b) => String(b?.member_id || b?.open_id || '').trim()).filter(Boolean));
+  const remaining = users
+    .map((u) => String(u?.member_id || u?.open_id || '').trim())
+    .filter((id) => id && !EXCLUDED_OPERATOR_OPEN_IDS.has(id) && !botIds.has(id));
+  if (remaining.length === 1) {
+    return { ok: true, mentorOpenId: remaining[0] };
+  }
+  if (remaining.length === 0) {
+    return { ok: false, reason: 'mentor_not_found', count: 0, raw: r.raw.slice(0, 500) };
+  }
+  return { ok: false, reason: 'mentor_not_unique', count: remaining.length, raw: r.raw.slice(0, 500) };
+}
+
+/**
+ * 发送 post 富文本 @mention 消息（G3 文案）。
+ * 结构：[{at: 导师 open_id + user_name}, {text: bodyText}]。
+ * 导师 open_id 由 feishuResolveMentorOpenId 排除法定位，user_name 由控制平面按导师中文名传入。
+ * 用 execFile 数组传参（content 字段是 JSON 字符串），避免 shell 引号吞引号。
+ */
+export async function feishuSendPostMention({ chatId, mentorName, bodyText, idempotencyKey, dryRun = false }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  const name = String(mentorName || '').trim();
+  if (!name) return { ok: false, reason: 'empty_mentor_name' };
+  const body = String(bodyText ?? '');
+  if (!body) return { ok: false, reason: 'empty_body' };
+
+  const resolved = await feishuResolveMentorOpenId({ chatId });
+  if (!resolved.ok) {
+    return { ok: false, reason: `mentor_resolve:${resolved.reason}`, raw: resolved.raw ?? '' };
+  }
+
+  const post = JSON.stringify({
+    zh_cn: {
+      title: '',
+      content: [[{ tag: 'at', user_id: resolved.mentorOpenId, user_name: name }, { tag: 'text', text: body }]],
+    },
+  });
+
+  const { cli } = await resolveLarkCli();
+  const args = [
+    'im',
+    '+messages-send',
+    '--chat-id',
+    chatId,
+    '--msg-type',
+    'post',
+    '--content',
+    post,
+    '--idempotency-key',
+    sanitizeIdempotencyKey(idempotencyKey),
+    '--format',
+    'json',
+  ];
+  if (dryRun) args.push('--dry-run');
+  const r = await runLark(cli, args, { timeoutMs: SEND_TIMEOUT_MS });
+  if (!r.ok) return { ok: false, reason: r.reason, raw: r.raw };
+  if (r.json && r.json.ok === false) {
+    return { ok: false, reason: r.json.error?.message || 'send_failed', raw: r.raw };
+  }
+  return { ok: true, messageId: r.json?.data?.message_id ?? null, dryRun, raw: r.raw.slice(0, 500) };
 }

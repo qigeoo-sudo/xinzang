@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --test tests/content-ops.test.ts tests/kb-governance.test.ts tests/preflight-checks.test.ts tests/tier-score.test.ts",
     "regress:induce": "tsx scripts/regression-inducement.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

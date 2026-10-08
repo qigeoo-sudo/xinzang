@@ -119,8 +119,8 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     });
   }
 
-  it('总数 = 361', () => {
-    assert.equal(CANONICAL_TOTAL_CARDS, 361);
+  it('总数 = 399', () => {
+    assert.equal(CANONICAL_TOTAL_CARDS, 399);
     assert.equal(allCards.length, CANONICAL_TOTAL_CARDS);
   });
 
@@ -145,10 +145,10 @@ describe('content/knowledge-governance/cards 规范资产', () => {
     assert.equal(internal[0].card.disclosureMode, 'none');
   });
 
-  it('generalized 355 张 + exact 5 张', () => {
+  it('generalized 393 张 + exact 5 张', () => {
     const exact = allCards.filter((x) => x.card.disclosureMode === 'exact');
     const generalized = allCards.filter((x) => x.card.disclosureMode === 'generalized');
-    assert.equal(generalized.length, 355);
+    assert.equal(generalized.length, 393);
     assert.equal(exact.length, 5);
     assert.deepEqual(
       exact.map((x) => x.card.cardId).sort(),

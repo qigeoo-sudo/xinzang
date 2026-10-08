@@ -5,7 +5,7 @@
  * 约定：
  * - Run 状态字符串与设计文档 §7.1 逐字一致，禁止在代码里另造状态名。
  * - 步骤 S0-S22 的操作者/责任方与 §8 表格逐字对应。
- * - 已开放步骤（active）：P1=S0-S7；P2a=S8-S9（飞书连接器）。后续步骤只定义、不开放按钮。
+ * - 已开放步骤（active）：P1=S0-S7；P2a=S8-S9；P2b=S10-S11。后续步骤只定义、不开放按钮。
  * - P2 依据：docs/mentor-content-operations-v1.md §543（P2 验收=验证报告+真实导师 S1/S9/S12 全链路）。
  */
 
@@ -199,79 +199,79 @@ export const STEP_DEFS: StepDef[] = [
     code: 'S10', title: '第一轮审核清单回复接收归档（_回复 命名）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND1_REPLY_RECEIVED,
-    needsVpn: false, isFeishu: true, active: false,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S11', title: 'Codex 吸收第一轮回复（复用同一对话，固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND1_ABSORB,
-    needsVpn: true, isFeishu: false, active: false,
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S12', title: '人工批准 + 发送第二轮官方大纲（G2，固定链接+文案）',
     actor: ACTOR.HUMAN, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND2_OUTLINE_SENT,
-    needsVpn: false, isFeishu: true, active: false,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S13', title: '第二轮材料识别与归档（歧义必须人工确认）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.ROUND2_MATERIAL_RECEIVED,
-    needsVpn: false, isFeishu: true, active: false,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S14', title: 'Codex 第二轮候选更新（固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND2_UPDATE,
-    needsVpn: true, isFeishu: false, active: false,
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S15', title: '第二轮审核清单比对（v0.3）+ G3 批准 + 发送',
     actor: ACTOR.TRAE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.ROUND2_DOCS_SENT,
-    needsVpn: false, isFeishu: true, active: false,
+    needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S16', title: '第二轮回复接收归档 + Codex 最终吸收',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_FINAL_ABSORB,
-    needsVpn: true, isFeishu: true, active: false,
+    needsVpn: true, isFeishu: true, active: true,
   },
   {
     code: 'S17', title: 'Final Handoff 发现（最新有效不可变包）',
     actor: ACTOR.CONTROL_PLANE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.FINAL_HANDOFF_PREFLIGHT,
-    needsVpn: false, isFeishu: false, active: false,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S18', title: 'Final Handoff 完整预检（AGENTS 第 16 节逐项）',
     actor: ACTOR.CONTROL_PLANE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.READY_FOR_INTEGRATION,
-    needsVpn: false, isFeishu: false, active: false,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S19', title: 'pending 归零处置（Codex 逐张，Trae 无升级权）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.AWAITING_STAGING_INTEGRATION_APPROVAL,
-    needsVpn: false, isFeishu: false, active: false,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S20', title: '第一次人工确认：确认交给Trae集成至main和测试端（G4）',
     actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.INTEGRATING_APPLICATION,
-    needsVpn: false, isFeishu: false, active: false,
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S21', title: 'Trae 集成：对账→备份→集成→八类测试→推main→部署测试端',
     actor: ACTOR.TRAE, owner: ACTOR.TRAE,
     nextRunState: RUN_STATE.AWAITING_STAGING_ACCEPTANCE,
-    needsVpn: true, isFeishu: false, active: false,
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S22', title: '测试端验收 + 验收通过并发布生产（main → master → aihr.top）（G5）',
     actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.COMPLETED,
-    needsVpn: true, isFeishu: false, active: false,
+    needsVpn: true, isFeishu: false, active: true,
   },
 ];
 
@@ -283,6 +283,69 @@ export const ACTIVE_CODES = STEP_DEFS.filter((s) => s.active).map((s) => s.code)
 
 export const G1_ROUND1_DOCS_TEXT =
   '@导师，这里有两份文件，其中语言人格风格分析文件是供浏览用，不需要回复，而第一轮审核清单文件，需要阅读并回复，感谢。';
+
+/**
+ * G2 第二轮访谈大纲（AGENTS §11）：必须发送共享官方大纲，禁止另写导师专用版。
+ * 一条文本消息：固定文案 + 官方链接（飞书自动识别为云文档卡片）。
+ */
+export const G2_OUTLINE_TEXT = '@导师，你好，这是第二轮访谈大纲，请查收，谢谢。';
+export const G2_OUTLINE_LINK = 'https://rcnjoh3ukdwe.feishu.cn/docx/YAj1dG4jeoOy3FxELepczukdnIh';
+export const G2_OUTLINE_MESSAGE = `${G2_OUTLINE_TEXT}\n${G2_OUTLINE_LINK}`;
+
+/** G3 第二轮审核清单（AGENTS §13.4）：文件之后发送的固定文案 */
+export const G3_ROUND2_DOCS_TEXT = '@导师，这是第二轮审核清单文件，需要阅读并回复，感谢。';
+
+/**
+ * G3 文案正文（去掉 "@导师" 前缀后的部分）。
+ * 发送结构为 post 富文本：[{at: 导师 open_id}, {text: G3_ROUND2_DOCS_BODY}]。
+ * 导师真实 open_id 由 Runner 在群成员中按排除法定位（除导师外只有 陈初效/陆秉文/机器人）。
+ */
+export const G3_ROUND2_DOCS_BODY = '，这是第二轮审核清单文件，需要阅读并回复，感谢。';
+
+/**
+ * G4 第一次集成确认（AGENTS §18）：按钮文案 + 影响范围声明。
+ * 只授权应用集成、推 main、部署/更新测试端；不授权 master 与生产。
+ * evidenceChecks 四项：预检全过 / pending 全归零 / Final Handoff 版本与全量哈希已记录 / 已读不触碰 master+生产声明。
+ */
+export const G4_INTEGRATION_APPROVAL_BUTTON = '确认交给Trae集成至main和测试端';
+export const G4_INTEGRATION_APPROVAL_SCOPE = '本按钮只授权应用集成、推送 main、部署/更新测试端；不授权推送 master 或部署生产。';
+
+/**
+ * G5 第二次生产发布确认（AGENTS §18）：按钮文案 + 影响范围声明。
+ * 授权锁定 main SHA、推送 main→master、部署生产 ECS、验证 aihr.top。
+ * evidenceChecks 四项：测试端验收通过 / 已读生产发布影响 / main SHA 已锁定 / 已读回滚预案。
+ */
+export const G5_PRODUCTION_APPROVAL_BUTTON = '测试端验收通过并发布生产';
+export const G5_PRODUCTION_APPROVAL_SCOPE = '本按钮授权锁定当前 main SHA、推送 main→master、部署生产 ECS（aihr.top）并执行线上验证；完成后 Run 结束。';
+
+/** S21 六段集成阶段标签（与 RUN_STATE 链一致，供面板只读展示） */
+export const S21_PHASES = [
+  { code: 'reconcile', label: '对账（Final Handoff vs 仓库哈希基线）', runState: RUN_STATE.RECONCILING_SNAPSHOTS },
+  { code: 'backup', label: '备份（带时间戳目录 + before hash）', runState: RUN_STATE.INTEGRATION_BACKUP_CREATED },
+  { code: 'integrate', label: '集成（复制包内容到 current/）', runState: RUN_STATE.INTEGRATING_APPLICATION },
+  { code: 'test', label: '八类测试（AGENTS §16.5 回归）', runState: RUN_STATE.TESTING_STAGING },
+  { code: 'push_main', label: '推 main（git commit + push origin main）', runState: RUN_STATE.PUSHING_MAIN },
+  { code: 'deploy_staging', label: '部署测试端（CloudBase 自动部署）', runState: RUN_STATE.DEPLOYING_STAGING },
+] as const;
+
+/** S22 生产发布阶段标签（G5 之后的自动段） */
+export const S22_PHASES = [
+  { code: 'lock_sha', label: '锁定 main SHA', runState: RUN_STATE.LOCKING_ACCEPTED_MAIN_SHA },
+  { code: 'promote', label: 'main→master（git push origin main:master）', runState: RUN_STATE.PROMOTING_MAIN_TO_MASTER },
+  { code: 'deploy_prod', label: '部署生产 ECS', runState: RUN_STATE.DEPLOYING_PRODUCTION },
+  { code: 'verify', label: '验证生产 aihr.top', runState: RUN_STATE.VERIFYING_PRODUCTION },
+] as const;
+
+/** S19 pending 归零 Codex 触发语（AGENTS §17，逐张处置；Trae 无升级权） */
+export const PENDING_DISPOSITION_TRIGGER =
+  '该导师的 Final Handoff 预检发现 pending 知识卡，请依据导师审核回复和现行治理规则逐张处置：转 external_approved+generalized/exact、转 internal_approved+none、从最终候选快照排除并记录，或保持 pending 阻塞。';
+
+/** S14 Codex 触发语（AGENTS §12.4，逐字固定；旧句语义未确认前不得代发） */
+export const ROUND2_UPDATE_TRIGGER =
+  '该导师的第二轮访谈音频和文字稿已经到达，请查阅并按照现行规范更新其prompt和知识卡，生成第二轮候选包及第二轮审核材料。';
+
+/** S16 Codex 最终吸收触发语（AGENTS §14.4，逐字固定） */
+export const ROUND2_ABSORB_TRIGGER = '该导师的第二轮访谈审核清单回复已经到达，请查阅并更新其prompt和知识卡。';
 
 /** S8 四维比对项（§8：与 ying-v0.1 同类参考比结构/职责/密度/可读性） */
 export const ROUND1_QC_ITEMS = [

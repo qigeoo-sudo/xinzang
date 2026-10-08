@@ -8,21 +8,35 @@
  * - codex_deliver 在 M5 验证前恒定返回 needs_validation（Q15）
  */
 import path from 'node:path';
-import { readFile, readdir, rename, stat } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, stat } from 'node:fs/promises';
 import {
   hashFile,
   isInsideContentRoot,
   listMentorDirs,
   listMentorFiles,
   listWorkFiles,
+  scanFinalHandoff,
   scanWorkPackages,
   toDisplayPath,
 } from './filer.mjs';
 import { detectCodex, deliverTrigger } from './codex.mjs';
 import {
+  gitFetchStatus,
+  gitBackupCreate,
+  gitIntegrateHandoff,
+  runRegressionTests,
+  gitPushMain,
+  deployStaging,
+  gitPromoteMainToMaster,
+  deployProduction,
+  verifyProduction,
+} from './git.mjs';
+import {
+  feishuChatInfo,
   feishuChatMessages,
   feishuDownloadResource,
   feishuSendFile,
+  feishuSendPostMention,
   feishuSendText,
   feishuWhoami,
 } from './feishu.mjs';
@@ -188,26 +202,187 @@ export async function handleCommand(command, contentRoot) {
     case 'feishu_list_messages': {
       // 元数据级拉群消息（S10 审核回复识别用）；文本正文不回传
       const chatId = payload.chatId;
-      return {
-        chatId: String(chatId),
-        ...(await feishuChatMessages({ chatId, limit: payload.limit, order: payload.order })),
-      };
+      const r = await feishuChatMessages({ chatId, limit: payload.limit, order: payload.order });
+      if (!r.ok) throw new Error(`拉取群消息失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+      return { chatId: String(chatId), ok: true, count: r.count, hasMore: r.hasMore, messages: r.messages };
     }
 
     case 'feishu_download_resource': {
-      // 下载消息资源落盘到导师目录；destDirAbs 必须在 CONTENT_ROOT 内
+      // 下载消息资源落盘到导师目录；destDirAbs 必须在 CONTENT_ROOT 内。
+      // S13 第二轮 audio/word 子目录可能尚不存在：边界校验通过后允许就地递归创建（仍在 CONTENT_ROOT 内）。
       const destDirAbs = path.resolve(String(payload.destDirAbs || ''));
       if (!path.isAbsolute(destDirAbs) || !isInsideContentRoot(destDirAbs, contentRoot)) {
         throw new Error(`feishu_download_resource 目标目录越界: ${payload.destDirAbs}`);
       }
+      await mkdir(destDirAbs, { recursive: true });
+      const r = await feishuDownloadResource(payload);
+      if (!r.ok) throw new Error(`下载回复文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+      // 规范（AGENTS §10.3）要求保留字节数与 SHA-256，落盘后立即计算
+      const { sha256 } = await hashFile(r.destAbs);
       return {
-        chatId: payload.chatId ? String(payload.chatId) : undefined,
-        ...(await feishuDownloadResource(payload)),
+        destAbs: r.destAbs,
+        destName: payload.destName ? String(payload.destName) : path.basename(r.destAbs),
+        bytes: r.bytes,
+        sha256,
       };
     }
 
+    case 'feishu_chat_info': {
+      // 群成员元数据（users/bots 分桶），供 S0 机器人进群软提示；只回传显示名，不回传完整 id
+      const r = await feishuChatInfo({ chatId: payload.chatId });
+      if (!r.ok) throw new Error(`群信息探测失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-800)}` : ''}`);
+      return { chatId: String(payload.chatId), ...r };
+    }
+
+    case 'scan_final_handoff': {
+      // S17：定位导师 work 目录下最新 -final-handoff-v<actual> 包 + 四件套 + 哈希基线
+      if (!payload.mentorDir || typeof payload.mentorDir !== 'string') {
+        throw new Error('scan_final_handoff 缺少 mentorDir');
+      }
+      const r = await scanFinalHandoff(contentRoot, payload.mentorDir);
+      if (!r) {
+        return { packagePath: null, version: null, coreFiles: [], missing: ['00_START_HERE.md', 'source_manifest_final.json', 'TRAE_HANDOFF.md', 'VALIDATION_REPORT.md'] };
+      }
+      return r;
+    }
+
+    case 'preflight_checks': {
+      // S18：读 Final Handoff 包内文件，回传原始内容供控制平面解析（preflight-checks.ts runAllChecks）
+      if (!payload.mentorDir || typeof payload.mentorDir !== 'string') {
+        throw new Error('preflight_checks 缺少 mentorDir');
+      }
+      const r = await scanFinalHandoff(contentRoot, payload.mentorDir);
+      if (!r) throw new Error('Final Handoff 包未定位到，无法预检');
+      const pkgAbs = path.join(contentRoot, r.packagePath);
+      const readText = async (name) => {
+        try {
+          return await readFile(path.join(pkgAbs, name), 'utf8');
+        } catch {
+          return null;
+        }
+      };
+      const manifestText = await readText('source_manifest_final.json');
+      const traeHandoffText = await readText('TRAE_HANDOFF.md');
+      const validationText = await readText('VALIDATION_REPORT.md');
+      let manifest = null;
+      try { manifest = manifestText ? JSON.parse(manifestText) : null; } catch { manifest = null; }
+      // 知识卡 JSONL：扫包内所有 .jsonl 文件逐行解析
+      const knowledgeCards = [];
+      async function walkJsonl(dir) {
+        let ents;
+        try { ents = await readdir(dir, { withFileTypes: true }); } catch { return; }
+        for (const ent of ents) {
+          const full = path.join(dir, ent.name);
+          if (ent.isDirectory()) {
+            // 跳过基线子目录（baseline/、deployment-baseline/），里面的旧版 JSONL 不是当前版本
+            if (ent.name === 'baseline' || ent.name === 'deployment-baseline') continue;
+            await walkJsonl(full);
+            continue;
+          }
+          if (!ent.name.toLowerCase().endsWith('.jsonl')) continue;
+          const text = await readFile(full, 'utf8').catch(() => '');
+          for (const line of text.split(/\r?\n/)) {
+            if (!line.trim()) continue;
+            try {
+              const obj = JSON.parse(line);
+              if (obj && typeof obj === 'object') knowledgeCards.push(obj);
+            } catch { /* skip bad line */ }
+          }
+        }
+      }
+      await walkJsonl(pkgAbs);
+      // Prompt System 快照：从 prompt-system 目录结构组装（manifest.json + persona.md + capability.json + boundary）
+      let promptSystemSnapshot = null;
+      {
+        const psFiles = r.coreFiles.filter((f) => f.relPath && f.relPath.toLowerCase().includes('prompt-system') && f.exists);
+        const findFile = (keyword) => psFiles.find((f) => f.relPath.toLowerCase().includes(keyword));
+        const readJson = async (f) => {
+          if (!f) return null;
+          try { return JSON.parse(await readFile(path.join(contentRoot, f.relPath), 'utf8')); } catch { return null; }
+        };
+        const readText = async (f) => {
+          if (!f) return null;
+          try { return await readFile(path.join(contentRoot, f.relPath), 'utf8'); } catch { return null; }
+        };
+        const manifest = await readJson(findFile('manifest.json'));
+        const personaText = await readText(findFile('persona'));
+        const capabilityJson = await readJson(findFile('capability.json'));
+        const boundaryText = await readText(findFile('boundary'));
+        const evalsText = await readText(findFile('evals'));
+        if (manifest || personaText || capabilityJson) {
+          promptSystemSnapshot = {
+            persona: personaText ? personaText.trim().split('\n')[0].replace(/^#\s*/, '') : (manifest?.publicName ?? manifest?.id ?? null),
+            capabilities: Array.isArray(capabilityJson?.capabilities) ? capabilityJson.capabilities
+              : Array.isArray(manifest?.allowedTools) ? manifest.allowedTools
+              : [],
+            boundaries: Array.isArray(capabilityJson?.boundaries) ? capabilityJson.boundaries
+              : (boundaryText ? [boundaryText.trim().split('\n')[0].replace(/^#\s*/, '')] : []),
+            evals: evalsText ? [evalsText.trim().split('\n')[0]] : [],
+            manifestStatus: manifest?.status ? 'pass' : 'unknown',
+          };
+        }
+      }
+      return {
+        packagePath: r.packagePath,
+        version: r.version,
+        coreFiles: r.coreFiles,
+        missing: r.missing,
+        manifestText: manifestText ? manifestText.slice(0, 20000) : null, // 限长回传
+        traeHandoffText: traeHandoffText ? traeHandoffText.slice(0, 20000) : null,
+        validationText: validationText ? validationText.slice(0, 20000) : null,
+        knowledgeCards: knowledgeCards.slice(0, 500), // 限 500 张
+        promptSystemSnapshot,
+      };
+    }
+
+    case 'resolve_pending_card': {
+      // S19：列出 pending 卡（只读，不修改）；复用 preflight_checks 的 JSONL 解析
+      if (!payload.mentorDir || typeof payload.mentorDir !== 'string') {
+        throw new Error('resolve_pending_card 缺少 mentorDir');
+      }
+      const r = await scanFinalHandoff(contentRoot, payload.mentorDir);
+      if (!r) return { pendingCards: [] };
+      const pkgAbs = path.join(contentRoot, r.packagePath);
+      const pendingCards = [];
+      async function walkJsonl(dir) {
+        let ents;
+        try { ents = await readdir(dir, { withFileTypes: true }); } catch { return; }
+        for (const ent of ents) {
+          const full = path.join(dir, ent.name);
+          if (ent.isDirectory()) {
+            if (ent.name === 'baseline' || ent.name === 'deployment-baseline') continue;
+            await walkJsonl(full);
+            continue;
+          }
+          if (!ent.name.toLowerCase().endsWith('.jsonl')) continue;
+          const text = await readFile(full, 'utf8').catch(() => '');
+          for (const line of text.split(/\r?\n/)) {
+            if (!line.trim()) continue;
+            try {
+              const obj = JSON.parse(line);
+              if (obj && typeof obj === 'object' && String(obj.knowledgeClass || '').endsWith('_pending')) {
+                pendingCards.push({
+                  cardId: String(obj.cardId ?? ''),
+                  knowledgeClass: String(obj.knowledgeClass ?? ''),
+                  disclosureMode: String(obj.disclosureMode ?? ''),
+                  round: Number(obj.round ?? 0),
+                  mentorId: String(obj.mentorId ?? ''),
+                  blockingReason: obj.blockingReason ? String(obj.blockingReason) : undefined,
+                });
+              }
+            } catch { /* skip */ }
+          }
+        }
+      }
+      await walkJsonl(pkgAbs);
+      return { pendingCards: pendingCards.slice(0, 200) };
+    }
+
     case 'feishu_send_message': {
-      // 发送（人工批准后由引擎入队才执行）：kind=file（先核验哈希再上传）/ kind=text（G1 固定文案）
+      // 发送（人工批准后由引擎入队才执行）：
+      //   kind=file（先核验哈希再上传）
+      //   kind=text（G1/G2 纯文本固定文案）
+      //   kind=text_mention（G3 富文本，@mention 群里导师 + 固定文案正文）
       const chatId = payload.chatId;
       if (payload.kind === 'file') {
         const fileName = String(payload.fileName || '');
@@ -234,6 +409,18 @@ export async function handleCommand(command, contentRoot) {
         if (!r.ok) throw new Error(`飞书发送文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1500)}` : ''}`);
         return { kind: 'file', fileName, ...r };
       }
+      if (payload.kind === 'text_mention') {
+        // G3：post 富文本，@mention 群里导师（排除法定位 open_id）+ 固定文案正文
+        const r = await feishuSendPostMention({
+          chatId,
+          mentorName: payload.mentionMentorName,
+          bodyText: payload.bodyText,
+          idempotencyKey: payload.idempotencyKey,
+          dryRun: payload.dryRun,
+        });
+        if (!r.ok) throw new Error(`飞书发送 @mention 文案失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1500)}` : ''}`);
+        return { kind: 'text_mention', ...r };
+      }
       const r = await feishuSendText({
         chatId,
         text: payload.text,
@@ -249,10 +436,37 @@ export async function handleCommand(command, contentRoot) {
       return locateViewDocs(contentRoot, payload.mentorDir);
     }
 
+    case 'locate_round2_docs': {
+      // S15：在 S14 收步版本包内定位第二轮审核清单 + ying-v0.3 唯一参考
+      return locateRound2Docs(contentRoot, payload.mentorDir, payload.packageName);
+    }
+
     case 'read_view_docs': {
       // S8 唯一正文开口：读取 locate 登记过的阅览文档正文，供控制平面 AI 评分
       return readViewDocs(contentRoot, payload.items);
     }
+
+    // P4b：S21 集成六段 + S22 生产发布四段
+    case 'git_fetch_status': {
+      const phase = payload.phase;
+      if (phase === 'reconcile') return await gitFetchStatus(payload);
+      if (phase === 'verify') return await verifyProduction(payload);
+      return await gitFetchStatus(payload);
+    }
+    case 'git_backup_create':
+      return await gitBackupCreate(payload);
+    case 'git_integrate_handoff':
+      return await gitIntegrateHandoff(payload, contentRoot);
+    case 'run_regression_tests':
+      return await runRegressionTests(payload);
+    case 'git_push_main':
+      return await gitPushMain(payload);
+    case 'deploy_staging':
+      return await deployStaging(payload);
+    case 'git_promote_main_to_master':
+      return await gitPromoteMainToMaster(payload);
+    case 'deploy_production':
+      return await deployProduction(payload);
 
     default:
       throw new Error(`未知指令类型: ${type}`);
@@ -397,8 +611,77 @@ export async function locateViewDocs(contentRoot, mentorDir) {
 }
 
 /**
- * S8 唯一正文开口：读取 locate 阶段登记过的阅览文档正文回传控制平面。
- * 白名单：文件名必须命中两类正式文档、不含 回复/更新/第二轮、限 .md/.txt、限 200KB；
+ * S15 第二轮审核清单候选命名口径：
+ * 命中「第二轮审核清单」，但回复稿/更新稿一律排除。
+ */
+export function isRound2ChecklistFile(base) {
+  return /第二轮审核清单/.test(base) && !/回复|更新/.test(base);
+}
+
+/**
+ * S15 定位第二轮审核清单（AGENTS §13）：
+ * - 候选只在 S14 收步指定的版本包目录内找 `<Display_Name>_第二轮审核清单_v<actual>.md`，
+ *   版本号以 Assembly 实际文件为准，不硬编码；
+ * - 参考固定两份：ying wang 的 ying-v0.3 包 + phyllis chi 的 phyllischi-v0.3 包。
+ *   各自内部版本最高一份归为一个参考；同名/同导师多份交由控制平面判歧义。
+ * 回复稿/更新稿排除。
+ */
+export async function locateRound2Docs(contentRoot, mentorDir, packageName) {
+  const dir = String(mentorDir || '');
+  const pkg = String(packageName || '');
+  if (!dir || !pkg || /[\\/]/.test(pkg) || pkg.includes('..')) {
+    throw new Error('locate_round2_docs 参数非法（mentorDir/packageName）');
+  }
+  const mentorRoot = path.join(contentRoot, 'mentors', dir);
+  if (!isInsideContentRoot(mentorRoot, contentRoot)) throw new Error(`导师目录越界: ${dir}`);
+  const pkgRoot = path.join(mentorRoot, 'work', pkg);
+  if (!isInsideContentRoot(pkgRoot, contentRoot)) throw new Error(`版本包目录越界: ${pkg}`);
+
+  const collect = async (scanRoot) => {
+    const files = [];
+    await walkMdFiles(scanRoot, 0, files);
+    const out = [];
+    for (const abs of files) {
+      const base = path.basename(abs);
+      if (!isRound2ChecklistFile(base)) continue;
+      try {
+        const { sha256, bytes } = await hashFile(abs);
+        const m = base.match(/_v(\d+(?:\.\d+)*)/);
+        out.push({
+          relPath: toDisplayPath(abs, contentRoot),
+          absPath: abs,
+          docType: 'round2_review_checklist',
+          version: m ? `v${m[1]}` : null,
+          bytes,
+          sha256,
+        });
+      } catch {
+        /* 单文件哈希失败跳过 */
+      }
+    }
+    return out;
+  };
+
+  const docs = await collect(pkgRoot);
+  // 每位参考导师取版本最高的一份（复用第一轮 S8 的 pickLatestByType：同版本并列保留，交控制平面判歧义）
+  const refSpecs = [
+    { mentor: 'ying wang', pkg: 'ying-v0.3' },
+    { mentor: 'phyllis chi', pkg: 'phyllischi-v0.4-card-approved' },
+  ];
+  const rawRefs = [];
+  for (const { mentor, pkg: refPkg } of refSpecs) {
+    if (dir.toLowerCase() === mentor) continue;
+    const refRoot = path.join(contentRoot, 'mentors', mentor, 'work', refPkg);
+    const found = await collect(refRoot);
+    rawRefs.push(...pickLatestByType(found).map((f) => ({ ...f, refMentor: mentor })));
+  }
+  return { mentorDir: dir, packageName: pkg, docs, refs: rawRefs };
+}
+
+/**
+ * S8/S15 唯一正文开口：读取 locate 阶段登记过的阅览文档正文回传控制平面。
+ * 白名单：文件名必须命中三类正式文档之一；第一轮开口排除 回复/更新/第二轮，
+ * 第二轮开口排除 回复/更新；限 .md/.txt、限 200KB；
  * 回传前重算 SHA-256 与登记值一致，防止批准后文件被换。
  */
 export async function readViewDocs(contentRoot, rawItems) {
@@ -411,8 +694,12 @@ export async function readViewDocs(contentRoot, rawItems) {
       throw new Error(`read_view_docs 路径越界: ${item?.absPath}`);
     }
     const base = path.basename(abs);
-    if (!/语言人格风格分析|第一轮审核清单/.test(base) || EXCLUDED_NAME_RE.test(base)) {
+    const isRound2 = /第二轮审核清单/.test(base);
+    if (!/语言人格风格分析|第一轮审核清单|第二轮审核清单/.test(base)) {
       throw new Error(`read_view_docs 非白名单文件: ${base}`);
+    }
+    if (isRound2 ? /回复|更新/.test(base) : EXCLUDED_NAME_RE.test(base)) {
+      throw new Error(`read_view_docs 命中排除规则（回复/更新/跨轮）: ${base}`);
     }
     if (!/\.(md|txt)$/i.test(base)) throw new Error(`read_view_docs 仅允许 md/txt: ${base}`);
     const s = await stat(abs);

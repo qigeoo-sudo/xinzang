@@ -43,11 +43,44 @@ function loadDotEnvLocal() {
 
 // 飞书身份切换：配置了自建应用（FEISHU_APP_ID/SECRET）则强制走应用（机器人）身份。
 // 用户身份令牌（Trae 注入）受商店应用无对外共享能力限制，无法在外部群发消息（230027）。
+// lark-cli 在 bot 模式不会自己用 app_id/secret 换 token（dry-run 不验证，真实调用报
+// "no access token available for bot"）。需要主动调 token endpoint 换 tenant_access_token
+// 注入 LARKSUITE_CLI_TENANT_ACCESS_TOKEN，lark-cli 才能真实调 API。
+// token 7200s 过期，每 100 分钟刷新一次。
+let larkTokenTimer = null;
+async function refreshLarkTenantToken() {
+  const appId = process.env.FEISHU_APP_ID;
+  const appSecret = process.env.FEISHU_APP_SECRET;
+  if (!appId || !appSecret) return false;
+  try {
+    const res = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
+    });
+    const data = await res.json();
+    if (data.code !== 0 || !data.tenant_access_token) {
+      log('ERROR', `刷新飞书 tenant_access_token 失败: ${JSON.stringify(data).slice(0, 300)}`);
+      return false;
+    }
+    process.env.LARKSUITE_CLI_TENANT_ACCESS_TOKEN = data.tenant_access_token;
+    log('OK', `刷新飞书 tenant_access_token 成功（expire=${data.expire}s）`);
+    return true;
+  } catch (e) {
+    log('ERROR', `刷新飞书 tenant_access_token 异常: ${e instanceof Error ? e.message : String(e)}`);
+    return false;
+  }
+}
 function applyLarkIdentity() {
   if (!process.env.FEISHU_APP_ID || !process.env.FEISHU_APP_SECRET) return null;
   process.env.LARKSUITE_CLI_APP_ID = process.env.FEISHU_APP_ID;
   process.env.LARKSUITE_CLI_APP_SECRET = process.env.FEISHU_APP_SECRET;
   delete process.env.LARKSUITE_CLI_USER_ACCESS_TOKEN;
+  // 同步触发首次换 token（async，不阻塞 main 启动；token 没就绪时 lark-cli 调用会失败，下次心跳周期能恢复）
+  void refreshLarkTenantToken();
+  // 每 100 分钟刷新一次（7200s 过期，留 200s 缓冲）
+  if (larkTokenTimer) clearInterval(larkTokenTimer);
+  larkTokenTimer = setInterval(() => { void refreshLarkTenantToken(); }, 100 * 60 * 1000);
   return process.env.FEISHU_APP_ID;
 }
 

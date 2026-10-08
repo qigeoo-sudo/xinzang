@@ -283,7 +283,7 @@ export function CreateRunWizard({
                 </p>
               )}
             </div>
-            <label className="flex items-start gap-2 rounded-lg bg-stone-50 p-3 text-xs leading-5 text-stone-700">
+            <label className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-xs leading-5 text-amber-800">
               <input
                 type="checkbox"
                 checked={isPilot}
@@ -294,6 +294,15 @@ export function CreateRunWizard({
                 这是试点 Run（P1）。试点使用导师目录副本跑通 S0-S7，验收后由人工删除副本，不触碰真实导师目录。
               </span>
             </label>
+            <div className="rounded-lg bg-stone-50 p-3 text-xs leading-5 text-stone-600">
+              <p className="font-medium text-stone-700">「榨职机助手」机器人（软提示，不挡建 Run）</p>
+              <p className="mt-1">
+                机器人过审后需要拉进导师群。不在群里不影响建 Run，但 S10 回复抓取、S12 二轮发送会受限。
+                {chatId.trim()
+                  ? '已填群 ID：建 Run 后会自动探测一次机器人在群状态，结果显示在详情页。'
+                  : '未填群 ID：本次跳过机器人探测；建议补填以便自动探测。'}
+              </p>
+            </div>
             <div className="flex justify-between">
               <button type="button" onClick={() => setStep(2)} className="text-sm text-stone-500">
                 上一步
