@@ -308,7 +308,7 @@ export function checkSourceHashAudioCoverage(input: PreflightInput): CheckResult
 export function checkUnabsorbedRepliesPrivacy(input: PreflightInput): CheckResult {
   const report = input.handoff.validationReport;
   const cards = input.handoff.knowledgeCards;
-  // 用 manifest.mentorId 做期望值（JSONL 卡里的 mentorId 是 "ying-pilot"，与 mentorDir "ying wang pilot" 不同）
+  // 用 manifest.mentorId 做期望值（JSONL 卡里的 mentorId 可能与 mentorDir 写法不同）
   const manifestMentorId = (input.handoff.sourceManifest?.mentorId as string | undefined) ?? null;
   const expectedRaw = manifestMentorId ?? input.mentorDir;
   const expectedMentorId = expectedRaw.trim().toLowerCase().replace(/[\s-]+/g, '_');

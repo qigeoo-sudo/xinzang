@@ -4598,14 +4598,9 @@ export async function rejectG4(userId: string, runId: string, input: { reason: s
 //   - 每段指令在 S21/S22 同一 step 行上轮转（commandPayload 覆盖、idempotencyKey 轮换、evidence 累积阶段进度）
 // ------------------------------------------------------------------
 
-/** S21 activate_pilot 段：pilot 导师激活配置（mentorDirKey → 激活所需资产） */
-const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {
-  'ying wang pilot': {
-    mentorId: 'ying-pilot',
-    cardsSource: 'content/knowledge-governance/current/ying_pilot_r1_r2_knowledge_cards_v0.3.jsonl',
-    promptSource: 'content/knowledge-governance/current/prompt-system/mentors/ying-pilot/persona.md',
-  },
-};
+/** S21 activate_pilot 段：pilot 导师激活配置（mentorDirKey → 激活所需资产）。
+ *  无配置的导师自动跳过该段。新增 pilot 时在此注册。 */
+const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {};
 
 /** S21 七段指令类型映射 */
 const S21_PHASE_COMMAND: Record<string, string> = {
