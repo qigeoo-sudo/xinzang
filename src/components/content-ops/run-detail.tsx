@@ -175,7 +175,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       return { lit: false, color: 'bg-stone-400 text-white', title: '该步骤的 VPN 要求已通过（后续步骤已完成）' };
     }
     if (vpnLevel === 'green' || vpnLevel === 'amber') {
-      return { lit: true, color: 'bg-emerald-500 text-white', title: '该步骤需要 VPN，当前已开启' };
+      return { lit: true, color: 'bg-lime-400 text-emerald-950', title: '该步骤需要 VPN，当前已开启' };
     }
     if (vpnLevel === 'red') {
       return { lit: true, color: 'bg-red-500 text-white', title: '该步骤需要 VPN，但当前未开启！' };
