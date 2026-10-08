@@ -140,9 +140,11 @@ export async function gitPushMain(payload) {
     // nothing to commit 时 git 非零退出，但不算失败
     if (!/nothing to commit|no changes/i.test(String(err.stderr || err.stdout || ''))) throw err;
   }
-  await git('push origin main', cwd);
+  // 工作区可能在开发分支（如 feat/content-ops-p1）：commit 落当前分支，推送到远程 main（快进）
+  // 语义：main=staging。远程 main 领先时非快进被拒属预期（需人工对齐）
+  await git('push origin HEAD:main', cwd);
   const mainSha = (await git('rev-parse HEAD', cwd)).stdout;
-  return { mainSha, pushed: true };
+  return { mainSha, pushed: true, pushedTo: 'origin/main (HEAD:main)' };
 }
 
 /**
