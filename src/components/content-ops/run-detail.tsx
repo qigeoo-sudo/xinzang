@@ -218,6 +218,31 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   const gate = (key: string, gateCode: string, node: React.ReactNode) => (
     <StepGate key={key} locked={gateLocked(gateCode)}>{node}</StepGate>
   );
+  // S0 面板：飞书群搜索/机器人探测状态；失败时显示重试按钮
+  const s0Step = stepByCode['S0'];
+  if (s0Step && s0Step.commandStatus === 'failed') {
+    panels.push(
+      <div key="S0" className="rounded-[18px] border border-red-200 bg-red-50/40 p-4">
+        <p className="text-sm font-semibold text-red-700">S0 · 飞书群绑定失败</p>
+        <p className="mt-1 text-xs text-red-600">{s0Step.failureReason ?? '未知原因'}</p>
+        {canWrite && (
+          <button
+            type="button"
+            onClick={() => onAction('retry-command', { stepCode: 'S0' })}
+            className="mt-2 rounded-md border border-stone-300 px-3 py-1 text-sm hover:bg-stone-50"
+          >
+            重试该指令
+          </button>
+        )}
+      </div>,
+    );
+  } else if (s0Step && (s0Step.commandStatus === 'queued' || s0Step.commandStatus === 'dispatched')) {
+    panels.push(
+      <div key="S0" className="rounded-[18px] border border-stone-200 bg-stone-50/40 p-4">
+        <p className="text-sm text-stone-600">S0 · 飞书群搜索/机器人探测进行中…</p>
+      </div>,
+    );
+  }
   panels.push(gate('S1', 'S1', <FileRegisterCard run={run} code="S1" onAction={onAction} canWrite={canWrite} />));
   panels.push(gate('S2', 'S2', <FileRegisterCard run={run} code="S2" onAction={onAction} canWrite={canWrite} />));
   panels.push(gate('S3', 'S3', <S3GateCard run={run} />));

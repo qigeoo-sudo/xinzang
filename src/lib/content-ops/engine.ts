@@ -530,14 +530,22 @@ export async function handleCommandResult(runnerId: string, body: {
           },
         });
       } else {
-        // 搜索失败：S0 标记 done（无群绑定，后续发送步骤会 409 拦截）
-        await prisma.contentOpsStep.update({
-          where: { id: step.id },
-          data: {
-            commandStatus: 'done',
-            commandResult: JSON.stringify(result),
-            evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
-          },
+        // 搜索失败：S0 标记 failed + run 转 failed 干预态，允许用户重试
+        await prisma.$transaction(async (tx) => {
+          await tx.contentOpsStep.update({
+            where: { id: step.id },
+            data: {
+              commandStatus: 'failed',
+              commandResult: JSON.stringify(result),
+              evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
+              failureReason: result?.reason
+                ? `飞书群搜索失败：${result.reason}`
+                : '飞书群搜索失败（未搜到匹配群名）',
+            },
+          });
+          if (step.run.status !== 'failed') {
+            await transitionRun(tx, step.run, 'failed', 'S0 feishu chat search failed');
+          }
         });
       }
       break;
@@ -5159,6 +5167,7 @@ export async function retryCommand(userId: string, runId: string, stepCode: stri
       // 从失败干预态回到该步语义对应的活跃主线状态（由步骤定义推导）
       const recovery = step.code === 'S3' ? RUN_STATE.ROUND1_ARCHIVED
         : step.code === 'S17' ? RUN_STATE.FINAL_HANDOFF_DISCOVERED
+        : step.code === 'S0' ? RUN_STATE.WAITING_ROUND1_SUBMISSION
         : run.status;
       if (recovery !== run.status) {
         await transitionRun(tx, run, recovery, 'manual retry');
