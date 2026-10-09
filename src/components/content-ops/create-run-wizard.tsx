@@ -275,7 +275,7 @@ export function CreateRunWizard({
                       <>
                         {envChip('国内参照', endpoints.cnBase?.reachable)}
                         {envChip('飞书', endpoints.feishu?.reachable, vpnOn)}
-                        {envChip('Claude', endpoints.claude?.reachable)}
+                        {envChip('Claude', endpoints.claude?.reachable && vpnOn)}
                         {envChip('Codex', endpoints.codex?.reachable)}
                         {envChip('GitHub', endpoints.github?.reachable)}
                       </>
@@ -283,7 +283,17 @@ export function CreateRunWizard({
                   </div>
                   {vpnOn && (
                     <p className="text-xs text-amber-700">
-                      ⚠ 检测到 VPN 已开启：飞书建议关闭 VPN（lark-cli 直连更稳定），GitHub 需要 VPN 属正常。
+                      ⚠ 检测到 VPN 已开启：飞书建议关闭 VPN（lark-cli 直连更稳定）。
+                    </p>
+                  )}
+                  {!vpnOn && endpoints?.github?.reachable === false && (
+                    <p className="text-xs text-red-600">
+                      ⚠ GitHub 不可达，可能 DNS 抽风，建议开启 VPN 后重试。
+                    </p>
+                  )}
+                  {!vpnOn && (
+                    <p className="text-xs text-stone-500">
+                      Claude/Codex 在 VPN 关闭时不可用，S4/S5（Claude）和 S6（Codex）阶段需要时请提前开启 VPN。
                     </p>
                   )}
                 </div>
