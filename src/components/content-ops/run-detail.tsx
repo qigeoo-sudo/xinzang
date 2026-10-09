@@ -421,7 +421,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
 
         {/* 阶段面板（左栏可滚动） + 右栏（sticky 始终可见） */}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="space-y-4">{panels}</div>
+          <div className="max-h-[calc(100vh-7rem)] space-y-4 overflow-y-auto">{panels}</div>
 
           {/* 右栏：Agent 观察窗（sticky 始终可见，不被进度 bar 遮住） */}
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto">

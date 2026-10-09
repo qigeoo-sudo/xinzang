@@ -11,6 +11,21 @@
 import { useEffect, useState } from 'react';
 import type { RunDetail, RunStep, RunArtifact } from './types';
 import { COMMAND_STATUS_LABELS, STEP_STATUS_LABELS, ARTIFACT_KIND_LABELS, labelOf } from './display-labels';
+import { STEP_DEFS } from '@/lib/content-ops/state-machine';
+
+/** pending 步骤占位卡片：让用户看到全部步骤，即使前置未完成 */
+function PendingCard({ code }: { code: string }) {
+  const def = STEP_DEFS.find((d) => d.code === code);
+  return (
+    <section className="letter-paper rounded-[18px] p-4 opacity-50">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-200 text-[10px] text-stone-400">{code}</span>
+        <h2 className="text-sm font-bold text-stone-400">{def?.title ?? code}</h2>
+      </div>
+      <p className="mt-1 text-xs text-stone-400">待前置步骤完成后激活</p>
+    </section>
+  );
+}
 import {
   G1_ROUND1_DOCS_TEXT,
   G2_OUTLINE_TEXT,
@@ -1039,7 +1054,7 @@ export function Round1DocsQcPanel({
   const registered = new Set(run.artifacts.filter((a) => a.kind === 'review_doc').map((a) => a.displayPath));
 
   // 需要显示面板的时机：状态进入比对中/比对失败/等待批准前，或 S8 行存在
-  if (!run.status.includes('round1_docs_qc') && !step) return null;
+  if (!run.status.includes('round1_docs_qc') && !step) return <PendingCard code="S8" />;
 
   const locateReady = !!locate && !locate.ambiguous && (locate.missing?.length ?? 0) === 0;
   const aiFailed = !!compare === false && step?.status === 'failed' && !!locate;
@@ -1266,7 +1281,7 @@ export function Round1SendApprovalPanel({
     run.status === 'round1_docs_sent' ||
     run.status === 'failed' ||
     Boolean(step);
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const approve = async () => {
     setBusy(true);
@@ -1485,7 +1500,7 @@ export function Round1ReplyPanel({
   const showPanel =
     ['round1_docs_sent', 'waiting_round1_review_reply', 'round1_reply_received', 'codex_round1_absorb'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const scan = ev.replyScan;
   const canSubmit =
@@ -1712,7 +1727,7 @@ export function Round1AbsorbPanel({
     if (recommended && !done) setPkg(recommended);
   }, [recommended, done]);
 
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const guard = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -1897,7 +1912,7 @@ export function Round2OutlinePanel({
       'waiting_round2_submission',
       'round2_material_received',
     ].includes(run.status) || Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const sent = (ev.sendLog?.length ?? 0) > 0 || Boolean(ev.manualSend);
 
@@ -2060,7 +2075,7 @@ export function Round2MaterialPanel({
   const showPanel =
     ['round2_outline_sent', 'waiting_round2_submission', 'round2_material_received', 'codex_round2_update'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const received = run.status === 'round2_material_received' || run.status === 'codex_round2_update' || (ev.materialArchived?.length ?? 0) > 0;
   const canAct = canWrite && !running && ['waiting_round2_submission', 'round2_material_received', 'failed'].includes(run.status);
@@ -2287,7 +2302,7 @@ export function Round2UpdatePanel({
   const showPanel =
     ['round2_material_received', 'codex_round2_update', 'round2_docs_qc', 'round2_docs_qc_failed'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const done = Boolean(ev.updateConfirm);
   const packages: AbsorbPackageView[] = (ev.workPackages ?? []).map((p) =>
@@ -2456,7 +2471,7 @@ export function Round2DocsQcPanel({
       'round2_reply_received',
       'codex_final_absorb',
     ].includes(run.status) || Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const locate = ev.locateRound2;
   const compare = ev.compareRound2;
@@ -2710,7 +2725,7 @@ export function Round2ReplyPanel({
   const showPanel =
     ['round2_docs_sent', 'waiting_round2_review_reply', 'round2_reply_received', 'codex_final_absorb'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
 
   const scan = ev.replyScanRound2;
   const archived = ev.archivedReplyRound2;
@@ -2959,7 +2974,7 @@ export function FinalHandoffDiscoverPanel({
   const { busy, error, guard } = useGuard();
   const showPanel =
     HANDOFF_STATES.includes(run.status) || Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
   const canDiscover = canWrite && !running && ['codex_final_absorb', 'final_handoff_discovered', 'final_handoff_blocked'].includes(run.status);
   const discovered = ev.discovered;
   return (
@@ -3011,7 +3026,7 @@ export function PreflightNineChecksPanel({
   const showPanel =
     ['final_handoff_preflight', 'final_handoff_blocked', 'ready_for_integration', 'awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
   const canCheck = canWrite && !running && ['final_handoff_preflight', 'final_handoff_blocked'].includes(run.status);
   const preflight = ev.preflight;
   const statusColor = (s: string) => s === 'pass' ? 'bg-emerald-100 text-emerald-700' : s === 'fail' ? 'bg-red-100 text-red-700' : s === 'warn' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-500';
@@ -3079,7 +3094,7 @@ export function PendingDispositionPanel({
   const showPanel =
     ['ready_for_integration', 'awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
   const pendingCards = ev.pendingCards ?? [];
   const scanDone = step?.commandStatus === 'done' && pendingCards.length === 0;
   const canScan = canWrite && !running && ['ready_for_integration', 'awaiting_staging_integration_approval'].includes(run.status) && !scanDone;
@@ -3215,7 +3230,7 @@ export function G4GatePanel({
   const showPanel =
     ['awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
   const handoffEv = (s17?.evidence ?? {}) as HandoffEvidence;
   const preflightEv = (s18?.evidence ?? {}) as PreflightEvidence;
   const pendingTotal = (preflightEv.preflight?.pendingCount.external ?? 0) + (preflightEv.preflight?.pendingCount.internal ?? 0);
@@ -3356,7 +3371,7 @@ export function S21IntegrationPanel({
   const step = run.steps.find((s) => s.code === 'S21');
   const showPanel =
     S21_ACTIVE_STATES.includes(run.status) || Boolean(step && step.status !== 'pending');
-  if (!showPanel) return null;
+  if (!showPanel) return <PendingCard code={step?.code ?? 'S?'} />;
   const ev = (step?.evidence ?? {}) as S21Evidence;
   const progress = ev.s21Progress ?? {};
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
@@ -3446,7 +3461,7 @@ export function S22ProductionPanel({
   const canApprove = canWrite && run.status === 'awaiting_staging_acceptance' && allChecked;
   const canReject = canWrite && ['awaiting_staging_acceptance', 'production_approval_granted', 'promoting_main_to_master', 'deploying_production', 'verifying_production', 'production_failed_rolled_back'].includes(run.status);
 
-  if (!showGate && !showProgress && !ev.g5Approval && !ev.g5Reject) return null;
+  if (!showGate && !showProgress && !ev.g5Approval && !ev.g5Reject) return <PendingCard code="S22" />;
 
   const progress = ev.s22Progress ?? {};
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
