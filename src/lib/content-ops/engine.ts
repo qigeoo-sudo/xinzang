@@ -15,7 +15,7 @@ import { prisma } from '@/lib/prisma';
 import {
   ACTOR,
   ACTIVE_CODES,
-  G1_ROUND1_DOCS_TEXT,
+  G1_ROUND1_DOCS_BODY,
   G2_OUTLINE_LINK,
   G2_OUTLINE_MESSAGE,
   G3_ROUND2_DOCS_BODY,
@@ -1315,11 +1315,28 @@ export async function submitRound1Qc(
   return { ok: true, verdict: 'pass', overridden };
 }
 
-/** S9 发送清单：①风格分析（浏览用）→②审核清单（需回复）→③G1 固定文案；幂等键按内容+序号确定，重试去重 */
+/** S9 发送清单：①风格分析（浏览用）→②审核清单（需回复）→③G1 富文本回复审核清单消息 + @mention 导师 */
 async function buildS9SendPayload(runId: string, chatId: string, index: number, dedupBase: string) {
   const idempotencyKey = `${runId}:S9:${sha256Text(dedupBase).slice(0, 8)}:${index}`.slice(0, 50);
   if (index >= 2) {
-    return { chatId, kind: 'text', text: G1_ROUND1_DOCS_TEXT, sendIndex: 2, idempotencyKey };
+    // G1 文案：回复审核清单文件消息（index 1 的 messageId）+ post 富文本 @mention 导师
+    const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S9' } });
+    const ev = safeParse(step.evidence) as { sendLog?: Array<{ index?: number; messageId?: string }> };
+    const sendLog = Array.isArray(ev.sendLog) ? ev.sendLog : [];
+    // 审核清单在 index 1（sendPlan 顺序：0=风格分析, 1=审核清单）
+    const checklistEntry = sendLog.find((s) => s.index === 1);
+    const replyToMessageId = checklistEntry?.messageId ?? null;
+    const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+    const mentorName = resolveMentorChineseName(run.mentorDir);
+    return {
+      chatId,
+      kind: 'text_mention_reply' as const,
+      replyToMessageId,
+      mentionMentorName: mentorName,
+      bodyText: G1_ROUND1_DOCS_BODY,
+      sendIndex: 2,
+      idempotencyKey,
+    };
   }
   const docs = await prisma.contentOpsArtifact.findMany({ where: { runId, kind: 'review_doc' }, orderBy: { createdAt: 'asc' } });
   const ordered = [...docs].sort(
@@ -1386,7 +1403,7 @@ export async function approveSendRound1Docs(
         sendPlan: [
           { kind: 'file', label: '语言人格风格分析（浏览用）' },
           { kind: 'file', label: '第一轮审核清单（需回复）' },
-          { kind: 'text', label: 'G1 固定文案' },
+          { kind: 'text_mention_reply', label: 'G1 回复审核清单 + @mention 导师' },
         ],
         dedupKeyBase: dedupBase,
         approvedBy: userId,
@@ -1403,7 +1420,7 @@ export async function approveSendRound1Docs(
       gate: 'G1',
       stepCode: 'S9',
       buttonName: '批准发送：第一轮阅览文件',
-      scope: `仅本次向群 ${run.feishuChatName ?? run.feishuChatId} 发送 2 份阅览文件 + 1 条 G1 固定文案`,
+      scope: `仅本次向群 ${run.feishuChatName ?? run.feishuChatId} 发送 2 份阅览文件 + 1 条 G1 回复审核清单消息（@mention 导师）`,
       checks: JSON.stringify(c),
       status: 'approved',
       actorId: userId,
@@ -1500,7 +1517,7 @@ async function handleFeishuSendMessageResult(
   > = {
     S9: {
       total: 3,
-      textLabel: 'G1 固定文案',
+      textLabel: 'G1 回复审核清单 + @mention',
       build: buildS9SendPayload,
       sentState: RUN_STATE.ROUND1_DOCS_SENT,
       waitingState: RUN_STATE.WAITING_ROUND1_REVIEW_REPLY,
@@ -1537,7 +1554,7 @@ async function handleFeishuSendMessageResult(
   sendLog.push({
     index: idx,
     kind,
-    label: kind === 'text' ? cfg.textLabel : fileName,
+    label: kind === 'text' ? cfg.textLabel : kind === 'text_mention_reply' ? cfg.textLabel : fileName,
     messageId: typeof result.messageId === 'string' ? result.messageId : null,
     at: new Date().toISOString(),
   });

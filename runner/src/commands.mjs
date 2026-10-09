@@ -38,6 +38,7 @@ import {
   feishuDownloadResource,
   feishuSendFile,
   feishuSendPostMention,
+  feishuReplyPostMention,
   feishuSendText,
   feishuWhoami,
 } from './feishu.mjs';
@@ -448,6 +449,19 @@ export async function handleCommand(command, contentRoot) {
         });
         if (!r.ok) throw new Error(`飞书发送 @mention 文案失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1500)}` : ''}`);
         return { kind: 'text_mention', ...r };
+      }
+      if (payload.kind === 'text_mention_reply') {
+        // G1：回复审核清单文件消息 + post 富文本 @mention 导师
+        const r = await feishuReplyPostMention({
+          chatId,
+          replyToMessageId: payload.replyToMessageId,
+          mentorName: payload.mentionMentorName,
+          bodyText: payload.bodyText,
+          idempotencyKey: payload.idempotencyKey,
+          dryRun: payload.dryRun,
+        });
+        if (!r.ok) throw new Error(`飞书回复 @mention 文案失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1500)}` : ''}`);
+        return { kind: 'text_mention_reply', ...r };
       }
       const r = await feishuSendText({
         chatId,
