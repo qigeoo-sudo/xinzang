@@ -323,6 +323,26 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   ) {
     panels.push(<S22ProductionPanel key="S22" run={run} onAction={onAction} canWrite={canWrite} />);
   }
+  // 未渲染的 pending 步骤：显示占位卡片让用户看到全流程
+  const renderedCodes = new Set(panels.map((p) => (p as { key?: string }).key).filter((k): k is string => typeof k === 'string' && k.startsWith('S')));
+  const upcoming = STEP_DEFS.filter(
+    (d) => !renderedCodes.has(d.code) && stepByCode[d.code]?.status === 'pending',
+  );
+  if (upcoming.length > 0) {
+    panels.push(
+      <section key="upcoming" className="letter-paper rounded-[18px] p-4">
+        <h2 className="mb-3 text-sm font-bold text-stone-500">后续步骤（待前置完成）</h2>
+        <ul className="space-y-2">
+          {upcoming.map((d) => (
+            <li key={d.code} className="flex items-center gap-2 text-xs text-stone-400">
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-stone-200 text-[10px] text-stone-400">{d.code}</span>
+              <span>{d.title}</span>
+            </li>
+          ))}
+        </ul>
+      </section>,
+    );
+  }
   panels.push(<TraePanelC key="C" run={run} />);
 
   // 观察窗事件
