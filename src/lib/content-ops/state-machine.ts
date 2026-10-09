@@ -150,11 +150,11 @@ export const STEP_DEFS: StepDef[] = [
   {
     code: 'S2', title: '归并、规范化命名与 D 盘归档（人工批准后执行）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
-    nextRunState: RUN_STATE.ROUND1_ARCHIVED,
+    nextRunState: RUN_STATE.CLAUDE_MANUAL_STEP,
     needsVpn: false, isFeishu: false, active: true,
   },
   {
-    code: 'S3', title: 'VPN / 连通性探测',
+    code: 'S3', title: 'VPN / 连通性探测（已自动跳过，由 S4 小灯实时提示）',
     actor: ACTOR.RUNNER, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.CLAUDE_MANUAL_STEP,
     needsVpn: false, isFeishu: false, active: true,

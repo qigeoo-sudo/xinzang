@@ -51,7 +51,7 @@ export const ENDPOINT_LABELS: Record<EndpointKey, string> = {
 export const PROBE_FRESH_MS = 90_000;
 
 /** 各步骤需要 VPN 访问的端点（与 state-machine STEP_DEFS 口径一致） */
-function requiredEndpoints(step: StepDef): EndpointKey[] {
+export function requiredEndpoints(step: StepDef): EndpointKey[] {
   if (!step.needsVpn) return step.isFeishu ? ['feishu'] : [];
   switch (step.code) {
     case 'S4':

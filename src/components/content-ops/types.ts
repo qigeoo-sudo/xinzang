@@ -45,6 +45,10 @@ export interface RunnerInfo {
   contentRoot: string | null;
   probes: VpnSnapshot | null;
   dirs: Array<{ name: string; status: string }>;
+  // 方案B：Runner 心跳上报 stale=true 表示源码已变更但进程未重启，
+  // 控制台据此提示"版本过旧，需重启 Runner"
+  stale: boolean;
+  staleAt: string | null;
 }
 
 export interface RunStep {

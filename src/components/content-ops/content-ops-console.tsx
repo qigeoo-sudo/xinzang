@@ -110,6 +110,11 @@ export function ContentOpsConsole({
                 <span className="font-medium text-stone-500">○ 离线</span>
               )}
             </span>
+            {onlineRunner?.stale && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
+                Runner 版本过旧，建议重启
+              </span>
+            )}
             <span className="text-stone-300">|</span>
             <span>{accountName}</span>
           </div>
@@ -230,6 +235,11 @@ export function ContentOpsConsole({
                       <span className="truncate">
                         {r.online ? '●' : '○'} {r.name}{' '}
                         <span className="text-stone-400">v{r.version}</span>
+                        {r.stale && (
+                          <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                            版本过旧
+                          </span>
+                        )}
                       </span>
                       <span className="shrink-0 text-stone-400">{timeAgo(r.lastSeenAt, now)}</span>
                     </li>

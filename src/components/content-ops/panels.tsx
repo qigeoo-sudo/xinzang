@@ -112,6 +112,17 @@ const STEP_KIND_LABEL: Record<string, string> = {
 
 type ScanCandidate = { relPath: string; bytes: number; mtimeMs: number; suggestedKind: string | null; renamed?: boolean };
 
+/** S1 妙记拆解后的「不明」候选（未下载，仅元数据，待人工甄别勾选） */
+type UnknownCandidate = {
+  messageId: string;
+  fileKey: string | null;
+  minuteToken: string | null;
+  fileName: string;
+  senderName: string | null;
+  createTime: string | null;
+  kind: 'audio' | 'transcript';
+};
+
 function formatBytes(n: number): string {
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
   if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
@@ -162,10 +173,23 @@ export function FileRegisterCard({
   const registeredPaths = new Set(artifacts.map((a) => a.displayPath));
 
   // S1/S2 扫描候选：Runner 列目录 → evidence.scanFiles；用户勾选/改类型后批量哈希登记
-  const scanEv = (step.evidence ?? {}) as { scanFiles?: ScanCandidate[]; scannedAt?: string };
+  const scanEv = (step.evidence ?? {}) as {
+    scanFiles?: ScanCandidate[];
+    scannedAt?: string;
+    unknownCandidates?: UnknownCandidate[];
+    unknownDownloaded?: { handled?: string[]; failed?: string[]; at?: string };
+    autoMergeTriggered?: boolean;
+    audioCount?: number;
+    textCount?: number;
+  };
   const scanFiles = canScan ? scanEv.scanFiles ?? [] : [];
+  // S1 不明候选（含妙记虚拟文件）：文件名不含「第一轮」按规则不自动下载，人工甄别后勾选下载登记
+  const unknownCandidates = isS1 ? scanEv.unknownCandidates ?? [] : [];
+  const unknownHandled = new Set(scanEv.unknownDownloaded?.handled ?? []);
+  const unknownPending = unknownCandidates.filter((c) => !unknownHandled.has(`${c.messageId}:${c.kind}`));
   const scanning = step.commandStatus === 'queued' || step.commandStatus === 'dispatched';
   const [pick, setPick] = useState<Record<string, { checked: boolean; kind: string }>>({});
+  const [pickUnknown, setPickUnknown] = useState<Record<string, boolean>>({});
   useEffect(() => {
     // 仅在新一轮扫描结果到达时重置勾选；已登记文件默认不勾
     setPick(
@@ -176,6 +200,7 @@ export function FileRegisterCard({
         ]),
       ),
     );
+    setPickUnknown({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanEv.scannedAt]);
 
@@ -183,6 +208,25 @@ export function FileRegisterCard({
   const allChecked = selectable.length > 0 && selectable.every((f) => pick[f.relPath]?.checked);
   const checkedCount = selectable.filter((f) => pick[f.relPath]?.checked).length;
   const mentorPrefix = `mentors/${run.mentorDir}/`;
+
+  const submitUnknown = async () => {
+    const selections = unknownPending
+      .filter((c) => pickUnknown[`${c.messageId}:${c.kind}`])
+      .map((c) => `${c.messageId}:${c.kind}`);
+    if (selections.length === 0) {
+      setError('请至少勾选一个要下载的不明候选');
+      return;
+    }
+    setError('');
+    setBusy(true);
+    try {
+      await onAction('download-unknown', { selections });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '下载指令发起失败');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const setRow = (i: number, patch: Partial<{ relPath: string; kind: string }>) =>
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -350,14 +394,14 @@ export function FileRegisterCard({
                   disabled={busy || scanning || !run.runner?.online || step.status === 'done'}
                   className="rounded-lg border border-cyan-700/30 bg-cyan-50 px-3 py-1.5 text-xs text-cyan-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {scanning ? '扫描指令执行中…' : step.status === 'done' ? '已扫描完成 ✓' : scanFiles.length > 0 ? '重新扫描' : isS1 ? '扫描导师目录' : isS2 ? '扫描归并产物' : '扫描产物'}
+                  {scanning ? (isS2 ? '归并中…' : '扫描指令执行中…') : step.status === 'done' ? '已扫描完成 ✓' : scanFiles.length > 0 ? '重新扫描' : isS1 ? '扫描导师目录' : isS2 ? '扫描归并产物' : '扫描产物'}
                 </button>
               </div>
               <p className="mt-1 text-[11px] leading-4 text-stone-500">
                 {isS1
                   ? 'Runner 递归扫描该导师目录（自动跳过 work/outputs 等产物区），只回传文件路径、大小、修改时间，并按扩展名预猜音频/文字稿类型；你勾选或改类型后再让 Runner 计算哈希登记。'
                   : isS2
-                    ? 'Runner 扫描该导师目录下文件名含「full」的归并产物（完整音频/完整文字稿），回传路径、大小、修改时间并预猜类型；你确认勾选后让 Runner 计算哈希登记。'
+                    ? 'S1 下载完成后自动归并：多份音频 ffmpeg 拼接、多份文字稿按序合并，命名为「第一轮 full interview / full transcript」。原件保留不动。若自动归并未触发（如 Runner 离线），可用此按钮手动扫描已存在的归并产物。'
                     : 'Runner 扫描导师根目录下的文档文件，自动套用 ` by sonnet ` 规范命名后把规范命名的文件显示给你（只改名不改内容）；你勾选确认后 Runner 直接计算哈希登记。'}
               </p>
               {!run.runner?.online && <p className="mt-1 text-xs text-red-500">Runner 离线，无法扫描</p>}
@@ -450,11 +494,77 @@ export function FileRegisterCard({
               {scanEv.scannedAt && scanFiles.length === 0 && !scanning && (
                 <p className="mt-2 text-xs text-amber-700">
                   {isS1
-                    ? '未扫描到候选文件（仅识别音频与 md/txt/doc 文稿，产物区已跳过）。可用下方手工入口。'
+                    ? unknownCandidates.length > 0
+                      ? `正式候选 0 个；发现 ${unknownCandidates.length} 条「不明」候选（文件名不含「第一轮」），请在下方甄别勾选后下载登记。`
+                      : '未扫描到候选文件（仅识别音频与 md/txt/doc 文稿，产物区已跳过）。可用下方手工入口。'
                     : isS2
-                      ? '未找到文件名含「full」的归并产物。请先把归并后的完整音频/完整文字稿放回对应文件夹（文件名带 full 字样），再重新扫描，或用下方手工入口。'
+                      ? scanEv.autoMergeTriggered
+                        ? `自动归并已触发（${scanEv.audioCount ?? 0} 份音频 / ${scanEv.textCount ?? 0} 份文字稿），请稍候或查看上方归并结果。`
+                        : '未找到文件名含「full」的归并产物。S1 完成后会自动归并；若需手动登记，可把归并产物放回对应文件夹（文件名带 full 字样）后重新扫描，或用下方手工入口。'
                       : '导师根目录未发现文档产物（md/txt/docx/doc）。请确认 Claude 产物文件已保存到导师根目录后重新扫描，或用下方手工入口。'}
                 </p>
+              )}
+              {isS1 && unknownCandidates.length > 0 && !scanning && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold text-amber-800">
+                      不明候选 · 待人工甄别（{unknownPending.length}/{unknownCandidates.length} 待处理）
+                    </p>
+                    <button
+                      type="button"
+                      onClick={submitUnknown}
+                      disabled={
+                        busy ||
+                        scanning ||
+                        !run.runner?.online ||
+                        step.status === 'done' ||
+                        unknownPending.every((c) => !pickUnknown[`${c.messageId}:${c.kind}`])
+                      }
+                      className="rounded-lg border border-amber-700/30 bg-white px-3 py-1.5 text-xs text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {scanning ? '指令执行中…' : '下载勾选文件并登记'}
+                    </button>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-4 text-amber-700/80">
+                    文件名不含「第一轮」的音频/文字文件（含妙记分享拆解出的音频+文字稿）不会自动下载；确认是本轮访谈材料后勾选，
+                    Runner 会下载到第一轮归档目录并直接计算哈希登记。全部成功后本步自动完成。
+                  </p>
+                  {scanEv.unknownDownloaded?.failed && scanEv.unknownDownloaded.failed.length > 0 && (
+                    <ul className="mt-1.5 space-y-0.5">
+                      {scanEv.unknownDownloaded.failed.map((f, i) => (
+                        <li key={i} className="text-[11px] text-red-600">下载失败：{f}（可重新勾选重试）</li>
+                      ))}
+                    </ul>
+                  )}
+                  {unknownHandled.size > 0 && (
+                    <p className="mt-1.5 text-[11px] text-emerald-700">已下载登记 {unknownHandled.size} 个文件。</p>
+                  )}
+                  <ul className="mt-2 space-y-1">
+                    {unknownPending.map((c) => {
+                      const key = `${c.messageId}:${c.kind}`;
+                      return (
+                        <li key={key} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white">
+                          <input
+                            type="checkbox"
+                            checked={pickUnknown[key] ?? false}
+                            onChange={(e) => setPickUnknown((p) => ({ ...p, [key]: e.target.checked }))}
+                          />
+                          <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${c.kind === 'audio' ? 'bg-cyan-100 text-cyan-800' : 'bg-violet-100 text-violet-700'}`}>
+                            {c.kind === 'audio' ? '音频' : '文字稿'}
+                          </span>
+                          {c.minuteToken && (
+                            <span className="shrink-0 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] text-stone-600">妙记</span>
+                          )}
+                          <span className="min-w-0 flex-1 truncate text-stone-700" title={c.fileName}>
+                            {c.fileName}
+                          </span>
+                          <span className="shrink-0 text-[10px] text-stone-400">{c.senderName ?? ''}</span>
+                          <span className="shrink-0 text-[10px] text-stone-300">{c.createTime ?? ''}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               )}
               <ImpactNote>
                 扫描只读元数据，不移动、不读取文件正文；勾选提交后 Runner 才对文件计算字节数与 SHA-256 并登记。
@@ -508,18 +618,14 @@ export function S3GateCard({ run }: { run: RunDetail }) {
   const s3 = run.steps.find((s) => s.code === 'S3')!;
   return (
     <section className="letter-paper rounded-[18px] p-4">
-      <h3 className="text-sm font-bold text-stone-700">VPN / 连通性探测（S3）</h3>
+      <h3 className="text-sm font-bold text-stone-700">VPN / 连通性探测（S3）— 已自动跳过</h3>
       <p className="mt-1 text-xs leading-5 text-stone-500">
-        本步由 Runner 心跳自动判定（归档完成后的下一次心跳，≤30 秒）：Claude 端点与国内参照点同时可达才通过，
-        通过后进入 Claude 人工提交；不通则停在 vpn_check_failed，状态恢复后心跳自动放行。正式探测结果已写入步骤证据留档。
+        S2 归并完成后自动跳过本步，直接进入 Claude 人工提交。VPN 连通性由 S4 节点的小灯实时提示：
+        <span className="ml-1 inline-block h-2.5 w-2.5 rounded-full bg-red-500 align-middle" /> 红=需开 VPN，
+        <span className="ml-1 inline-block h-2.5 w-2.5 rounded-full bg-lime-400 align-middle" /> 绿=已就绪。
       </p>
       <p className="mt-2 text-xs text-stone-500">
         步骤状态：{labelOf(STEP_STATUS_LABELS, s3.status)}
-        {s3.failureReason && (
-          <span className={`ml-2 ${s3.status === 'done' ? 'text-stone-400' : 'text-red-600'}`}>
-            {s3.status === 'done' ? `（历史记录：${s3.failureReason}）` : s3.failureReason}
-          </span>
-        )}
       </p>
     </section>
   );
@@ -550,6 +656,43 @@ export function ClaudePanelA({
   const [error, setError] = useState('');
   const [r3, setR3] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [vpnConnected, setVpnConnected] = useState(false);
+  const [vpnStarting, setVpnStarting] = useState(false);
+
+  // 轮询 VPN 状态（每 5s）
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      try {
+        const res = await fetch('/api/content-ops/vpn/status');
+        const data = await res.json();
+        if (alive) setVpnConnected(!!data.connected);
+      } catch { /* ignore */ }
+    };
+    check();
+    const t = setInterval(check, 5000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+
+  const startVpn = async () => {
+    setVpnStarting(true);
+    try {
+      await fetch('/api/content-ops/vpn/on', { method: 'POST' });
+    } catch { /* ignore */ }
+    // 立即开始轮询状态
+    const check = async () => {
+      try {
+        const res = await fetch('/api/content-ops/vpn/status');
+        const data = await res.json();
+        setVpnConnected(!!data.connected);
+      } catch { /* ignore */ }
+    };
+    const t = setInterval(async () => {
+      await check();
+      if (vpnConnected) { setVpnStarting(false); clearInterval(t); }
+    }, 5000);
+    setTimeout(() => { setVpnStarting(false); clearInterval(t); }, 120000);
+  };
 
   const copyTrigger = async () => {
     try {
@@ -588,9 +731,27 @@ export function ClaudePanelA({
 
       {/* S4 区 */}
       <div className="mt-3">
-        <p className="text-xs font-semibold text-stone-600">
-          S4 · 导师风格摹写对话（Sonnet 5.5 中等） · {labelOf(STEP_STATUS_LABELS, s4.status)}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-stone-600">
+            S4 · 导师风格摹写对话（Sonnet 5.5 中等） · {labelOf(STEP_STATUS_LABELS, s4.status)}
+          </p>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${vpnConnected ? 'bg-lime-100 text-lime-700' : 'bg-red-100 text-red-600'}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${vpnConnected ? 'bg-lime-500' : 'bg-red-500'}`} />
+              VPN {vpnConnected ? '已连接' : '未连接'}
+            </span>
+            {!vpnConnected && (
+              <button
+                type="button"
+                disabled={vpnStarting}
+                onClick={startVpn}
+                className="rounded-lg bg-violet-600 px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-50 hover:bg-violet-700"
+              >
+                {vpnStarting ? '连接中…' : '一键开 VPN'}
+              </button>
+            )}
+          </div>
+        </div>
         {canWrite && s4Open ? (
           <div className="mt-2 space-y-2">
             <input

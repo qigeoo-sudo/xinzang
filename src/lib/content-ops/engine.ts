@@ -83,6 +83,10 @@ export const COMMAND = {
   FEISHU_CHAT_INFO: 'feishu_chat_info',
   FEISHU_SEARCH_CHAT: 'feishu_search_chat',
   FEISHU_SCAN_DOWNLOAD: 'feishu_scan_download',
+  // S1 不明候选批量下载：人工勾选后 Runner 下载（含妙记）+ 直接登记哈希
+  FEISHU_DOWNLOAD_UNKNOWN: 'feishu_download_unknown',
+  // S2 自动归并：多份音频 ffmpeg concat + 多份文字稿按序拼接
+  MERGE_ROUND1_MATERIALS: 'merge_round1_materials',
   // P4a：S17-S20 Final Handoff 预检段
   SCAN_FINAL_HANDOFF: 'scan_final_handoff',
   PREFLIGHT_CHECKS: 'preflight_checks',
@@ -149,6 +153,19 @@ async function appendEvent(
       payload: JSON.stringify(data.payload),
     },
   });
+}
+
+/**
+ * 指令类型 → 观察窗 agent 栏映射。
+ * 用来给 Agent 观察窗按 agent 分流事件：飞书类指令去 feishu 栏，codex 类去 codex 栏，
+ * 其余 runner 执行的指令去 runner 栏。control_plane/human 不参与（人工步骤有自己的 stage 事件）。
+ */
+function commandAgent(commandType: string | undefined | null): string {
+  if (!commandType) return 'runner';
+  if (commandType.startsWith('feishu_')) return 'feishu';
+  if (commandType.startsWith('codex_')) return 'codex';
+  if (commandType.startsWith('claude_')) return 'claude';
+  return 'runner';
 }
 
 async function transitionRun(
@@ -250,6 +267,9 @@ interface HeartbeatBody {
   probes?: VpnSnapshot;
   contentRoot?: string;
   dirs?: unknown;
+  // 方案B：Runner 心跳上报代码版本信息，控制平面据此在 UI 提示"版本过旧，需重启"
+  stale?: boolean;
+  codeMtime?: number;
 }
 
 export async function ingestHeartbeat(
@@ -261,6 +281,9 @@ export async function ingestHeartbeat(
     probes: body.probes ?? null,
     contentRoot: body.contentRoot ?? null,
     dirs: body.dirs ?? null,
+    stale: body.stale === true,
+    codeMtime: typeof body.codeMtime === 'number' ? body.codeMtime : null,
+    staleAt: body.stale === true ? now.toISOString() : null,
   });
 
   const runner = await prisma.$transaction(async (tx) => {
@@ -300,50 +323,8 @@ export async function ingestHeartbeat(
     });
   }
 
-  // S3 VPN 闸门：round1_archived 评估，vpn_check_failed 恢复评估
-  const vpnGateRuns = await prisma.contentOpsRun.findMany({
-    where: { runnerId, status: { in: [RUN_STATE.ROUND1_ARCHIVED, RUN_STATE.VPN_CHECK_FAILED] } },
-  });
-  for (const run of vpnGateRuns) {
-    const claudeOk = body.probes?.endpoints?.claude?.reachable === true;
-    const cnOk = body.probes?.endpoints?.cnBase?.reachable === true;
-    if (claudeOk && cnOk) {
-      await prisma.$transaction(async (tx) => {
-        const s3 = await tx.contentOpsStep.findFirst({ where: { runId: run.id, code: 'S3' } });
-        if (s3) {
-          await tx.contentOpsStep.update({
-            where: { id: s3.id },
-            data: {
-              status: STEP_STATUS.DONE,
-              startedAt: s3.startedAt ?? now,
-              finishedAt: now,
-              evidence: JSON.stringify({ probes: body.probes, auto: 'heartbeat_vpn_gate' }),
-            },
-          });
-        }
-        if (run.status === RUN_STATE.VPN_CHECK_FAILED) {
-          await transitionRun(tx, run, RUN_STATE.CLAUDE_MANUAL_STEP, 'vpn recovered via heartbeat');
-        } else {
-          await transitionRun(tx, run, RUN_STATE.CLAUDE_MANUAL_STEP, 'vpn gate passed');
-        }
-      });
-    } else if (run.status === RUN_STATE.ROUND1_ARCHIVED) {
-      await prisma.$transaction(async (tx) => {
-        const s3 = await tx.contentOpsStep.findFirst({ where: { runId: run.id, code: 'S3' } });
-        if (s3) {
-          await tx.contentOpsStep.update({
-            where: { id: s3.id },
-            data: {
-              status: STEP_STATUS.FAILED,
-              startedAt: s3.startedAt ?? now,
-              failureReason: cnOk ? 'Claude 端点不可达，请开启 VPN' : '国内参照点不可达，本机网络异常',
-            },
-          });
-        }
-        await transitionRun(tx, run, RUN_STATE.VPN_CHECK_FAILED, 'vpn gate failed');
-      });
-    }
-  }
+  // S3 VPN 闸门已移除：S2 完成时自动标 S3 done 并直达 CLAUDE_MANUAL_STEP，
+  // VPN 连通性由 S4 小灯实时提示（红/绿），不再硬阻塞流程。
 
   return { commands: await dispatchCommands(runnerId) };
 }
@@ -363,6 +344,17 @@ async function dispatchCommands(runnerId: string): Promise<unknown[]> {
     where: { id: { in: ids }, commandStatus: 'queued' },
     data: { commandStatus: 'dispatched', dispatchedAt: new Date() },
   });
+  // 按指令 agent 分流写 dispatched 事件，让观察窗能看到"指令已下发，等待 Runner 执行"
+  for (const s of queued) {
+    const cmdType = (() => { try { return JSON.parse(s.commandPayload ?? '{}').type; } catch { return null; } })();
+    await appendEvent({
+      runId: s.runId,
+      runnerId,
+      agent: commandAgent(cmdType),
+      type: 'dispatched',
+      payload: { step: s.code, type: cmdType },
+    });
+  }
   return queued.map((s) => ({
     stepId: s.id,
     idempotencyKey: s.idempotencyKey,
@@ -400,6 +392,16 @@ export async function handleCommandResult(runnerId: string, body: {
     type: string;
     payload: { files?: Array<{ relPath: string; kind: string; sourceType: string; note?: string }> };
   };
+
+  // 通用 result 事件：按指令 agent 分流到 feishu/codex/claude/runner 观察窗，
+  // 让用户实时看到指令完成状态。各 case 内部仍可写更具体的事件（如 registered files）。
+  await appendEvent({
+    runId: step.runId,
+    runnerId,
+    agent: commandAgent(payload?.type),
+    type: 'result',
+    payload: { step: step.code, type: payload?.type, status: body.status, result: body.result, error: body.error },
+  });
 
   if (body.status === 'failed') {
     await prisma.$transaction(async (tx) => {
@@ -441,6 +443,12 @@ export async function handleCommandResult(runnerId: string, body: {
     case COMMAND.LIST_MENTOR_FILES:
     case COMMAND.FEISHU_SCAN_DOWNLOAD:
       await handleListMentorFilesResult(step, result);
+      break;
+    case COMMAND.FEISHU_DOWNLOAD_UNKNOWN:
+      await handleFeishuDownloadUnknownResult(step, result);
+      break;
+    case COMMAND.MERGE_ROUND1_MATERIALS:
+      await handleMergeRound1Result(step, result);
       break;
     case COMMAND.LIST_WORK_FILES:
       await handleListWorkFilesResult(step, result);
@@ -504,8 +512,12 @@ export async function handleCommandResult(runnerId: string, body: {
         where: { id: step.id },
         data: {
           commandStatus: 'done',
+          // 机器人进群探测完成 → S0 真正 DONE（解锁 S1）。失败时不改 status，由重试或人工介入。
+          status: result?.ok ? STEP_STATUS.DONE : (step.status === STEP_STATUS.DONE ? STEP_STATUS.DONE : STEP_STATUS.PENDING),
+          finishedAt: result?.ok ? new Date() : step.finishedAt,
           commandResult: JSON.stringify(result),
           evidence: JSON.stringify({ ...safeParse(step.evidence), botCheck: result.feishu ?? result }),
+          ...(result?.ok ? {} : { failureReason: result?.reason ? `机器人进群探测失败：${result.reason}` : '机器人进群探测失败' }),
         },
       });
       break;
@@ -531,6 +543,7 @@ export async function handleCommandResult(runnerId: string, body: {
         });
       } else {
         // 搜索失败：S0 标记 failed + run 转 failed 干预态，允许用户重试
+        const rawTail = result?.raw ? `（${String(result.raw).slice(0, 200)}）` : '';
         await prisma.$transaction(async (tx) => {
           await tx.contentOpsStep.update({
             where: { id: step.id },
@@ -540,8 +553,8 @@ export async function handleCommandResult(runnerId: string, body: {
               commandResult: JSON.stringify(result),
               evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
               failureReason: result?.reason
-                ? `飞书群搜索失败：${result.reason}`
-                : '飞书群搜索失败（未搜到匹配群名）',
+                ? `飞书群搜索失败：${result.reason}${rawTail}`
+                : `飞书群搜索失败（未搜到匹配群名）${rawTail}`,
               finishedAt: new Date(),
             },
           });
@@ -788,6 +801,10 @@ async function handleHashFilesResult(
     return;
   }
   await finishStepAndAdvance(step, def.nextRunState, result);
+  // S1 通过 HASH_FILES 完成时也自动触发 S2 归并
+  if (step.code === 'S1') {
+    await autoMergeRound1(step.runId);
+  }
 }
 
 async function handleScanResult(
@@ -874,18 +891,260 @@ async function handleListMentorFilesResult(
     .filter((f) => f.relPath.toLowerCase().startsWith(prefix) && !f.relPath.includes('/../'))
     .slice(0, 300);
 
+  // S1 妙记拆解后的"不明"候选（未下载，仅元数据，待人工审核）
+  const rawUnknown = Array.isArray(result.unknownCandidates) ? result.unknownCandidates : [];
+
   await prisma.contentOpsStep.update({
     where: { id: step.id },
     data: {
       commandStatus: 'done',
-      commandResult: JSON.stringify({ count: files.length }),
+      commandResult: JSON.stringify({ count: files.length, unknownCount: rawUnknown.length }),
       evidence: JSON.stringify({
         ...safeParse(step.evidence),
         scanFiles: files,
+        unknownCandidates: rawUnknown,
         scannedAt: new Date().toISOString(),
       }),
     },
   });
+}
+
+/**
+ * S1 不明候选批量下载结果：Runner 已落盘并计算 SHA-256，这里直接登记 artifact
+ * （与 S13 下载即登记同构，不再走 HASH_FILES 指令）。全部成功才收敛 S1 完成；
+ * 部分失败时登记成功的部分、失败清单留在 evidence 供用户重勾重试。
+ */
+async function handleFeishuDownloadUnknownResult(
+  step: { id: string; runId: string; code: string; evidence: string | null; run: { id: string; status: string } },
+  result: Record<string, unknown>,
+) {
+  const rows = (Array.isArray(result.results) ? result.results : []) as Array<{
+    messageId?: string;
+    kind?: string;
+    fileName?: string;
+    destName?: string;
+    destAbs?: string;
+    relPath?: string;
+    bytes?: number;
+    sha256?: string;
+  }>;
+  const failedRaw = (Array.isArray(result.failed) ? result.failed : []) as Array<{ fileName?: string; reason?: string }>;
+  const evidence = safeParse(step.evidence);
+
+  const failedNotes: string[] = failedRaw.map((f) => `${f.fileName ?? '未知文件'}：${f.reason ?? '下载失败'}`);
+  const handled: string[] = [];
+  const registered: Array<{ relPath: string; kind: string }> = [];
+
+  await prisma.$transaction(async (tx) => {
+    for (const r of rows) {
+      const relPath = String(r.relPath ?? '').replace(/\\/g, '/');
+      const destAbs = String(r.destAbs ?? '');
+      const sha256 = typeof r.sha256 === 'string' ? r.sha256 : '';
+      const bytes = Number(r.bytes);
+      const kind = r.kind === 'audio' ? 'source_audio' : 'source_transcript';
+      if (!relPath || !destAbs || !sha256 || !Number.isFinite(bytes)) {
+        failedNotes.push(`${r.fileName ?? relPath ?? '未知文件'}：下载结果缺少落盘信息`);
+        continue;
+      }
+      const existing = await tx.contentOpsArtifact.findUnique({
+        where: { runId_path: { runId: step.runId, path: destAbs } },
+      });
+      if (existing) {
+        if (existing.sha256 !== sha256) {
+          failedNotes.push(`${r.destName ?? relPath}：文件内容已变化且曾被登记，禁止覆盖`);
+          continue;
+        }
+      } else {
+        await tx.contentOpsArtifact.create({
+          data: {
+            runId: step.runId,
+            kind,
+            path: destAbs,
+            displayPath: relPath,
+            sha256,
+            bytes: BigInt(bytes),
+            sourceType: 'primary',
+            provenance: JSON.stringify({
+              registeredByStep: 'S1',
+              round: 1,
+              messageId: r.messageId ?? null,
+              unknownCandidateDownload: true,
+            }),
+            validationStatus: 'verified',
+            immutable: true,
+          },
+        });
+      }
+      handled.push(`${r.messageId ?? ''}:${r.kind === 'audio' ? 'audio' : 'transcript'}`);
+      registered.push({ relPath, kind });
+    }
+
+    await appendEvent(
+      {
+        runId: step.runId,
+        agent: 'feishu',
+        type: 'result',
+        payload: { step: 'S1', unknownDownloaded: registered.map((f) => f.relPath), failed: failedNotes },
+      },
+      tx,
+    );
+
+    const allFailed = registered.length === 0;
+    await tx.contentOpsStep.update({
+      where: { id: step.id },
+      data: {
+        commandStatus: allFailed ? 'failed' : 'done',
+        commandResult: JSON.stringify({ okCount: registered.length, failedCount: failedNotes.length }),
+        ...(allFailed ? { failureReason: `不明候选全部下载失败：${failedNotes.join('；')}` } : {}),
+        evidence: JSON.stringify({
+          ...evidence,
+          unknownDownloaded: { handled, failed: failedNotes, at: new Date().toISOString() },
+        }),
+      },
+    });
+  });
+
+  // 全部成功才收敛 S1 完成；部分失败保持 running，用户对失败项重勾重试
+  if (registered.length > 0 && failedNotes.length === 0) {
+    const def = getStepDef('S1');
+    await finishStepAndAdvance(step, def.nextRunState, result);
+    // S1 完成后自动触发 S2 归并（多文件 concat / 单文件复制为 full 命名）
+    await autoMergeRound1(step.runId);
+  }
+}
+
+/**
+ * S2 自动归并入口：S1 完成后收集所有源音频/文字稿 artifact，
+ * 按登记时间排序（反映飞书上传顺序），入队 merge_round1_materials 指令。
+ * 单文件也走此指令（复制为 full 命名），保证 S2 产物命名一致。
+ */
+async function autoMergeRound1(runId: string) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: { runner: true },
+  });
+  if (!run.runner) return; // Runner 不在线则跳过，等 S2 手动扫描兜底
+
+  const artifacts = await prisma.contentOpsArtifact.findMany({
+    where: { runId, kind: { in: ['source_audio', 'source_transcript'] } },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const audioOrder = artifacts.filter((a) => a.kind === 'source_audio').map((a) => a.path);
+  const textOrder = artifacts.filter((a) => a.kind === 'source_transcript').map((a) => a.path);
+
+  if (audioOrder.length === 0 && textOrder.length === 0) return;
+
+  const s2 = await prisma.contentOpsStep.findFirst({ where: { runId, code: 'S2' } });
+  if (!s2) return;
+  if (s2.status === STEP_STATUS.DONE) return;
+
+  await prisma.contentOpsStep.update({
+    where: { id: s2.id },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: s2.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({
+        type: COMMAND.MERGE_ROUND1_MATERIALS,
+        payload: { mentorDir: run.mentorDir, audioOrder, textOrder },
+      }),
+      idempotencyKey: `${runId}:S2:merge:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+      evidence: JSON.stringify({
+        ...safeParse(s2.evidence),
+        autoMergeTriggered: true,
+        audioCount: audioOrder.length,
+        textCount: textOrder.length,
+        triggeredAt: new Date().toISOString(),
+      }),
+    },
+  });
+}
+
+/**
+ * S2 归并结果处理：Runner 已产出 full interview / full transcript，
+ * 登记 merged_audio / normalized_md artifact，完成 S2。
+ */
+async function handleMergeRound1Result(
+  step: { id: string; runId: string; code: string; evidence: string | null; run: { id: string; status: string } },
+  result: Record<string, unknown>,
+) {
+  if (result.ok === false) {
+    const reason = String(result.reason ?? '归并失败');
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: step.id },
+        data: {
+          commandStatus: 'failed',
+          commandResult: JSON.stringify(result),
+          status: STEP_STATUS.FAILED,
+          failureReason: reason,
+          finishedAt: new Date(),
+        },
+      });
+      if (step.run.status !== 'failed') {
+        await transitionRun(tx, step.run, 'failed', `S2 归并失败: ${reason}`);
+      }
+    });
+    return;
+  }
+
+  const audio = (result.audio ?? null) as { absPath?: string; relPath?: string; sha256?: string; bytes?: number; sourceCount?: number } | null;
+  const text = (result.text ?? null) as { absPath?: string; relPath?: string; sha256?: string; bytes?: number; sourceCount?: number; manifest?: unknown } | null;
+  const audioBytes = audio?.bytes;
+  const textBytes = text?.bytes;
+
+  await prisma.$transaction(async (tx) => {
+    if (audio?.absPath && audio.sha256 && Number.isFinite(audio.bytes)) {
+      await tx.contentOpsArtifact.upsert({
+        where: { runId_path: { runId: step.runId, path: audio.absPath } },
+        create: {
+          runId: step.runId,
+          kind: 'merged_audio',
+          path: audio.absPath,
+          displayPath: audio.relPath ?? '',
+          sha256: audio.sha256,
+          bytes: BigInt(audioBytes!),
+          sourceType: 'derived',
+          provenance: JSON.stringify({ registeredByStep: 'S2', round: 1, sourceCount: audio.sourceCount, autoMerged: true }),
+          validationStatus: 'verified',
+          immutable: false,
+        },
+        update: { sha256: audio.sha256, bytes: BigInt(audioBytes!), displayPath: audio.relPath ?? '' },
+      });
+    }
+    if (text?.absPath && text.sha256 && Number.isFinite(text.bytes)) {
+      await tx.contentOpsArtifact.upsert({
+        where: { runId_path: { runId: step.runId, path: text.absPath } },
+        create: {
+          runId: step.runId,
+          kind: 'normalized_md',
+          path: text.absPath,
+          displayPath: text.relPath ?? '',
+          sha256: text.sha256,
+          bytes: BigInt(textBytes!),
+          sourceType: 'derived',
+          provenance: JSON.stringify({ registeredByStep: 'S2', round: 1, sourceCount: text.sourceCount, autoMerged: true, manifest: text.manifest ?? null }),
+          validationStatus: 'verified',
+          immutable: false,
+        },
+        update: { sha256: text.sha256, bytes: BigInt(textBytes!), displayPath: text.relPath ?? '' },
+      });
+    }
+    await appendEvent(
+      {
+        runId: step.runId,
+        agent: 'runner',
+        type: 'result',
+        payload: { step: 'S2', merged: { audio: audio?.relPath ?? null, text: text?.relPath ?? null } },
+      },
+      tx,
+    );
+  });
+
+  const def = getStepDef('S2');
+  await finishStepAndAdvance(step, def.nextRunState, result, { alsoDone: ['S3'] });
 }
 
 async function handleListWorkFilesResult(
@@ -1739,7 +1998,7 @@ export async function startRound1ReplyScan(userId: string, runId: string) {
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_LIST_MESSAGES,
-        payload: { chatId: run.feishuChatId, limit: 200, order: 'desc' },
+        payload: { chatId: run.feishuChatId, limit: 500, order: 'asc', expandMinutes: false },
       }),
       idempotencyKey: `${runId}:S10:${randomBytes(6).toString('hex')}`,
       failureReason: null,
@@ -1767,6 +2026,7 @@ async function handleFeishuListMessagesResult(
       deleted: r.deleted === true,
       fileName: typeof r.fileName === 'string' ? r.fileName : null,
       fileKey: typeof r.fileKey === 'string' ? r.fileKey : null,
+      minuteToken: typeof r.minuteToken === 'string' ? r.minuteToken : null,
     };
   });
   const view = filterReplyCandidates(metas, round);
@@ -1860,11 +2120,15 @@ export async function submitRound1Reply(
   // —— 扫描勾选路径 ——
   const scan = evidence.replyScan as { candidates?: ReplyCandidate[] } | undefined;
   const candidate = scan?.candidates?.find((c) => c.messageId === input.messageId);
-  if (!candidate || !candidate.fileKey) {
+  if (!candidate || (!candidate.fileKey && !candidate.minuteToken)) {
     throw new EngineError(409, '所选消息不在已扫描候选中（或缺少文件标识），请重新扫描后选择');
   }
   const destName = buildReplyFileName(candidate.fileName);
   const destDirAbs = `${contentRoot}\\mentors\\${run.mentorDir}`;
+  // 妙记虚拟文件（有 minuteToken）下载 payload 带 minuteToken + kind
+  const replyDownloadPayload = candidate.minuteToken
+    ? { messageId: candidate.messageId, minuteToken: candidate.minuteToken, kind: 'transcript' as const, destDirAbs, destName }
+    : { messageId: candidate.messageId, fileKey: candidate.fileKey, type: 'file' as const, destDirAbs, destName };
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['none', 'failed', 'done'] } },
     data: {
@@ -1872,7 +2136,7 @@ export async function submitRound1Reply(
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_DOWNLOAD_RESOURCE,
-        payload: { messageId: candidate.messageId, fileKey: candidate.fileKey, type: 'file', destDirAbs, destName },
+        payload: replyDownloadPayload,
       }),
       idempotencyKey: `${runId}:S10:${randomBytes(6).toString('hex')}`,
       failureReason: null,
@@ -2212,6 +2476,11 @@ export async function createRun(userId: string, input: {
     });
     for (const def of STEP_DEFS.filter((d) => ACTIVE_CODES.includes(d.code))) {
       const isS0 = def.code === 'S0';
+      // S0 初始状态：有 chat_id 或 chat_name 需要搜索/探测时为 PENDING（待探测完成置 DONE）；
+      // 无任何飞书群信息时（极少见）直接 DONE。否则 S0 一开始就 DONE 会让 currentIdx
+      // 跳过 S0，S1 在搜索进行中就解锁——与"搜索失败时 S1 应灰"的视觉门禁冲突。
+      const s0NeedsProbe = isS0 && (r.feishuChatId || chatName);
+      const s0InitialStatus = isS0 ? (s0NeedsProbe ? STEP_STATUS.PENDING : STEP_STATUS.DONE) : STEP_STATUS.PENDING;
       await tx.contentOpsStep.create({
         data: {
           runId: r.id,
@@ -2219,10 +2488,10 @@ export async function createRun(userId: string, input: {
           round: 0,
           actor: def.actor,
           title: def.title,
-          status: isS0 ? STEP_STATUS.DONE : STEP_STATUS.PENDING,
+          status: s0InitialStatus,
           idempotencyKey: `${r.id}:${def.code}:0`,
           startedAt: isS0 ? new Date() : null,
-          finishedAt: isS0 ? new Date() : null,
+          finishedAt: isS0 && !s0NeedsProbe ? new Date() : null,
           evidence: isS0
             ? JSON.stringify({
                 feishuChatName: chatName,
@@ -2377,13 +2646,20 @@ function serializeRunListItem(r: {
 function parseHeartbeat(raw: string | null): {
   probes: VpnSnapshot | null;
   contentRoot: string | null;
+  stale: boolean;
+  staleAt: string | null;
 } {
-  if (!raw) return { probes: null, contentRoot: null };
+  if (!raw) return { probes: null, contentRoot: null, stale: false, staleAt: null };
   try {
-    const j = JSON.parse(raw) as { probes?: VpnSnapshot; contentRoot?: string };
-    return { probes: j.probes ?? null, contentRoot: j.contentRoot ?? null };
+    const j = JSON.parse(raw) as { probes?: VpnSnapshot; contentRoot?: string; stale?: boolean; staleAt?: string | null };
+    return {
+      probes: j.probes ?? null,
+      contentRoot: j.contentRoot ?? null,
+      stale: j.stale === true,
+      staleAt: j.staleAt ?? null,
+    };
   } catch {
-    return { probes: null, contentRoot: null };
+    return { probes: null, contentRoot: null, stale: false, staleAt: null };
   }
 }
 
@@ -2496,6 +2772,8 @@ export async function listRunners() {
       contentRoot: hb.contentRoot,
       probes: online ? hb.probes : null,
       dirs: online ? dirs : [],
+      stale: online && hb.stale,
+      staleAt: hb.staleAt,
     };
   });
 }
@@ -2554,6 +2832,75 @@ export async function scanMentorFiles(userId: string, runId: string) {
   if (updated.count === 0) throw new EngineError(409, '扫描指令入队失败（指令状态异常）');
   await audit(userId, 'content_ops.scan_mentor_files', runId, { mentorDir: run.mentorDir });
   return { queued: true };
+}
+
+/**
+ * S1 不明候选下载：人工在面板勾选 unknownCandidates 后入队批量下载指令。
+ * Runner 下载（含妙记音频/文字稿）+ 落盘 + 计算 SHA-256，结果处理器直接登记 artifact。
+ * 用户提交下载即视为归档决定：run 同 observeFiles 一样先迁移到 round1_material_received。
+ */
+export async function downloadUnknownCandidates(userId: string, runId: string, input: { selections: string[] }) {
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({
+    where: { id: runId },
+    include: { runner: true },
+  });
+  const allowedStates = [RUN_STATE.WAITING_ROUND1_SUBMISSION, RUN_STATE.ROUND1_MATERIAL_RECEIVED, 'failed'];
+  if (!allowedStates.includes(run.status)) {
+    throw new EngineError(409, `当前状态（${run.status}）不能下载 S1 不明候选`);
+  }
+  const s1 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S1' } });
+  if (s1.status === STEP_STATUS.DONE) throw new EngineError(409, 'S1 已完成，不能再下载不明候选');
+  if (s1.commandStatus === 'queued' || s1.commandStatus === 'dispatched') {
+    throw new EngineError(409, '已有指令在执行中，请稍候');
+  }
+
+  const evidence = safeParse(s1.evidence);
+  const unknown = Array.isArray(evidence.unknownCandidates) ? (evidence.unknownCandidates as Array<Record<string, unknown>>) : [];
+  const keyOf = (c: Record<string, unknown>) => `${String(c.messageId ?? '')}:${String(c.kind ?? '')}`;
+  const selections = [...new Set((input.selections ?? []).map((s) => String(s)))].filter((k) => unknown.some((c) => keyOf(c) === k));
+  if (selections.length === 0) {
+    throw new EngineError(400, '所选条目不在不明候选清单中，请重新扫描后再勾选');
+  }
+  if (selections.length > 50) throw new EngineError(400, '单次最多下载 50 个文件');
+  const items = unknown
+    .filter((c) => selections.includes(keyOf(c)))
+    .map((c) => ({
+      messageId: typeof c.messageId === 'string' ? c.messageId : null,
+      fileKey: typeof c.fileKey === 'string' ? c.fileKey : null,
+      minuteToken: typeof c.minuteToken === 'string' ? c.minuteToken : null,
+      kind: c.kind === 'audio' ? 'audio' : 'transcript',
+      fileName: typeof c.fileName === 'string' ? c.fileName : '',
+    }));
+
+  if (run.status === RUN_STATE.WAITING_ROUND1_SUBMISSION) {
+    await prisma.contentOpsRun.update({
+      where: { id: runId },
+      data: { status: RUN_STATE.ROUND1_MATERIAL_RECEIVED, currentOwner: ACTOR.RUNNER },
+    });
+    await appendEvent({ runId, agent: 'human', type: 'stage', payload: { to: 'round1_material_received' } });
+  }
+
+  const updated = await prisma.contentOpsStep.updateMany({
+    where: { id: s1.id, commandStatus: { in: ['none', 'failed', 'done'] } },
+    data: {
+      status: STEP_STATUS.RUNNING,
+      startedAt: s1.startedAt ?? new Date(),
+      commandStatus: 'queued',
+      commandPayload: JSON.stringify({
+        type: COMMAND.FEISHU_DOWNLOAD_UNKNOWN,
+        payload: { mentorDir: run.mentorDir, items },
+      }),
+      idempotencyKey: `${runId}:S1:${randomBytes(6).toString('hex')}`,
+      failureReason: null,
+      evidence: JSON.stringify({
+        ...evidence,
+        unknownSelection: { selections, selectedBy: userId, selectedAt: new Date().toISOString() },
+      }),
+    },
+  });
+  if (updated.count === 0) throw new EngineError(409, '下载指令入队失败（指令状态异常）');
+  await audit(userId, 'content_ops.download_unknown_candidates', runId, { count: items.length });
+  return { queued: true, count: items.length };
 }
 
 export async function scanWorkFiles(userId: string, runId: string) {
@@ -2729,9 +3076,24 @@ export async function manualNote(
       completedBy: userId,
       completedAt: new Date().toISOString(),
     });
-    await prisma.contentOpsStep.update({
-      where: { id: s4.id },
-      data: { status: STEP_STATUS.DONE, finishedAt: new Date(), evidence: JSON.stringify(evidence) },
+    await prisma.$transaction(async (tx) => {
+      await tx.contentOpsStep.update({
+        where: { id: s4.id },
+        data: { status: STEP_STATUS.DONE, finishedAt: new Date(), evidence: JSON.stringify(evidence) },
+      });
+      // S5 自动完成：S4 完成后直接归档，不等 R3 勾选（S5 不依赖 VPN，保持 VPN 开启供 S6 使用）
+      const s5 = await tx.contentOpsStep.findFirst({ where: { runId, code: 'S5' } });
+      if (s5) {
+        await tx.contentOpsStep.update({
+          where: { id: s5.id },
+          data: {
+            status: STEP_STATUS.DONE,
+            finishedAt: new Date(),
+            evidence: JSON.stringify({ autoDone: true, reason: 'S4 完成后自动归档，跳过 R3 勾选' }),
+          },
+        });
+      }
+      await transitionRun(tx, run, RUN_STATE.CLAUDE_OUTPUT_ARCHIVED, 'S4 done, S5 auto archived');
     });
   }
   await audit(userId, 'content_ops.claude_manual_note', runId, { phase: input.phase });
@@ -2825,7 +3187,7 @@ export async function codexSubmission(
           commandStatus: 'queued',
           commandPayload: JSON.stringify({
             type: COMMAND.CODEX_DELIVER,
-            payload: { workspaceDir, trigger },
+            payload: { workspaceDir, trigger, taskType: 'assembly_round1' },
           }),
           idempotencyKey: `${runId}:S6:deliver:${randomBytes(6).toString('hex')}`,
           failureReason: null,
@@ -3084,7 +3446,6 @@ export async function startRound2MaterialScan(userId: string, runId: string) {
     await transitionRun(prisma, run, RUN_STATE.WAITING_ROUND2_SUBMISSION, 'S13 材料扫描发起');
   }
   const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S13' } });
-  const sinceIso = await getRound2OutlineSentAt(runId);
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['none', 'failed', 'done'] } },
     data: {
@@ -3093,19 +3454,15 @@ export async function startRound2MaterialScan(userId: string, runId: string) {
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_LIST_MESSAGES,
-        payload: { chatId: run.feishuChatId, limit: 300, order: 'desc' },
+        payload: { chatId: run.feishuChatId, limit: 500, order: 'asc', expandMinutes: true },
       }),
       idempotencyKey: `${runId}:S13:${randomBytes(6).toString('hex')}`,
       failureReason: null,
-      evidence: JSON.stringify({
-        ...safeParse(step.evidence),
-        scanSince: sinceIso,
-      }),
     },
   });
   if (updated.count === 0) throw new EngineError(409, 'S13 已有指令在执行中，请等待完成或失败后再试');
-  await audit(userId, 'content_ops.start_round2_material_scan', runId, { sinceIso });
-  return { queued: true, sinceIso };
+  await audit(userId, 'content_ops.start_round2_material_scan', runId, {});
+  return { queued: true };
 }
 
 /**
@@ -3176,13 +3533,11 @@ async function handleRound2MaterialScanResult(
       deleted: r.deleted === true,
       fileName: typeof r.fileName === 'string' ? r.fileName : null,
       fileKey: typeof r.fileKey === 'string' ? r.fileKey : null,
+      minuteToken: typeof r.minuteToken === 'string' ? r.minuteToken : null,
     };
   });
   const evidence = safeParse(step.evidence);
-  const sinceIso = typeof evidence.scanSince === 'string' ? evidence.scanSince : null;
-  const sinceMs = sinceIso ? Date.parse(sinceIso) : null;
-  const archivedNames = await collectArchivedFileNames(step.runId);
-  const view = groupRound2Materials(metas, Number.isFinite(sinceMs) ? sinceMs : null, archivedNames);
+  const view = groupRound2Materials(metas);
   await prisma.contentOpsStep.update({
     where: { id: step.id },
     data: {
@@ -3279,11 +3634,12 @@ export async function submitRound2Material(
   const byId = new Map(allScanned.map((f) => [f.messageId, f]));
   const queue = ids.map((id) => {
     const f = byId.get(id);
-    if (!f || !f.fileKey) throw new EngineError(409, `所选消息不在已扫描结果中（或缺少文件标识）：${id}`);
+    if (!f || (!f.fileKey && !f.minuteToken)) throw new EngineError(409, `所选消息不在已扫描结果中（或缺少文件标识）：${id}`);
     const slot = f.kind === 'audio' ? 'audio' : 'word';
     return {
       messageId: f.messageId,
       fileKey: f.fileKey,
+      minuteToken: f.minuteToken ?? null,
       fileName: f.fileName,
       destName: sanitizeFileNameForFs(f.fileName),
       kind: f.kind,
@@ -3298,6 +3654,22 @@ export async function submitRound2Material(
 
   const first = queue[0];
   const destDirAbs = round2DestDir(contentRoot, run.mentorDir, first.slot as 'audio' | 'word');
+  // 妙记虚拟文件（有 minuteToken 无 fileKey）下载 payload 带 minuteToken + kind
+  const downloadPayload = first.minuteToken
+    ? {
+        messageId: first.messageId,
+        minuteToken: first.minuteToken,
+        kind: first.kind === 'audio' ? 'audio' : 'transcript',
+        destDirAbs,
+        destName: first.destName,
+      }
+    : {
+        messageId: first.messageId,
+        fileKey: first.fileKey,
+        type: 'file' as const,
+        destDirAbs,
+        destName: first.destName,
+      };
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['none', 'failed', 'done'] } },
     data: {
@@ -3305,13 +3677,7 @@ export async function submitRound2Material(
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_DOWNLOAD_RESOURCE,
-        payload: {
-          messageId: first.messageId,
-          fileKey: first.fileKey,
-          type: 'file',
-          destDirAbs,
-          destName: first.destName,
-        },
+        payload: downloadPayload,
       }),
       idempotencyKey: `${runId}:S13:${randomBytes(6).toString('hex')}`,
       failureReason: null,
@@ -3398,19 +3764,30 @@ async function handleRound2MaterialDownloadResult(
   const next = rest[0];
   const nextSlot = next.slot === 'audio' ? 'audio' : 'word';
   const destDirAbs = round2DestDir(contentRoot, run.mentorDir, nextSlot);
+  const nextDestName = typeof next.destName === 'string' && next.destName ? String(next.destName) : sanitizeFileNameForFs(String(next.fileName));
+  // 妙记虚拟文件（有 minuteToken 无 fileKey）下载 payload 带 minuteToken + kind
+  const nextPayload = next.minuteToken
+    ? {
+        messageId: String(next.messageId ?? ''),
+        minuteToken: String(next.minuteToken),
+        kind: next.slot === 'audio' ? 'audio' : 'transcript',
+        destDirAbs,
+        destName: nextDestName,
+      }
+    : {
+        messageId: String(next.messageId ?? ''),
+        fileKey: String(next.fileKey ?? ''),
+        type: 'file' as const,
+        destDirAbs,
+        destName: nextDestName,
+      };
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['dispatched', 'done'] } },
     data: {
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_DOWNLOAD_RESOURCE,
-        payload: {
-          messageId: next.messageId,
-          fileKey: next.fileKey,
-          type: 'file',
-          destDirAbs,
-          destName: typeof next.destName === 'string' && next.destName ? String(next.destName) : sanitizeFileNameForFs(String(next.fileName)),
-        },
+        payload: nextPayload,
       }),
       idempotencyKey: `${step.runId}:S13:${randomBytes(6).toString('hex')}`,
       evidence: JSON.stringify({ ...evidence, materialQueue: rest, materialArchived: archived }),
@@ -4071,7 +4448,7 @@ export async function startRound2ReplyScan(userId: string, runId: string) {
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_LIST_MESSAGES,
-        payload: { chatId: run.feishuChatId, limit: 200, order: 'desc' },
+        payload: { chatId: run.feishuChatId, limit: 500, order: 'asc', expandMinutes: false },
       }),
       idempotencyKey: `${runId}:S16:${randomBytes(6).toString('hex')}`,
       failureReason: null,
@@ -4140,11 +4517,14 @@ export async function submitRound2Reply(userId: string, runId: string, input: { 
 
   const scan = evidence.replyScanRound2 as { candidates?: ReplyCandidate[] } | undefined;
   const candidate = scan?.candidates?.find((c) => c.messageId === input.messageId);
-  if (!candidate || !candidate.fileKey) {
+  if (!candidate || (!candidate.fileKey && !candidate.minuteToken)) {
     throw new EngineError(409, '所选消息不在已扫描候选中（或缺少文件标识），请重新扫描后选择');
   }
   const destName = buildReplyFileName(candidate.fileName);
   const destDirAbs = `${contentRoot}\\mentors\\${run.mentorDir}`;
+  const reply2DownloadPayload = candidate.minuteToken
+    ? { messageId: candidate.messageId, minuteToken: candidate.minuteToken, kind: 'transcript' as const, destDirAbs, destName }
+    : { messageId: candidate.messageId, fileKey: candidate.fileKey, type: 'file' as const, destDirAbs, destName };
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['none', 'failed', 'done'] } },
     data: {
@@ -4152,7 +4532,7 @@ export async function submitRound2Reply(userId: string, runId: string, input: { 
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
         type: COMMAND.FEISHU_DOWNLOAD_RESOURCE,
-        payload: { messageId: candidate.messageId, fileKey: candidate.fileKey, type: 'file', destDirAbs, destName },
+        payload: reply2DownloadPayload,
       }),
       idempotencyKey: `${runId}:S16:${randomBytes(6).toString('hex')}`,
       failureReason: null,
@@ -5149,11 +5529,17 @@ export async function rejectG5(userId: string, runId: string, input: { reason: s
 
 export async function retryCommand(userId: string, runId: string, stepCode: string) {
   const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: stepCode } });
-  if (step.commandStatus !== 'failed') {
-    throw new EngineError(409, `步骤 ${stepCode} 指令未失败，无需重试`);
+  // 允许重试的状态：failed（明确失败）或 dispatched（Runner 已拉取但未回报，
+  // 常见原因是 Runner 本地幂等去重把指令跳过——卡死状态需要新 key 才能解锁）
+  if (step.commandStatus !== 'failed' && step.commandStatus !== 'dispatched') {
+    throw new EngineError(409, `步骤 ${stepCode} 指令未失败（${step.commandStatus}），无需重试`);
   }
   if (!step.commandPayload) throw new EngineError(409, '该步骤没有可重试的指令');
   const payload = JSON.parse(step.commandPayload) as { type: string };
+  // 生成新 idempotencyKey：旧 key 在 Runner processed.json 里已记录，沿用会被
+  // 幂等去重跳过。追加 :retry:<时间戳> 让 Runner 视为新指令重新执行。
+  const baseKey = step.idempotencyKey.replace(/:retry:\d+$/, '');
+  const retryKey = `${baseKey}:retry:${Date.now()}`;
   await prisma.$transaction(async (tx) => {
     await tx.contentOpsStep.update({
       where: { id: step.id },
@@ -5162,12 +5548,13 @@ export async function retryCommand(userId: string, runId: string, stepCode: stri
         status: STEP_STATUS.RUNNING,
         failureReason: null,
         dispatchedAt: null,
+        idempotencyKey: retryKey,
       },
     });
     const run = await tx.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
     if (run.status === 'failed') {
       // 从失败干预态回到该步语义对应的活跃主线状态（由步骤定义推导）
-      const recovery = step.code === 'S3' ? RUN_STATE.ROUND1_ARCHIVED
+      const recovery = step.code === 'S3' ? RUN_STATE.CLAUDE_MANUAL_STEP
         : step.code === 'S17' ? RUN_STATE.FINAL_HANDOFF_DISCOVERED
         : step.code === 'S0' ? RUN_STATE.WAITING_ROUND1_SUBMISSION
         : run.status;

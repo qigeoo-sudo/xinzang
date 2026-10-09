@@ -413,14 +413,13 @@ function mat(
   };
 }
 
-test('S13 窗内两个含音频事件：建议最早无冲突组，同时给歧义提示', () => {
+test('S13 两个含音频事件：建议最早无冲突组，同时给歧义提示', () => {
   const view = groupRound2Materials(
     [
-      mat('a1', SINCE + 10 * 60_000, { fileName: '访谈.m4a' }),
-      mat('a2', SINCE + 12 * 60_000, { fileName: '文稿.docx' }),
-      mat('b1', SINCE + 120 * 60_000, { fileName: '访谈补录.m4a' }),
+      mat('a1', SINCE + 10 * 60_000, { fileName: '第二轮访谈.m4a' }),
+      mat('a2', SINCE + 12 * 60_000, { fileName: '第二轮文稿.docx' }),
+      mat('b1', SINCE + 120 * 60_000, { fileName: '第二轮访谈补录.m4a' }),
     ],
-    SINCE,
   );
   assert.equal(view.groups.length, 2);
   assert.equal(view.suggestedGroupId, 'g0');
@@ -429,10 +428,9 @@ test('S13 窗内两个含音频事件：建议最早无冲突组，同时给歧�
   assert.ok(view.ambiguity.some((a) => a.includes('2 个含音频')));
 });
 
-test('S13 窗内无音频：无建议组且给未发现音频提示', () => {
+test('S13 无音频：无建议组且给未发现音频提示', () => {
   const view = groupRound2Materials(
-    [mat('t1', SINCE + 5 * 60_000, { fileName: '只有文稿.docx' })],
-    SINCE,
+    [mat('t1', SINCE + 5 * 60_000, { fileName: '第二轮文稿.docx' })],
   );
   assert.equal(view.suggestedGroupId, null);
   assert.equal(view.groups[0].hasAudio, false);
@@ -441,8 +439,7 @@ test('S13 窗内无音频：无建议组且给未发现音频提示', () => {
 
 test('S13 唯一音频组文件名带补传信号：不建议，给分段/补录提示', () => {
   const view = groupRound2Materials(
-    [mat('x1', SINCE + 5 * 60_000, { fileName: '访谈补传.m4a' })],
-    SINCE,
+    [mat('x1', SINCE + 5 * 60_000, { fileName: '第二轮访谈补传.m4a' })],
   );
   assert.equal(view.suggestedGroupId, null);
   assert.equal(view.groups[0].files[0].conflictHint, true);
@@ -454,10 +451,9 @@ test('S13 硬性排除：文件名含「第一轮」「审核清单」一律不�
     [
       mat('f1', SINCE + 5 * 60_000, { fileName: '第一轮访谈.m4a' }),
       mat('f2', SINCE + 6 * 60_000, { fileName: 'Ying_Wang_第二轮审核清单_v0.3.md' }),
-      mat('f3', null, { fileName: '第一轮审核清单_回复.md' }), // 无时间也照样排除（审核清单优先）
+      mat('f3', null, { fileName: '第一轮审核清单_回复.md' }),
       mat('ok', SINCE + 10 * 60_000, { fileName: '第二轮访谈.m4a' }),
     ],
-    SINCE,
   );
   assert.equal(view.skipped.firstRound, 1);
   assert.equal(view.skipped.reviewDoc, 2);
@@ -466,50 +462,34 @@ test('S13 硬性排除：文件名含「第一轮」「审核清单」一律不�
   assert.equal(view.suggestedGroupId, 'g0');
 });
 
-test('S13 无时间且已在 S1/S2/S10 归档/归并过的文件不再出现（忽略扩展名比对）；有时间的不受此限', () => {
-  // 归档集合存的是去掉扩展名后的 base
-  const archived = new Set(['老录音', 'ying_wang_第一轮审核清单_v0.1_回复']);
+test('S13 未含「第二轮」关键词的文件标注为"不明"候选', () => {
   const view = groupRound2Materials(
     [
-      mat('u1', null, { fileName: '老录音.opus' }), // 无时间+已归档（base 相同扩展名不同）→ 排除
-      mat('u2', null, { fileName: 'Ying_Wang_第一轮审核清单_v0.1_回复.md' }), // 先被「审核清单」排除
-      mat('u3', null, { fileName: '未见过的新文稿.docx' }), // 无时间+未归档 → 保留
-      mat('t1', SINCE + 60_000, { fileName: '老录音.m4a' }), // 有时间即使 base 同名也保留（窗内新事件）
+      mat('u1', SINCE + 60_000, { fileName: '访谈录音.m4a' }),
+      mat('u2', SINCE + 120_000, { fileName: '文稿.docx' }),
+      mat('ok', SINCE + 180_000, { fileName: '第二轮录音.m4a' }),
     ],
-    SINCE,
-    archived,
   );
-  assert.equal(view.skipped.archivedBefore, 1);
-  assert.equal(view.skipped.reviewDoc, 1);
-  const ids = view.groups.flatMap((g) => g.files.map((f) => f.messageId));
-  assert.deepEqual(ids.sort(), ['t1', 'u3']);
-});
-
-test('S13 S12 之前的消息全部计入 beforeSince，不进任何组', () => {
-  const view = groupRound2Materials(
-    [
-      mat('old1', SINCE - 1, { fileName: '早前录音.m4a' }),
-      mat('old2', SINCE - 3600_000, { fileName: '早前文稿.docx' }),
-      mat('new1', SINCE + 60_000, { fileName: '第二轮.m4a' }),
-    ],
-    SINCE,
-  );
-  assert.equal(view.skipped.beforeSince, 2);
-  assert.equal(view.groups.length, 1);
-  assert.deepEqual(view.groups[0].files.map((f) => f.messageId), ['new1']);
+  const all = view.groups.flatMap((g) => g.files);
+  assert.equal(all.length, 3);
+  assert.ok(all.find((f) => f.messageId === 'u1')?.unknown);
+  assert.ok(all.find((f) => f.messageId === 'u2')?.unknown);
+  assert.equal(all.find((f) => f.messageId === 'ok')?.unknown, false);
+  // 建议组只考虑非 unknown 的
+  assert.equal(view.suggestedGroupId, view.groups.find((g) => g.files.some((f) => f.messageId === 'ok'))?.id ?? null);
+  assert.ok(view.ambiguity.some((a) => a.includes('不明')));
 });
 
 test('S13 无上传时间的文件各自成组且永不参与建议', () => {
   const view = groupRound2Materials(
     [
-      mat('z1', null, { fileName: '录音.m4a' }),
-      mat('z2', null, { fileName: '文稿.docx' }),
+      mat('z1', null, { fileName: '第二轮录音.m4a' }),
+      mat('z2', null, { fileName: '第二轮文稿.docx' }),
       mat('ok', SINCE + 60_000, { fileName: '第二轮录音.m4a' }),
     ],
-    SINCE,
   );
   assert.equal(view.groups.length, 3);
-  assert.equal(view.suggestedGroupId, 'g0'); // 有时间的 ok 组先入组并被建议
+  assert.equal(view.suggestedGroupId, 'g0');
   assert.ok(view.groups.slice(1).every((g) => !g.suggested && g.files.length === 1));
   assert.ok(view.ambiguity.some((a) => a.includes('缺少上传时间')));
 });
@@ -517,19 +497,17 @@ test('S13 无上传时间的文件各自成组且永不参与建议', () => {
 test('S13 30 分钟间隔边界：恰好 30 分钟同组，超过 1ms 切两组', () => {
   const atEdge = groupRound2Materials(
     [
-      mat('e1', SINCE, { fileName: 'a.m4a' }),
-      mat('e2', SINCE + MATERIAL_GROUP_GAP_MS, { fileName: 'b.docx' }),
+      mat('e1', SINCE, { fileName: '第二轮a.m4a' }),
+      mat('e2', SINCE + MATERIAL_GROUP_GAP_MS, { fileName: '第二轮b.docx' }),
     ],
-    SINCE,
   );
   assert.equal(atEdge.groups.length, 1);
 
   const overEdge = groupRound2Materials(
     [
-      mat('o1', SINCE, { fileName: 'a.m4a' }),
-      mat('o2', SINCE + MATERIAL_GROUP_GAP_MS + 1, { fileName: 'b.docx' }),
+      mat('o1', SINCE, { fileName: '第二轮a.m4a' }),
+      mat('o2', SINCE + MATERIAL_GROUP_GAP_MS + 1, { fileName: '第二轮b.docx' }),
     ],
-    SINCE,
   );
   assert.equal(overEdge.groups.length, 2);
 });
@@ -538,13 +516,13 @@ test('S13 类型识别：audio 语音消息/音频扩展为音频，文档扩展
   const view = groupRound2Materials(
     [
       mat('v1', SINCE + 1000, { msgType: 'audio', fileName: null }),
-      mat('v2', SINCE + 2000, { fileName: 'song.opus' }),
-      mat('v3', SINCE + 3000, { fileName: 'note.txt' }),
-      mat('v4', SINCE + 4000, { fileName: 'sheet.xlsx' }),
-      mat('me', SINCE + 5000, { fileName: '我发的.m4a', senderName: '陆秉文' }),
+      mat('v2', SINCE + 2000, { fileName: '第二轮song.opus' }),
+      mat('v3', SINCE + 3000, { fileName: '第二轮note.txt' }),
+      mat('v4', SINCE + 4000, { fileName: '第二轮sheet.xlsx' }),
+      mat('me', SINCE + 5000, { fileName: '第二轮我发的.m4a', senderName: '陆秉文' }),
+      mat('cx', SINCE + 5500, { fileName: '第二轮陈初效的.m4a', senderName: '陈初效' }),
       { messageId: 'txt', msgType: 'text', createTime: SINCE + 6000, senderName: '王颖', senderType: 'user', deleted: false },
     ],
-    SINCE,
   );
   const all = view.groups.flatMap((g) => g.files);
   assert.deepEqual(all.map((f) => [f.messageId, f.kind]), [
@@ -553,7 +531,7 @@ test('S13 类型识别：audio 语音消息/音频扩展为音频，文档扩展
     ['v3', 'transcript'],
     ['v4', 'other'],
   ]);
-  assert.equal(view.skipped.selfSender, 1);
+  assert.equal(view.skipped.selfSender, 2); // 陆秉文 + 陈初效
   assert.equal(view.skipped.text, 1);
 });
 

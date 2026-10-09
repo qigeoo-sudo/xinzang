@@ -26,6 +26,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 dev.log
+runner.log
+
+# temp / local scratch
+tmp-*.mjs
+.codex-jsonl.txt
+.codex-test-home/
 
 # misc
 .DS_Store

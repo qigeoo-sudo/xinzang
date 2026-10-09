@@ -10,6 +10,7 @@ import Link from 'next/link';
 import type { RunDetail, RunEvent, RunListItem } from './types';
 import { mentorColor, MENTOR_TERMINAL } from './mentor-lights-bar';
 import { STEP_DEFS } from '@/lib/content-ops/state-machine';
+import { requiredEndpoints } from '@/lib/content-ops/vpn-policy';
 import {
   FileRegisterCard,
   S3GateCard,
@@ -172,7 +173,8 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   /** 步骤码 → TIMELINE 索引；用于 StepGate 判定是否已到达 */
   const idxByCode = Object.fromEntries(TIMELINE.map((n, i) => [n.code, i])) as Record<string, number>;
   const gateLocked = (code: string) => currentIdx !== -1 && (idxByCode[code] ?? 999) > currentIdx;
-  const vpnLevel = run.vpn?.hint?.level ?? 'gray';
+  // 原始端点探测结果：用于按节点自身需求判断 VPN 小灯颜色（而非复用当前步的全局 level）
+  const vpnEndpoints = run.vpn?.raw?.endpoints ?? null;
 
   // 计算某节点的 VPN 小灯是否该亮：
   // 规则——需要 VPN 的节点，当它是「当前步」或「下一步」时亮灯；一旦越过该步
@@ -185,13 +187,17 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
     if (!lit) {
       return { lit: false, color: 'bg-stone-400 text-white', title: '该步骤的 VPN 要求已通过' };
     }
-    if (vpnLevel === 'green' || vpnLevel === 'amber') {
-      return { lit: true, color: 'bg-lime-400 text-emerald-950', title: '该步骤需要 VPN，当前已开启' };
+    // 按该节点自身需要的端点判断颜色，但 VPN 类节点统一用 vpnIndicator（google.com）
+    // 判断 VPN 是否开启——claude.ai 等端点在国内也可能建立连接，不能作为 VPN 已开的依据。
+    const needed = requiredEndpoints(def);
+    if (!vpnEndpoints || needed.length === 0) {
+      return { lit: true, color: 'bg-stone-400 text-white', title: '该步骤需要 VPN，状态无法探测' };
     }
-    if (vpnLevel === 'red') {
-      return { lit: true, color: 'bg-red-500 text-white', title: '该步骤需要 VPN，但当前未开启！' };
+    const vpnOn = vpnEndpoints.vpnIndicator?.reachable === true;
+    if (vpnOn) {
+      return { lit: true, color: 'bg-lime-400 text-emerald-950', title: `该步骤需要 VPN，当前已开启（${needed.join('/')} 可用）` };
     }
-    return { lit: true, color: 'bg-stone-400 text-white', title: '该步骤需要 VPN，状态无法探测' };
+    return { lit: true, color: 'bg-red-500 text-white', title: `该步骤需要 VPN，但当前未开启（google.com 不可达），请开启 VPN` };
   }
 
   // 所有导师的进度彩灯：按 currentStepCode 分组，叠到对应节点上方

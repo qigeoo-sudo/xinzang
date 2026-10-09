@@ -12,7 +12,7 @@
  * 安全：不打印令牌与指令载荷正文；文件操作限定 CONTENT_ROOT；codex 自动投递未验证前恒为 needs_validation。
  */
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync, readdirSync, writeFileSync, unlinkSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { heartbeat as apiHeartbeat, register as apiRegister, reportResult } from './api.mjs';
@@ -24,6 +24,7 @@ import {
   newMachineKey,
   saveConfig,
   saveProcessed,
+  STATE_DIR,
 } from './config.mjs';
 import { DEFAULT_CONTENT_ROOT, listMentorDirs } from './filer.mjs';
 import { probeAll } from './probe.mjs';
@@ -82,6 +83,66 @@ function applyLarkIdentity() {
   if (larkTokenTimer) clearInterval(larkTokenTimer);
   larkTokenTimer = setInterval(() => { void refreshLarkTenantToken(); }, 100 * 60 * 1000);
   return process.env.FEISHU_APP_ID;
+}
+
+// ── 方案A：PID 文件守卫——启动时杀旧进程，退出时清理 PID 文件 ──
+const PID_PATH = join(STATE_DIR, 'runner.pid');
+function killStaleRunner() {
+  if (!existsSync(PID_PATH)) return;
+  let oldPid;
+  try {
+    oldPid = parseInt(readFileSync(PID_PATH, 'utf8').trim(), 10);
+  } catch {
+    return; // PID 文件损坏，忽略
+  }
+  if (!oldPid || !Number.isInteger(oldPid) || oldPid <= 0) return;
+  try {
+    process.kill(oldPid, 0); // 探测旧进程是否存活（signal 0 = no-op）
+  } catch {
+    return; // 旧进程已退出，正常
+  }
+  log('WARN', `发现旧 Runner 进程 (PID ${oldPid})，正在终止…`);
+  try { process.kill(oldPid, 'SIGTERM'); } catch { /* ignore */ }
+  // 等 2 秒让旧进程优雅退出
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    try { process.kill(oldPid, 0); } catch { break; }
+  }
+  try {
+    process.kill(oldPid, 0); // 还活着？
+    process.kill(oldPid, 'SIGKILL'); // 强制杀
+    log('WARN', `旧 Runner 进程 (PID ${oldPid}) 已强制终止`);
+  } catch {
+    log('OK', `旧 Runner 进程 (PID ${oldPid}) 已退出`);
+  }
+}
+function writePidFile() {
+  try {
+    if (!existsSync(STATE_DIR)) mkdirSync(STATE_DIR, { recursive: true });
+    writeFileSync(PID_PATH, String(process.pid), 'utf8');
+  } catch { /* 非致命 */ }
+}
+function cleanupPidFile() {
+  try { unlinkSync(PID_PATH); } catch { /* 非致命 */ }
+}
+
+// ── 方案B：代码版本探测——心跳里带 codeMtime，服务端/UI 据此提示"版本过旧" ──
+const SRC_DIR = join(dirname(fileURLToPath(import.meta.url)), 'src');
+function computeCodeMtime() {
+  let maxMs = 0;
+  try {
+    for (const f of readdirSync(SRC_DIR)) {
+      if (f.endsWith('.mjs')) {
+        const s = statSync(join(SRC_DIR, f));
+        if (s.mtimeMs > maxMs) maxMs = s.mtimeMs;
+      }
+    }
+  } catch { /* ignore */ }
+  return maxMs;
+}
+const STARTUP_CODE_MTIME = computeCodeMtime();
+function isCodeStale() {
+  return computeCodeMtime() > STARTUP_CODE_MTIME + 1000; // 1s 容差
 }
 
 function parseArgs(argv) {
@@ -168,6 +229,8 @@ async function tick(cfg, processed, busy) {
         probes,
         dirs: Array.isArray(dirs) ? dirs : null,
         activeCommands,
+        codeMtime: STARTUP_CODE_MTIME,
+        stale: isCodeStale(),
       },
     );
 
@@ -200,10 +263,34 @@ async function tick(cfg, processed, busy) {
         }).catch((reportErr) => {
           log('ERROR', `失败结果回报也失败 type=${type}: ${reportErr.message}`);
         });
-        log('ERROR', `指令执行失败 type=${type} key=${idempotencyKey}: ${message}`);
+        log('ERROR', `指令执行失败（Runner 侧异常）type=${type} key=${idempotencyKey}: ${message}`);
         activeCommands -= 1;
         continue;
       }
+
+      // 区分业务结果：result.ok === false 视为 Codex 业务失败（含超时、产物验证失败等）
+      const isBusinessFailure = result && typeof result === 'object' && result.ok === false;
+      const reason = result?.reason || result?.error || null;
+      const isTimeout = reason && /超时/.test(String(reason));
+
+      if (isBusinessFailure) {
+        const category = isTimeout ? 'Codex 超时' : 'Codex 业务失败';
+        const detail = reason ? `：${String(reason).slice(0, 300)}` : '';
+        await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
+          stepId,
+          idempotencyKey,
+          status: 'failed',
+          error: `${category}${detail}`,
+          result,
+        }).catch((reportErr) => {
+          log('ERROR', `失败结果回报也失败 type=${type}: ${reportErr.message}`);
+        });
+        log('ERROR', `${category} type=${type} key=${idempotencyKey}${detail}`);
+        activeCommands -= 1;
+        continue;
+      }
+
+      // Codex 任务成功，回报 done
       try {
         await reportResult(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
           stepId,
@@ -219,10 +306,9 @@ async function tick(cfg, processed, busy) {
           resultDigest: digestResult(result),
         };
         await saveProcessed(processed);
-        log('OK', `指令完成 type=${type} key=${idempotencyKey}（${Date.now() - startedAt}ms）`);
+        log('OK', `Codex 任务成功 + Runner 回报完成 type=${type} key=${idempotencyKey}（${Date.now() - startedAt}ms）`);
       } catch (reportErr) {
-        // 指令在本机确实执行成功，仅回报被服务端拒绝：不反向标记 failed、不写 processed，
-        // 留待人工在工作台重试/重新发起，避免用失败信号污染已成功的产物
+        // 指令在本机确实执行成功，仅回报被服务端拒绝：不反向标记 failed、不写 processed
         log('ERROR', `指令已执行但结果回报被拒 type=${type} key=${idempotencyKey}: ${reportErr.message}`);
       } finally {
         activeCommands -= 1;
@@ -238,6 +324,10 @@ async function tick(cfg, processed, busy) {
 async function main() {
   const args = parseArgs(process.argv);
   loadDotEnvLocal();
+  // 方案A：启动前杀旧进程，写 PID 文件。必须在 loadConfig 之前执行，
+  // 防止旧进程仍持有配置/锁导致行为错乱。
+  killStaleRunner();
+  writePidFile();
   const larkAppId = applyLarkIdentity();
 
   if (args.register) {
@@ -269,6 +359,8 @@ async function main() {
     const wait = setInterval(() => {
       if (!busy.current) {
         clearInterval(wait);
+        cleanupPidFile();
+        if (larkTokenTimer) clearInterval(larkTokenTimer);
         log('OK', '已停止');
         process.exit(0);
       }

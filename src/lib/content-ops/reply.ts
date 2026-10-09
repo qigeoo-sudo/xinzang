@@ -18,7 +18,7 @@ export const REPLY_KEYWORDS = {
 export type ReplyRound = 1 | 2;
 
 /** 我方发送者名字（当前操作者；今后 S9/S12 由机器人发，机器人走 sender_type 排除） */
-export const SELF_SENDER_NAMES = ['陆秉文'];
+export const SELF_SENDER_NAMES = ['陆秉文', '陈初效'];
 
 /** 音频扩展：回复只认文档，音频一律不进候选（访谈录音属于 S1/S13 原始材料） */
 const AUDIO_EXTS = new Set([
@@ -42,6 +42,8 @@ export interface ReplyMessageMeta {
   deleted: boolean;
   fileName?: string | null;
   fileKey?: string | null;
+  /** 妙记虚拟文件的 minute_token（有此字段表示是妙记拆出的音频/文字稿，无 fileKey） */
+  minuteToken?: string | null;
 }
 
 export interface ReplyCandidate {
@@ -52,6 +54,8 @@ export interface ReplyCandidate {
   createTime: number | null;
   /** 文件名已含「回复」，落盘时不再追加 `_回复` */
   alreadyNamedReply: boolean;
+  /** 妙记虚拟文件的 minute_token（有此字段时下载走妙记 API 而非消息资源 API） */
+  minuteToken?: string | null;
 }
 
 export interface ReplyScanView {
@@ -117,13 +121,14 @@ export function filterReplyCandidates(messages: ReplyMessageMeta[], round: Reply
       skipped.keywordMiss += 1;
       continue;
     }
-    if (!m.fileKey) {
+    if (!m.fileKey && !m.minuteToken) {
       skipped.noFileKey += 1;
       continue;
     }
     candidates.push({
       messageId: m.messageId,
-      fileKey: m.fileKey,
+      fileKey: m.fileKey ?? null,
+      minuteToken: m.minuteToken ?? null,
       fileName,
       senderName: m.senderName,
       createTime: m.createTime,

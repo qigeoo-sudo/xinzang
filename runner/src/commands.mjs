@@ -35,7 +35,9 @@ import {
 import {
   feishuChatInfo,
   feishuChatMessages,
+  feishuDownloadMinutes,
   feishuDownloadResource,
+  feishuDownloadUnknownBatch,
   feishuScanAndDownload,
   feishuSendFile,
   feishuSendPostMention,
@@ -44,6 +46,7 @@ import {
   feishuSearchChatId,
   feishuWhoami,
 } from './feishu.mjs';
+import { mergeRound1Materials } from './merge.mjs';
 
 /**
  * 从目标路径反推导师顶层目录（<contentRoot>/mentors/<mentorDir>）。
@@ -209,15 +212,18 @@ export async function handleCommand(command, contentRoot) {
       return { codex: await detectCodex() };
 
     case 'codex_deliver': {
-      // S6/S11/S14/S16：向 Codex 投递固定触发语；workspaceDir 必须在 CONTENT_ROOT 内
+      // S6/S11/S14/S16：向 Codex 投递固定触发语；工作根目录 = contentRoot（D:\database），
+      // 不用目标导师子目录作为 -C。payload.workspaceDir 仅用于越界校验（必须在 contentRoot 内）。
       const workspaceDir = path.resolve(String(payload.workspaceDir || ''));
       if (!path.isAbsolute(workspaceDir) || !isInsideContentRoot(workspaceDir, contentRoot)) {
         throw new Error(`codex_deliver 工作目录越界: ${payload.workspaceDir}`);
       }
+      const taskType = String(payload.taskType || 'default');
       return deliverTrigger({
-        workspaceDir,
+        baseDir: contentRoot,
         trigger: String(payload.trigger || ''),
         threadId: payload.threadId ? String(payload.threadId) : undefined,
+        taskType,
       });
     }
 
@@ -234,13 +240,29 @@ export async function handleCommand(command, contentRoot) {
       if (!chatId || !mentorDir) throw new Error('feishu_scan_download 缺少 chatId 或 mentorDir');
       const r = await feishuScanAndDownload({ chatId, mentorDir, contentRoot });
       if (!r.ok) throw new Error(`飞书扫描下载失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
-      return { ok: true, files: r.files ?? [], count: r.count ?? 0 };
+      return { ok: true, files: r.files ?? [], unknownCandidates: r.unknownCandidates ?? [], count: r.count ?? 0 };
+    }
+
+    case 'feishu_download_unknown': {
+      // S1 不明候选批量下载：人工勾选后逐条下载（含妙记音频/文字稿）+ 落盘 + 计算哈希
+      const mentorDir = String(payload.mentorDir || '');
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      if (!mentorDir || items.length === 0) throw new Error('feishu_download_unknown 缺少 mentorDir 或 items');
+      const r = await feishuDownloadUnknownBatch({ mentorDir, contentRoot, items });
+      if (!r.ok) throw new Error(`不明候选下载失败: ${r.reason}`);
+      return { ok: true, results: r.results ?? [], failed: r.failed ?? [] };
     }
 
     case 'feishu_list_messages': {
-      // 元数据级拉群消息（S10 审核回复识别用）；文本正文不回传
+      // 元数据级拉群消息（S10/S13/S16 扫描用）；文本正文不回传
+      // expandMinutes=true 时自动拆解妙记为虚拟文件（音频+文字稿）
       const chatId = payload.chatId;
-      const r = await feishuChatMessages({ chatId, limit: payload.limit, order: payload.order });
+      const r = await feishuChatMessages({
+        chatId,
+        limit: payload.limit,
+        order: payload.order,
+        expandMinutes: payload.expandMinutes === true,
+      });
       if (!r.ok) throw new Error(`拉取群消息失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
       return { chatId: String(chatId), ok: true, count: r.count, hasMore: r.hasMore, messages: r.messages };
     }
@@ -248,6 +270,7 @@ export async function handleCommand(command, contentRoot) {
     case 'feishu_download_resource': {
       // 下载消息资源落盘到导师目录；destDirAbs 必须在 CONTENT_ROOT 内。
       // 顶层导师目录必须由人工预先创建；Runner 只允许在其下创建子目录（S13 第二轮 audio/word 等）。
+      // 支持 minuteToken（妙记虚拟文件下载）：有 minuteToken 时走妙记 API 下载音频/文字稿
       const destDirAbs = path.resolve(String(payload.destDirAbs || ''));
       if (!path.isAbsolute(destDirAbs) || !isInsideContentRoot(destDirAbs, contentRoot)) {
         throw new Error(`feishu_download_resource 目标目录越界: ${payload.destDirAbs}`);
@@ -259,6 +282,23 @@ export async function handleCommand(command, contentRoot) {
         throw new Error(`导师顶层目录不存在，请先由人工创建后再下载: ${topDir}`);
       }
       await mkdir(destDirAbs, { recursive: true });
+      // 妙记虚拟文件下载：有 minuteToken 时走妙记 API（音频或文字稿）
+      if (payload.minuteToken) {
+        const r = await feishuDownloadMinutes({
+          minuteToken: payload.minuteToken,
+          kind: payload.kind === 'audio' ? 'audio' : 'transcript',
+          destDirAbs,
+          destName: payload.destName,
+        });
+        if (!r.ok) throw new Error(`下载妙记文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+        const { sha256 } = await hashFile(r.destAbs);
+        return {
+          destAbs: r.destAbs,
+          destName: payload.destName ? String(payload.destName) : path.basename(r.destAbs),
+          bytes: r.bytes,
+          sha256,
+        };
+      }
       const r = await feishuDownloadResource(payload);
       if (!r.ok) throw new Error(`下载回复文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
       // 规范（AGENTS §10.3）要求保留字节数与 SHA-256，落盘后立即计算
@@ -526,6 +566,16 @@ export async function handleCommand(command, contentRoot) {
       return await gitPromoteMainToMaster(payload);
     case 'deploy_production':
       return await deployProduction(payload);
+
+    case 'merge_round1_materials': {
+      // S2 自动归并：多份音频 ffmpeg concat + 多份文字稿按序拼接
+      // 命名 <mentorDir> 第一轮 full interview.m4a / full transcript.md，原件保留
+      const mentorDir = String(payload.mentorDir || '');
+      const audioOrder = Array.isArray(payload.audioOrder) ? payload.audioOrder : [];
+      const textOrder = Array.isArray(payload.textOrder) ? payload.textOrder : [];
+      if (!mentorDir) throw new Error('merge_round1_materials 缺少 mentorDir');
+      return await mergeRound1Materials({ mentorDir, audioOrder, textOrder, contentRoot });
+    }
 
     default:
       throw new Error(`未知指令类型: ${type}`);

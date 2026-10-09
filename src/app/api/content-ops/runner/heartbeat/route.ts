@@ -9,6 +9,8 @@ export async function POST(req: Request) {
       probes: body.probes,
       contentRoot: typeof body.contentRoot === 'string' ? body.contentRoot : undefined,
       dirs: body.dirs,
+      stale: body.stale === true,
+      codeMtime: typeof body.codeMtime === 'number' ? body.codeMtime : undefined,
     });
     return Response.json(result);
   } catch (e) {
