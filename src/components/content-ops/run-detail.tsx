@@ -99,6 +99,20 @@ function EventLine({ e }: { e: RunEvent }) {
   );
 }
 
+/**
+ * 步骤门禁：未到达（TIMELINE 索引 > currentIdx）的卡片整体变灰、禁止交互。
+ * 按钮和链接通过 pointer-events-none 统一拦截；currentIdx=-1（全部完成）时不锁。
+ */
+function StepGate({ locked, children }: { locked: boolean; children: React.ReactNode }) {
+  if (!locked) return <>{children}</>;
+  return (
+    <div aria-disabled="true" className="rounded-[18px]">
+      <div className="pointer-events-none cursor-not-allowed opacity-45">{children}</div>
+      <p className="-mt-1 px-1 text-[11px] text-stone-400">🔒 待前置步骤完成后激活</p>
+    </div>
+  );
+}
+
 export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWrite: boolean }) {
   const [run, setRun] = useState<RunDetail>(initial);
   const [mentors, setMentors] = useState<RunListItem[]>([]);
@@ -155,6 +169,9 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
     const s = stepByCode[n.code];
     return (s?.status ?? 'pending') !== 'done';
   });
+  /** 步骤码 → TIMELINE 索引；用于 StepGate 判定是否已到达 */
+  const idxByCode = Object.fromEntries(TIMELINE.map((n, i) => [n.code, i])) as Record<string, number>;
+  const gateLocked = (code: string) => currentIdx !== -1 && (idxByCode[code] ?? 999) > currentIdx;
   const vpnLevel = run.vpn?.hint?.level ?? 'gray';
 
   // 计算某节点的 VPN 小灯是否该亮：
@@ -197,32 +214,33 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       </section>,
     );
   }
-  // S1-S22 全部步骤始终渲染卡片
-  panels.push(<FileRegisterCard key="S1" run={run} code="S1" onAction={onAction} canWrite={canWrite} />);
-  panels.push(<FileRegisterCard key="S2" run={run} code="S2" onAction={onAction} canWrite={canWrite} />);
-  panels.push(<S3GateCard key="S3" run={run} />);
-  panels.push(<ClaudePanelA key="A" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<CodexPanelB key="B" run={run} onAction={onAction} canWrite={canWrite && st !== 'round1_docs_qc'} />);
-  panels.push(<VerifyAssemblyCard key="S7" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round1DocsQcPanel key="S8" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round1SendApprovalPanel key="S9" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round1ReplyPanel key="S10" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round1AbsorbPanel key="S11" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round2OutlinePanel key="S12" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round2MaterialPanel key="S13" run={run} onAction={onAction} canWrite={canWrite} />);
-  // S13 完成后开放归档补登
-  if (stepByCode.S13?.status === 'done' || stepByCode.S13?.status === 'failed') {
-    panels.push(<FileRegisterCard key="S13-merge" run={run} code="S13" onAction={onAction} canWrite={canWrite} />);
-  }
-  panels.push(<Round2UpdatePanel key="S14" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round2DocsQcPanel key="S15" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<Round2ReplyPanel key="S16" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<FinalHandoffDiscoverPanel key="S17" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<PreflightNineChecksPanel key="S18" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<PendingDispositionPanel key="S19" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<G4GatePanel key="S20" run={run} onAction={onAction} canWrite={canWrite} />);
-  panels.push(<S21IntegrationPanel key="S21" run={run} canWrite={canWrite} />);
-  panels.push(<S22ProductionPanel key="S22" run={run} onAction={onAction} canWrite={canWrite} />);
+  // S1-S22 全部步骤始终渲染卡片；未到达的卡片由 StepGate 整体变灰、禁止交互
+  const gate = (key: string, gateCode: string, node: React.ReactNode) => (
+    <StepGate key={key} locked={gateLocked(gateCode)}>{node}</StepGate>
+  );
+  panels.push(gate('S1', 'S1', <FileRegisterCard run={run} code="S1" onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S2', 'S2', <FileRegisterCard run={run} code="S2" onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S3', 'S3', <S3GateCard run={run} />));
+  panels.push(gate('A', 'S4', <ClaudePanelA run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('B', 'S6', <CodexPanelB run={run} onAction={onAction} canWrite={canWrite && st !== 'round1_docs_qc'} />));
+  panels.push(gate('S7', 'S7', <VerifyAssemblyCard run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S8', 'S8', <Round1DocsQcPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S9', 'S9', <Round1SendApprovalPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S10', 'S10', <Round1ReplyPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S11', 'S11', <Round1AbsorbPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S12', 'S12', <Round2OutlinePanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S13', 'S13', <Round2MaterialPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  // S13 完成后开放归档补登（与 S13 同步解锁/锁定）
+  panels.push(gate('S13-merge', 'S13', <FileRegisterCard run={run} code="S13" onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S14', 'S14', <Round2UpdatePanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S15', 'S15', <Round2DocsQcPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S16', 'S16', <Round2ReplyPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S17', 'S17', <FinalHandoffDiscoverPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S18', 'S18', <PreflightNineChecksPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S19', 'S19', <PendingDispositionPanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S20', 'S20', <G4GatePanel run={run} onAction={onAction} canWrite={canWrite} />));
+  panels.push(gate('S21', 'S21', <S21IntegrationPanel run={run} canWrite={canWrite} />));
+  panels.push(gate('S22', 'S22', <S22ProductionPanel run={run} onAction={onAction} canWrite={canWrite} />));
   panels.push(<TraePanelC key="C" run={run} />);
 
   // 观察窗事件
