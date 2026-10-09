@@ -186,8 +186,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
     mentorsByStep.set(key, arr);
   }
 
-  // 阶段面板路由（P1 S0-S7 → P4a S17-S20）
-  // 已完成步骤面板持续显示（只读），让用户下拉时能看到全流程进展
+  // 阶段面板路由：全部步骤始终渲染（pending 时只读/禁用），让用户下拉即可看到全流程
   const panels: React.ReactNode[] = [];
   const st = run.status;
   if (st === 'waiting_runner') {
@@ -198,151 +197,32 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       </section>,
     );
   }
-  // S1：step 存在即显示（done 后只读）
-  if (stepByCode.S1) {
-    panels.push(<FileRegisterCard key="S1" run={run} code="S1" onAction={onAction} canWrite={canWrite} />);
+  // S1-S22 全部步骤始终渲染卡片
+  panels.push(<FileRegisterCard key="S1" run={run} code="S1" onAction={onAction} canWrite={canWrite} />);
+  panels.push(<FileRegisterCard key="S2" run={run} code="S2" onAction={onAction} canWrite={canWrite} />);
+  panels.push(<S3GateCard key="S3" run={run} />);
+  panels.push(<ClaudePanelA key="A" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<CodexPanelB key="B" run={run} onAction={onAction} canWrite={canWrite && st !== 'round1_docs_qc'} />);
+  panels.push(<VerifyAssemblyCard key="S7" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round1DocsQcPanel key="S8" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round1SendApprovalPanel key="S9" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round1ReplyPanel key="S10" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round1AbsorbPanel key="S11" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round2OutlinePanel key="S12" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round2MaterialPanel key="S13" run={run} onAction={onAction} canWrite={canWrite} />);
+  // S13 完成后开放归档补登
+  if (stepByCode.S13?.status === 'done' || stepByCode.S13?.status === 'failed') {
+    panels.push(<FileRegisterCard key="S13-merge" run={run} code="S13" onAction={onAction} canWrite={canWrite} />);
   }
-  // S2：S1 完成后显示（done 后只读）
-  if (stepByCode.S1?.status === 'done' && stepByCode.S2) {
-    panels.push(<FileRegisterCard key="S2" run={run} code="S2" onAction={onAction} canWrite={canWrite} />);
-  }
-  // S3：VPN 检查，step 存在即显示（done/failed 后只读）
-  if (stepByCode.S3) {
-    panels.push(<S3GateCard key="S3" run={run} />);
-  }
-  // S4/S5（Claude 面板 A）：step 存在即显示
-  if (stepByCode.S4 || stepByCode.S5) {
-    panels.push(<ClaudePanelA key="A" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  // S6（Codex 面板 B）：step 存在即显示
-  if (stepByCode.S6) {
-    panels.push(<CodexPanelB key="B" run={run} onAction={onAction} canWrite={canWrite && st !== 'round1_docs_qc'} />);
-  }
-  // S7：核验，step 存在即显示
-  if (stepByCode.S7) {
-    panels.push(<VerifyAssemblyCard key="S7" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['round1_docs_qc', 'round1_docs_qc_failed', 'awaiting_send_approval_round1_docs'].includes(st) ||
-    (stepByCode.S8 && !['pending', 'done'].includes(stepByCode.S8.status))
-  ) {
-    panels.push(<Round1DocsQcPanel key="S8" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['awaiting_send_approval_round1_docs', 'round1_docs_sent'].includes(st) ||
-    (stepByCode.S9 && !['pending', 'done'].includes(stepByCode.S9.status))
-  ) {
-    panels.push(<Round1SendApprovalPanel key="S9" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['round1_docs_sent', 'waiting_round1_review_reply', 'round1_reply_received', 'codex_round1_absorb'].includes(st) ||
-    (stepByCode.S10 && stepByCode.S10.status !== 'pending')
-  ) {
-    panels.push(<Round1ReplyPanel key="S10" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (['round1_reply_received', 'codex_round1_absorb'].includes(st) || (stepByCode.S11 && stepByCode.S11.status !== 'pending')) {
-    panels.push(<Round1AbsorbPanel key="S11" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['codex_round1_absorb', 'round2_outline_sent', 'waiting_round2_submission', 'round2_material_received'].includes(st) ||
-    (stepByCode.S12 && stepByCode.S12.status !== 'pending')
-  ) {
-    panels.push(<Round2OutlinePanel key="S12" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['round2_outline_sent', 'waiting_round2_submission', 'round2_material_received', 'codex_round2_update'].includes(st) ||
-    (stepByCode.S13 && stepByCode.S13.status !== 'pending')
-  ) {
-    panels.push(<Round2MaterialPanel key="S13" run={run} onAction={onAction} canWrite={canWrite} />);
-    // S13 完成后开放归档补登（与 S2 同构：多源文件时登记 round2 full interview/transcript 归并稿）
-    if (stepByCode.S13?.status === 'done' || stepByCode.S13?.status === 'failed') {
-      panels.push(<FileRegisterCard key="S13-merge" run={run} code="S13" onAction={onAction} canWrite={canWrite} />);
-    }
-  }
-  if (
-    ['round2_material_received', 'codex_round2_update', 'round2_docs_qc', 'round2_docs_qc_failed'].includes(st) ||
-    (stepByCode.S14 && stepByCode.S14.status !== 'pending')
-  ) {
-    panels.push(<Round2UpdatePanel key="S14" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    [
-      'round2_docs_qc',
-      'round2_docs_qc_failed',
-      'awaiting_send_approval_round2_docs',
-      'round2_docs_sent',
-      'waiting_round2_review_reply',
-      'round2_reply_received',
-      'codex_final_absorb',
-    ].includes(st) ||
-    (stepByCode.S15 && stepByCode.S15.status !== 'pending')
-  ) {
-    panels.push(<Round2DocsQcPanel key="S15" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['round2_docs_sent', 'waiting_round2_review_reply', 'round2_reply_received', 'codex_final_absorb'].includes(st) ||
-    (stepByCode.S16 && stepByCode.S16.status !== 'pending')
-  ) {
-    panels.push(<Round2ReplyPanel key="S16" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  // P4a：S17-S20 Final Handoff 发现 → 九类预检 → pending 归零 → G4 第一次门禁
-  if (
-    ['codex_final_absorb', 'final_handoff_discovered', 'final_handoff_preflight', 'final_handoff_blocked', 'ready_for_integration', 'awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(st) ||
-    (stepByCode.S17 && stepByCode.S17.status !== 'pending')
-  ) {
-    panels.push(<FinalHandoffDiscoverPanel key="S17" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['final_handoff_preflight', 'final_handoff_blocked', 'ready_for_integration', 'awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(st) ||
-    (stepByCode.S18 && stepByCode.S18.status !== 'pending')
-  ) {
-    panels.push(<PreflightNineChecksPanel key="S18" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['ready_for_integration', 'awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(st) ||
-    (stepByCode.S19 && stepByCode.S19.status !== 'pending')
-  ) {
-    panels.push(<PendingDispositionPanel key="S19" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  if (
-    ['awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(st) ||
-    (stepByCode.S20 && stepByCode.S20.status !== 'pending')
-  ) {
-    panels.push(<G4GatePanel key="S20" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  // P4b：S21 Trae 集成（六段自动串联） + S22 生产发布（G5 门禁 + 四段自动）
-  if (
-    ['reconciling_snapshots', 'integration_backup_created', 'integrating_application', 'testing_staging', 'pushing_main', 'deploying_staging', 'awaiting_staging_acceptance', 'production_failed_rolled_back'].includes(st) ||
-    (stepByCode.S21 && stepByCode.S21.status !== 'pending')
-  ) {
-    panels.push(<S21IntegrationPanel key="S21" run={run} canWrite={canWrite} />);
-  }
-  if (
-    ['awaiting_staging_acceptance', 'production_approval_granted', 'locking_accepted_main_sha', 'promoting_main_to_master', 'deploying_production', 'verifying_production', 'completed', 'production_failed_rolled_back'].includes(st) ||
-    (stepByCode.S22 && stepByCode.S22.status !== 'pending')
-  ) {
-    panels.push(<S22ProductionPanel key="S22" run={run} onAction={onAction} canWrite={canWrite} />);
-  }
-  // 未渲染的 pending 步骤：显示占位卡片让用户看到全流程
-  const renderedCodes = new Set(panels.map((p) => (p as { key?: string }).key).filter((k): k is string => typeof k === 'string' && k.startsWith('S')));
-  const upcoming = STEP_DEFS.filter(
-    (d) => !renderedCodes.has(d.code) && stepByCode[d.code]?.status === 'pending',
-  );
-  if (upcoming.length > 0) {
-    panels.push(
-      <section key="upcoming" className="letter-paper rounded-[18px] p-4">
-        <h2 className="mb-3 text-sm font-bold text-stone-500">后续步骤（待前置完成）</h2>
-        <ul className="space-y-2">
-          {upcoming.map((d) => (
-            <li key={d.code} className="flex items-center gap-2 text-xs text-stone-400">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-stone-200 text-[10px] text-stone-400">{d.code}</span>
-              <span>{d.title}</span>
-            </li>
-          ))}
-        </ul>
-      </section>,
-    );
-  }
+  panels.push(<Round2UpdatePanel key="S14" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round2DocsQcPanel key="S15" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<Round2ReplyPanel key="S16" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<FinalHandoffDiscoverPanel key="S17" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<PreflightNineChecksPanel key="S18" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<PendingDispositionPanel key="S19" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<G4GatePanel key="S20" run={run} onAction={onAction} canWrite={canWrite} />);
+  panels.push(<S21IntegrationPanel key="S21" run={run} canWrite={canWrite} />);
+  panels.push(<S22ProductionPanel key="S22" run={run} onAction={onAction} canWrite={canWrite} />);
   panels.push(<TraePanelC key="C" run={run} />);
 
   // 观察窗事件
