@@ -536,11 +536,13 @@ export async function handleCommandResult(runnerId: string, body: {
             where: { id: step.id },
             data: {
               commandStatus: 'failed',
+              status: STEP_STATUS.FAILED,
               commandResult: JSON.stringify(result),
               evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
               failureReason: result?.reason
                 ? `飞书群搜索失败：${result.reason}`
                 : '飞书群搜索失败（未搜到匹配群名）',
+              finishedAt: new Date(),
             },
           });
           if (step.run.status !== 'failed') {
