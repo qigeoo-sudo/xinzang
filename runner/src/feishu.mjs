@@ -11,7 +11,7 @@
  * - lark-cli 自发现：环境变量 LARK_CLI_PATH → Trae 插件目录最新版 → PATH 兜底，不写死版本号
  */
 import { execFile } from 'node:child_process';
-import { readdir, stat, unlink } from 'node:fs/promises';
+import { mkdir, readdir, stat, unlink } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -353,6 +353,108 @@ export async function feishuSendFile({ chatId, srcDirAbs, fileName, idempotencyK
 }
 
 /** 探测登录态与 CLI 版本（whoami）：供面板显示「lark-cli 已登录/未登录」，不臆测 */
+/**
+ * 按群名搜索飞书群，返回匹配的 chat_id。
+ * 用 lark-cli im +chat-search --query <群名> --format json。
+ * 多个匹配时返回第一个；无匹配返回 null。
+ */
+export async function feishuSearchChatId({ query }) {
+  const q = String(query || '').trim();
+  if (!q) return { ok: false, reason: 'empty_query' };
+  const { cli } = await resolveLarkCli();
+  const args = ['im', '+chat-search', '--query', q, '--format', 'json'];
+  const r = await runLark(cli, args, { timeoutMs: 30_000 });
+  if (!r.ok) return { ok: false, reason: r.reason, raw: r.raw };
+  // lark-cli 返回 {items: [{chat_id, name, ...}]} 或 {data: {...}}
+  const items = r.json?.items ?? r.json?.data?.items ?? [];
+  if (!Array.isArray(items) || items.length === 0) {
+    return { ok: false, reason: 'no_match', raw: r.raw.slice(0, 500) };
+  }
+  const hit = items.find((c) => c.name === q) ?? items[0];
+  const chatId = hit?.chat_id ?? null;
+  if (!chatId) return { ok: false, reason: 'no_chat_id', raw: r.raw.slice(0, 500) };
+  return { ok: true, chatId, chatName: hit.name ?? q };
+}
+
+const AUDIO_EXTS = new Set(['.m4a', '.mp3', '.wav', '.aac', '.amr', '.ogg', '.flac']);
+const TEXT_EXTS = new Set(['.md', '.txt', '.docx', '.doc']);
+const ILLEGAL_CHARS_RE = /[\\/:*?"<>|]/g;
+
+/**
+ * S1 一体化扫描下载：拉取飞书群消息 → 建目录结构 → 下载文件 → 返回候选清单。
+ * 目录结构（D:\database\AGENTS.md §4）：
+ *   mentors/<mentorDir>/<mentorDir> word/<mentorDir> 第一轮 interview word/
+ *   mentors/<mentorDir>/<mentorDir> audio/<mentorDir> 第一轮 interview audio/
+ * 顶层目录 <mentorDir> 必须已存在（人工创建），Runner 只建子目录。
+ * 返回格式与 list_mentor_files 一致：{ ok, files: [{ relPath, bytes, mtimeMs, suggestedKind }] }
+ */
+export async function feishuScanAndDownload({ chatId, mentorDir, contentRoot }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  if (!mentorDir || typeof mentorDir !== 'string') return { ok: false, reason: 'bad_mentor_dir' };
+
+  // 1. 拉群消息
+  const msgResult = await feishuChatMessages({ chatId, limit: 200, order: 'asc' });
+  if (!msgResult.ok) return { ok: false, reason: msgResult.reason, raw: msgResult.raw };
+
+  // 2. 筛选文件消息（排除已删除、非文件类型）
+  const fileMessages = msgResult.messages.filter(
+    (m) => (m.msgType === 'file' || m.msgType === 'audio') && m.fileKey && !m.deleted,
+  );
+  if (fileMessages.length === 0) return { ok: true, files: [], count: 0 };
+
+  // 3. 建目录结构（顶层目录必须已存在）
+  const mentorRoot = path.join(contentRoot, 'mentors', mentorDir);
+  const topStat = await stat(mentorRoot).catch(() => null);
+  if (!topStat || !topStat.isDirectory()) {
+    return { ok: false, reason: 'mentor_top_dir_missing', mentorRoot };
+  }
+  const wordDir = path.join(mentorRoot, `${mentorDir} word`, `${mentorDir} 第一轮 interview word`);
+  const audioDir = path.join(mentorRoot, `${mentorDir} audio`, `${mentorDir} 第一轮 interview audio`);
+  await mkdir(wordDir, { recursive: true });
+  await mkdir(audioDir, { recursive: true });
+
+  // 4. 逐个下载
+  const files = [];
+  for (const msg of fileMessages) {
+    // 文件名：有则用原始名（净化非法字符），音频无文件名则合成
+    let fileName = msg.fileName;
+    if (!fileName) {
+      const ext = msg.msgType === 'audio' ? '.m4a' : '';
+      fileName = `audio_${msg.messageId.slice(-12)}${ext}`;
+    }
+    fileName = fileName.replace(ILLEGAL_CHARS_RE, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) + 0xFEE0),
+    ); // 全角等价符
+
+    const ext = path.extname(fileName).toLowerCase();
+    const isAudio = AUDIO_EXTS.has(ext);
+    const isText = TEXT_EXTS.has(ext);
+    if (!isAudio && !isText) continue; // 跳过非音频/非文本文件
+    const destDir = isAudio ? audioDir : wordDir;
+
+    const dl = await feishuDownloadResource({
+      messageId: msg.messageId,
+      fileKey: msg.fileKey,
+      type: 'file',
+      destDirAbs: destDir,
+      destName: fileName,
+    });
+    if (!dl.ok) continue; // 跳过下载失败的文件
+
+    const s = await stat(dl.destAbs).catch(() => null);
+    if (!s) continue;
+    const relPath = path.relative(contentRoot, dl.destAbs).split(path.sep).join('/');
+    files.push({
+      relPath,
+      bytes: s.size,
+      mtimeMs: s.mtimeMs,
+      suggestedKind: isAudio ? 'source_audio' : 'source_transcript',
+    });
+  }
+
+  return { ok: true, files, count: files.length };
+}
+
 export async function feishuWhoami() {
   let cliInfo;
   try {

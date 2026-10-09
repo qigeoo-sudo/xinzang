@@ -36,10 +36,12 @@ import {
   feishuChatInfo,
   feishuChatMessages,
   feishuDownloadResource,
+  feishuScanAndDownload,
   feishuSendFile,
   feishuSendPostMention,
   feishuReplyPostMention,
   feishuSendText,
+  feishuSearchChatId,
   feishuWhoami,
 } from './feishu.mjs';
 
@@ -221,6 +223,19 @@ export async function handleCommand(command, contentRoot) {
 
     case 'feishu_probe':
       return { feishu: await feishuWhoami() };
+
+    case 'feishu_search_chat':
+      return await feishuSearchChatId({ query: payload.query });
+
+    case 'feishu_scan_download': {
+      // S1 一体化扫描下载：拉飞书群消息 → 建目录 → 下载文件 → 返回候选清单
+      const chatId = String(payload.chatId || '');
+      const mentorDir = String(payload.mentorDir || '');
+      if (!chatId || !mentorDir) throw new Error('feishu_scan_download 缺少 chatId 或 mentorDir');
+      const r = await feishuScanAndDownload({ chatId, mentorDir, contentRoot });
+      if (!r.ok) throw new Error(`飞书扫描下载失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+      return { ok: true, files: r.files ?? [], count: r.count ?? 0 };
+    }
 
     case 'feishu_list_messages': {
       // 元数据级拉群消息（S10 审核回复识别用）；文本正文不回传

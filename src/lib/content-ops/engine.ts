@@ -81,6 +81,8 @@ export const COMMAND = {
   FEISHU_LIST_MESSAGES: 'feishu_list_messages',
   FEISHU_DOWNLOAD_RESOURCE: 'feishu_download_resource',
   FEISHU_CHAT_INFO: 'feishu_chat_info',
+  FEISHU_SEARCH_CHAT: 'feishu_search_chat',
+  FEISHU_SCAN_DOWNLOAD: 'feishu_scan_download',
   // P4a：S17-S20 Final Handoff 预检段
   SCAN_FINAL_HANDOFF: 'scan_final_handoff',
   PREFLIGHT_CHECKS: 'preflight_checks',
@@ -437,6 +439,7 @@ export async function handleCommandResult(runnerId: string, body: {
       else await handleScanResult(step, result, runnerId);
       break;
     case COMMAND.LIST_MENTOR_FILES:
+    case COMMAND.FEISHU_SCAN_DOWNLOAD:
       await handleListMentorFilesResult(step, result);
       break;
     case COMMAND.LIST_WORK_FILES:
@@ -506,6 +509,39 @@ export async function handleCommandResult(runnerId: string, body: {
         },
       });
       break;
+    case COMMAND.FEISHU_SEARCH_CHAT: {
+      // 方案A：按群名搜到 chat_id → 回写 run.feishuChatId，再链式排队 FEISHU_CHAT_INFO（机器人进群探测）
+      if (result?.ok && result.chatId) {
+        await prisma.contentOpsRun.update({
+          where: { id: step.runId },
+          data: { feishuChatId: result.chatId },
+        });
+        await prisma.contentOpsStep.update({
+          where: { id: step.id },
+          data: {
+            commandStatus: 'queued',
+            commandPayload: JSON.stringify({
+              type: COMMAND.FEISHU_CHAT_INFO,
+              payload: { chatId: result.chatId },
+            }),
+            idempotencyKey: `${step.runId}:S0:chat_info:${randomBytes(6).toString('hex')}`,
+            commandResult: JSON.stringify(result),
+            evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
+          },
+        });
+      } else {
+        // 搜索失败：S0 标记 done（无群绑定，后续发送步骤会 409 拦截）
+        await prisma.contentOpsStep.update({
+          where: { id: step.id },
+          data: {
+            commandStatus: 'done',
+            commandResult: JSON.stringify(result),
+            evidence: JSON.stringify({ ...safeParse(step.evidence), chatSearch: result }),
+          },
+        });
+      }
+      break;
+    }
     case COMMAND.SCAN_FINAL_HANDOFF:
       await handleScanFinalHandoffResult(step, result);
       break;
@@ -2196,8 +2232,8 @@ export async function createRun(userId: string, input: {
     payload: { stage: 'run_created', mentorDir, isPilot: input.isPilot, runnerOnline: online },
   });
 
-  // S0 附带机器人进群探测（软提示，不改变 S0 业务状态；未填群 ID 则跳过）。
-  // 结果落 S0 evidence.botCheck：bots 名单供详情页显示「榨职机助手」是否在群。
+  // S0 附带机器人进群探测（软提示，不改变 S0 业务状态）。
+  // 方案A：有 chat_id 直接探测；只有群名无 ID → 先搜群名拿 chat_id 再链式探测。
   if (run.feishuChatId) {
     await prisma.contentOpsStep.updateMany({
       where: { runId: run.id, code: 'S0', commandStatus: 'none' },
@@ -2206,6 +2242,18 @@ export async function createRun(userId: string, input: {
         commandPayload: JSON.stringify({
           type: COMMAND.FEISHU_CHAT_INFO,
           payload: { chatId: run.feishuChatId },
+        }),
+      },
+    });
+  } else if (chatName) {
+    // 群名已填但 chat_id 缺失 → 自动搜索（结果处理器回写 chat_id 后链式排队 CHAT_INFO）
+    await prisma.contentOpsStep.updateMany({
+      where: { runId: run.id, code: 'S0', commandStatus: 'none' },
+      data: {
+        commandStatus: 'queued',
+        commandPayload: JSON.stringify({
+          type: COMMAND.FEISHU_SEARCH_CHAT,
+          payload: { query: chatName },
         }),
       },
     });
@@ -2435,6 +2483,9 @@ export async function scanMentorFiles(userId: string, runId: string) {
   }
   const { contentRoot } = parseHeartbeat(run.runner?.lastHeartbeat ?? null);
   if (!contentRoot) throw new EngineError(409, 'Runner 不在线或未上报 CONTENT_ROOT');
+  if (!run.feishuChatId) {
+    throw new EngineError(409, 'Run 未绑定飞书群（S0 未搜到 chat_id），无法扫描飞书群消息');
+  }
 
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: s1.id, commandStatus: { in: ['none', 'failed', 'done'] } },
@@ -2443,8 +2494,8 @@ export async function scanMentorFiles(userId: string, runId: string) {
       startedAt: s1.startedAt ?? new Date(),
       commandStatus: 'queued',
       commandPayload: JSON.stringify({
-        type: COMMAND.LIST_MENTOR_FILES,
-        payload: { mentorDir: run.mentorDir },
+        type: COMMAND.FEISHU_SCAN_DOWNLOAD,
+        payload: { chatId: run.feishuChatId, mentorDir: run.mentorDir },
       }),
       // 重新扫描是同类型新指令，轮换幂等键，绕过 Runner「键+类型」去重
       idempotencyKey: `${runId}:S1:${randomBytes(6).toString('hex')}`,
