@@ -47,11 +47,16 @@ export function CreateRunWizard({
 
   const mentorValid = /^[A-Za-z][A-Za-z ._-]{0,99}$/.test(mentorDir.trim()) && !mentorDir.includes('  ');
   const endpoints = onlineRunner?.probes?.endpoints ?? null;
-  const envChip = (label: string, ok: boolean | undefined) => (
+  const vpnOn = endpoints?.vpnIndicator?.reachable === true;
+  const envChip = (label: string, ok: boolean | undefined, warn?: boolean) => (
     <span
       key={label}
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
-        ok ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+        warn
+          ? 'bg-amber-100 text-amber-700'
+          : ok
+            ? 'bg-emerald-100 text-emerald-700'
+            : 'bg-red-100 text-red-700'
       }`}
     >
       {label}
@@ -269,13 +274,18 @@ export function CreateRunWizard({
                     {endpoints && (
                       <>
                         {envChip('国内参照', endpoints.cnBase?.reachable)}
-                        {envChip('飞书', endpoints.feishu?.reachable)}
+                        {envChip('飞书', endpoints.feishu?.reachable, vpnOn)}
                         {envChip('Claude', endpoints.claude?.reachable)}
                         {envChip('Codex', endpoints.codex?.reachable)}
                         {envChip('GitHub', endpoints.github?.reachable)}
                       </>
                     )}
                   </div>
+                  {vpnOn && (
+                    <p className="text-xs text-amber-700">
+                      ⚠ 检测到 VPN 已开启：飞书建议关闭 VPN（lark-cli 直连更稳定），GitHub 需要 VPN 属正常。
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="text-sm text-stone-600">
