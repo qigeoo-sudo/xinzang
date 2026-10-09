@@ -414,6 +414,56 @@ export async function feishuResolveMentorOpenId({ chatId }) {
 }
 
 /**
+ * 回复某条消息 + post 富文本 @mention（G1 文案：@导师 + 回复审核清单文件消息）。
+ * 用 +messages-reply --message-id <om_xxx> --msg-type post --content <JSON>，
+ * 导师收到飞书通知 + 点击引用即可找到审核清单文件。
+ * 结构与 feishuSendPostMention 一致：[{at: open_id + user_name}, {text: bodyText}]。
+ */
+export async function feishuReplyPostMention({ chatId, replyToMessageId, mentorName, bodyText, idempotencyKey, dryRun = false }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  if (!MESSAGE_ID_RE.test(String(replyToMessageId || ''))) return { ok: false, reason: 'bad_reply_to_message_id' };
+  const name = String(mentorName || '').trim();
+  if (!name) return { ok: false, reason: 'empty_mentor_name' };
+  const body = String(bodyText ?? '');
+  if (!body) return { ok: false, reason: 'empty_body' };
+
+  const resolved = await feishuResolveMentorOpenId({ chatId });
+  if (!resolved.ok) {
+    return { ok: false, reason: `mentor_resolve:${resolved.reason}`, raw: resolved.raw ?? '' };
+  }
+
+  const post = JSON.stringify({
+    zh_cn: {
+      title: '',
+      content: [[{ tag: 'at', user_id: resolved.mentorOpenId, user_name: name }, { tag: 'text', text: body }]],
+    },
+  });
+
+  const { cli } = await resolveLarkCli();
+  const args = [
+    'im',
+    '+messages-reply',
+    '--message-id',
+    replyToMessageId,
+    '--msg-type',
+    'post',
+    '--content',
+    post,
+    '--idempotency-key',
+    sanitizeIdempotencyKey(idempotencyKey),
+    '--format',
+    'json',
+  ];
+  if (dryRun) args.push('--dry-run');
+  const r = await runLark(cli, args, { timeoutMs: SEND_TIMEOUT_MS });
+  if (!r.ok) return { ok: false, reason: r.reason, raw: r.raw };
+  if (r.json && r.json.ok === false) {
+    return { ok: false, reason: r.json.error?.message || 'reply_failed', raw: r.raw };
+  }
+  return { ok: true, messageId: r.json?.data?.message_id ?? null, dryRun, raw: r.raw.slice(0, 500) };
+}
+
+/**
  * 发送 post 富文本 @mention 消息（G3 文案）。
  * 结构：[{at: 导师 open_id + user_name}, {text: bodyText}]。
  * 导师 open_id 由 feishuResolveMentorOpenId 排除法定位，user_name 由控制平面按导师中文名传入。
