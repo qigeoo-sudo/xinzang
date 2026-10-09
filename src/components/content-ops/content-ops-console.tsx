@@ -36,6 +36,29 @@ export function ContentOpsConsole({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [deleteTarget, setDeleteTarget] = useState<RunListItem | null>(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch(`/api/content-ops/runs/${deleteTarget.id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? `删除失败（${res.status}）`);
+      }
+      const removedId = deleteTarget.id;
+      setRuns((prev) => (prev ? prev.filter((x) => x.id !== removedId) : prev));
+      setDeleteTarget(null);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : '删除失败，请重试');
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget]);
 
   const refresh = useCallback(async () => {
     try {
@@ -113,10 +136,10 @@ export function ContentOpsConsole({
             ) : (
               <ul className="divide-y divide-stone-100">
                 {runs.map((r) => (
-                  <li key={r.id}>
+                  <li key={r.id} className="flex items-stretch gap-1">
                     <Link
                       href={`/content-ops/runs/${r.id}`}
-                      className="flex items-center justify-between gap-3 py-3 hover:opacity-80"
+                      className="flex flex-1 items-center justify-between gap-3 py-3 hover:opacity-80"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-stone-800">
@@ -144,6 +167,19 @@ export function ContentOpsConsole({
                         </p>
                       </div>
                     </Link>
+                    {canWrite && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeleteTarget(r);
+                          setDeleteError('');
+                        }}
+                        className="shrink-0 self-center rounded-md px-2 py-1 text-xs text-stone-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                        aria-label={`删除 ${r.mentorDir} 流水线记录`}
+                      >
+                        删除
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -207,6 +243,53 @@ export function ContentOpsConsole({
 
       {wizardOpen && (
         <CreateRunWizard runners={runners} onClose={() => setWizardOpen(false)} />
+      )}
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/40 px-4 py-20"
+          onClick={() => {
+            if (!deleting) setDeleteTarget(null);
+          }}
+        >
+          <div
+            className="letter-paper w-full max-w-md rounded-[20px] p-6"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="删除流水线记录确认"
+          >
+            <h2 className="mb-3 font-serif text-lg font-bold text-ink">删除流水线记录</h2>
+            <p className="mb-2 text-sm leading-relaxed text-stone-700">
+              将删除「<span className="font-semibold text-stone-900">{deleteTarget.mentorDir}</span>
+              」这条 Run 的全部数据库记录：所有步骤节点、产物登记、事件流、门禁审批与飞书发送登记，删除后不可恢复。
+            </p>
+            <p className="mb-4 text-xs leading-relaxed text-stone-500">
+              D 盘文件、飞书群消息、Codex / Claude / Trae 的对话内容均不受影响。
+            </p>
+            {deleteError && (
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{deleteError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? '删除中…' : '确认删除'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

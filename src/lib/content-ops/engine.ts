@@ -2278,6 +2278,45 @@ export async function listRuns() {
   return runs.map(serializeRunListItem);
 }
 
+/**
+ * 删除一条流水线 Run（硬删除）：
+ * - 5 张子表（steps/artifacts/events/approvals/feishu_messages）全部 onDelete: Cascade，删 Run 即净
+ * - artifacts 只存路径与哈希，删除不触碰 D 盘；飞书/Codex/Claude/Trae 侧内容也不受影响
+ * - 有 dispatched 指令（Runner 执行中）时拒绝，避免删库后指令悬空回写
+ * - 删除前在 AuditLog 落摘要留痕（该表无外键，不随级联消失）
+ */
+export async function deleteRun(userId: string, runId: string) {
+  const run = await prisma.contentOpsRun.findUnique({ where: { id: runId } });
+  if (!run) throw new EngineError(404, 'Run 不存在');
+  const dispatched = await prisma.contentOpsStep.findMany({
+    where: { runId, commandStatus: 'dispatched' },
+    select: { code: true },
+  });
+  if (dispatched.length > 0) {
+    throw new EngineError(
+      409,
+      `有指令正在 Runner 执行中（${dispatched.map((s) => s.code).join('、')}），请等它完成后再删除`,
+    );
+  }
+  const counts = {
+    steps: await prisma.contentOpsStep.count({ where: { runId } }),
+    artifacts: await prisma.contentOpsArtifact.count({ where: { runId } }),
+    events: await prisma.contentOpsAgentEvent.count({ where: { runId } }),
+    approvals: await prisma.contentOpsApproval.count({ where: { runId } }),
+    messages: await prisma.contentOpsFeishuMessage.count({ where: { runId } }),
+  };
+  await audit(userId, 'content_ops.run_delete', runId, {
+    mentorDir: run.mentorDir,
+    isPilot: run.isPilot,
+    status: run.status,
+    feishuChatName: run.feishuChatName,
+    runCreatedAt: run.createdAt.toISOString(),
+    counts,
+  });
+  await prisma.contentOpsRun.delete({ where: { id: runId } });
+  return { ok: true, mentorDir: run.mentorDir, counts };
+}
+
 // S0-S22 主线步骤顺序（用于计算当前进度位置）
 const STEP_ORDER = [
   'S0','S1','S2','S3','S4','S5','S6','S7','S8','S9','S10','S11',
