@@ -47,11 +47,13 @@ async function pluginCandidates() {
 }
 
 /** 执行单条 lark-cli 命令并解析输出；exit 0 即 ok，JSON 宽松解析失败时原样透传 raw */
-function runLark(cli, args, { timeoutMs = 30_000, cwd } = {}) {
+function runLark(cli, args, { timeoutMs = 30_000, cwd, asBot = true } = {}) {
+  // 统一以机器人身份调用（appId + appSecret 自动刷新令牌，不再依赖 2h 过期的 UAT）
+  const finalArgs = asBot ? ['--as', 'bot', ...args] : args;
   return new Promise((resolve) => {
     execFile(
       cli,
-      args,
+      finalArgs,
       { timeout: timeoutMs, cwd, windowsHide: true, maxBuffer: 32 * 1024 * 1024 },
       (err, stdout, stderr) => {
         const raw = String(stdout || '');
@@ -85,7 +87,7 @@ export async function resolveLarkCli() {
   if (cachedCli) return cachedCli;
   const candidates = [process.env.LARK_CLI_PATH, ...(await pluginCandidates()), 'lark-cli'].filter(Boolean);
   for (const cli of candidates) {
-    const r = await runLark(cli, ['--version'], { timeoutMs: 10_000 });
+    const r = await runLark(cli, ['--version'], { timeoutMs: 10_000, asBot: false });
     if (r.ok) {
       cachedCli = { cli, version: r.json?.version ?? r.raw ?? null };
       return cachedCli;
