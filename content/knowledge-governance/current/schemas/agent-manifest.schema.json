@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://along.local/schemas/agent-manifest.schema.json",
+  "title": "Along Agent Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "publicName",
+    "type",
+    "version",
+    "status",
+    "handler",
+    "promptAssembly"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "publicName": { "type": "string", "minLength": 1 },
+    "type": { "enum": ["service", "mentor"] },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "status": { "enum": ["draft", "active_in_migration", "active", "paused", "retired"] },
+    "handler": { "type": "string", "minLength": 1 },
+    "promptAssembly": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "knowledgeNamespace": { "type": ["string", "null"] },
+    "routerPolicy": { "type": "string" },
+    "allowedTools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "legacySources": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    }
+  }
+}

@@ -1,0 +1,292 @@
+[
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\00_START_HERE.md",
+    "bytes": 2060,
+    "sha256": "CF8734AF4D8BA481BD3526EAFE5162EE05CCF56C69354F961B5CC828DFC783B6"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\assembly_config.json",
+    "bytes": 1608,
+    "sha256": "9DE49452B7CC42F8CCFB86536AFA7FF4EDAB9C0B8AADB56ADC56E2B247C02189"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\audio-analysis\\ying_pilot_r2_audio_full_analysis.json",
+    "bytes": 393318,
+    "sha256": "684646B9531D9BEC69A13FC708FEF4E69E6CF8F09361BBAC8177234660FBB31E"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\audio-analysis\\ying_pilot_r2_audio_internal_asr.txt",
+    "bytes": 72368,
+    "sha256": "1F656EE3277B46CD5C3E7230F4727644BA34C999D375642EF3A5C910C6BCE7D8"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\audio-analysis\\ying_pilot_r2_audio_style_metrics.json",
+    "bytes": 8800,
+    "sha256": "8D89805B2F1188D2634B1CBA2D029419779A13005127A12B1E3D4FA8794734B7"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\AGENTS_build_snapshot.md",
+    "bytes": 60244,
+    "sha256": "A340E1A52DC2F602D2CF17B54CCA541EA10F32D0E3482F4CF5971477E1CB1A70"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\audio-analysis-r1\\decoded_merge_check.json",
+    "bytes": 51993,
+    "sha256": "0E4FEC247D0DF65F42C0963E898B0A17EA692E2C416CE679A49CAC516284A24E"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\audio-analysis-r1\\merge_integrity.json",
+    "bytes": 230,
+    "sha256": "EEB38DB091576444F84679CADBCAEE0425FB6DA4A455B93C602D977A8698126F"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\audio-analysis-r1\\ying_pilot_audio_full_analysis.json",
+    "bytes": 1373697,
+    "sha256": "A18F3F8AA8FE2F67A88181A0980C338268B058BF7DC5F1766D391B7C173A8904"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\audio-analysis-r1\\ying_pilot_audio_internal_asr.txt",
+    "bytes": 335478,
+    "sha256": "469BF9E6E2AD56DD696BA59D00B9E4AAEEB70D8C19E7D5E1833BCFDED1522EA2"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\audio-analysis-r1\\ying_pilot_audio_style_metrics.json",
+    "bytes": 7666,
+    "sha256": "E40707215E4E07074FB3F2C4E25701BD7412C61FBB72B178EEAD131A1ADDC15A"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\prior_package_hashes.json",
+    "bytes": 11251,
+    "sha256": "157E6B31A6A3B6DA76A4A4477F53A5F02D99A64B1126BA149010BC6EF0A0A385"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\production_hashes.json",
+    "bytes": 3559,
+    "sha256": "EE16C37439CB3404568E51F2D3CF2BD7148F140363955FD5BC4127A5806080D0"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\review_absorption_map_v0.3.json",
+    "bytes": 25851,
+    "sha256": "5C08BEF4CDF129465C708694BEFD9E052B439ACEFF957D3799B7638889746270"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\source_manifest_v0.3.json",
+    "bytes": 11161,
+    "sha256": "09ADD88646D456895643FC4CE30933163B9ACD57337D4B131EF3EC220F9F8BA5"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\ying_pilot_knowledge_cards_current_v0.3.jsonl",
+    "bytes": 66764,
+    "sha256": "61C9F30B68D121654787F2126EEC8E24D33FC6AF0C79AB437188B07ADD9D7888"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\baseline\\ying_pilot_system_prompt_current_v0.3.md",
+    "bytes": 11606,
+    "sha256": "F10EF2F21A00FC7504CE36D72381A64FC97124075E1A3DA68DEBA8C930C677A2"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\build_ying_pilot_v0.4.mjs",
+    "bytes": 17128,
+    "sha256": "ACA3C1EFD1B89D3B2BAEE7FB5E0BF412FDF88BA2BDC2D27988D9B208627123CD"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\coverage_map_r2.json",
+    "bytes": 76755,
+    "sha256": "D4A95D8B5651408FD73D6B158D7C99D7858FFAB58763D518F51261B81ED3E072"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\paragraphs_r2.json",
+    "bytes": 60307,
+    "sha256": "4CEB1A670D22841282AE37DB81AA6C47ACC859319F39C3C9BAFD2495C147CF59"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\common\\platform-base.md",
+    "bytes": 2653,
+    "sha256": "1FD7F456BBD176A9D061C3E2CDF671E35380FE297F125EACDAC9D822C83131D7"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\families\\mentor\\knowledge-orchestrator.md",
+    "bytes": 1778,
+    "sha256": "EA2B54019FC39D45FD9098797B92CFCAC94AD49963AC86A911A8BF0EE0EFB1D7"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\families\\mentor\\mentor-constraints.md",
+    "bytes": 1700,
+    "sha256": "C79F43C479754354D5712349ECBF8CB35AABEE6D4C2357C2A3C05819D3EB2B54"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\mentors\\ying-pilot\\boundary-responses.json",
+    "bytes": 972,
+    "sha256": "318BB0E0898A3992B958C4D94F092052A2B7222A88F9C8BB2220A34B64864BEA"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\mentors\\ying-pilot\\capability.json",
+    "bytes": 1574,
+    "sha256": "42AE7AA697F2157620ECDAB0CAECC8D501FCF4AC139079DD2FBA82C13621519B"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\mentors\\ying-pilot\\evals.md",
+    "bytes": 2029,
+    "sha256": "6A7A1E31623AFF83C994A1CB2C7384FD1DAEB343C0DAB3BA07AE575634A11908"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\mentors\\ying-pilot\\manifest.json",
+    "bytes": 3876,
+    "sha256": "9C6F1D007C1EC8890EEEF97DDE5FA88A07061FE3879459FE7979D676B0DCED2F"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\prompt-system\\mentors\\ying-pilot\\persona.md",
+    "bytes": 13892,
+    "sha256": "A50EEA274A2AA67B69BB72C7FAA4D3315284A45B2D0741CB82453B2DB6411B39"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\r2_documents.mjs",
+    "bytes": 14540,
+    "sha256": "667E4D970D47DB91FEE308605071C6CC7E9F0879E3C0E2E809859AAD20576B8F"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\r2_specs.mjs",
+    "bytes": 10831,
+    "sha256": "B597C03BF66BECF980D0DB33E979E105812AE7515919F335D7A81EEAE2C68B67"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\REPRODUCIBILITY_REPORT.json",
+    "bytes": 2320,
+    "sha256": "8BBE8BDA6722C28DDC543A06A1810E7B71F97000EEA17CEF8F14DEEC376165D7"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\review-source\\Ying_Wang_第一轮审核清单_v0.1_回复.md",
+    "bytes": 10256,
+    "sha256": "0687AC1D02D8541BFBBBDEBFDFE4077C19886D5A71845A0E88B8E5B6436A5881"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\schema-validator.mjs",
+    "bytes": 1866,
+    "sha256": "538FC57D5F91305A58A675E767BF2A6D2A38733C36E55730BDA0FBCE0C05C3BE"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\schemas\\agent-manifest.schema.json",
+    "bytes": 1240,
+    "sha256": "6B1E13FE44104F4A979B801B772875EAB71C80E835FDB67CC011DBC9D3194D3E"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\schemas\\knowledge_card.schema.json",
+    "bytes": 3656,
+    "sha256": "81CCB1F1DFDC78E6CC73D9F95199948ACA494D7BAFBA2DD87FC22A71D1D4E384"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\schemas\\knowledge_card_current.schema.json",
+    "bytes": 3656,
+    "sha256": "81CCB1F1DFDC78E6CC73D9F95199948ACA494D7BAFBA2DD87FC22A71D1D4E384"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\schemas\\mentor-capability.schema.json",
+    "bytes": 1336,
+    "sha256": "220B70E180A1095DDA3FB41D518070943AE538284B8FA1C5B45F7F550E9E9595"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\Q0 角色定位.txt",
+    "bytes": 2083,
+    "sha256": "42286A9565989427DF7E9DFC18DA7467C8207F1D53CCDC4970A455457470D331"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\Q1 职业发展路径与经验分享.md",
+    "bytes": 18862,
+    "sha256": "965D0ED8AE5132E16FED69BBEA6EB649E5A7987CD9A0F7CE07E4C19A60AD04DA"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\Q2行业深度洞察.txt",
+    "bytes": 47494,
+    "sha256": "4820B66DCB8585823141A37415763D923AC945C788AAAC03E4A843C0F2F0D507"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\Q3招人和求职视角.txt",
+    "bytes": 58834,
+    "sha256": "C3B27ED625910FF3B68478B42D983BE401E9E02FDE4F15FB97B020B00AE2B206"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\Q4、Q5、Q6.txt",
+    "bytes": 47647,
+    "sha256": "D05FE1BB45AC597030A63D2494D83DDBD7C5D149ED7C5D32ADC5ED7593BFA505"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\r2\\d第二季Q4.txt",
+    "bytes": 19283,
+    "sha256": "EEE588CAA0B7E15224FD69DCFBE1763B0F2EEB340FE437D9316FC40795D7474A"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\r2\\第二季Q1.txt",
+    "bytes": 9379,
+    "sha256": "FD41FA59BA6BD02D289FD312C00D032B3F6C014CE8751F335034F20E73449A6B"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\r2\\第二季Q2_Q3.txt",
+    "bytes": 21087,
+    "sha256": "3EA81448BAAB29D746769DB40F5ADE76B0FF0F5F684DB2F9D52A9B29F1070347"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\r2\\第二季Q2＼Q3.txt",
+    "bytes": 21240,
+    "sha256": "C53E04CDFC06B3B7AA8E4526951810EDD298DA91452FC16CDC4F66CB5FB3D30B"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\ying wang pilot 第一轮 full transcript.md",
+    "bytes": 156341,
+    "sha256": "FACCEED55365FB300957F1AC59EA670EB439EDFF72B6E102D2DA1E45A48F6DD3"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source\\YingWang_AI分身人格prompt.md",
+    "bytes": 14442,
+    "sha256": "6755E726A870543409F594F4AA05F27E2D3E417C6C787A765CCBBD7EEDF3C4F9"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\source_manifest_r2.json",
+    "bytes": 19262,
+    "sha256": "8F32F0A0FECE64B09E197167AA9C3FEB2430E8033E8E57376D3304A79C1192C0"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\validate_ying_pilot_v0.4.mjs",
+    "bytes": 11962,
+    "sha256": "23E26BF4DD7A54FA67B27A3E731DC4CF73F7884AD99B2CF706400944D1C35BCC"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\VALIDATION_REPORT.md",
+    "bytes": 1958,
+    "sha256": "ABF01FD4413C94D2DA3E66D8CA69F4314FD002498C3744D10B876E3E536A0B5D"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\validation_result.json",
+    "bytes": 1544,
+    "sha256": "3EFF23C33C6840AE0679D2DBDCB86A2CD5B49817EDA522D7EDA2BEE92DE13B52"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\ying_pilot_public_profile_v0.1.json",
+    "bytes": 1513,
+    "sha256": "7B6132BA5859CFD0F234758AC3C77351B93C1623926E98387D5C7F29DA92857F"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\ying_pilot_r1_r2_knowledge_cards_v0.4.jsonl",
+    "bytes": 93766,
+    "sha256": "CE0373D5EB9B549B7E9B684CDC5F67CD4CCAD8D8521A518C309A060E574C076F"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\Ying_Wang_Pilot_分身SystemPrompt_candidate_v0.4.md",
+    "bytes": 13892,
+    "sha256": "A50EEA274A2AA67B69BB72C7FAA4D3315284A45B2D0741CB82453B2DB6411B39"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\Ying_Wang_Pilot_第二轮审核清单_v0.1.md",
+    "bytes": 6874,
+    "sha256": "8D0F9FA0BC0357105C03A85AD3CBD6E66006C8F337DF31D9D8D7AB8F2AA46EA3"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\Ying_Wang_Pilot_第二轮覆盖与更新审计_v0.1.md",
+    "bytes": 15403,
+    "sha256": "EB5AEB275887615CB42AF625308E9AEC30FB7C75C047BAB0A70966D391014EF5"
+  },
+  {
+    "path": "D:\\database\\mentors\\ying wang pilot\\work\\ying-pilot-v0.4\\Ying_Wang_Pilot_语言人格风格更新_v0.1.md",
+    "bytes": 7586,
+    "sha256": "9FB7E1C92B1D6D124EF49AC21112DF31CAC370BE63E1373ACD573F37074A10AB"
+  }
+]

@@ -1,0 +1,112 @@
+[
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\AGENTS.md",
+    "bytes": 3639,
+    "sha256": "9C05525D5E06C887E17F96D3F908D8520B92F15D79D25C613F8C1E06E66E3A1F"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\docs\\PRD.md",
+    "bytes": 43083,
+    "sha256": "63610C55D8867319DF9563F50CED465CD693D1213584B20EF6522A969973665F"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\manifest.json",
+    "bytes": 3305,
+    "sha256": "521879C11D65801073D1FD649B6461D2589190F9DFF71D4256FC92762317A84F"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\src\\lib\\kb-governance.ts",
+    "bytes": 6143,
+    "sha256": "4B0BD6049EF269B9F0C41253B5A8869FF420F5A5938BC5A2664256DEEE9D9655"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\src\\lib\\kb-scoring.ts",
+    "bytes": 4651,
+    "sha256": "904B250E9E6387A2A2ABDA259FD4F9183AE78F0D50D5A21CA172F38BB5216B92"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\src\\lib\\mentor-kb.ts",
+    "bytes": 4364,
+    "sha256": "F58D0CBC8FD80CC8FCD70034A325339263E10BF48CF0951567F820292D57A5B2"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\prisma\\seed-knowledge-cards.ts",
+    "bytes": 7989,
+    "sha256": "CC2119ACB58D26F01C55377CB64563A82926AF1B6802149E09C8A6737C1C12D7"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\freyagao_knowledge_cards.jsonl",
+    "bytes": 64579,
+    "sha256": "A4590B9A24374BF98BF8FDDB78A486C8016B3D545A55AD1834CCC7434136078F"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\freyaren_knowledge_cards.jsonl",
+    "bytes": 38819,
+    "sha256": "FEA1F9B95D68F72BBA1A913758B975A14EB3E1D63623C1AF283641F275290A50"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\lydiachen_knowledge_cards.jsonl",
+    "bytes": 62710,
+    "sha256": "BA9FD1685783CC22D71EA3A32667E0E2208F3CF00FD90E9857434B4D3072D9DE"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\phyllischi_knowledge_cards.jsonl",
+    "bytes": 52592,
+    "sha256": "3407EFEFA86505761B23AE2E4169931E432FFA57A4605A03985414308E0E3C80"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\tinazhang_knowledge_cards.jsonl",
+    "bytes": 71857,
+    "sha256": "2666504B41964448E06CF02B64908BCF6370CC15DB99C1A26F6CC0E016C27D56"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\winnieni_knowledge_cards.jsonl",
+    "bytes": 78635,
+    "sha256": "1B1F313FA1C66B5E183BD88961F11C4E4ED3BC0BC34BB8174AC5D00FDB7B1EC1"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\cards\\yingwang_knowledge_cards.jsonl",
+    "bytes": 67948,
+    "sha256": "3D769E539116282ADF325F95A348D0C619FED4F1F3D3E7B03183EB9FA98F4498"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\freyagao_system_prompt.md",
+    "bytes": 13524,
+    "sha256": "208BA358FF5865D3EBC183583D2DA7EFDCA5143C1C3B2551009F5F3DF4ABC437"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\freyaren_system_prompt.md",
+    "bytes": 10149,
+    "sha256": "28719F26D7D2F801C337A92AA6F33DE8E0C06C34C658D0446F8637B359783752"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\lydiachen_system_prompt.md",
+    "bytes": 9562,
+    "sha256": "381105EAC84C536B0DE31026DABAC7D433656FF24EA50D6B87E9348FB968FA02"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\phyllischi_system_prompt.md",
+    "bytes": 17571,
+    "sha256": "24B83D71C9587AE721568A394005BFE5A367BB137139BE33FEEFD5662B07AAE7"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\README.md",
+    "bytes": 1673,
+    "sha256": "DB0AE50BCA40B59833C543725308588921A7294BF1A539F1FCBEA0643B8278C6"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\tinazhang_system_prompt.md",
+    "bytes": 12230,
+    "sha256": "76C9BD896EECC95F9413ED5C7DC8AB46C0AB9B0F27E828E9366A28351C85B1A2"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\winnieni_system_prompt.md",
+    "bytes": 11484,
+    "sha256": "D817EEBD555DF1BD48A0664F40B2CA51F9CBE9C5FE6F22FD81A7DBE6844E868E"
+  },
+  {
+    "path": "C:\\Users\\bingw\\Documents\\trae_projects\\squeezer\\content\\knowledge-governance\\prompts\\yingwang_system_prompt.md",
+    "bytes": 10406,
+    "sha256": "A5558EFC81177BDEA12F9A1B5696782753365F0B6E78A078E8B5B259C5DE1F32"
+  }
+]

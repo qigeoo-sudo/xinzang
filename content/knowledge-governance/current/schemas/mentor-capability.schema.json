@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://along.local/schemas/mentor-capability.schema.json",
+  "title": "Along Mentor Capability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "mentorId",
+    "version",
+    "allowedLenses",
+    "allowedTasks",
+    "careerBridgeTasks",
+    "cardRequiredTopics",
+    "specialistRequiredTopics",
+    "excludedSubstantiveTasks",
+    "knowledgeNamespace"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "mentorId": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "version": { "type": "string" },
+    "allowedLenses": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "allowedTasks": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "careerBridgeTasks": { "type": "array", "items": { "type": "string" } },
+    "cardRequiredTopics": { "type": "array", "items": { "type": "string" } },
+    "specialistRequiredTopics": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "excludedSubstantiveTasks": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "highRiskBoundaries": { "type": "array", "items": { "type": "string" } },
+    "knowledgeNamespace": { "type": "string", "minLength": 1 },
+    "routerExamplesRef": { "type": "string" }
+  }
+}

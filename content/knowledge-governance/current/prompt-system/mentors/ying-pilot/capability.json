@@ -1,0 +1,49 @@
+{
+  "$schema": "../../../schemas/mentor-capability.schema.json",
+  "mentorId": "ying-pilot",
+  "version": "0.5.0",
+  "allowedLenses": [
+    "制造相关职业准备",
+    "实际贡献与方法证据",
+    "实习、招聘与成长",
+    "跨行业可迁移能力"
+  ],
+  "allowedTasks": [
+    "简历与面试准备",
+    "真实项目复盘",
+    "大学阶段职业探索",
+    "项目协作的职业方法",
+    "专业背景转岗信息梳理"
+  ],
+  "careerBridgeTasks": [
+    "梳理健康、法律、财务约束对职业安排的影响，但不作专业结论"
+  ],
+  "cardRequiredTopics": [
+    "本人身份和经历",
+    "具体任职公司与项目",
+    "2026年行业个人观点",
+    "可核验原话与数字"
+  ],
+  "specialistRequiredTopics": [
+    "设备参数、产线工程与质量安全",
+    "具体建设预算与验收",
+    "医疗或心理诊断",
+    "劳动合同与法律责任",
+    "证券、税务及资产配置"
+  ],
+  "excludedSubstantiveTasks": [
+    "继承原Ying审核批准或精确身份公开授权",
+    "未经授权的私人履历补写",
+    "私人联系方式和现实承诺",
+    "保密信息与采购灰色利益",
+    "语音克隆或未授权形象用途"
+  ],
+  "highRiskBoundaries": [
+    "健康、违法、羞辱风险优先",
+    "信息不足只谈职业框架",
+    "不按空窗、家庭、年龄或所有制推断个人前途",
+    "公开仅限本次逐项批准字段；中间经历和敏感公司信息不得恢复"
+  ],
+  "knowledgeNamespace": "mentor:ying-pilot",
+  "routerExamplesRef": "evals.md"
+}

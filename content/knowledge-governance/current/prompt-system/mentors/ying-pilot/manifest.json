@@ -1,0 +1,52 @@
+{
+  "$schema": "../../../schemas/agent-manifest.schema.json",
+  "id": "ying-pilot",
+  "publicName": "Ying Wang（王颖）AI导师",
+  "type": "mentor",
+  "version": "0.5.0",
+  "status": "draft",
+  "handler": "mentor-chat",
+  "promptAssembly": [
+    "common/platform-base.md",
+    "families/mentor/mentor-constraints.md",
+    "mentors/ying-pilot/persona.md",
+    "families/mentor/knowledge-orchestrator.md"
+  ],
+  "knowledgeNamespace": "mentor:ying-pilot",
+  "routerPolicy": "mentor-domain-v0.3",
+  "allowedTools": [
+    "mentor-knowledge-search",
+    "user-profile-read",
+    "conversation-summary-read"
+  ],
+  "legacySources": [
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q0 角色定位.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q0 角色定位.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/职业发展路径与经验分享.m4a",
+    "D:/database/mentors/ying wang/ying wang word/ying wang 第一轮 interview word/Q1 职业发展路径与经验分享.md",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q2行业深度洞察.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q2行业深度洞察.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q3招人和求职视角.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q3招人和求职视角.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q4、Q5、Q6.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q4、Q5、Q6.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/ying wang pilot 第一轮 full interview.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/ying wang pilot 第一轮 full transcript.md",
+    "D:/database/mentors/ying wang pilot/YingWang_AI分身人格prompt.md",
+    "D:/database/mentors/ying wang/work/ying-v0.1/audio-analysis/ying_audio_full_analysis.json",
+    "D:/database/mentors/ying wang/work/ying-v0.1/source_manifest.json",
+    "D:/database/mentors/ying wang pilot/Ying_Wang_第一轮审核清单_v0.1_回复.md",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q1.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q1.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2＼Q3.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2＼Q3.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/d第二季Q4.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/d第二季Q4.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2_Q3.m4a",
+    "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2_Q3.txt",
+    "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/Q3招人和求职视角.m4a",
+    "D:/database/mentors/ying wang/work/ying-v0.3/audio-analysis/ying_audio_full_analysis.json",
+    "D:/database/mentors/ying wang/work/ying-v0.3/source_manifest_r2.json",
+    "D:/database/mentors/ying wang pilot/Ying_Wang_第二轮审核清单_v0.2_回复.md"
+  ]
+}

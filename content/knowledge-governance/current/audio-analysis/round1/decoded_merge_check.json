@@ -1,0 +1,2438 @@
+{
+  "method": "20ms RMS envelope comparison of complete decoded concatenation versus supplied AAC merge. Re-encoding prevents packet hash equality; compare decoded content/order rather than compressed-byte equality.",
+  "expectedDecodedDurationSec": 14501.8475,
+  "actualDecodedDurationSec": 14501.847,
+  "durationDifferenceSec": -0.0005000000001018634,
+  "frameSizeSec": 0.02,
+  "globalBest": {
+    "lagFrames": 0,
+    "correlation": 0.9999948754872794
+  },
+  "windowSizeSec": 30,
+  "windowCount": 484,
+  "minimumWindowCorrelation": 0.9998461445048157,
+  "windows": [
+    {
+      "decodedStartSec": 0,
+      "lagFrames": 0,
+      "correlation": 0.9999991647365117
+    },
+    {
+      "decodedStartSec": 30,
+      "lagFrames": 0,
+      "correlation": 0.9999892718109972
+    },
+    {
+      "decodedStartSec": 60,
+      "lagFrames": 0,
+      "correlation": 0.9999982171217341
+    },
+    {
+      "decodedStartSec": 90,
+      "lagFrames": 0,
+      "correlation": 0.9999961505791257
+    },
+    {
+      "decodedStartSec": 120,
+      "lagFrames": 0,
+      "correlation": 0.9999681206010287
+    },
+    {
+      "decodedStartSec": 150,
+      "lagFrames": 0,
+      "correlation": 0.999998891627891
+    },
+    {
+      "decodedStartSec": 180,
+      "lagFrames": 0,
+      "correlation": 0.9999910393221694
+    },
+    {
+      "decodedStartSec": 210,
+      "lagFrames": 0,
+      "correlation": 0.9999708429815972
+    },
+    {
+      "decodedStartSec": 240,
+      "lagFrames": 0,
+      "correlation": 0.9999968578982531
+    },
+    {
+      "decodedStartSec": 270,
+      "lagFrames": 0,
+      "correlation": 0.9999974040513121
+    },
+    {
+      "decodedStartSec": 300,
+      "lagFrames": 0,
+      "correlation": 0.9999943371223624
+    },
+    {
+      "decodedStartSec": 330,
+      "lagFrames": 0,
+      "correlation": 0.9999983856021019
+    },
+    {
+      "decodedStartSec": 360,
+      "lagFrames": 0,
+      "correlation": 0.999994343825662
+    },
+    {
+      "decodedStartSec": 390,
+      "lagFrames": 0,
+      "correlation": 0.9999964500856258
+    },
+    {
+      "decodedStartSec": 420,
+      "lagFrames": 0,
+      "correlation": 0.99999628028769
+    },
+    {
+      "decodedStartSec": 450,
+      "lagFrames": 0,
+      "correlation": 0.9999975033532718
+    },
+    {
+      "decodedStartSec": 480,
+      "lagFrames": 0,
+      "correlation": 0.9999995671936182
+    },
+    {
+      "decodedStartSec": 510,
+      "lagFrames": 0,
+      "correlation": 0.9999990823847557
+    },
+    {
+      "decodedStartSec": 540,
+      "lagFrames": 0,
+      "correlation": 0.9999988348892925
+    },
+    {
+      "decodedStartSec": 570,
+      "lagFrames": 0,
+      "correlation": 0.9999457152584242
+    },
+    {
+      "decodedStartSec": 600,
+      "lagFrames": 0,
+      "correlation": 0.9999842960224498
+    },
+    {
+      "decodedStartSec": 630,
+      "lagFrames": 0,
+      "correlation": 0.9999908452627978
+    },
+    {
+      "decodedStartSec": 660,
+      "lagFrames": 0,
+      "correlation": 0.9999935951571687
+    },
+    {
+      "decodedStartSec": 690,
+      "lagFrames": 0,
+      "correlation": 0.9999983365156502
+    },
+    {
+      "decodedStartSec": 720,
+      "lagFrames": 0,
+      "correlation": 0.9999257122984008
+    },
+    {
+      "decodedStartSec": 750,
+      "lagFrames": 0,
+      "correlation": 0.9999978273118598
+    },
+    {
+      "decodedStartSec": 780,
+      "lagFrames": 0,
+      "correlation": 0.9999954537590247
+    },
+    {
+      "decodedStartSec": 810,
+      "lagFrames": 0,
+      "correlation": 0.9999969234435458
+    },
+    {
+      "decodedStartSec": 840,
+      "lagFrames": 0,
+      "correlation": 0.9999980845026362
+    },
+    {
+      "decodedStartSec": 870,
+      "lagFrames": 0,
+      "correlation": 0.9999696875292983
+    },
+    {
+      "decodedStartSec": 900,
+      "lagFrames": 0,
+      "correlation": 0.9999968886724777
+    },
+    {
+      "decodedStartSec": 930,
+      "lagFrames": 0,
+      "correlation": 0.9999985296527675
+    },
+    {
+      "decodedStartSec": 960,
+      "lagFrames": 0,
+      "correlation": 0.9999972761124719
+    },
+    {
+      "decodedStartSec": 990,
+      "lagFrames": 0,
+      "correlation": 0.9999985717494133
+    },
+    {
+      "decodedStartSec": 1020,
+      "lagFrames": 0,
+      "correlation": 0.9999937327833732
+    },
+    {
+      "decodedStartSec": 1050,
+      "lagFrames": 0,
+      "correlation": 0.999998138608441
+    },
+    {
+      "decodedStartSec": 1080,
+      "lagFrames": 0,
+      "correlation": 0.9999946568403653
+    },
+    {
+      "decodedStartSec": 1110,
+      "lagFrames": 0,
+      "correlation": 0.999996267053576
+    },
+    {
+      "decodedStartSec": 1140,
+      "lagFrames": 0,
+      "correlation": 0.9999970060214434
+    },
+    {
+      "decodedStartSec": 1170,
+      "lagFrames": 0,
+      "correlation": 0.999997474705854
+    },
+    {
+      "decodedStartSec": 1200,
+      "lagFrames": 0,
+      "correlation": 0.9999989572121047
+    },
+    {
+      "decodedStartSec": 1230,
+      "lagFrames": 0,
+      "correlation": 0.9999970058391923
+    },
+    {
+      "decodedStartSec": 1260,
+      "lagFrames": 0,
+      "correlation": 0.9999975661158838
+    },
+    {
+      "decodedStartSec": 1290,
+      "lagFrames": 0,
+      "correlation": 0.9999817300884366
+    },
+    {
+      "decodedStartSec": 1320,
+      "lagFrames": 0,
+      "correlation": 0.9999982845627993
+    },
+    {
+      "decodedStartSec": 1350,
+      "lagFrames": 0,
+      "correlation": 0.9999972496627915
+    },
+    {
+      "decodedStartSec": 1380,
+      "lagFrames": 0,
+      "correlation": 0.9999705184966431
+    },
+    {
+      "decodedStartSec": 1410,
+      "lagFrames": 0,
+      "correlation": 0.9999969104009501
+    },
+    {
+      "decodedStartSec": 1440,
+      "lagFrames": 0,
+      "correlation": 0.9999965366567027
+    },
+    {
+      "decodedStartSec": 1470,
+      "lagFrames": 0,
+      "correlation": 0.999989435991694
+    },
+    {
+      "decodedStartSec": 1500,
+      "lagFrames": 0,
+      "correlation": 0.9999990036073195
+    },
+    {
+      "decodedStartSec": 1530,
+      "lagFrames": 0,
+      "correlation": 0.9999994260936671
+    },
+    {
+      "decodedStartSec": 1560,
+      "lagFrames": 0,
+      "correlation": 0.9999916499788677
+    },
+    {
+      "decodedStartSec": 1590,
+      "lagFrames": 0,
+      "correlation": 0.999997649711764
+    },
+    {
+      "decodedStartSec": 1620,
+      "lagFrames": 0,
+      "correlation": 0.9999944654138994
+    },
+    {
+      "decodedStartSec": 1650,
+      "lagFrames": 0,
+      "correlation": 0.9999968087307992
+    },
+    {
+      "decodedStartSec": 1680,
+      "lagFrames": 0,
+      "correlation": 0.9999772569223786
+    },
+    {
+      "decodedStartSec": 1710,
+      "lagFrames": 0,
+      "correlation": 0.9999969367660747
+    },
+    {
+      "decodedStartSec": 1740,
+      "lagFrames": 0,
+      "correlation": 0.9999961876158173
+    },
+    {
+      "decodedStartSec": 1770,
+      "lagFrames": 0,
+      "correlation": 0.999998784655296
+    },
+    {
+      "decodedStartSec": 1800,
+      "lagFrames": 0,
+      "correlation": 0.9999990496865255
+    },
+    {
+      "decodedStartSec": 1830,
+      "lagFrames": 0,
+      "correlation": 0.9999980056890656
+    },
+    {
+      "decodedStartSec": 1860,
+      "lagFrames": 0,
+      "correlation": 0.9999978694034163
+    },
+    {
+      "decodedStartSec": 1890,
+      "lagFrames": 0,
+      "correlation": 0.9999954483113767
+    },
+    {
+      "decodedStartSec": 1920,
+      "lagFrames": 0,
+      "correlation": 0.9999994379282484
+    },
+    {
+      "decodedStartSec": 1950,
+      "lagFrames": 0,
+      "correlation": 0.9999976940936841
+    },
+    {
+      "decodedStartSec": 1980,
+      "lagFrames": 0,
+      "correlation": 0.9999974572765672
+    },
+    {
+      "decodedStartSec": 2010,
+      "lagFrames": 0,
+      "correlation": 0.9999963028168422
+    },
+    {
+      "decodedStartSec": 2040,
+      "lagFrames": 0,
+      "correlation": 0.9999984242809135
+    },
+    {
+      "decodedStartSec": 2070,
+      "lagFrames": 0,
+      "correlation": 0.9999990955117898
+    },
+    {
+      "decodedStartSec": 2100,
+      "lagFrames": 0,
+      "correlation": 0.9999404182082704
+    },
+    {
+      "decodedStartSec": 2130,
+      "lagFrames": 0,
+      "correlation": 0.9999979430548362
+    },
+    {
+      "decodedStartSec": 2160,
+      "lagFrames": 0,
+      "correlation": 0.9999967726063314
+    },
+    {
+      "decodedStartSec": 2190,
+      "lagFrames": 0,
+      "correlation": 0.999998947800538
+    },
+    {
+      "decodedStartSec": 2220,
+      "lagFrames": 0,
+      "correlation": 0.9999970078628043
+    },
+    {
+      "decodedStartSec": 2250,
+      "lagFrames": 0,
+      "correlation": 0.9999993815729998
+    },
+    {
+      "decodedStartSec": 2280,
+      "lagFrames": 0,
+      "correlation": 0.999998107460642
+    },
+    {
+      "decodedStartSec": 2310,
+      "lagFrames": 0,
+      "correlation": 0.9999968904650892
+    },
+    {
+      "decodedStartSec": 2340,
+      "lagFrames": 0,
+      "correlation": 0.9999974509199635
+    },
+    {
+      "decodedStartSec": 2370,
+      "lagFrames": 0,
+      "correlation": 0.9999959510212146
+    },
+    {
+      "decodedStartSec": 2400,
+      "lagFrames": 0,
+      "correlation": 0.9999995354730388
+    },
+    {
+      "decodedStartSec": 2430,
+      "lagFrames": 0,
+      "correlation": 0.999997719193394
+    },
+    {
+      "decodedStartSec": 2460,
+      "lagFrames": 0,
+      "correlation": 0.9999973204151306
+    },
+    {
+      "decodedStartSec": 2490,
+      "lagFrames": 0,
+      "correlation": 0.9999990315975276
+    },
+    {
+      "decodedStartSec": 2520,
+      "lagFrames": 0,
+      "correlation": 0.9999981242760733
+    },
+    {
+      "decodedStartSec": 2550,
+      "lagFrames": 0,
+      "correlation": 0.9999980611135624
+    },
+    {
+      "decodedStartSec": 2580,
+      "lagFrames": 0,
+      "correlation": 0.9999887161189386
+    },
+    {
+      "decodedStartSec": 2610,
+      "lagFrames": 0,
+      "correlation": 0.9999948520637777
+    },
+    {
+      "decodedStartSec": 2640,
+      "lagFrames": 0,
+      "correlation": 0.999993539146853
+    },
+    {
+      "decodedStartSec": 2670,
+      "lagFrames": 0,
+      "correlation": 0.999998761313561
+    },
+    {
+      "decodedStartSec": 2700,
+      "lagFrames": 0,
+      "correlation": 0.9999986268381809
+    },
+    {
+      "decodedStartSec": 2730,
+      "lagFrames": 0,
+      "correlation": 0.9999958458753051
+    },
+    {
+      "decodedStartSec": 2760,
+      "lagFrames": 0,
+      "correlation": 0.9999992201715501
+    },
+    {
+      "decodedStartSec": 2790,
+      "lagFrames": 0,
+      "correlation": 0.9999054879934242
+    },
+    {
+      "decodedStartSec": 2820,
+      "lagFrames": 0,
+      "correlation": 0.9999913834937401
+    },
+    {
+      "decodedStartSec": 2850,
+      "lagFrames": 0,
+      "correlation": 0.9999957453997916
+    },
+    {
+      "decodedStartSec": 2880,
+      "lagFrames": 0,
+      "correlation": 0.9999948443788456
+    },
+    {
+      "decodedStartSec": 2910,
+      "lagFrames": 0,
+      "correlation": 0.9999939453558732
+    },
+    {
+      "decodedStartSec": 2940,
+      "lagFrames": 0,
+      "correlation": 0.9999940282097884
+    },
+    {
+      "decodedStartSec": 2970,
+      "lagFrames": 0,
+      "correlation": 0.9999968797111618
+    },
+    {
+      "decodedStartSec": 3000,
+      "lagFrames": 0,
+      "correlation": 0.9999991155750477
+    },
+    {
+      "decodedStartSec": 3030,
+      "lagFrames": 0,
+      "correlation": 0.9999986180359062
+    },
+    {
+      "decodedStartSec": 3060,
+      "lagFrames": 0,
+      "correlation": 0.9998461445048157
+    },
+    {
+      "decodedStartSec": 3090,
+      "lagFrames": 0,
+      "correlation": 0.9999985960991278
+    },
+    {
+      "decodedStartSec": 3120,
+      "lagFrames": 0,
+      "correlation": 0.9999990522786194
+    },
+    {
+      "decodedStartSec": 3150,
+      "lagFrames": 0,
+      "correlation": 0.9999982015844951
+    },
+    {
+      "decodedStartSec": 3180,
+      "lagFrames": 0,
+      "correlation": 0.9999902589352558
+    },
+    {
+      "decodedStartSec": 3210,
+      "lagFrames": 0,
+      "correlation": 0.9999993501489729
+    },
+    {
+      "decodedStartSec": 3240,
+      "lagFrames": 0,
+      "correlation": 0.9999980593138984
+    },
+    {
+      "decodedStartSec": 3270,
+      "lagFrames": 0,
+      "correlation": 0.9999968818958866
+    },
+    {
+      "decodedStartSec": 3300,
+      "lagFrames": 0,
+      "correlation": 0.9999957256478608
+    },
+    {
+      "decodedStartSec": 3330,
+      "lagFrames": 0,
+      "correlation": 0.9999994753297656
+    },
+    {
+      "decodedStartSec": 3360,
+      "lagFrames": 0,
+      "correlation": 0.9999983710473135
+    },
+    {
+      "decodedStartSec": 3390,
+      "lagFrames": 0,
+      "correlation": 0.999994167352389
+    },
+    {
+      "decodedStartSec": 3420,
+      "lagFrames": 0,
+      "correlation": 0.999996482379358
+    },
+    {
+      "decodedStartSec": 3450,
+      "lagFrames": 0,
+      "correlation": 0.9999977655227373
+    },
+    {
+      "decodedStartSec": 3480,
+      "lagFrames": 0,
+      "correlation": 0.9999983492513336
+    },
+    {
+      "decodedStartSec": 3510,
+      "lagFrames": 0,
+      "correlation": 0.9999968137359151
+    },
+    {
+      "decodedStartSec": 3540,
+      "lagFrames": 0,
+      "correlation": 0.9999966132964896
+    },
+    {
+      "decodedStartSec": 3570,
+      "lagFrames": 0,
+      "correlation": 0.9999990153396359
+    },
+    {
+      "decodedStartSec": 3600,
+      "lagFrames": 0,
+      "correlation": 0.9999987230133893
+    },
+    {
+      "decodedStartSec": 3630,
+      "lagFrames": 0,
+      "correlation": 0.9999988489812077
+    },
+    {
+      "decodedStartSec": 3660,
+      "lagFrames": 0,
+      "correlation": 0.9999961583834542
+    },
+    {
+      "decodedStartSec": 3690,
+      "lagFrames": 0,
+      "correlation": 0.9999969153981049
+    },
+    {
+      "decodedStartSec": 3720,
+      "lagFrames": 0,
+      "correlation": 0.9999979715493763
+    },
+    {
+      "decodedStartSec": 3750,
+      "lagFrames": 0,
+      "correlation": 0.9999651593489182
+    },
+    {
+      "decodedStartSec": 3780,
+      "lagFrames": 0,
+      "correlation": 0.9999966375862143
+    },
+    {
+      "decodedStartSec": 3810,
+      "lagFrames": 0,
+      "correlation": 0.999999363714982
+    },
+    {
+      "decodedStartSec": 3840,
+      "lagFrames": 0,
+      "correlation": 0.9999994086743267
+    },
+    {
+      "decodedStartSec": 3870,
+      "lagFrames": 0,
+      "correlation": 0.9999979448613221
+    },
+    {
+      "decodedStartSec": 3900,
+      "lagFrames": 0,
+      "correlation": 0.9999988924836184
+    },
+    {
+      "decodedStartSec": 3930,
+      "lagFrames": 0,
+      "correlation": 0.9999976403592623
+    },
+    {
+      "decodedStartSec": 3960,
+      "lagFrames": 0,
+      "correlation": 0.9999984062539549
+    },
+    {
+      "decodedStartSec": 3990,
+      "lagFrames": 0,
+      "correlation": 0.9999989715083887
+    },
+    {
+      "decodedStartSec": 4020,
+      "lagFrames": 0,
+      "correlation": 0.9999993144305297
+    },
+    {
+      "decodedStartSec": 4050,
+      "lagFrames": 0,
+      "correlation": 0.9999772227347845
+    },
+    {
+      "decodedStartSec": 4080,
+      "lagFrames": 0,
+      "correlation": 0.9999979413678802
+    },
+    {
+      "decodedStartSec": 4110,
+      "lagFrames": 0,
+      "correlation": 0.9999989283781981
+    },
+    {
+      "decodedStartSec": 4140,
+      "lagFrames": 0,
+      "correlation": 0.9999992647766078
+    },
+    {
+      "decodedStartSec": 4170,
+      "lagFrames": 0,
+      "correlation": 0.9999896099096925
+    },
+    {
+      "decodedStartSec": 4200,
+      "lagFrames": 0,
+      "correlation": 0.9999995307924354
+    },
+    {
+      "decodedStartSec": 4230,
+      "lagFrames": 0,
+      "correlation": 0.9999994778477045
+    },
+    {
+      "decodedStartSec": 4260,
+      "lagFrames": 0,
+      "correlation": 0.9999881250741056
+    },
+    {
+      "decodedStartSec": 4290,
+      "lagFrames": 0,
+      "correlation": 0.9999921286833164
+    },
+    {
+      "decodedStartSec": 4320,
+      "lagFrames": 0,
+      "correlation": 0.9999982660122941
+    },
+    {
+      "decodedStartSec": 4350,
+      "lagFrames": 0,
+      "correlation": 0.9999986096229302
+    },
+    {
+      "decodedStartSec": 4380,
+      "lagFrames": 0,
+      "correlation": 0.9999995093080895
+    },
+    {
+      "decodedStartSec": 4410,
+      "lagFrames": 0,
+      "correlation": 0.9999977088573605
+    },
+    {
+      "decodedStartSec": 4440,
+      "lagFrames": 0,
+      "correlation": 0.9999975152852548
+    },
+    {
+      "decodedStartSec": 4470,
+      "lagFrames": 0,
+      "correlation": 0.9999985413323528
+    },
+    {
+      "decodedStartSec": 4500,
+      "lagFrames": 0,
+      "correlation": 0.9999990227913856
+    },
+    {
+      "decodedStartSec": 4530,
+      "lagFrames": 0,
+      "correlation": 0.9999974467428177
+    },
+    {
+      "decodedStartSec": 4560,
+      "lagFrames": 0,
+      "correlation": 0.9999988271283855
+    },
+    {
+      "decodedStartSec": 4590,
+      "lagFrames": 0,
+      "correlation": 0.9999990229339887
+    },
+    {
+      "decodedStartSec": 4620,
+      "lagFrames": 0,
+      "correlation": 0.9999959505139273
+    },
+    {
+      "decodedStartSec": 4650,
+      "lagFrames": 0,
+      "correlation": 0.9999975696242411
+    },
+    {
+      "decodedStartSec": 4680,
+      "lagFrames": 0,
+      "correlation": 0.9999983317927927
+    },
+    {
+      "decodedStartSec": 4710,
+      "lagFrames": 0,
+      "correlation": 0.9999985125438005
+    },
+    {
+      "decodedStartSec": 4740,
+      "lagFrames": 0,
+      "correlation": 0.9999981018595878
+    },
+    {
+      "decodedStartSec": 4770,
+      "lagFrames": 0,
+      "correlation": 0.9999927801519298
+    },
+    {
+      "decodedStartSec": 4800,
+      "lagFrames": 0,
+      "correlation": 0.9999971106818859
+    },
+    {
+      "decodedStartSec": 4830,
+      "lagFrames": 0,
+      "correlation": 0.9999992210593581
+    },
+    {
+      "decodedStartSec": 4860,
+      "lagFrames": 0,
+      "correlation": 0.9999945604267824
+    },
+    {
+      "decodedStartSec": 4890,
+      "lagFrames": 0,
+      "correlation": 0.9999941673813562
+    },
+    {
+      "decodedStartSec": 4920,
+      "lagFrames": 0,
+      "correlation": 0.999998711938228
+    },
+    {
+      "decodedStartSec": 4950,
+      "lagFrames": 0,
+      "correlation": 0.9999932816363948
+    },
+    {
+      "decodedStartSec": 4980,
+      "lagFrames": 0,
+      "correlation": 0.999998828748467
+    },
+    {
+      "decodedStartSec": 5010,
+      "lagFrames": 0,
+      "correlation": 0.9999993248153253
+    },
+    {
+      "decodedStartSec": 5040,
+      "lagFrames": 0,
+      "correlation": 0.9999984121426038
+    },
+    {
+      "decodedStartSec": 5070,
+      "lagFrames": 0,
+      "correlation": 0.9999961488164544
+    },
+    {
+      "decodedStartSec": 5100,
+      "lagFrames": 0,
+      "correlation": 0.9999980838785617
+    },
+    {
+      "decodedStartSec": 5130,
+      "lagFrames": 0,
+      "correlation": 0.9999992872517195
+    },
+    {
+      "decodedStartSec": 5160,
+      "lagFrames": 0,
+      "correlation": 0.9999981514518609
+    },
+    {
+      "decodedStartSec": 5190,
+      "lagFrames": 0,
+      "correlation": 0.9999988593926475
+    },
+    {
+      "decodedStartSec": 5220,
+      "lagFrames": 0,
+      "correlation": 0.999989215438992
+    },
+    {
+      "decodedStartSec": 5250,
+      "lagFrames": 0,
+      "correlation": 0.9999991625838252
+    },
+    {
+      "decodedStartSec": 5280,
+      "lagFrames": 0,
+      "correlation": 0.9999990528602137
+    },
+    {
+      "decodedStartSec": 5310,
+      "lagFrames": 0,
+      "correlation": 0.9999994138117057
+    },
+    {
+      "decodedStartSec": 5340,
+      "lagFrames": 0,
+      "correlation": 0.9999993259529871
+    },
+    {
+      "decodedStartSec": 5370,
+      "lagFrames": 0,
+      "correlation": 0.9999976666534108
+    },
+    {
+      "decodedStartSec": 5400,
+      "lagFrames": 0,
+      "correlation": 0.9999988971259735
+    },
+    {
+      "decodedStartSec": 5430,
+      "lagFrames": 0,
+      "correlation": 0.9999995170161763
+    },
+    {
+      "decodedStartSec": 5460,
+      "lagFrames": 0,
+      "correlation": 0.9999990747898198
+    },
+    {
+      "decodedStartSec": 5490,
+      "lagFrames": 0,
+      "correlation": 0.9999856910718498
+    },
+    {
+      "decodedStartSec": 5520,
+      "lagFrames": 0,
+      "correlation": 0.9999987785252837
+    },
+    {
+      "decodedStartSec": 5550,
+      "lagFrames": 0,
+      "correlation": 0.999993824309245
+    },
+    {
+      "decodedStartSec": 5580,
+      "lagFrames": 0,
+      "correlation": 0.9999993173164198
+    },
+    {
+      "decodedStartSec": 5610,
+      "lagFrames": 0,
+      "correlation": 0.9999977344640826
+    },
+    {
+      "decodedStartSec": 5640,
+      "lagFrames": 0,
+      "correlation": 0.999994390037823
+    },
+    {
+      "decodedStartSec": 5670,
+      "lagFrames": 0,
+      "correlation": 0.9999986167835917
+    },
+    {
+      "decodedStartSec": 5700,
+      "lagFrames": 0,
+      "correlation": 0.9999993583964778
+    },
+    {
+      "decodedStartSec": 5730,
+      "lagFrames": 0,
+      "correlation": 0.9999981043898245
+    },
+    {
+      "decodedStartSec": 5760,
+      "lagFrames": 0,
+      "correlation": 0.9999972486000286
+    },
+    {
+      "decodedStartSec": 5790,
+      "lagFrames": 0,
+      "correlation": 0.9999990779063805
+    },
+    {
+      "decodedStartSec": 5820,
+      "lagFrames": 0,
+      "correlation": 0.9999978507674367
+    },
+    {
+      "decodedStartSec": 5850,
+      "lagFrames": 0,
+      "correlation": 0.9999992833876861
+    },
+    {
+      "decodedStartSec": 5880,
+      "lagFrames": 0,
+      "correlation": 0.9999994564877419
+    },
+    {
+      "decodedStartSec": 5910,
+      "lagFrames": 0,
+      "correlation": 0.999998226871651
+    },
+    {
+      "decodedStartSec": 5940,
+      "lagFrames": 0,
+      "correlation": 0.9999986775794788
+    },
+    {
+      "decodedStartSec": 5970,
+      "lagFrames": 0,
+      "correlation": 0.9999980221527186
+    },
+    {
+      "decodedStartSec": 6000,
+      "lagFrames": 0,
+      "correlation": 0.9999993007083383
+    },
+    {
+      "decodedStartSec": 6030,
+      "lagFrames": 0,
+      "correlation": 0.9999966734185531
+    },
+    {
+      "decodedStartSec": 6060,
+      "lagFrames": 0,
+      "correlation": 0.9999980670249409
+    },
+    {
+      "decodedStartSec": 6090,
+      "lagFrames": 0,
+      "correlation": 0.9999970646983143
+    },
+    {
+      "decodedStartSec": 6120,
+      "lagFrames": 0,
+      "correlation": 0.9999945729292082
+    },
+    {
+      "decodedStartSec": 6150,
+      "lagFrames": 0,
+      "correlation": 0.9999970544683614
+    },
+    {
+      "decodedStartSec": 6180,
+      "lagFrames": 0,
+      "correlation": 0.9999947951820057
+    },
+    {
+      "decodedStartSec": 6210,
+      "lagFrames": 0,
+      "correlation": 0.9999972277151522
+    },
+    {
+      "decodedStartSec": 6240,
+      "lagFrames": 0,
+      "correlation": 0.9999970278391116
+    },
+    {
+      "decodedStartSec": 6270,
+      "lagFrames": 0,
+      "correlation": 0.9999981922361414
+    },
+    {
+      "decodedStartSec": 6300,
+      "lagFrames": 0,
+      "correlation": 0.999998881351343
+    },
+    {
+      "decodedStartSec": 6330,
+      "lagFrames": 0,
+      "correlation": 0.9999986855975515
+    },
+    {
+      "decodedStartSec": 6360,
+      "lagFrames": 0,
+      "correlation": 0.9999974686616753
+    },
+    {
+      "decodedStartSec": 6390,
+      "lagFrames": 0,
+      "correlation": 0.9999994553326619
+    },
+    {
+      "decodedStartSec": 6420,
+      "lagFrames": 0,
+      "correlation": 0.9999989325792358
+    },
+    {
+      "decodedStartSec": 6450,
+      "lagFrames": 0,
+      "correlation": 0.999996371865326
+    },
+    {
+      "decodedStartSec": 6480,
+      "lagFrames": 0,
+      "correlation": 0.9999945643572712
+    },
+    {
+      "decodedStartSec": 6510,
+      "lagFrames": 0,
+      "correlation": 0.9999982243641254
+    },
+    {
+      "decodedStartSec": 6540,
+      "lagFrames": 0,
+      "correlation": 0.9999972831179327
+    },
+    {
+      "decodedStartSec": 6570,
+      "lagFrames": 0,
+      "correlation": 0.999998432385106
+    },
+    {
+      "decodedStartSec": 6600,
+      "lagFrames": 0,
+      "correlation": 0.9999933466557993
+    },
+    {
+      "decodedStartSec": 6630,
+      "lagFrames": 0,
+      "correlation": 0.9999979417387643
+    },
+    {
+      "decodedStartSec": 6660,
+      "lagFrames": 0,
+      "correlation": 0.999997626092162
+    },
+    {
+      "decodedStartSec": 6690,
+      "lagFrames": 0,
+      "correlation": 0.9999266200649148
+    },
+    {
+      "decodedStartSec": 6720,
+      "lagFrames": 0,
+      "correlation": 0.9999848212362701
+    },
+    {
+      "decodedStartSec": 6750,
+      "lagFrames": 0,
+      "correlation": 0.9999983475926013
+    },
+    {
+      "decodedStartSec": 6780,
+      "lagFrames": 0,
+      "correlation": 0.9999807098152538
+    },
+    {
+      "decodedStartSec": 6810,
+      "lagFrames": 0,
+      "correlation": 0.9999955506384055
+    },
+    {
+      "decodedStartSec": 6840,
+      "lagFrames": 0,
+      "correlation": 0.9999951698951578
+    },
+    {
+      "decodedStartSec": 6870,
+      "lagFrames": 0,
+      "correlation": 0.9999976098684021
+    },
+    {
+      "decodedStartSec": 6900,
+      "lagFrames": 0,
+      "correlation": 0.9999989239226065
+    },
+    {
+      "decodedStartSec": 6930,
+      "lagFrames": 0,
+      "correlation": 0.9999992354849482
+    },
+    {
+      "decodedStartSec": 6960,
+      "lagFrames": 0,
+      "correlation": 0.9999966657779523
+    },
+    {
+      "decodedStartSec": 6990,
+      "lagFrames": 0,
+      "correlation": 0.9999967361649788
+    },
+    {
+      "decodedStartSec": 7020,
+      "lagFrames": 0,
+      "correlation": 0.9999960071486323
+    },
+    {
+      "decodedStartSec": 7050,
+      "lagFrames": 0,
+      "correlation": 0.9999990628731282
+    },
+    {
+      "decodedStartSec": 7080,
+      "lagFrames": 0,
+      "correlation": 0.9999992320798404
+    },
+    {
+      "decodedStartSec": 7110,
+      "lagFrames": 0,
+      "correlation": 0.9999974982602827
+    },
+    {
+      "decodedStartSec": 7140,
+      "lagFrames": 0,
+      "correlation": 0.9999965803475348
+    },
+    {
+      "decodedStartSec": 7170,
+      "lagFrames": 0,
+      "correlation": 0.9999942468502114
+    },
+    {
+      "decodedStartSec": 7200,
+      "lagFrames": 0,
+      "correlation": 0.9999969718744127
+    },
+    {
+      "decodedStartSec": 7230,
+      "lagFrames": 0,
+      "correlation": 0.9999982188397466
+    },
+    {
+      "decodedStartSec": 7260,
+      "lagFrames": 0,
+      "correlation": 0.9999986611714922
+    },
+    {
+      "decodedStartSec": 7290,
+      "lagFrames": 0,
+      "correlation": 0.9999980248493581
+    },
+    {
+      "decodedStartSec": 7320,
+      "lagFrames": 0,
+      "correlation": 0.9999976901179843
+    },
+    {
+      "decodedStartSec": 7350,
+      "lagFrames": 0,
+      "correlation": 0.9999991095810399
+    },
+    {
+      "decodedStartSec": 7380,
+      "lagFrames": 0,
+      "correlation": 0.9999991512458898
+    },
+    {
+      "decodedStartSec": 7410,
+      "lagFrames": 0,
+      "correlation": 0.9999987254266841
+    },
+    {
+      "decodedStartSec": 7440,
+      "lagFrames": 0,
+      "correlation": 0.9999838021464676
+    },
+    {
+      "decodedStartSec": 7470,
+      "lagFrames": 0,
+      "correlation": 0.9999967582449459
+    },
+    {
+      "decodedStartSec": 7500,
+      "lagFrames": 0,
+      "correlation": 0.9999933845624641
+    },
+    {
+      "decodedStartSec": 7530,
+      "lagFrames": 0,
+      "correlation": 0.9999953480661309
+    },
+    {
+      "decodedStartSec": 7560,
+      "lagFrames": 0,
+      "correlation": 0.9999982424337341
+    },
+    {
+      "decodedStartSec": 7590,
+      "lagFrames": 0,
+      "correlation": 0.999997087045387
+    },
+    {
+      "decodedStartSec": 7620,
+      "lagFrames": 0,
+      "correlation": 0.9999961296115933
+    },
+    {
+      "decodedStartSec": 7650,
+      "lagFrames": 0,
+      "correlation": 0.9999977181893237
+    },
+    {
+      "decodedStartSec": 7680,
+      "lagFrames": 0,
+      "correlation": 0.9999935264804328
+    },
+    {
+      "decodedStartSec": 7710,
+      "lagFrames": 0,
+      "correlation": 0.9999988814877885
+    },
+    {
+      "decodedStartSec": 7740,
+      "lagFrames": 0,
+      "correlation": 0.9999980429177131
+    },
+    {
+      "decodedStartSec": 7770,
+      "lagFrames": 0,
+      "correlation": 0.9999964509511767
+    },
+    {
+      "decodedStartSec": 7800,
+      "lagFrames": 0,
+      "correlation": 0.9999934850049438
+    },
+    {
+      "decodedStartSec": 7830,
+      "lagFrames": 0,
+      "correlation": 0.999997912973579
+    },
+    {
+      "decodedStartSec": 7860,
+      "lagFrames": 0,
+      "correlation": 0.9999976377807774
+    },
+    {
+      "decodedStartSec": 7890,
+      "lagFrames": 0,
+      "correlation": 0.9999982984965939
+    },
+    {
+      "decodedStartSec": 7920,
+      "lagFrames": 0,
+      "correlation": 0.9999939172179136
+    },
+    {
+      "decodedStartSec": 7950,
+      "lagFrames": 0,
+      "correlation": 0.9999984233359936
+    },
+    {
+      "decodedStartSec": 7980,
+      "lagFrames": 0,
+      "correlation": 0.9999974744416188
+    },
+    {
+      "decodedStartSec": 8010,
+      "lagFrames": 0,
+      "correlation": 0.9999984770039999
+    },
+    {
+      "decodedStartSec": 8040,
+      "lagFrames": 0,
+      "correlation": 0.9999963938214859
+    },
+    {
+      "decodedStartSec": 8070,
+      "lagFrames": 0,
+      "correlation": 0.9999770725425303
+    },
+    {
+      "decodedStartSec": 8100,
+      "lagFrames": 0,
+      "correlation": 0.9999982391615608
+    },
+    {
+      "decodedStartSec": 8130,
+      "lagFrames": 0,
+      "correlation": 0.9999989047494193
+    },
+    {
+      "decodedStartSec": 8160,
+      "lagFrames": 0,
+      "correlation": 0.9999984906957406
+    },
+    {
+      "decodedStartSec": 8190,
+      "lagFrames": 0,
+      "correlation": 0.9999986978966126
+    },
+    {
+      "decodedStartSec": 8220,
+      "lagFrames": 0,
+      "correlation": 0.9999983947042423
+    },
+    {
+      "decodedStartSec": 8250,
+      "lagFrames": 0,
+      "correlation": 0.9999937105614187
+    },
+    {
+      "decodedStartSec": 8280,
+      "lagFrames": 0,
+      "correlation": 0.9999975234182531
+    },
+    {
+      "decodedStartSec": 8310,
+      "lagFrames": 0,
+      "correlation": 0.9999151178969722
+    },
+    {
+      "decodedStartSec": 8340,
+      "lagFrames": 0,
+      "correlation": 0.9999975661380818
+    },
+    {
+      "decodedStartSec": 8370,
+      "lagFrames": 0,
+      "correlation": 0.999996543931464
+    },
+    {
+      "decodedStartSec": 8400,
+      "lagFrames": 0,
+      "correlation": 0.9999979636015325
+    },
+    {
+      "decodedStartSec": 8430,
+      "lagFrames": 0,
+      "correlation": 0.9999975223338133
+    },
+    {
+      "decodedStartSec": 8460,
+      "lagFrames": 0,
+      "correlation": 0.9999984526817083
+    },
+    {
+      "decodedStartSec": 8490,
+      "lagFrames": 0,
+      "correlation": 0.9999971181838738
+    },
+    {
+      "decodedStartSec": 8520,
+      "lagFrames": 0,
+      "correlation": 0.9999983521420212
+    },
+    {
+      "decodedStartSec": 8550,
+      "lagFrames": 0,
+      "correlation": 0.9999679855055437
+    },
+    {
+      "decodedStartSec": 8580,
+      "lagFrames": 0,
+      "correlation": 0.9999841591406948
+    },
+    {
+      "decodedStartSec": 8610,
+      "lagFrames": 0,
+      "correlation": 0.9999977331873664
+    },
+    {
+      "decodedStartSec": 8640,
+      "lagFrames": 0,
+      "correlation": 0.9999968907177538
+    },
+    {
+      "decodedStartSec": 8670,
+      "lagFrames": 0,
+      "correlation": 0.9999618397956027
+    },
+    {
+      "decodedStartSec": 8700,
+      "lagFrames": 0,
+      "correlation": 0.9999990474757795
+    },
+    {
+      "decodedStartSec": 8730,
+      "lagFrames": 0,
+      "correlation": 0.9999981369662632
+    },
+    {
+      "decodedStartSec": 8760,
+      "lagFrames": 0,
+      "correlation": 0.9999974745057832
+    },
+    {
+      "decodedStartSec": 8790,
+      "lagFrames": 0,
+      "correlation": 0.9999978476164326
+    },
+    {
+      "decodedStartSec": 8820,
+      "lagFrames": 0,
+      "correlation": 0.9999991259202952
+    },
+    {
+      "decodedStartSec": 8850,
+      "lagFrames": 0,
+      "correlation": 0.9999984081126639
+    },
+    {
+      "decodedStartSec": 8880,
+      "lagFrames": 0,
+      "correlation": 0.9999958028384437
+    },
+    {
+      "decodedStartSec": 8910,
+      "lagFrames": 0,
+      "correlation": 0.9999875058049348
+    },
+    {
+      "decodedStartSec": 8940,
+      "lagFrames": 0,
+      "correlation": 0.9999962758653745
+    },
+    {
+      "decodedStartSec": 8970,
+      "lagFrames": 0,
+      "correlation": 0.9999922184755599
+    },
+    {
+      "decodedStartSec": 9000,
+      "lagFrames": 0,
+      "correlation": 0.9999993577954023
+    },
+    {
+      "decodedStartSec": 9030,
+      "lagFrames": 0,
+      "correlation": 0.9999966124190357
+    },
+    {
+      "decodedStartSec": 9060,
+      "lagFrames": 0,
+      "correlation": 0.9999965407231362
+    },
+    {
+      "decodedStartSec": 9090,
+      "lagFrames": 0,
+      "correlation": 0.9999973441224973
+    },
+    {
+      "decodedStartSec": 9120,
+      "lagFrames": 0,
+      "correlation": 0.9999896026399928
+    },
+    {
+      "decodedStartSec": 9150,
+      "lagFrames": 0,
+      "correlation": 0.9999955493075856
+    },
+    {
+      "decodedStartSec": 9180,
+      "lagFrames": 0,
+      "correlation": 0.9999940540913809
+    },
+    {
+      "decodedStartSec": 9210,
+      "lagFrames": 0,
+      "correlation": 0.9999884663625633
+    },
+    {
+      "decodedStartSec": 9240,
+      "lagFrames": 0,
+      "correlation": 0.9999965659015123
+    },
+    {
+      "decodedStartSec": 9270,
+      "lagFrames": 0,
+      "correlation": 0.9999976156098451
+    },
+    {
+      "decodedStartSec": 9300,
+      "lagFrames": 0,
+      "correlation": 0.9999980818226712
+    },
+    {
+      "decodedStartSec": 9330,
+      "lagFrames": 0,
+      "correlation": 0.9999994126645521
+    },
+    {
+      "decodedStartSec": 9360,
+      "lagFrames": 0,
+      "correlation": 0.9999984511621416
+    },
+    {
+      "decodedStartSec": 9390,
+      "lagFrames": 0,
+      "correlation": 0.9999971574042984
+    },
+    {
+      "decodedStartSec": 9420,
+      "lagFrames": 0,
+      "correlation": 0.9999963159463722
+    },
+    {
+      "decodedStartSec": 9450,
+      "lagFrames": 0,
+      "correlation": 0.9999990321459892
+    },
+    {
+      "decodedStartSec": 9480,
+      "lagFrames": 0,
+      "correlation": 0.9999989716367327
+    },
+    {
+      "decodedStartSec": 9510,
+      "lagFrames": 0,
+      "correlation": 0.99999892673827
+    },
+    {
+      "decodedStartSec": 9540,
+      "lagFrames": 0,
+      "correlation": 0.9999967062404514
+    },
+    {
+      "decodedStartSec": 9570,
+      "lagFrames": 0,
+      "correlation": 0.9999974863126612
+    },
+    {
+      "decodedStartSec": 9600,
+      "lagFrames": 0,
+      "correlation": 0.9999947730400286
+    },
+    {
+      "decodedStartSec": 9630,
+      "lagFrames": 0,
+      "correlation": 0.9999978857347173
+    },
+    {
+      "decodedStartSec": 9660,
+      "lagFrames": 0,
+      "correlation": 0.9999976132432394
+    },
+    {
+      "decodedStartSec": 9690,
+      "lagFrames": 0,
+      "correlation": 0.9999991744876416
+    },
+    {
+      "decodedStartSec": 9720,
+      "lagFrames": 0,
+      "correlation": 0.9999984485777744
+    },
+    {
+      "decodedStartSec": 9750,
+      "lagFrames": 0,
+      "correlation": 0.9999984887376376
+    },
+    {
+      "decodedStartSec": 9780,
+      "lagFrames": 0,
+      "correlation": 0.9999974869561444
+    },
+    {
+      "decodedStartSec": 9810,
+      "lagFrames": 0,
+      "correlation": 0.9999990537761931
+    },
+    {
+      "decodedStartSec": 9840,
+      "lagFrames": 0,
+      "correlation": 0.9999994403185752
+    },
+    {
+      "decodedStartSec": 9870,
+      "lagFrames": 0,
+      "correlation": 0.9999989800083908
+    },
+    {
+      "decodedStartSec": 9900,
+      "lagFrames": 0,
+      "correlation": 0.9999984877689637
+    },
+    {
+      "decodedStartSec": 9930,
+      "lagFrames": 0,
+      "correlation": 0.9999805431307042
+    },
+    {
+      "decodedStartSec": 9960,
+      "lagFrames": 0,
+      "correlation": 0.9999941666756099
+    },
+    {
+      "decodedStartSec": 9990,
+      "lagFrames": 0,
+      "correlation": 0.9999963576327933
+    },
+    {
+      "decodedStartSec": 10020,
+      "lagFrames": 0,
+      "correlation": 0.9999954531389285
+    },
+    {
+      "decodedStartSec": 10050,
+      "lagFrames": 0,
+      "correlation": 0.999999048162274
+    },
+    {
+      "decodedStartSec": 10080,
+      "lagFrames": 0,
+      "correlation": 0.999998009807084
+    },
+    {
+      "decodedStartSec": 10110,
+      "lagFrames": 0,
+      "correlation": 0.9999951120645836
+    },
+    {
+      "decodedStartSec": 10140,
+      "lagFrames": 0,
+      "correlation": 0.9999983743373709
+    },
+    {
+      "decodedStartSec": 10170,
+      "lagFrames": 0,
+      "correlation": 0.9999992731571283
+    },
+    {
+      "decodedStartSec": 10200,
+      "lagFrames": 0,
+      "correlation": 0.9999961021101164
+    },
+    {
+      "decodedStartSec": 10230,
+      "lagFrames": 0,
+      "correlation": 0.9999990646580336
+    },
+    {
+      "decodedStartSec": 10260,
+      "lagFrames": 0,
+      "correlation": 0.9999984134863018
+    },
+    {
+      "decodedStartSec": 10290,
+      "lagFrames": 0,
+      "correlation": 0.9999985084032895
+    },
+    {
+      "decodedStartSec": 10320,
+      "lagFrames": 0,
+      "correlation": 0.9999992727206428
+    },
+    {
+      "decodedStartSec": 10350,
+      "lagFrames": 0,
+      "correlation": 0.9999990774803761
+    },
+    {
+      "decodedStartSec": 10380,
+      "lagFrames": 0,
+      "correlation": 0.9999994183921468
+    },
+    {
+      "decodedStartSec": 10410,
+      "lagFrames": 0,
+      "correlation": 0.9999990532131575
+    },
+    {
+      "decodedStartSec": 10440,
+      "lagFrames": 0,
+      "correlation": 0.9999957365136632
+    },
+    {
+      "decodedStartSec": 10470,
+      "lagFrames": 0,
+      "correlation": 0.9999954488149735
+    },
+    {
+      "decodedStartSec": 10500,
+      "lagFrames": 0,
+      "correlation": 0.9999982455811266
+    },
+    {
+      "decodedStartSec": 10530,
+      "lagFrames": 0,
+      "correlation": 0.9999983325243736
+    },
+    {
+      "decodedStartSec": 10560,
+      "lagFrames": 0,
+      "correlation": 0.9999993432885491
+    },
+    {
+      "decodedStartSec": 10590,
+      "lagFrames": 0,
+      "correlation": 0.9999995362666977
+    },
+    {
+      "decodedStartSec": 10620,
+      "lagFrames": 0,
+      "correlation": 0.9999955614424008
+    },
+    {
+      "decodedStartSec": 10650,
+      "lagFrames": 0,
+      "correlation": 0.9999965422990651
+    },
+    {
+      "decodedStartSec": 10680,
+      "lagFrames": 0,
+      "correlation": 0.9999970844227786
+    },
+    {
+      "decodedStartSec": 10710,
+      "lagFrames": 0,
+      "correlation": 0.9999991299881025
+    },
+    {
+      "decodedStartSec": 10740,
+      "lagFrames": 0,
+      "correlation": 0.9999990847845598
+    },
+    {
+      "decodedStartSec": 10770,
+      "lagFrames": 0,
+      "correlation": 0.9999967793511063
+    },
+    {
+      "decodedStartSec": 10800,
+      "lagFrames": 0,
+      "correlation": 0.9999956200352825
+    },
+    {
+      "decodedStartSec": 10830,
+      "lagFrames": 0,
+      "correlation": 0.9999986235438983
+    },
+    {
+      "decodedStartSec": 10860,
+      "lagFrames": 0,
+      "correlation": 0.9999985992726615
+    },
+    {
+      "decodedStartSec": 10890,
+      "lagFrames": 0,
+      "correlation": 0.999999187488993
+    },
+    {
+      "decodedStartSec": 10920,
+      "lagFrames": 0,
+      "correlation": 0.9999991248387821
+    },
+    {
+      "decodedStartSec": 10950,
+      "lagFrames": 0,
+      "correlation": 0.9999974578175832
+    },
+    {
+      "decodedStartSec": 10980,
+      "lagFrames": 0,
+      "correlation": 0.9999990110199672
+    },
+    {
+      "decodedStartSec": 11010,
+      "lagFrames": 0,
+      "correlation": 0.9999985587574933
+    },
+    {
+      "decodedStartSec": 11040,
+      "lagFrames": 0,
+      "correlation": 0.9999991256837965
+    },
+    {
+      "decodedStartSec": 11070,
+      "lagFrames": 0,
+      "correlation": 0.9999973974367458
+    },
+    {
+      "decodedStartSec": 11100,
+      "lagFrames": 0,
+      "correlation": 0.9999964605883787
+    },
+    {
+      "decodedStartSec": 11130,
+      "lagFrames": 0,
+      "correlation": 0.9999973859606842
+    },
+    {
+      "decodedStartSec": 11160,
+      "lagFrames": 0,
+      "correlation": 0.9999971997199056
+    },
+    {
+      "decodedStartSec": 11190,
+      "lagFrames": 0,
+      "correlation": 0.9999968948839121
+    },
+    {
+      "decodedStartSec": 11220,
+      "lagFrames": 0,
+      "correlation": 0.9999985802665434
+    },
+    {
+      "decodedStartSec": 11250,
+      "lagFrames": 0,
+      "correlation": 0.9999977438184486
+    },
+    {
+      "decodedStartSec": 11280,
+      "lagFrames": 0,
+      "correlation": 0.9999971685293476
+    },
+    {
+      "decodedStartSec": 11310,
+      "lagFrames": 0,
+      "correlation": 0.999998763761949
+    },
+    {
+      "decodedStartSec": 11340,
+      "lagFrames": 0,
+      "correlation": 0.9999975650813855
+    },
+    {
+      "decodedStartSec": 11370,
+      "lagFrames": 0,
+      "correlation": 0.999996411314316
+    },
+    {
+      "decodedStartSec": 11400,
+      "lagFrames": 0,
+      "correlation": 0.99999774628313
+    },
+    {
+      "decodedStartSec": 11430,
+      "lagFrames": 0,
+      "correlation": 0.9999982015839991
+    },
+    {
+      "decodedStartSec": 11460,
+      "lagFrames": 0,
+      "correlation": 0.9999947246262185
+    },
+    {
+      "decodedStartSec": 11490,
+      "lagFrames": 0,
+      "correlation": 0.9999946944096353
+    },
+    {
+      "decodedStartSec": 11520,
+      "lagFrames": 0,
+      "correlation": 0.9999928909589199
+    },
+    {
+      "decodedStartSec": 11550,
+      "lagFrames": 0,
+      "correlation": 0.9999971624643604
+    },
+    {
+      "decodedStartSec": 11580,
+      "lagFrames": 0,
+      "correlation": 0.9999975583968734
+    },
+    {
+      "decodedStartSec": 11610,
+      "lagFrames": 0,
+      "correlation": 0.9999978568558249
+    },
+    {
+      "decodedStartSec": 11640,
+      "lagFrames": 0,
+      "correlation": 0.9999951711209984
+    },
+    {
+      "decodedStartSec": 11670,
+      "lagFrames": 0,
+      "correlation": 0.9999978290815178
+    },
+    {
+      "decodedStartSec": 11700,
+      "lagFrames": 0,
+      "correlation": 0.9999935467401653
+    },
+    {
+      "decodedStartSec": 11730,
+      "lagFrames": 0,
+      "correlation": 0.9999984401304152
+    },
+    {
+      "decodedStartSec": 11760,
+      "lagFrames": 0,
+      "correlation": 0.9999938734389919
+    },
+    {
+      "decodedStartSec": 11790,
+      "lagFrames": 0,
+      "correlation": 0.9999949897958288
+    },
+    {
+      "decodedStartSec": 11820,
+      "lagFrames": 0,
+      "correlation": 0.9999971440182346
+    },
+    {
+      "decodedStartSec": 11850,
+      "lagFrames": 0,
+      "correlation": 0.9999951518624102
+    },
+    {
+      "decodedStartSec": 11880,
+      "lagFrames": 0,
+      "correlation": 0.9999929714818366
+    },
+    {
+      "decodedStartSec": 11910,
+      "lagFrames": 0,
+      "correlation": 0.9999967160773631
+    },
+    {
+      "decodedStartSec": 11940,
+      "lagFrames": 0,
+      "correlation": 0.9999977974744879
+    },
+    {
+      "decodedStartSec": 11970,
+      "lagFrames": 0,
+      "correlation": 0.9999963231990106
+    },
+    {
+      "decodedStartSec": 12000,
+      "lagFrames": 0,
+      "correlation": 0.9999975269806822
+    },
+    {
+      "decodedStartSec": 12030,
+      "lagFrames": 0,
+      "correlation": 0.9999975978104608
+    },
+    {
+      "decodedStartSec": 12060,
+      "lagFrames": 0,
+      "correlation": 0.9999966211778081
+    },
+    {
+      "decodedStartSec": 12090,
+      "lagFrames": 0,
+      "correlation": 0.9999960361950454
+    },
+    {
+      "decodedStartSec": 12120,
+      "lagFrames": 0,
+      "correlation": 0.9999954379160552
+    },
+    {
+      "decodedStartSec": 12150,
+      "lagFrames": 0,
+      "correlation": 0.9999979294400888
+    },
+    {
+      "decodedStartSec": 12180,
+      "lagFrames": 0,
+      "correlation": 0.9999985633313336
+    },
+    {
+      "decodedStartSec": 12210,
+      "lagFrames": 0,
+      "correlation": 0.9999981441034802
+    },
+    {
+      "decodedStartSec": 12240,
+      "lagFrames": 0,
+      "correlation": 0.9999976429883299
+    },
+    {
+      "decodedStartSec": 12270,
+      "lagFrames": 0,
+      "correlation": 0.9999983865604521
+    },
+    {
+      "decodedStartSec": 12300,
+      "lagFrames": 0,
+      "correlation": 0.9999986210043097
+    },
+    {
+      "decodedStartSec": 12330,
+      "lagFrames": 0,
+      "correlation": 0.9999992307769963
+    },
+    {
+      "decodedStartSec": 12360,
+      "lagFrames": 0,
+      "correlation": 0.9999984337077239
+    },
+    {
+      "decodedStartSec": 12390,
+      "lagFrames": 0,
+      "correlation": 0.9999961063028306
+    },
+    {
+      "decodedStartSec": 12420,
+      "lagFrames": 0,
+      "correlation": 0.9999986373612392
+    },
+    {
+      "decodedStartSec": 12450,
+      "lagFrames": 0,
+      "correlation": 0.9999980754042269
+    },
+    {
+      "decodedStartSec": 12480,
+      "lagFrames": 0,
+      "correlation": 0.9999983265212982
+    },
+    {
+      "decodedStartSec": 12510,
+      "lagFrames": 0,
+      "correlation": 0.999991156218854
+    },
+    {
+      "decodedStartSec": 12540,
+      "lagFrames": 0,
+      "correlation": 0.9999963320260089
+    },
+    {
+      "decodedStartSec": 12570,
+      "lagFrames": 0,
+      "correlation": 0.9999986990818998
+    },
+    {
+      "decodedStartSec": 12600,
+      "lagFrames": 0,
+      "correlation": 0.9999979885165495
+    },
+    {
+      "decodedStartSec": 12630,
+      "lagFrames": 0,
+      "correlation": 0.9999944735104309
+    },
+    {
+      "decodedStartSec": 12660,
+      "lagFrames": 0,
+      "correlation": 0.9999968263514297
+    },
+    {
+      "decodedStartSec": 12690,
+      "lagFrames": 0,
+      "correlation": 0.9999987588421428
+    },
+    {
+      "decodedStartSec": 12720,
+      "lagFrames": 0,
+      "correlation": 0.9999989075015469
+    },
+    {
+      "decodedStartSec": 12750,
+      "lagFrames": 0,
+      "correlation": 0.9999971026782993
+    },
+    {
+      "decodedStartSec": 12780,
+      "lagFrames": 0,
+      "correlation": 0.999997460478315
+    },
+    {
+      "decodedStartSec": 12810,
+      "lagFrames": 0,
+      "correlation": 0.9999969490520876
+    },
+    {
+      "decodedStartSec": 12840,
+      "lagFrames": 0,
+      "correlation": 0.9999957191634817
+    },
+    {
+      "decodedStartSec": 12870,
+      "lagFrames": 0,
+      "correlation": 0.9999958363138342
+    },
+    {
+      "decodedStartSec": 12900,
+      "lagFrames": 0,
+      "correlation": 0.9999949963815792
+    },
+    {
+      "decodedStartSec": 12930,
+      "lagFrames": 0,
+      "correlation": 0.9999965578978561
+    },
+    {
+      "decodedStartSec": 12960,
+      "lagFrames": 0,
+      "correlation": 0.9999927131431056
+    },
+    {
+      "decodedStartSec": 12990,
+      "lagFrames": 0,
+      "correlation": 0.9999973773106535
+    },
+    {
+      "decodedStartSec": 13020,
+      "lagFrames": 0,
+      "correlation": 0.999995870630409
+    },
+    {
+      "decodedStartSec": 13050,
+      "lagFrames": 0,
+      "correlation": 0.9999925415030007
+    },
+    {
+      "decodedStartSec": 13080,
+      "lagFrames": 0,
+      "correlation": 0.9999984181393412
+    },
+    {
+      "decodedStartSec": 13110,
+      "lagFrames": 0,
+      "correlation": 0.9999981397722891
+    },
+    {
+      "decodedStartSec": 13140,
+      "lagFrames": 0,
+      "correlation": 0.9999979396344137
+    },
+    {
+      "decodedStartSec": 13170,
+      "lagFrames": 0,
+      "correlation": 0.9999894460558821
+    },
+    {
+      "decodedStartSec": 13200,
+      "lagFrames": 0,
+      "correlation": 0.9999950739582085
+    },
+    {
+      "decodedStartSec": 13230,
+      "lagFrames": 0,
+      "correlation": 0.9999961829079236
+    },
+    {
+      "decodedStartSec": 13260,
+      "lagFrames": 0,
+      "correlation": 0.9999946505299606
+    },
+    {
+      "decodedStartSec": 13290,
+      "lagFrames": 0,
+      "correlation": 0.9999942136126325
+    },
+    {
+      "decodedStartSec": 13320,
+      "lagFrames": 0,
+      "correlation": 0.9999964749337967
+    },
+    {
+      "decodedStartSec": 13350,
+      "lagFrames": 0,
+      "correlation": 0.9999957645711824
+    },
+    {
+      "decodedStartSec": 13380,
+      "lagFrames": 0,
+      "correlation": 0.9999968413056064
+    },
+    {
+      "decodedStartSec": 13410,
+      "lagFrames": 0,
+      "correlation": 0.9999981598288598
+    },
+    {
+      "decodedStartSec": 13440,
+      "lagFrames": 0,
+      "correlation": 0.9999986483470977
+    },
+    {
+      "decodedStartSec": 13470,
+      "lagFrames": 0,
+      "correlation": 0.9999972748065942
+    },
+    {
+      "decodedStartSec": 13500,
+      "lagFrames": 0,
+      "correlation": 0.9999986026266371
+    },
+    {
+      "decodedStartSec": 13530,
+      "lagFrames": 0,
+      "correlation": 0.9999983121983123
+    },
+    {
+      "decodedStartSec": 13560,
+      "lagFrames": 0,
+      "correlation": 0.9999982955707899
+    },
+    {
+      "decodedStartSec": 13590,
+      "lagFrames": 0,
+      "correlation": 0.9999983018313884
+    },
+    {
+      "decodedStartSec": 13620,
+      "lagFrames": 0,
+      "correlation": 0.9999968427063506
+    },
+    {
+      "decodedStartSec": 13650,
+      "lagFrames": 0,
+      "correlation": 0.9999975506842221
+    },
+    {
+      "decodedStartSec": 13680,
+      "lagFrames": 0,
+      "correlation": 0.999998291137227
+    },
+    {
+      "decodedStartSec": 13710,
+      "lagFrames": 0,
+      "correlation": 0.9999963702123792
+    },
+    {
+      "decodedStartSec": 13740,
+      "lagFrames": 0,
+      "correlation": 0.9999988619203782
+    },
+    {
+      "decodedStartSec": 13770,
+      "lagFrames": 0,
+      "correlation": 0.9999973858910097
+    },
+    {
+      "decodedStartSec": 13800,
+      "lagFrames": 0,
+      "correlation": 0.9999965761784021
+    },
+    {
+      "decodedStartSec": 13830,
+      "lagFrames": 0,
+      "correlation": 0.9999972692942135
+    },
+    {
+      "decodedStartSec": 13860,
+      "lagFrames": 0,
+      "correlation": 0.9999965153078821
+    },
+    {
+      "decodedStartSec": 13890,
+      "lagFrames": 0,
+      "correlation": 0.9999977421533907
+    },
+    {
+      "decodedStartSec": 13920,
+      "lagFrames": 0,
+      "correlation": 0.9999975218332806
+    },
+    {
+      "decodedStartSec": 13950,
+      "lagFrames": 0,
+      "correlation": 0.9999972036388115
+    },
+    {
+      "decodedStartSec": 13980,
+      "lagFrames": 0,
+      "correlation": 0.999990610151743
+    },
+    {
+      "decodedStartSec": 14010,
+      "lagFrames": 0,
+      "correlation": 0.9999965779945448
+    },
+    {
+      "decodedStartSec": 14040,
+      "lagFrames": 0,
+      "correlation": 0.9999894594457762
+    },
+    {
+      "decodedStartSec": 14070,
+      "lagFrames": 0,
+      "correlation": 0.9999976252354623
+    },
+    {
+      "decodedStartSec": 14100,
+      "lagFrames": 0,
+      "correlation": 0.9999984539609577
+    },
+    {
+      "decodedStartSec": 14130,
+      "lagFrames": 0,
+      "correlation": 0.9999960832786913
+    },
+    {
+      "decodedStartSec": 14160,
+      "lagFrames": 0,
+      "correlation": 0.9999983576583247
+    },
+    {
+      "decodedStartSec": 14190,
+      "lagFrames": 0,
+      "correlation": 0.999997622822405
+    },
+    {
+      "decodedStartSec": 14220,
+      "lagFrames": 0,
+      "correlation": 0.9999984951072025
+    },
+    {
+      "decodedStartSec": 14250,
+      "lagFrames": 0,
+      "correlation": 0.9999979570188952
+    },
+    {
+      "decodedStartSec": 14280,
+      "lagFrames": 0,
+      "correlation": 0.9999972559182643
+    },
+    {
+      "decodedStartSec": 14310,
+      "lagFrames": 0,
+      "correlation": 0.9999985027793968
+    },
+    {
+      "decodedStartSec": 14340,
+      "lagFrames": 0,
+      "correlation": 0.9999989212806333
+    },
+    {
+      "decodedStartSec": 14370,
+      "lagFrames": 0,
+      "correlation": 0.9999969674716127
+    },
+    {
+      "decodedStartSec": 14400,
+      "lagFrames": 0,
+      "correlation": 0.9999950755024922
+    },
+    {
+      "decodedStartSec": 14430,
+      "lagFrames": 0,
+      "correlation": 0.9999988139888643
+    },
+    {
+      "decodedStartSec": 14460,
+      "lagFrames": 0,
+      "correlation": 0.9999989466677955
+    },
+    {
+      "decodedStartSec": 14490,
+      "lagFrames": 0,
+      "correlation": 0.9999993188902152
+    }
+  ],
+  "referenceWarnings": "",
+  "mergedWarnings": ""
+}

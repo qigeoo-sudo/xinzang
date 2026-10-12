@@ -1,0 +1,507 @@
+{
+  "schemaVersion": "1.0",
+  "mentorId": "ying-pilot",
+  "generatedAt": "2026-10-12T17:11:33.147Z",
+  "sourceRoot": "D:/database/mentors/ying wang pilot",
+  "factualSourcePolicy": "最新适用书面审核优先，人工稿为事实主来源；音频完整PCM复核，同SHA历史ASR仅作辅助，不继承原Ying审核批准。",
+  "selectedInputs": [
+    "YWP-R1-FULL-AUD",
+    "YWP-R1-FULL-TXT",
+    "YWP-R1-Q1-TXT",
+    "YWP-SECONDARY",
+    "YWP-R1-REVIEW-001",
+    "YWP-R2-Q1-AUD",
+    "YWP-R2-Q1-TXT",
+    "YWP-R2-Q2Q3-AUD",
+    "YWP-R2-Q2Q3-TXT",
+    "YWP-R2-Q4Q6-AUD",
+    "YWP-R2-Q4Q6-TXT"
+  ],
+  "rawSourceCount": 23,
+  "derivedEvidenceCount": 4,
+  "sources": [
+    {
+      "sourceId": "YWP-R1-Q0-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q0 角色定位.m4a",
+      "bytes": 2235003,
+      "sha256": "9F5FC86F986043C622A9618EBF88F4363D76A1847D6ADC75B8C82462BAB2237C",
+      "role": "preserved_original_merge_crosscheck",
+      "priority": 4,
+      "durationSec": 159.34,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-Q0-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q0 角色定位.txt",
+      "bytes": 2083,
+      "sha256": "42286A9565989427DF7E9DFC18DA7467C8207F1D53CCDC4970A455457470D331",
+      "role": "preserved_human_fragment",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R1-Q1-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/职业发展路径与经验分享.m4a",
+      "bytes": 22505401,
+      "sha256": "02928601888CA18D1F3343571588A63DDA0509D1ED834948FB118F8D07C2F4E2",
+      "role": "preserved_original_merge_crosscheck",
+      "priority": 4,
+      "durationSec": 1538.1,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-Q1-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang/ying wang word/ying wang 第一轮 interview word/Q1 职业发展路径与经验分享.md",
+      "bytes": 18862,
+      "sha256": "965D0ED8AE5132E16FED69BBEA6EB649E5A7987CD9A0F7CE07E4C19A60AD04DA",
+      "role": "selected_Q1_human_supplement",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R1-Q2-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q2行业深度洞察.m4a",
+      "bytes": 63374960,
+      "sha256": "E9D5CF0E4890C97DFBF6304068618AA631E88C9343B014FC953103F63337BE0C",
+      "role": "preserved_original_merge_crosscheck",
+      "priority": 4,
+      "durationSec": 4394.64,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-Q2-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q2行业深度洞察.txt",
+      "bytes": 47494,
+      "sha256": "4820B66DCB8585823141A37415763D923AC945C788AAAC03E4A843C0F2F0D507",
+      "role": "preserved_human_fragment",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R1-Q3-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q3招人和求职视角.m4a",
+      "bytes": 67110148,
+      "sha256": "4D2917AFA095A6C3E64177B884D6AA7BA741A51A3DE0B4AA1A59F516AFD8D5E9",
+      "role": "preserved_original_merge_crosscheck",
+      "priority": 4,
+      "durationSec": 4580.9,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-Q3-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q3招人和求职视角.txt",
+      "bytes": 58834,
+      "sha256": "C3B27ED625910FF3B68478B42D983BE401E9E02FDE4F15FB97B020B00AE2B206",
+      "role": "preserved_human_fragment",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R1-Q4Q6-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/Q4、Q5、Q6.m4a",
+      "bytes": 58815006,
+      "sha256": "81EDD183648CF6E95E6D6F212ADCEE2E9E200B4A962F8DF1D97BD3FB05AB21EF",
+      "role": "preserved_original_merge_crosscheck",
+      "priority": 4,
+      "durationSec": 3945.52,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-Q4Q6-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q4、Q5、Q6.txt",
+      "bytes": 47647,
+      "sha256": "D05FE1BB45AC597030A63D2494D83DDBD7C5D149ED7C5D32ADC5ED7593BFA505",
+      "role": "preserved_human_fragment",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R1-FULL-AUD",
+      "sourceType": "audio",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第一轮 interview audio/ying wang pilot 第一轮 full interview.m4a",
+      "bytes": 231151220,
+      "sha256": "B7B5EA371159AD88EA83353398E7AF1E54DD890198C25BFCDAE3EC6F8C0AE5A4",
+      "role": "selected_only_audio_analysis_input",
+      "priority": 4,
+      "durationSec": 14618.567,
+      "streams": [
+        {
+          "codec_name": "aac",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R1-FULL-TXT",
+      "sourceType": "transcript",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/ying wang pilot 第一轮 full transcript.md",
+      "bytes": 156341,
+      "sha256": "FACCEED55365FB300957F1AC59EA670EB439EDFF72B6E102D2DA1E45A48F6DD3",
+      "role": "selected_four_section_human_transcript",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-SECONDARY",
+      "sourceType": "secondary_analysis",
+      "path": "D:/database/mentors/ying wang pilot/YingWang_AI分身人格prompt.md",
+      "bytes": 14442,
+      "sha256": "6755E726A870543409F594F4AA05F27E2D3E417C6C787A765CCBBD7EEDF3C4F9",
+      "role": "hypotheses_only",
+      "priority": 6
+    },
+    {
+      "sourceId": "YWP-DERIVED-ASR",
+      "sourceType": "derived_analysis",
+      "path": "D:/database/mentors/ying wang/work/ying-v0.1/audio-analysis/ying_audio_full_analysis.json",
+      "bytes": 1014970,
+      "sha256": "FA1D7EDDE7FC2953AF1CE140A1F6D2B5734B6D1C3820C7816A374B844AC4B516",
+      "role": "reuse_five_audio_SHA256_matches_only",
+      "priority": 5
+    },
+    {
+      "sourceId": "YWP-ASR-PROVENANCE",
+      "sourceType": "provenance_manifest",
+      "path": "D:/database/mentors/ying wang/work/ying-v0.1/source_manifest.json",
+      "bytes": 3886,
+      "sha256": "3FA2CD4A32085A9972C0CA00A0FD7ED32EFEB4F974ED3874F54E126510AF33B8",
+      "role": "hash_linkage_only",
+      "priority": 5
+    },
+    {
+      "sourceId": "YWP-R1-REVIEW-001",
+      "sourceType": "mentor_written_review",
+      "path": "D:/database/mentors/ying wang pilot/Ying_Wang_第一轮审核清单_v0.1_回复.md",
+      "bytes": 10256,
+      "sha256": "0687AC1D02D8541BFBBBDEBFDFE4077C19886D5A71845A0E88B8E5B6436A5881",
+      "priority": 1,
+      "snapshot": "review-source/Ying_Wang_第一轮审核清单_v0.1_回复.md",
+      "receivedAt": "2026-10-12T15:29:14.392Z",
+      "mentorConfirmationDate": null,
+      "authority": "用户在本Pilot专属对话明确指定本次收到的首轮回复；仅吸收此文件的逐项答案，非继承原Ying历史批准。"
+    },
+    {
+      "sourceId": "YWP-R2-Q1-AUD",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q1.m4a",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q1.m4a",
+      "sourceType": "audio",
+      "role": "selected_unique_full_audio",
+      "bytes": 12028841,
+      "sha256": "307CE1247C536514347159D587DC0A28637CF6DF5C6A0A51E51232AEF5E8475B",
+      "priority": 4,
+      "durationSec": 806.9,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ],
+      "decodedDurationSec": 800.5135
+    },
+    {
+      "sourceId": "YWP-R2-Q1-TXT",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q1.txt",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q1.txt",
+      "sourceType": "transcript",
+      "role": "selected_human_transcript",
+      "bytes": 9379,
+      "sha256": "FD41FA59BA6BD02D289FD312C00D032B3F6C014CE8751F335034F20E73449A6B",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R2-Q2Q3-AUD",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2＼Q3.m4a",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2＼Q3.m4a",
+      "sourceType": "audio",
+      "role": "selected_unique_full_audio",
+      "bytes": 26335152,
+      "sha256": "87EC4A7F5D094A60756EEC9D04F4484AF490D7DC8948B73418CFF979BA3EF0BF",
+      "priority": 4,
+      "durationSec": 1809.26,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ],
+      "decodedDurationSec": 1794.8735
+    },
+    {
+      "sourceId": "YWP-R2-Q2Q3-TXT",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2＼Q3.txt",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2＼Q3.txt",
+      "sourceType": "transcript",
+      "role": "selected_human_transcript",
+      "bytes": 21240,
+      "sha256": "C53E04CDFC06B3B7AA8E4526951810EDD298DA91452FC16CDC4F66CB5FB3D30B",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R2-Q4Q6-AUD",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/d第二季Q4.m4a",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/d第二季Q4.m4a",
+      "sourceType": "audio",
+      "role": "selected_unique_full_audio",
+      "bytes": 24402964,
+      "sha256": "3FE7BBECCA3596AF6637D7D959B216F69E46E6F2B988FEFCD4C0C70363614026",
+      "priority": 4,
+      "durationSec": 1703.08,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ],
+      "decodedDurationSec": 1689.4935
+    },
+    {
+      "sourceId": "YWP-R2-Q4Q6-TXT",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/d第二季Q4.txt",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/d第二季Q4.txt",
+      "sourceType": "transcript",
+      "role": "selected_human_transcript",
+      "bytes": 19283,
+      "sha256": "EEE588CAA0B7E15224FD69DCFBE1763B0F2EEB340FE437D9316FC40795D7474A",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R2-DUP-Q2Q3-AUD",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2_Q3.m4a",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/第二季Q2_Q3.m4a",
+      "sourceType": "audio",
+      "role": "duplicate_not_analyzed",
+      "bytes": 26335152,
+      "sha256": "87EC4A7F5D094A60756EEC9D04F4484AF490D7DC8948B73418CFF979BA3EF0BF",
+      "priority": 4,
+      "durationSec": 1809.26,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R2-ALT-Q2Q3-TXT",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2_Q3.txt",
+      "relativePath": "ying wang pilot word/ying wang pilot 第二轮 interview word/第二季Q2_Q3.txt",
+      "sourceType": "transcript",
+      "role": "same_spoken_body_less_precise_timestamps",
+      "bytes": 21087,
+      "sha256": "3EA81448BAAB29D746769DB40F5ADE76B0FF0F5F684DB2F9D52A9B29F1070347",
+      "priority": 3
+    },
+    {
+      "sourceId": "YWP-R2-MISPLACED-R1-Q3",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot audio/ying wang pilot 第二轮 interview audio/Q3招人和求职视角.m4a",
+      "relativePath": "ying wang pilot audio/ying wang pilot 第二轮 interview audio/Q3招人和求职视角.m4a",
+      "sourceType": "audio",
+      "role": "same_as_round1_Q3_not_round2_content",
+      "bytes": 67110148,
+      "sha256": "4D2917AFA095A6C3E64177B884D6AA7BA741A51A3DE0B4AA1A59F516AFD8D5E9",
+      "priority": 4,
+      "durationSec": 4580.9,
+      "streams": [
+        {
+          "codec_name": "opus",
+          "sample_rate": "48000",
+          "channels": 2
+        }
+      ]
+    },
+    {
+      "sourceId": "YWP-R2-HIST-ASR",
+      "path": "D:/database/mentors/ying wang/work/ying-v0.3/audio-analysis/ying_audio_full_analysis.json",
+      "relativePath": "../ying wang/work/ying-v0.3/audio-analysis/ying_audio_full_analysis.json",
+      "sourceType": "derived_analysis",
+      "role": "hash_verified_ASR_acoustic_reuse_no_review_inheritance",
+      "bytes": 295758,
+      "sha256": "4702A4036717B02FFD5588955F67AE217FBED9E7D42A804AE766B37737EBFDA2",
+      "priority": 5
+    },
+    {
+      "sourceId": "YWP-R2-HIST-ASR-MANIFEST",
+      "path": "D:/database/mentors/ying wang/work/ying-v0.3/source_manifest_r2.json",
+      "relativePath": "../ying wang/work/ying-v0.3/source_manifest_r2.json",
+      "sourceType": "provenance_manifest",
+      "role": "audio_hash_linkage_only",
+      "bytes": 2640,
+      "sha256": "DB67AB2FFE9D66F4750949DED45EEC1DC1464851235577F2851B009A0F95F4BD",
+      "priority": 5
+    }
+  ],
+  "sections": [
+    {
+      "section": "Q1",
+      "audioSourceId": "YWP-R1-Q1-AUD",
+      "transcriptSourceId": "YWP-R1-Q1-TXT",
+      "offsetContainerSec": 0,
+      "offsetDecodedSec": 0,
+      "containerDurationSec": 1538.1,
+      "historicalAnalysisDurationSec": 1525.87
+    },
+    {
+      "section": "Q2",
+      "audioSourceId": "YWP-R1-Q2-AUD",
+      "transcriptSourceId": "YWP-R1-Q2-TXT",
+      "offsetContainerSec": 1538.1,
+      "offsetDecodedSec": 1525.87,
+      "containerDurationSec": 4394.64,
+      "historicalAnalysisDurationSec": 4359.53
+    },
+    {
+      "section": "Q3",
+      "audioSourceId": "YWP-R1-Q3-AUD",
+      "transcriptSourceId": "YWP-R1-Q3-TXT",
+      "offsetContainerSec": 5932.74,
+      "offsetDecodedSec": 5885.4,
+      "containerDurationSec": 4580.9,
+      "historicalAnalysisDurationSec": 4544.27
+    },
+    {
+      "section": "Q0",
+      "audioSourceId": "YWP-R1-Q0-AUD",
+      "transcriptSourceId": "YWP-R1-Q0-TXT",
+      "offsetContainerSec": 10513.64,
+      "offsetDecodedSec": 10429.67,
+      "containerDurationSec": 159.34,
+      "historicalAnalysisDurationSec": 158.15
+    },
+    {
+      "section": "Q4Q6",
+      "audioSourceId": "YWP-R1-Q4Q6-AUD",
+      "transcriptSourceId": "YWP-R1-Q4Q6-TXT",
+      "offsetContainerSec": 10672.98,
+      "offsetDecodedSec": 10587.82,
+      "containerDurationSec": 3945.52,
+      "historicalAnalysisDurationSec": 3914.01
+    }
+  ],
+  "audioContainerDurationSec": 14618.567,
+  "fragmentTotalDurationSec": 14618.5,
+  "mergeDecision": {
+    "audio": "新版五段合并稿包含全部5份原音频，实际顺序Q1→Q2→Q3→Q0→Q4Q6；与旧暂存四段合并稿哈希不同。",
+    "transcript": "full transcript仅4段，顺序Q2→Q3→Q0→Q4Q6，未含Q1；停止唯一文字输入假设，另吸收Q1人工稿。原件不改。",
+    "rawAudioFragments": 5,
+    "rawTranscriptFragments": 5,
+    "missingTranscriptSections": [
+      "Q1"
+    ],
+    "duplicateAudioCounted": false
+  },
+  "missingSections": [],
+  "reviewInputs": {
+    "round1ReviewReceived": true,
+    "round2InterviewReceived": true,
+    "round2ReviewReceived": false
+  },
+  "status": "draft",
+  "sameSourceAliases": [
+    {
+      "kind": "human_transcript",
+      "selectedSourceId": "YWP-R1-Q1-TXT",
+      "path": "D:/database/mentors/ying wang pilot/ying wang pilot word/ying wang pilot 第一轮 interview word/Q1 职业发展路径与经验分享.md",
+      "bytes": 18862,
+      "sha256": "965D0ED8AE5132E16FED69BBEA6EB649E5A7987CD9A0F7CE07E4C19A60AD04DA"
+    },
+    {
+      "kind": "audio",
+      "selectedSourceId": "YWP-R1-Q1-AUD",
+      "path": "D:/database/mentors/ying wang/ying wang audio/ying wang 第一轮 interview audio/ying wang 1st round audio Q1.m4a",
+      "bytes": 22505401,
+      "sha256": "02928601888CA18D1F3343571588A63DDA0509D1ED834948FB118F8D07C2F4E2"
+    }
+  ],
+  "q1SelectionAuthorization": "用户授权引用原Ying同SHA音频对应的同源人工稿；不继承任何原实例审核批准。",
+  "scope": "round2_candidate_update",
+  "round2Decision": "processing_authorized_by_latest_user_request",
+  "packageVersion": "v0.4",
+  "factPriority": [
+    "latest applicable mentor written review",
+    "human transcript",
+    "audio",
+    "derived ASR/acoustics",
+    "Claude analysis"
+  ],
+  "newSourceCount": 11,
+  "rawR2SourceCount": 9,
+  "newDerivedSourceCount": 2,
+  "selectedR2Inputs": [
+    "YWP-R2-Q1-AUD",
+    "YWP-R2-Q1-TXT",
+    "YWP-R2-Q2Q3-AUD",
+    "YWP-R2-Q2Q3-TXT",
+    "YWP-R2-Q4Q6-AUD",
+    "YWP-R2-Q4Q6-TXT"
+  ],
+  "audioR2ContainerDurationSec": 4319.24,
+  "audioR2DecodedAnalyzedDurationSec": 4284.880499999999,
+  "deduplication": {
+    "duplicateAudioSource": "YWP-R2-DUP-Q2Q3-AUD",
+    "sameRound1AudioSource": "YWP-R2-MISPLACED-R1-Q3",
+    "transcriptDuplicate": {
+      "source": "YWP-R2-ALT-Q2Q3-TXT",
+      "spokenBodyEqual": true,
+      "selection": "millisecond_timestamp_version"
+    },
+    "fullInterviewFilesFound": 0,
+    "fullTranscriptFilesFound": 0
+  },
+  "originalRound1Decision": "historical cancelled; superseded by user new round2 request",
+  "baselinePath": "D:/database/mentors/ying wang pilot/work/ying-pilot-v0.3",
+  "baselineVersion": "v0.3",
+  "totalSourceCount": 27,
+  "references": [
+    {
+      "path": "D:/database/AGENTS.md",
+      "bytes": 60244,
+      "sha256": "A340E1A52DC2F602D2CF17B54CCA541EA10F32D0E3482F4CF5971477E1CB1A70",
+      "role": "current_project_rules"
+    },
+    {
+      "path": "D:/database/mentors/_templates/interview-guides/AI_Career_导师interview_2_v1.0.docx",
+      "bytes": 48600,
+      "sha256": "01D92F629381717306F7C917B096DC5D9E7FAD2E837E17935134D93E42680789",
+      "role": "shared_official_round2_guide_v1.0_90min_not_rewritten"
+    }
+  ]
+}

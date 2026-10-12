@@ -1,0 +1,335 @@
+{
+  "mentorId": "ying-pilot",
+  "round": 2,
+  "inputAudioReceived": 5,
+  "inputAudioUniqueAnalyzed": 3,
+  "inputAudioDuplicateExcluded": 1,
+  "inputAudioRound1Excluded": 1,
+  "containerDurationSec": 4319.24,
+  "decodedAnalyzedDurationSec": 4284.880499999999,
+  "allDecodedSamplesProcessed": true,
+  "method": "new_full_PCM_energy_analysis_plus_SHA256_verified_historical_ASR_Praat_reuse; no new ASR inference, no human full listening",
+  "humanTranscript": {
+    "chineseChars": 14323,
+    "normalizedChars": 14539,
+    "fillers": {
+      "其实": 64,
+      "可能": 55,
+      "那么": 16,
+      "所以": 31,
+      "首先": 12,
+      "对不对": 0,
+      "怎么说呢": 3,
+      "打个比方": 3,
+      "我是这么想的": 0,
+      "一定": 30,
+      "肯定": 7
+    }
+  },
+  "asr": {
+    "chineseChars": 14662,
+    "normalizedChars": 14820,
+    "fillers": {
+      "其实": 39,
+      "可能": 58,
+      "那么": 29,
+      "所以": 35,
+      "首先": 11,
+      "对不对": 0,
+      "怎么说呢": 0,
+      "打个比方": 1,
+      "我是这么想的": 0,
+      "一定": 29,
+      "肯定": 5
+    }
+  },
+  "asrHumanNormalizedLengthRatio": 1.019327326501135,
+  "paragraphCount": 58,
+  "sections": [
+    {
+      "section": "Q1",
+      "containerDurationSec": 806.9,
+      "decodedDurationSec": 800.5135,
+      "asrLastLocalSec": 797.19,
+      "humanLastTimestamp": "00:12:49.590",
+      "newPCM": {
+        "decodedDurationSec": 800.5135,
+        "samples": 12808216,
+        "frameSec": 0.02,
+        "decodeWarnings": "",
+        "energy": {
+          "frames": 40026,
+          "rmsDbFS": -28.016869364538305,
+          "medianDbFS": -35.2889873894697,
+          "p10DbFS": -68.47621126850724,
+          "p90DbFS": -22.94959977384452,
+          "belowMinus45Ratio": 0.3121471043821516,
+          "peakNormalized": 0.726348876953125
+        }
+      },
+      "historicalAcoustics": {
+        "durationSec": 800.51,
+        "pitchHz": {
+          "median": 146.38,
+          "p10": 124.84,
+          "p90": 190.161,
+          "rangeP10P90": 65.32,
+          "voicedFrameRatio": 0.441
+        },
+        "intensityDb": {
+          "median": 60.097,
+          "p10": 27.751,
+          "p90": 70.833,
+          "rangeP10P90": 43.081
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 2711,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 203.2,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 9,
+          "怎么说呢": 0,
+          "就是说": 3,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 8,
+          "那么": 19,
+          "然后": 5,
+          "所以": 6,
+          "这个": 16,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 1,
+          "简而言之": 0,
+          "首先": 2,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 2,
+          "最重要": 0,
+          "很重要": 0,
+          "一定": 1,
+          "特别": 0,
+          "肯定": 0,
+          "千万不要": 0,
+          "完全": 4,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 2,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 2354,
+          "countGte0_2": 106,
+          "countGte0_5": 80,
+          "countGte1_0": 39,
+          "medianGte0_2": 0.8,
+          "p90Gte0_2": 2.08,
+          "max": 3.57
+        }
+      }
+    },
+    {
+      "section": "Q2Q3",
+      "containerDurationSec": 1809.26,
+      "decodedDurationSec": 1794.8735,
+      "asrLastLocalSec": 1789.38,
+      "humanLastTimestamp": "00:28:52.790",
+      "newPCM": {
+        "decodedDurationSec": 1794.8735,
+        "samples": 28717976,
+        "frameSec": 0.02,
+        "decodeWarnings": "",
+        "energy": {
+          "frames": 89744,
+          "rmsDbFS": -23.58878766589558,
+          "medianDbFS": -29.66702144580086,
+          "p10DbFS": -92.88076581877534,
+          "p90DbFS": -19.086436296399693,
+          "belowMinus45Ratio": 0.26991219468711,
+          "peakNormalized": 1
+        }
+      },
+      "historicalAcoustics": {
+        "durationSec": 1794.87,
+        "pitchHz": {
+          "median": 153.919,
+          "p10": 126.921,
+          "p90": 210.579,
+          "rangeP10P90": 83.658,
+          "voicedFrameRatio": 0.459
+        },
+        "intensityDb": {
+          "median": 65.536,
+          "p10": 4.436,
+          "p90": 74.806,
+          "rangeP10P90": 70.371
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 6523,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 218.1,
+        "fillerCounts": {
+          "我觉得": 0,
+          "我是这么想的": 0,
+          "其实": 0,
+          "怎么说呢": 0,
+          "就是说": 0,
+          "也就是说": 0,
+          "对吧": 0,
+          "可能": 19,
+          "那么": 0,
+          "然后": 0,
+          "所以": 16,
+          "这个": 0,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 0,
+          "简而言之": 0,
+          "首先": 6,
+          "其次": 1,
+          "最后": 0,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 0
+        },
+        "emphasisCounts": {
+          "非常非常": 1,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 0,
+          "很重要": 2,
+          "一定": 23,
+          "特别": 0,
+          "肯定": 2,
+          "千万不要": 0,
+          "完全": 2,
+          "绝对": 0,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 5525,
+          "countGte0_2": 335,
+          "countGte0_5": 273,
+          "countGte1_0": 91,
+          "medianGte0_2": 0.62,
+          "p90Gte0_2": 1.516,
+          "max": 7.66
+        }
+      }
+    },
+    {
+      "section": "Q4Q6",
+      "containerDurationSec": 1703.08,
+      "decodedDurationSec": 1689.4935,
+      "asrLastLocalSec": 1687.58,
+      "humanLastTimestamp": "00:27:55.180",
+      "newPCM": {
+        "decodedDurationSec": 1689.4935,
+        "samples": 27031896,
+        "frameSec": 0.02,
+        "decodeWarnings": "",
+        "energy": {
+          "frames": 84475,
+          "rmsDbFS": -23.78762501467339,
+          "medianDbFS": -29.805518989508755,
+          "p10DbFS": -96.16971755863268,
+          "p90DbFS": -19.274076555681866,
+          "belowMinus45Ratio": 0.25514057413435925,
+          "peakNormalized": 0.989349365234375
+        }
+      },
+      "historicalAcoustics": {
+        "durationSec": 1689.49,
+        "pitchHz": {
+          "median": 145.903,
+          "p10": 122.255,
+          "p90": 188.159,
+          "rangeP10P90": 65.904,
+          "voicedFrameRatio": 0.461
+        },
+        "intensityDb": {
+          "median": 65.285,
+          "p10": -0.173,
+          "p90": 74.634,
+          "rangeP10P90": 74.807
+        }
+      },
+      "asrLexicon": {
+        "chineseCharCount": 5428,
+        "englishTokenCount": 0,
+        "englishTokensTop": [],
+        "chineseCharsPerAudioMinute": 192.8,
+        "fillerCounts": {
+          "我觉得": 1,
+          "我是这么想的": 0,
+          "其实": 30,
+          "怎么说呢": 0,
+          "就是说": 7,
+          "也就是说": 1,
+          "对吧": 0,
+          "可能": 31,
+          "那么": 10,
+          "然后": 12,
+          "所以": 13,
+          "这个": 48,
+          "我会觉得": 0,
+          "说句实在话": 0,
+          "打个比方": 0,
+          "简而言之": 0,
+          "首先": 3,
+          "其次": 0,
+          "最后": 2,
+          "反过来": 0,
+          "举个例子": 0,
+          "你会发现": 1
+        },
+        "emphasisCounts": {
+          "非常非常": 0,
+          "很多很多": 0,
+          "真正": 1,
+          "最重要": 1,
+          "很重要": 1,
+          "一定": 5,
+          "特别": 0,
+          "肯定": 3,
+          "千万不要": 3,
+          "完全": 7,
+          "绝对": 2,
+          "极其": 0,
+          "最核心": 0,
+          "务实": 0,
+          "踏踏实实": 0,
+          "拼命": 0
+        },
+        "pauseStats": {
+          "wordGapCount": 4586,
+          "countGte0_2": 382,
+          "countGte0_5": 224,
+          "countGte1_0": 105,
+          "medianGte0_2": 0.56,
+          "p90Gte0_2": 1.778,
+          "max": 7.22
+        }
+      }
+    }
+  ]
+}
