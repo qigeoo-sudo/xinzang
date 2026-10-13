@@ -1,6 +1,0 @@
-{
-  "method": "AAC transcode: packet payloads differ as expected. Complete decoded waveform envelope compared with original concatenation.",
-  "pass": true,
-  "containerDurationSec": 14618.567,
-  "decodedDurationSec": 14501.847
-}
