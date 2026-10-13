@@ -6239,15 +6239,8 @@ export async function rejectG4(userId: string, runId: string, input: { reason: s
 // ------------------------------------------------------------------
 
 /** S21 activate_pilot 段：pilot 导师激活配置（mentorDirKey → 激活所需资产）。
- *  无配置的导师自动跳过该段。新增 pilot 时在此注册。
- *  cardsSource/promptSource 指向入库后的合同路径（cards/、prompts/），不依赖 current/ 整包。 */
-const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {
-  'ying wang pilot': {
-    mentorId: 'ying-pilot',
-    cardsSource: 'content/knowledge-governance/cards/ying-pilot_knowledge_cards.jsonl',
-    promptSource: null, // prompt 已落位 prompts/ying-pilot_system_prompt.md，无需再复制
-  },
-};
+ *  无配置的导师自动跳过该段。新增 pilot 时在此注册。 */
+const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {};
 
 /** S21 七段指令类型映射 */
 const S21_PHASE_COMMAND: Record<string, string> = {
