@@ -591,37 +591,6 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     ],
   },
   {
-    id: 'ying-pilot',
-    name: 'Ying Wang Pilot',
-    chineseName: '王颖',
-    avatar: '/avatars/ying-pilot.svg',
-    launchedAt: '2026-10-13',
-    title: '生产负责人',
-    company: '矩阵超智',
-    companyType: '创业',
-    industry: '智能制造',
-    years: 16,
-    tagline: '上汽通用、特斯拉出身 · 现矩阵超智生产负责人 · 从现场视角聊制造、工艺与求职（Pilot 测试分身）',
-    tags: ['制造业', '新能源汽车', '具身智能', '生产工艺', '量产导入', '校招社招'],
-    price: 59,
-    isFree: false,
-    gender: 'male',
-    // 人格 Prompt 由 content/knowledge-governance/prompts/ying-pilot_system_prompt.md 加载（pilot v0.5）
-    personalityPrompt: '',
-    knowledgeEntries: [],
-    usesDbKnowledge: true,
-    expertiseDomains: ['制造业', '汽车', '新能源汽车', '具身智能', '人形机器人', '生产管理', '工艺工程', '量产导入', '工厂现场', '质量', '校招', '社招', '简历', '面试', '职业转型', '职业探索', '普通本科求职'],
-    // 文案字段均出自 ying_pilot_public_profile_v0.2.json 获批字段
-    publicProfile:
-      'Ying Wang（王颖）｜现任矩阵超智（具身智能创业公司）生产负责人，负责生产制造与生产试制，向公司创始人汇报。上海工程技术大学自动化本科，上海交通大学项目管理在职硕士。2010 年加入上汽通用，曾参与新一代别克君威（2016，法兰克福）、新一代别克昂科威（2018，底特律）及凯迪拉克 ATS 相关工作；2019-04 至 2026-03 任特斯拉专家工程师（staff engineer），2019 年在旧金山参与特斯拉 Model 3 国内量产项目，2022 至 2026 年任特斯拉总装试制车间负责人。',
-    suggestedQuestions: [
-      '普通本科进制造业还有好机会吗？',
-      '生产和工艺工程师每天到底在做什么？',
-      '现在想进具身智能行业，晚不晚？',
-      '校招进工厂之后，几年内能怎么发展？',
-    ],
-  },
-  {
     id: 'kevinyuan',
     name: 'Kevin Yuan',
     chineseName: '袁宁宁',
