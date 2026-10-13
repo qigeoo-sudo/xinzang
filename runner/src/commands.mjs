@@ -38,6 +38,7 @@ import {
   feishuDownloadMinutes,
   feishuDownloadResource,
   feishuDownloadUnknownBatch,
+  feishuMentionText,
   feishuScanAndDownload,
   feishuSendFile,
   feishuSendPostMention,
@@ -45,6 +46,7 @@ import {
   feishuSendText,
   feishuSearchChatId,
   feishuWhoami,
+  isPermissionDeniedReason,
 } from './feishu.mjs';
 import { mergeRound1Materials } from './merge.mjs';
 
@@ -129,7 +131,7 @@ async function prepareClaudeOutputs(contentRoot, mentorDir) {
   return out.sort((a, b) => a.relPath.localeCompare(b.relPath));
 }
 
-export async function handleCommand(command, contentRoot) {
+export async function handleCommand(command, contentRoot, opts = {}) {
   const { type, payload = {} } = command;
   switch (type) {
     case 'ping':
@@ -224,6 +226,7 @@ export async function handleCommand(command, contentRoot) {
         trigger: String(payload.trigger || ''),
         threadId: payload.threadId ? String(payload.threadId) : undefined,
         taskType,
+        onProgress: opts.onProgress,
       });
     }
 
@@ -290,7 +293,18 @@ export async function handleCommand(command, contentRoot) {
           destDirAbs,
           destName: payload.destName,
         });
-        if (!r.ok) throw new Error(`下载妙记文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+        if (!r.ok) {
+          // 妙记分享权限未开放：群里 @ 分享者开权限（仅阅读不够），uuid 幂等防重复刷屏
+          if (isPermissionDeniedReason(r.raw || r.reason || '') && payload.senderId && payload.chatId) {
+            await feishuMentionText({
+              chatId: payload.chatId,
+              openId: payload.senderId,
+              text: `您好，您分享的《${payload.destName || '妙记文件'}》尚未对本系统开放权限（仅阅读不够，无法导出音频/文字稿）。麻烦把该妙记的分享权限设置为「获得链接的人可编辑」，设置好后我们会重试下载。谢谢！`,
+              idempotencyKey: `dm-perm-${String(payload.messageId || '')}-${payload.kind || 'file'}`,
+            }).catch(() => {});
+          }
+          throw new Error(`下载妙记文件失败: ${r.reason}${r.raw ? `｜raw: ${r.raw.slice(-1000)}` : ''}`);
+        }
         const { sha256 } = await hashFile(r.destAbs);
         return {
           destAbs: r.destAbs,

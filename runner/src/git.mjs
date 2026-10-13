@@ -122,7 +122,12 @@ export async function runRegressionTests(payload) {
   const passed = results.filter((r) => r.passed).length;
   const failed = results.filter((r) => !r.passed).length;
   if (failed > 0) {
-    throw new Error(`回归测试失败（${failed}/${results.length}）：${results.filter((r) => !r.passed).map((r) => r.name).join('、')}`);
+    // 失败详情随消息回传（截断 1500 字），否则面板只显示测试名，tsc 报错无从排查
+    const details = results
+      .filter((r) => !r.passed)
+      .map((r) => `${r.name}: ${(r.error ?? '').slice(0, 1400)}`)
+      .join(' ┃ ');
+    throw new Error(`回归测试失败（${failed}/${results.length}）：${results.filter((r) => !r.passed).map((r) => r.name).join('、')}｜详情：${details}`);
   }
   return { passed, failed, details: results };
 }

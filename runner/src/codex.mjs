@@ -21,16 +21,17 @@ export const CODEX_DELIVER_STATUS = 'ready';
 
 const VERSION_TIMEOUT_MS = 15_000;
 
-/** 任务类型 → 总任务上限（毫秒）。smoke 120s；完整 Assembly 允许长任务。 */
+/** 任务类型 → 总任务上限（毫秒）。smoke 120s；两轮完整 Assembly / 吸收任务各 60 分钟（更新 prompt+知识卡也常超 30 分钟）。 */
 const TASK_TIMEOUTS = {
   smoke: 120_000,
-  assembly_round1: 30 * 60_000,   // 30 分钟
-  assembly_round2: 30 * 60_000,
+  assembly_round1: 60 * 60_000,   // 60 分钟
+  assembly_round2: 60 * 60_000,
+  absorb: 60 * 60_000,            // S11/S16 吸收：长任务，300s idle 会误杀
   default: 30 * 60_000,
 };
 
-/** 无活动超时：收到任何 JSONL 事件后重新计时 */
-const IDLE_TIMEOUT_MS = 120_000;
+/** 无活动超时：收到任何 stdout/stderr 数据后重新计时（大文件探测/长命令期间持续输出算活动） */
+const IDLE_TIMEOUT_MS = 300_000;
 
 /** 对单个 CLI 路径跑 --version；shell 仅在裸命令名（依赖 PATH 解析 .cmd shim）时开启 */
 function runVersion(cli, timeoutMs = VERSION_TIMEOUT_MS) {
@@ -200,9 +201,10 @@ function desensitizeEvent(ev) {
  * @param {string} opts.trigger       固定触发语
  * @param {string} [opts.threadId]    已有对话 thread_id（续轮时传入）
  * @param {string} [opts.taskType]    任务类型，决定总超时上限（smoke/assembly_round1/...）
+ * @param {function} [opts.onProgress] 进度回调，每 3 分钟调用一次，参数 {elapsedMs, events, tracePath}
  * @returns {Promise<{ok:boolean, threadId?:string, output?:string, tracePath?:string, lastMessagePath?:string, events?:Array, reason?:string, exitCode?:number}>}
  */
-export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'default' }) {
+export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'default', onProgress }) {
   if (!baseDir || !trigger) {
     return { ok: false, reason: 'baseDir 和 trigger 必填' };
   }
@@ -237,6 +239,9 @@ export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'd
   }
 
   const totalTimeout = TASK_TIMEOUTS[taskType] ?? TASK_TIMEOUTS.default;
+  // 长组装任务放宽空闲超时：Codex 生成整份长文档时可 5-10 分钟不吐 JSONL 事件，
+  // 300s 会把「合法的长思考」误杀（2026-10-12 S6 实测被杀）；短任务（smoke）保持灵敏
+  const idleTimeout = taskType === 'assembly_round1' || taskType === 'assembly_round2' || taskType === 'absorb' ? 900_000 : IDLE_TIMEOUT_MS;
 
   const result = await runCodexExec({
     exe: codexExe,
@@ -246,7 +251,8 @@ export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'd
     tracePath,
     lastMessagePath,
     totalTimeoutMs: totalTimeout,
-    idleTimeoutMs: IDLE_TIMEOUT_MS,
+    idleTimeoutMs: idleTimeout,
+    onProgress,
   });
   return result;
 }
@@ -261,8 +267,11 @@ export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'd
  * 4. --output-last-message 文件保存最终回复，避免 JSONL 结构变化丢文本。
  * 5. 非零退出码一律失败（删除"有 threadId 即成功"的旧逻辑）。
  */
-function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePath, totalTimeoutMs, idleTimeoutMs }) {
+function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePath, totalTimeoutMs, idleTimeoutMs, onProgress }) {
   return new Promise((resolve) => {
+    // OPENAI_API_KEY 现在专指 OpenAI/Codex key（DS key 已改名为 DEEPSEEK_API_KEY，
+    // 见 .env.local）。直接透传，codex exec 从环境变量取认证（优先级高于 auth.json）。
+    // 历史教训：DS key 曾挂在 OPENAI_API_KEY 名下并透传给 codex 导致 401。
     const child = spawn(exe, args, {
       windowsHide: true,
       shell: useShell,
@@ -278,14 +287,32 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
     let done = false;
     let threadId = null;
     let fatalError = null;
-    let lastActivityAt = Date.now();
+    let turnCompleted = false;
+    const startedAt = Date.now();
+    let lastActivityAt = startedAt;
     const events = [];
     const publicEvents = [];
+
+    // 进度回调：每 3 分钟调用一次，发送最近事件和已运行时间
+    const progressTimer = onProgress
+      ? setInterval(() => {
+          if (done) return;
+          try {
+            onProgress({
+              elapsedMs: Date.now() - startedAt,
+              events: publicEvents.slice(-30),
+              tracePath,
+              threadId,
+            });
+          } catch { /* 回调异常不影响主流程 */ }
+        }, 3 * 60_000)
+      : null;
 
     // 总任务上限定时器
     const totalTimer = setTimeout(() => {
       if (done) return;
       done = true;
+      if (progressTimer) clearInterval(progressTimer);
       try { child.kill('SIGKILL'); } catch { /* ignore */ }
       resolve({
         ok: false,
@@ -308,6 +335,7 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
     function onIdle() {
       if (done) return;
       done = true;
+      if (progressTimer) clearInterval(progressTimer);
       clearTimeout(totalTimer);
       try { child.kill('SIGKILL'); } catch { /* ignore */ }
       resolve({
@@ -323,6 +351,9 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
 
     // stdout 按行实时消费
     child.stdout.on('data', (d) => {
+      // 任何 stdout 数据到达都重置无活动超时（大文件探测期间虽无完整 JSONL 行，
+      // 但进程在持续输出，不应判定为无活动）
+      resetIdle();
       stdoutBuffer += d.toString();
       let idx;
       while ((idx = stdoutBuffer.indexOf('\n')) !== -1) {
@@ -337,8 +368,13 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
         appendFile(tracePath, JSON.stringify(desensitizeEvent(ev)) + '\n').catch(() => {});
         // 提取 threadId / fatalError
         if (ev.type === 'thread.started' && ev.thread_id) threadId = ev.thread_id;
-        if (ev.type === 'error' && ev.message && !fatalError) fatalError = String(ev.message);
-        if (ev.type === 'turn.failed' && ev.error?.message) fatalError = String(ev.error.message);
+        if (ev.type === 'turn.completed') turnCompleted = true;
+        // 收尾阶段的连接抖动（如 workspace routing discovery timed out）
+        // 若任务已 turn.completed，不应视为业务失败——在 close 回调里统一裁决
+        if (!turnCompleted) {
+          if (ev.type === 'error' && ev.message && !fatalError) fatalError = String(ev.message);
+          if (ev.type === 'turn.failed' && ev.error?.message) fatalError = String(ev.error.message);
+        }
         // 可公开摘要
         const pub = summarizeEvent(ev);
         if (pub) publicEvents.push(pub);
@@ -354,6 +390,7 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
     child.on('error', (err) => {
       if (done) return;
       done = true;
+      if (progressTimer) clearInterval(progressTimer);
       clearTimeout(totalTimer);
       clearTimeout(idleTimer);
       resolve({
@@ -370,11 +407,17 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
     child.on('close', async (code) => {
       if (done) return;
       done = true;
+      if (progressTimer) clearInterval(progressTimer);
       clearTimeout(totalTimer);
       clearTimeout(idleTimer);
 
-      // 非零退出码一律失败
-      if (code !== 0) {
+      // 先读最终回复，便于判断收尾抖动是否应忽略
+      let output = '';
+      try { output = (await readFile(lastMessagePath, 'utf8')).trim(); } catch { output = ''; }
+      if (!output) output = extractTextFromEvents(events);
+
+      // 非零退出码：任务未完成才算失败；已 turn.completed 且有产出的收尾抖动忽略
+      if (code !== 0 && !(turnCompleted && output)) {
         resolve({
           ok: false,
           reason: `codex exec 退出码 ${code}${stderrTail ? `：${stderrTail.slice(0, 500)}` : ''}`,
@@ -387,8 +430,8 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
         return;
       }
 
-      // 退出码 0，但 JSONL 中有 fatalError 也判失败
-      if (fatalError) {
+      // JSONL fatalError：同样，若已 turn.completed 且有产出，视为收尾抖动，判成功
+      if (fatalError && !(turnCompleted && output)) {
         resolve({
           ok: false,
           reason: fatalError,
@@ -399,18 +442,6 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
           exitCode: code,
         });
         return;
-      }
-
-      // 成功：从 --output-last-message 文件读取最终回复
-      let output = '';
-      try {
-        output = (await readFile(lastMessagePath, 'utf8')).trim();
-      } catch {
-        output = '';
-      }
-      // 兜底：若 last-message 文件为空，尝试从 JSONL 事件中提取文本
-      if (!output) {
-        output = extractTextFromEvents(events);
       }
 
       resolve({

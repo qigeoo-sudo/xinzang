@@ -38,6 +38,8 @@ export interface ReplyMessageMeta {
   msgType: string;
   createTime: number | null;
   senderName: string | null;
+  /** 发件人 open_id（ou_ 开头）；妙记权限未开放时 bot 私聊提醒导师用 */
+  senderId: string | null;
   senderType: string | null;
   deleted: boolean;
   fileName?: string | null;

@@ -17,6 +17,27 @@ const DIR_STATUS_HINT: Record<string, string> = {
   readonly: '只读区（不可选）',
 };
 
+// 可选断点：勾选 = 到该阶段停车等人工；取消 = 自动接续。
+// S4/S9/S12 为强制断点（服务端不可改），在界面上单独固定展示。
+const STOP_OPTIONS: Array<{ code: 'S1' | 'S21'; label: string; hint: string }> = [
+  {
+    code: 'S1',
+    label: 'S1 开工前停车（素材人工甄别登记）',
+    hint: '默认。取消后：建 Run 起系统每 90 秒自动扫描飞书群，妙记候选自动全下载、文件自动全登记，一路自动跑到 S4；连续约 1 小时扫不到素材才转人工',
+  },
+  {
+    code: 'S21',
+    label: 'S21 完工后停车（集成完成等你验收测试端）',
+    hint: '默认。取消后：七段集成与八类回归全绿即自动推 main→master、部署生产 ECS、验证 aihr.top，零人眼验收；试点 Run 始终跳过生产发布',
+  },
+];
+
+const FIXED_STOPS: Array<{ label: string; hint: string }> = [
+  { label: 'S4 Claude 风格摹写（开工前）', hint: '摹写只能由你在 Claude 对话完成，系统不可代做' },
+  { label: 'S9 第一轮文件发送后（完工后）', hint: 'AI 四维全 ≥80 即自动批准发送；发完必须停车，等导师几天后回复，再由你启动 S10' },
+  { label: 'S12 第二轮大纲发送后（完工后）', hint: 'G2 自动发送完成后必须停车，等待第二轮材料' },
+];
+
 export function CreateRunWizard({
   runners,
   onClose,
@@ -33,6 +54,7 @@ export function CreateRunWizard({
   const [chatId, setChatId] = useState('');
   const [chatConfirmed, setChatConfirmed] = useState(false);
   const [isPilot, setIsPilot] = useState(true);
+  const [stops, setStops] = useState<Record<'S1' | 'S21', boolean>>({ S1: true, S21: true });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -76,6 +98,7 @@ export function CreateRunWizard({
           feishuChatName: chatName.trim(),
           feishuChatId: chatId.trim() || undefined,
           isPilot,
+          stops,
         }),
       });
       const data = await res.json();
@@ -314,6 +337,39 @@ export function CreateRunWizard({
                 这是试点 Run（P1）。试点使用导师目录副本跑通 S0-S7，验收后由人工删除副本，不触碰真实导师目录。
               </span>
             </label>
+
+            {/* 人工断点配置：S1/S21 可选；S4/S9/S12 强制 */}
+            <div className="rounded-xl border border-stone-200 p-3">
+              <p className="mb-1 text-sm font-medium text-ink">人工断点</p>
+              <p className="mb-2 text-xs text-stone-500">
+                勾选 = 到该节点停车等你；取消 = 自动接续。S5→S8 的机器步骤（Codex、核验、AI 评分、自动发送）始终自动。
+              </p>
+              <div className="space-y-2">
+                {STOP_OPTIONS.map((opt) => (
+                  <label key={opt.code} className="flex items-start gap-2 text-xs leading-5 text-stone-700">
+                    <input
+                      type="checkbox"
+                      checked={stops[opt.code]}
+                      onChange={(e) => setStops((prev) => ({ ...prev, [opt.code]: e.target.checked }))}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      <span className="font-medium">{opt.label}</span>
+                      <span className="block text-[11px] text-stone-400">{opt.hint}</span>
+                    </span>
+                  </label>
+                ))}
+                {FIXED_STOPS.map((f) => (
+                  <label key={f.label} className="flex items-start gap-2 text-xs leading-5 text-stone-400">
+                    <input type="checkbox" checked disabled className="mt-0.5" />
+                    <span>
+                      <span className="font-medium">{f.label}（强制停车）</span>
+                      <span className="block text-[11px]">{f.hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
             <div className="rounded-lg bg-stone-50 p-3 text-xs leading-5 text-stone-600">
               <p className="font-medium text-stone-700">「榨职机助手」机器人（软提示，不挡建 Run）</p>
               <p className="mt-1">

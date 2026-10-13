@@ -99,6 +99,46 @@ export async function resolveLarkCli() {
 
 const CHAT_ID_RE = /^oc_[A-Za-z0-9]+$/;
 const MESSAGE_ID_RE = /^om_[A-Za-z0-9]+$/;
+const OPEN_ID_RE = /^ou_[A-Za-z0-9]+$/;
+
+/** 判定下载/导出失败是否为「分享权限未开放」（飞书 2091005 permission deny / HTTP 403） */
+export function isPermissionDeniedReason(raw) {
+  const s = String(raw || '');
+  return s.includes('2091005') || /permission\s*deny/i.test(s) || /HTTP\s+403/.test(s);
+}
+
+/**
+ * 群内发送文本并 @ 指定成员（2026-10-13 用户定：不发私聊，群里 @ 更透明）。
+ * 直连 fetch（lark-cli 外部凭据模式对 --as bot 发送受限）；text 消息内联 <at user_id> 标签。
+ * uuid 幂等：同 key 重试不会重复刷屏。
+ */
+export async function feishuMentionText({ chatId, openId, text, idempotencyKey }) {
+  if (!CHAT_ID_RE.test(String(chatId || ''))) return { ok: false, reason: 'bad_chat_id' };
+  if (!OPEN_ID_RE.test(String(openId || ''))) return { ok: false, reason: 'bad_open_id' };
+  const body = String(text ?? '').trim();
+  if (!body) return { ok: false, reason: 'empty_text' };
+  const token = process.env.LARKSUITE_CLI_TENANT_ACCESS_TOKEN;
+  if (!token) return { ok: false, reason: 'no_tenant_token' };
+  try {
+    const res = await fetch('https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=chat_id', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({
+        receive_id: String(chatId),
+        msg_type: 'text',
+        content: JSON.stringify({ text: `<at user_id="${String(openId)}"></at> ${body}` }),
+        uuid: sanitizeIdempotencyKey(idempotencyKey),
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!data || data.code !== 0) {
+      return { ok: false, reason: data ? `api_error_${data.code}` : 'bad_json', raw: JSON.stringify(data ?? {}).slice(0, 400) };
+    }
+    return { ok: true, messageId: data.data?.message_id ?? null };
+  } catch (e) {
+    return { ok: false, reason: 'fetch_error', raw: String(e?.message || e).slice(0, 300) };
+  }
+}
 const FILE_KEY_RE = /^(img|file)_[A-Za-z0-9_-]+$/;
 // 目标文件名白名单：单段路径（无目录分隔符/盘符/通配符/..），首字符不为点
 const UNSAFE_NAME_RE = /[\\/:*?"<>|]|\.\./;
@@ -774,7 +814,18 @@ export async function feishuDownloadUnknownBatch({ mentorDir, contentRoot, items
         dl = { ok: false, reason: 'no_file_identity' };
       }
       if (!dl.ok) {
-        failed.push({ fileName, reason: dl.reason || 'download_failed' });
+        const permDenied = isPermissionDeniedReason(dl.raw || dl.reason || '');
+        failed.push({ fileName, reason: dl.reason || 'download_failed', permDenied });
+        // 妙记/文档分享权限未开放：群里 @ 分享者，请其把权限开到「获得链接的人可编辑」（仅阅读不够）。
+        // uuid 幂等防重复刷屏；发送失败不影响下载主流程。
+        if (permDenied && item.senderId && item.chatId) {
+          await feishuMentionText({
+            chatId: item.chatId,
+            openId: item.senderId,
+            text: `您好，您分享的《${fileName}》尚未对本系统开放权限（仅阅读不够，无法导出音频/文字稿）。麻烦把该妙记的分享权限设置为「获得链接的人可编辑」，设置好后我们会重试下载。谢谢！`,
+            idempotencyKey: `dm-perm-${String(item.messageId || '')}-${kind}`,
+          }).catch(() => {});
+        }
         continue;
       }
       const s = await stat(dl.destAbs);

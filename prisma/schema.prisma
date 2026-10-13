@@ -609,14 +609,14 @@ model DailyJourneyStats {
 ///         interaction_exclude | submission_review | mentor_account_manage 等
 model AuditLog {
   id        String   @id @default(cuid())
-  actorId   String
+  actorId   String? // 系统自动动作（如 auto_pilot）无真人用户，写 null 并在 metadata.actor 记录身份
   action    String
   targetId  String?
   reason    String?  @db.Text
   metadata  String?  @db.Text // JSON 操作详情
   createdAt DateTime @default(now())
 
-  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([actorId, createdAt])
   @@index([action, createdAt])

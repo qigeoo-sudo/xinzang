@@ -55,7 +55,7 @@ export function MessageFeedbackBar({
   const [showReasons, setShowReasons] = useState(false);
   const [pending, setPending] = useState(false);
 
-  const submit = async (feedbackType: string, reportReason?: string) => {
+  const submit = async (feedbackType: string | null, reportReason?: string) => {
     setPending(true);
     try {
       const res = await fetch('/api/feedback', {
@@ -83,7 +83,7 @@ export function MessageFeedbackBar({
         type="button"
         aria-label="点赞"
         className={btnCls(current === 'LIKE')}
-        onClick={() => void submit('LIKE')}
+        onClick={() => void submit(current === 'LIKE' ? null : 'LIKE')}
       >
         <ThumbUp />
       </button>
@@ -91,7 +91,7 @@ export function MessageFeedbackBar({
         type="button"
         aria-label="点踩"
         className={btnCls(current === 'DISLIKE')}
-        onClick={() => void submit('DISLIKE')}
+        onClick={() => void submit(current === 'DISLIKE' ? null : 'DISLIKE')}
       >
         <ThumbDown />
       </button>
@@ -99,7 +99,7 @@ export function MessageFeedbackBar({
         type="button"
         aria-label="报错"
         className={btnCls(current === 'REPORT')}
-        onClick={() => setShowReasons((v) => !v)}
+        onClick={() => (current === 'REPORT' ? void submit(null) : setShowReasons((v) => !v))}
       >
         <FlagIcon />
       </button>

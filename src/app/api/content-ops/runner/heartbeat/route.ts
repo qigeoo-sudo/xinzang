@@ -11,6 +11,7 @@ export async function POST(req: Request) {
       dirs: body.dirs,
       stale: body.stale === true,
       codeMtime: typeof body.codeMtime === 'number' ? body.codeMtime : undefined,
+      activeCommand: body.activeCommand ?? undefined,
     });
     return Response.json(result);
   } catch (e) {

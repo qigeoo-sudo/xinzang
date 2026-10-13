@@ -323,9 +323,9 @@ export async function scanFinalHandoff(contentRoot, mentorDir) {
     }
     coreFiles.push({ name, relPath: toDisplayPath(full, contentRoot) ?? name, exists, sha256, bytes, mtime });
   }
-  // 同时把可选 baseline/deployment-baseline/review-source/audio-analysis/prompt-system-snapshot 也收集进来
+  // 同时把可选 baseline/deployment-baseline/review-source/audio-analysis/prompt-system 也收集进来
   const optionalPatterns = ['baseline', 'deployment-baseline', 'review-source', 'audio-analysis', 'prompt-system'];
-  async function walkOptional(dir) {
+  async function walkOptional(dir, cap = 50, patterns = optionalPatterns) {
     let ents;
     try {
       ents = await readdir(dir, { withFileTypes: true });
@@ -334,15 +334,15 @@ export async function scanFinalHandoff(contentRoot, mentorDir) {
       throw err;
     }
     for (const ent of ents) {
-      if (out_length(coreFiles) >= 50) return;
+      if (out_length(coreFiles) >= cap) return;
       const full = path.join(dir, ent.name);
       if (ent.isDirectory()) {
-        await walkOptional(full);
+        await walkOptional(full, cap, patterns);
       } else if (ent.isFile()) {
         const rel = toDisplayPath(full, contentRoot) ?? ent.name;
         const lowerRel = rel.toLowerCase();
         // 检查完整相对路径（而非仅文件名），让 prompt-system/ 等子目录文件能被命中
-        if (optionalPatterns.some((p) => lowerRel.includes(p))) {
+        if (patterns.some((p) => lowerRel.includes(p))) {
           try {
             const s = await stat(full);
             if (s.isFile()) {
@@ -356,7 +356,29 @@ export async function scanFinalHandoff(contentRoot, mentorDir) {
       }
     }
   }
-  await walkOptional(latest.pkgDir);
+  // prompt-system 快照文件优先单独收集（2026-10-13 修复：deployment-baseline 文件多，
+  // 共享 50 上限会截断 prompt-system 导致九查「缺少 Prompt System 快照」误报）
+  await walkOptional(path.join(latest.pkgDir, 'prompt-system'), out_length(coreFiles) + 30, ['prompt-system']);
+  // 包根一级文件全收（2026-10-13 修复：候选 Prompt / 知识快照 jsonl 在包根一级，不匹配任何
+  // optional 模式，导致 TRAE_HANDOFF 引用的 SHA 补全失败 → 九查「缺候选 Prompt SHA-256」误报）
+  {
+    let rootEnts = [];
+    try {
+      rootEnts = await readdir(latest.pkgDir, { withFileTypes: true });
+    } catch { /* skip */ }
+    for (const ent of rootEnts) {
+      if (!ent.isFile() || coreFiles.some((f) => f.name === ent.name)) continue;
+      if (out_length(coreFiles) >= 90) break;
+      const full = path.join(latest.pkgDir, ent.name);
+      try {
+        const s = await stat(full);
+        const h = await hashFile(full);
+        coreFiles.push({ name: ent.name, relPath: toDisplayPath(full, contentRoot) ?? ent.name, exists: true, sha256: h.sha256, bytes: s.size, mtime: s.mtime.toISOString() });
+      } catch { /* skip */ }
+    }
+  }
+  // 其余可选目录
+  await walkOptional(latest.pkgDir, out_length(coreFiles) + 50);
 
   const missing = required.filter((n) => !coreFiles.find((f) => f.name === n && f.exists));
   return {

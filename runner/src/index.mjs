@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { heartbeat as apiHeartbeat, register as apiRegister, reportResult } from './api.mjs';
 import { handleCommand } from './commands.mjs';
+import { reconcileVpn } from './vpn.mjs';
 import {
   RUNNER_VERSION,
   loadConfig,
@@ -49,6 +50,7 @@ function loadDotEnvLocal() {
 // 注入 LARKSUITE_CLI_TENANT_ACCESS_TOKEN，lark-cli 才能真实调 API。
 // token 7200s 过期，每 100 分钟刷新一次。
 let larkTokenTimer = null;
+let larkTokenExpireAt = 0; // token 到期时刻（ms）；心跳驱动刷新的时间基准
 async function refreshLarkTenantToken() {
   const appId = process.env.FEISHU_APP_ID;
   const appSecret = process.env.FEISHU_APP_SECRET;
@@ -65,11 +67,29 @@ async function refreshLarkTenantToken() {
       return false;
     }
     process.env.LARKSUITE_CLI_TENANT_ACCESS_TOKEN = data.tenant_access_token;
+    larkTokenExpireAt = Date.now() + (Number(data.expire) || 7200) * 1000;
     log('OK', `刷新飞书 tenant_access_token 成功（expire=${data.expire}s）`);
     return true;
   } catch (e) {
     log('ERROR', `刷新飞书 tenant_access_token 异常: ${e instanceof Error ? e.message : String(e)}`);
     return false;
+  }
+}
+let larkRefreshing = false; // 刷新防抖：首刷/心跳检查并发时只放一个请求出去
+/**
+ * 心跳驱动的 token 保鲜（2026-10-13）：setInterval(100min) 在长期运行的 Runner 上实测一次都没触发
+ * （15:23 启动后 9 小时无任何刷新日志，token 过期后 S13 下载全挂 99991663）。改为每拍心跳检查，
+ * 到期前 10 分钟主动续期——不依赖长定时器，心跳不断就永不掉 token。
+ */
+async function ensureLarkTokenFresh() {
+  if (!process.env.FEISHU_APP_ID || !process.env.FEISHU_APP_SECRET) return;
+  if (larkRefreshing) return;
+  if (Date.now() < larkTokenExpireAt - 10 * 60 * 1000) return;
+  larkRefreshing = true;
+  try {
+    await refreshLarkTenantToken();
+  } finally {
+    larkRefreshing = false;
   }
 }
 function applyLarkIdentity() {
@@ -207,6 +227,7 @@ async function tick(cfg, processed, busy) {
   busy.current = true;
   let activeCommands = 0;
   try {
+    await ensureLarkTokenFresh().catch(() => {}); // 飞书 token 临期续期（失败不阻塞心跳）
     const [probes, dirs] = await Promise.all([
       probeAll(),
       listMentorDirs(cfg.contentRoot).catch((err) => ({ error: err.message })),
@@ -235,6 +256,10 @@ async function tick(cfg, processed, busy) {
     );
 
     const commands = Array.isArray(hb.commands) ? hb.commands : [];
+
+    // 按当前步骤自动开关系统 VPN（desiredVpn 由控制平面依据步骤策略下发）
+    reconcileVpn(hb.desiredVpn, probes, log);
+
     for (const command of commands) {
       const { stepId, idempotencyKey, type } = command;
       if (!idempotencyKey) {
@@ -249,9 +274,38 @@ async function tick(cfg, processed, busy) {
       activeCommands += 1;
       log('INFO', `执行指令 type=${type} step=${stepId} key=${idempotencyKey}`);
       const startedAt = Date.now();
+      let latestProgress = null;
+      // 进度心跳：命令执行期间每 3 分钟发一次，让观察窗看到 Codex 活动
+      const progressTimer = setInterval(async () => {
+        const elapsedMs = Date.now() - startedAt;
+        try {
+          // 指令执行期间常规 tick 被 busy 锁跳过，这里必须自带探针，否则 V 灯在长任务期间无数据
+          const probes = await probeAll().catch(() => null);
+          await apiHeartbeat(cfg.baseUrl, cfg.runnerToken, cfg.runnerId, {
+            runnerId: cfg.runnerId,
+            machineKey: cfg.machineKey,
+            version: RUNNER_VERSION,
+            name: cfg.runnerName,
+            contentRoot: cfg.contentRoot,
+            probes,
+            activeCommand: {
+              stepId,
+              type,
+              idempotencyKey,
+              elapsedMs,
+              progress: latestProgress,
+            },
+          });
+          log('INFO', `进度心跳 type=${type} elapsed=${Math.round(elapsedMs / 1000)}s events=${latestProgress?.events?.length ?? 0}`);
+        } catch (e) {
+          log('WARN', `进度心跳失败（不影响执行）: ${e.message}`);
+        }
+      }, 3 * 60_000);
       let result;
       try {
-        result = await handleCommand(command, cfg.contentRoot);
+        result = await handleCommand(command, cfg.contentRoot, {
+          onProgress: (info) => { latestProgress = info; },
+        });
       } catch (execErr) {
         // 仅本地执行失败才回报 failed；失败不写 processed，允许控制平面重新入队
         const message = execErr instanceof Error ? execErr.message : String(execErr);
@@ -264,6 +318,7 @@ async function tick(cfg, processed, busy) {
           log('ERROR', `失败结果回报也失败 type=${type}: ${reportErr.message}`);
         });
         log('ERROR', `指令执行失败（Runner 侧异常）type=${type} key=${idempotencyKey}: ${message}`);
+        clearInterval(progressTimer);
         activeCommands -= 1;
         continue;
       }
@@ -286,6 +341,7 @@ async function tick(cfg, processed, busy) {
           log('ERROR', `失败结果回报也失败 type=${type}: ${reportErr.message}`);
         });
         log('ERROR', `${category} type=${type} key=${idempotencyKey}${detail}`);
+        clearInterval(progressTimer);
         activeCommands -= 1;
         continue;
       }
@@ -311,6 +367,7 @@ async function tick(cfg, processed, busy) {
         // 指令在本机确实执行成功，仅回报被服务端拒绝：不反向标记 failed、不写 processed
         log('ERROR', `指令已执行但结果回报被拒 type=${type} key=${idempotencyKey}: ${reportErr.message}`);
       } finally {
+        clearInterval(progressTimer);
         activeCommands -= 1;
       }
     }

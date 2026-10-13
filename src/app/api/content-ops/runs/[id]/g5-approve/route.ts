@@ -1,21 +1,11 @@
-import { requestG5Approval } from '@/lib/content-ops/engine';
+import { acceptStagingAndPublish } from '@/lib/content-ops/engine';
 import { errorResponse, requireContentOpsAdmin } from '@/lib/content-ops/server-auth';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+// G5 已改为单按钮放行（无四项证据勾选）：测试端验收通过 → 自动推 master、部署生产、验证。
+export async function POST(_req: Request, { params }: { params: { id: string } }) {
   try {
     const { userId } = await requireContentOpsAdmin();
-    const body = (await req.json().catch(() => ({}))) as {
-      evidenceChecks?: {
-        stagingAcceptancePassed: boolean;
-        readProductionImpact: boolean;
-        mainShaLocked: boolean;
-        readRollbackPlan: boolean;
-      };
-    };
-    if (!body.evidenceChecks) {
-      return Response.json({ error: '缺少 evidenceChecks' }, { status: 400 });
-    }
-    const result = await requestG5Approval(userId, params.id, { evidenceChecks: body.evidenceChecks });
+    const result = await acceptStagingAndPublish(userId, params.id);
     return Response.json(result);
   } catch (e) {
     return errorResponse(e);

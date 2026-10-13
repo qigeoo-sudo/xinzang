@@ -4,7 +4,7 @@
  *
  * - 需登录，且只能反馈自己会话中的 assistant 消息
  * - 每条消息至多一条反馈：再次提交按更新处理（可改类型/撤销）
- * - feedbackType: LIKE | DISLIKE | REPORT
+ * - feedbackType: LIKE | DISLIKE | REPORT；传 null 表示撤销已有反馈
  * - reportReason（REPORT 必填）: OFFENSIVE | OFF_TOPIC | HALLUCINATION | REPETITIVE | OTHER
  */
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +16,7 @@ import { rateLimit } from '@/lib/rate-limit';
 const feedbackSchema = z
   .object({
     messageId: z.string().min(1).max(40),
-    feedbackType: z.enum(['LIKE', 'DISLIKE', 'REPORT']),
+    feedbackType: z.enum(['LIKE', 'DISLIKE', 'REPORT']).nullable(),
     reportReason: z
       .enum(['OFFENSIVE', 'OFF_TOPIC', 'HALLUCINATION', 'REPETITIVE', 'OTHER'])
       .optional(),
@@ -70,6 +70,14 @@ export async function POST(request: NextRequest) {
   }
   if (message.chatSession.userId !== session.user.id) {
     return NextResponse.json({ error: '无权操作' }, { status: 403 });
+  }
+
+  // feedbackType 为 null：撤销已有反馈
+  if (feedbackType === null) {
+    await prisma.messageFeedback.deleteMany({
+      where: { messageId, userId: session.user.id },
+    });
+    return NextResponse.json({ ok: true, feedback: null });
   }
 
   // upsert：messageId 唯一，重复提交覆盖旧反馈

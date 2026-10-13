@@ -56,6 +56,9 @@ export function requiredEndpoints(step: StepDef): EndpointKey[] {
   switch (step.code) {
     case 'S4':
       return ['claude'];
+    // S5 自身不联网，needsVpn 仅用于承接 S4→S6 段「VPN 不关」，不产生端点硬性要求
+    case 'S5':
+      return [];
     case 'S6':
     case 'S11':
     case 'S14':

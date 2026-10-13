@@ -41,6 +41,8 @@ export interface MaterialFile {
   fileName: string;
   kind: MaterialKind;
   senderName: string | null;
+  /** 发件人 open_id；妙记权限未开放时 bot 私聊提醒导师用 */
+  senderId: string | null;
   createTime: number | null;
   msgType: string;
   /** 文件名命中补传/重传等冲突信号 */
@@ -150,6 +152,7 @@ export function groupRound2Materials(messages: ReplyMessageMeta[]): Round2GroupV
       fileName: m.fileName ?? (m.msgType === 'audio' ? `语音消息_${m.messageId.slice(-8)}` : '(无文件名)'),
       kind,
       senderName: m.senderName,
+      senderId: m.senderId,
       createTime: m.createTime,
       msgType: m.msgType,
       conflictHint: ROUND_CONFLICT_RE.test(m.fileName ?? ''),

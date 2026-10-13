@@ -5,12 +5,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   try {
     const { userId } = await requireContentOpsAdmin();
     const body = await req.json();
-    if (!['copied', 'started', 'deliver'].includes(body.action)) {
-      return Response.json({ error: 'action 必须是 copied、started 或 deliver' }, { status: 400 });
+    if (!['copied', 'started', 'deliver', 'reply'].includes(body.action)) {
+      return Response.json({ error: 'action 必须是 copied、started、deliver 或 reply' }, { status: 400 });
     }
     const result = await codexSubmission(userId, params.id, {
-      action: body.action as 'copied' | 'started' | 'deliver',
+      action: body.action as 'copied' | 'started' | 'deliver' | 'reply',
       conversationName: body.conversationName ? String(body.conversationName) : undefined,
+      message: body.message ? String(body.message) : undefined,
     });
     return Response.json(result);
   } catch (e) {

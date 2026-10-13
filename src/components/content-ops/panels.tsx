@@ -8,7 +8,7 @@
  * 另含 S1/S2 文件登记卡、S3 自动探测说明、S7 核验卡。
  * 所有按钮均为元数据/指令动作，不产出任何内容。
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { RunDetail, RunStep, RunArtifact } from './types';
 import { COMMAND_STATUS_LABELS, STEP_STATUS_LABELS, ARTIFACT_KIND_LABELS, labelOf } from './display-labels';
 import { STEP_DEFS } from '@/lib/content-ops/state-machine';
@@ -37,6 +37,7 @@ import {
   S21_PHASES,
   S22_PHASES,
   ROUND1_QC_ITEMS,
+  ROUND1_ABSORB_TRIGGER,
   ROUND2_UPDATE_TRIGGER,
   ROUND2_ABSORB_TRIGGER,
 } from '@/lib/content-ops/state-machine';
@@ -127,6 +128,108 @@ function formatBytes(n: number): string {
   if (n >= 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
   if (n >= 1024) return `${(n / 1024).toFixed(0)} KB`;
   return `${n} B`;
+}
+
+/**
+ * S1 同名材料聚合提示：按标题归组飞书候选，逐消息标注音频/文字稿是否成对，
+ * 防止同名消息多条时人工只勾一半（如某条妙记同时含音频和文字稿，漏勾文字稿）。
+ * handledKeys 传入后同时标注每组/每消息的下载情况。
+ */
+function UnknownPairsSummary({
+  candidates,
+  handledKeys,
+}: {
+  candidates: UnknownCandidate[];
+  handledKeys?: Set<string>;
+}) {
+  // 按去扩展名的标题归组
+  const groups = new Map<
+    string,
+    Map<
+      string,
+      { createTime: string | null; senderName: string | null; hasAudio: boolean; hasTranscript: boolean }
+    >
+  >();
+  for (const c of candidates) {
+    const title = c.fileName.replace(/\.(m4a|mp3|wav|aac|txt|md|docx?)$/i, '').trim();
+    if (!groups.has(title)) groups.set(title, new Map());
+    const msgs = groups.get(title)!;
+    const cur = msgs.get(c.messageId) ?? {
+      createTime: c.createTime,
+      senderName: c.senderName,
+      hasAudio: false,
+      hasTranscript: false,
+    };
+    if (c.kind === 'audio') cur.hasAudio = true;
+    if (c.kind === 'transcript') cur.hasTranscript = true;
+    msgs.set(c.messageId, cur);
+  }
+
+  // 有风险的组：组内存在未成对消息，或同名消息 >1 条
+  type PairMsg = { createTime: string | null; hasAudio: boolean; hasTranscript: boolean };
+  const risky: Array<{ title: string; msgs: Array<[string, PairMsg]> }> = [];
+  for (const [title, msgs] of groups) {
+    let incomplete = false;
+    for (const m of msgs.values()) if (!m.hasAudio || !m.hasTranscript) incomplete = true;
+    if (incomplete || msgs.size > 1) {
+      risky.push({ title, msgs: [...msgs.entries()] });
+    }
+  }
+  if (risky.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-2.5">
+      <p className="text-[11px] font-semibold text-rose-800">
+        同名材料配对提示（{risky.length} 组需核对）
+      </p>
+      <p className="mt-0.5 text-[10px] leading-4 text-rose-700/80">
+        同一标题在群里可能有多条消息；妙记消息通常同时含「音频+文字稿」。请确认没有只勾音频、漏勾文字稿（或反之）。
+      </p>
+      <ul className="mt-1.5 space-y-1.5">
+        {risky.map(({ title, msgs }) => (
+          <li key={title} className="rounded-md bg-white/70 px-2 py-1">
+            <p className="text-[11px] font-medium text-stone-700">
+              {title}
+              <span className="ml-1 text-[10px] font-normal text-stone-400">（{msgs.length} 条消息）</span>
+            </p>
+            <ul className="mt-0.5 space-y-0.5">
+              {msgs.map(([msgId, m]) => {
+                  const audioDone = handledKeys?.has(`${msgId}:audio`);
+                  const textDone = handledKeys?.has(`${msgId}:transcript`);
+                  return (
+                    <li key={msgId} className="flex flex-wrap items-center gap-1 text-[10px]">
+                      <span className="text-stone-400">{m.createTime ?? '时间未知'}</span>
+                      <span
+                        className={`rounded px-1 py-px ${
+                          m.hasAudio ? (audioDone ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700') : 'bg-stone-100 text-stone-400 line-through'
+                        }`}
+                      >
+                        音频{m.hasAudio ? (audioDone ? '✓已下载' : '可勾') : '缺'}
+                      </span>
+                      <span
+                        className={`rounded px-1 py-px ${
+                          m.hasTranscript
+                            ? textDone
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-violet-100 text-violet-700'
+                            : 'bg-stone-100 text-stone-400 line-through'
+                        }`}
+                      >
+                        文字稿{m.hasTranscript ? (textDone ? '✓已下载' : '可勾') : '缺'}
+                      </span>
+                      {(!m.hasAudio || !m.hasTranscript) && (
+                        <span className="font-semibold text-rose-600">⚠ 不成对</span>
+                      )}
+                    </li>
+                  );
+                },
+              )}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export function FileRegisterCard({
@@ -529,6 +632,9 @@ export function FileRegisterCard({
                     文件名不含「第一轮」的音频/文字文件（含妙记分享拆解出的音频+文字稿）不会自动下载；确认是本轮访谈材料后勾选，
                     Runner 会下载到第一轮归档目录并直接计算哈希登记。全部成功后本步自动完成。
                   </p>
+                  <div className="mt-2">
+                    <UnknownPairsSummary candidates={unknownCandidates} handledKeys={unknownHandled} />
+                  </div>
                   {scanEv.unknownDownloaded?.failed && scanEv.unknownDownloaded.failed.length > 0 && (
                     <ul className="mt-1.5 space-y-0.5">
                       {scanEv.unknownDownloaded.failed.map((f, i) => (
@@ -592,7 +698,89 @@ export function FileRegisterCard({
       ) : canWrite && s13MergedDone ? (
         <p className="mt-2 text-xs text-emerald-600">归并稿已全部登记完成。</p>
       ) : canWrite && step.status === 'done' ? (
-        <p className="mt-2 text-xs text-stone-400">已完成登记（只读）。</p>
+        <div className="mt-3 space-y-3">
+          <p className="text-xs text-stone-400">已完成登记（只读）。以下保留当时扫描与人工甄别的完整历史，供回溯核对。</p>
+          {scanEv.scannedAt && (
+            <p className="text-[11px] text-stone-400">上次扫描时间：{new Date(scanEv.scannedAt).toLocaleString('zh-CN')}</p>
+          )}
+          {/* 历史机器扫描候选（含已登记/未登记状态） */}
+          {scanFiles.length > 0 && (
+            <div className="rounded-xl border border-stone-200 bg-stone-50/60 p-3">
+              <p className="text-xs font-semibold text-stone-600">机器扫描候选（{scanFiles.length}）</p>
+              <ul className="mt-1 max-h-60 space-y-0.5 overflow-auto pr-1">
+                {scanFiles.map((f) => {
+                  const registered = registeredPaths.has(f.relPath);
+                  return (
+                    <li key={f.relPath} className="flex items-center gap-2 rounded-md px-2 py-1 text-xs">
+                      <span className="w-16 shrink-0 text-right text-stone-400">{formatBytes(f.bytes)}</span>
+                      <span className="min-w-0 flex-1 truncate text-stone-500" title={f.relPath}>
+                        {f.relPath.startsWith(mentorPrefix) ? f.relPath.slice(mentorPrefix.length) : f.relPath}
+                      </span>
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                          registered ? 'bg-stone-200 text-stone-500' : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {registered ? '已登记' : '未登记'}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+          {/* 历史妙记/不明候选：全量展示（含已下载与未处理），按消息时间倒序，便于核对是否漏选 */}
+          {isS1 && unknownCandidates.length > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3">
+              <p className="text-xs font-semibold text-amber-800">
+                飞书候选甄别记录（{unknownCandidates.length} 项，含妙记拆解的音频/文字稿）
+              </p>
+              <p className="mt-0.5 text-[11px] leading-4 text-amber-700/80">
+                已下载 {unknownHandled.size} 项，未处理 {unknownCandidates.filter((c) => !unknownHandled.has(`${c.messageId}:${c.kind}`)).length} 项。
+                同一标题出现多次表示飞书群里有多条同名消息；请核对是否漏选了成对消息中的文字稿。
+              </p>
+              <div className="mt-2">
+                <UnknownPairsSummary candidates={unknownCandidates} handledKeys={unknownHandled} />
+              </div>
+              <ul className="mt-2 max-h-80 space-y-1 overflow-auto pr-1">
+                {unknownCandidates
+                  .slice()
+                  .sort((a, b) => (b.createTime ?? '').localeCompare(a.createTime ?? ''))
+                  .map((c) => {
+                    const handled = unknownHandled.has(`${c.messageId}:${c.kind}`);
+                    return (
+                      <li
+                        key={`${c.messageId}:${c.kind}`}
+                        className={`flex items-center gap-2 rounded-md px-2 py-1 text-xs ${
+                          handled ? 'opacity-70' : 'bg-white/70'
+                        }`}
+                      >
+                        <span
+                          className={`w-14 shrink-0 rounded px-1 py-0.5 text-center text-[10px] ${
+                            c.kind === 'audio' ? 'bg-sky-100 text-sky-700' : 'bg-violet-100 text-violet-700'
+                          }`}
+                        >
+                          {c.kind === 'audio' ? '音频' : '文字稿'}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-stone-700" title={c.fileName}>
+                          {c.fileName}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-stone-400">{c.senderName ?? ''}</span>
+                        <span className="shrink-0 text-[10px] text-stone-400">{c.createTime ?? ''}</span>
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] ${
+                            handled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-200/70 text-amber-800'
+                          }`}
+                        >
+                          {handled ? '已下载' : '未处理'}
+                        </span>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+          )}
+        </div>
       ) : (
         <p className="mt-2 text-xs text-stone-400">只读账号：仅可查看登记结果。</p>
       )}
@@ -851,6 +1039,7 @@ export function CodexPanelB({
   canWrite: boolean;
 }) {
   const s6 = run.steps.find((s) => s.code === 'S6')!;
+  const s7 = run.steps.find((s) => s.code === 'S7');
   const contract = (run.taskContract ?? {}) as { r1Trigger?: string };
   const trigger = contract.r1Trigger ?? '（触发语未生成）';
   const ev = (s6.evidence ?? {}) as {
@@ -858,12 +1047,46 @@ export function CodexPanelB({
     codex?: { detected?: boolean; version?: string };
     codexThreadId?: string;
     codexOutput?: string;
-    codexError?: string;
+    codexError?: string | null;
+    codexReplies?: Array<{ by?: string; at?: string; message?: string }>;
+    codexProgress?: { type?: string; elapsedMs?: number; at?: string; progress?: { events?: Array<Record<string, unknown>>; tracePath?: string; threadId?: string } | null };
   };
   const [conversationName, setConversationName] = useState(ev.conversationName ?? '');
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  // Codex 拦截批复场景：已有对话 + 主线失败（典型 S7 无包，Codex 在等范围澄清）+ 无在途指令。
+  // 注意：以 step.status 为准判断"是否在途"，避免进度心跳与失败回报竞态留下的 stale commandStatus='dispatched' 把批复卡藏掉。
+  const s6InFlight =
+    s6.status !== 'failed' &&
+    s6.status !== 'done' &&
+    (s6.commandStatus === 'queued' || s6.commandStatus === 'dispatched' || s6.commandStatus === 'running');
+  const clarificationMode =
+    canWrite && Boolean(ev.codexThreadId) && !s6InFlight &&
+    (run.status === 'failed' || s7?.commandStatus === 'failed');
+  const DEFAULT_REPLY =
+    '确认按两轮构建：1）引用原 Ying 目录中与 Pilot Q1 音频 SHA-256 一致的同源 Q1 人工稿，不继承原实例审核批准；' +
+    '2）去重重复音频（第二季 Q2 哈希重复件、合并音频中重复计入的 30 分钟段）；' +
+    '3）「第一轮」目录中属于第二轮的 3 个章节归入第二轮。请据此继续生成分身包。';
+  const [replyText, setReplyText] = useState(DEFAULT_REPLY);
+
+  const reply = async () => {
+    const message = replyText.trim();
+    if (!message) {
+      setError('批复内容不能为空');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      await onAction('codex-submission', { action: 'reply', message });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '续话失败');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -897,6 +1120,15 @@ export function CodexPanelB({
     }
   };
 
+  // Runner 投递失败时（commandStatus=failed 且有 codexError），人工备用按钮才变亮
+  const runnerFailed = s6.commandStatus === 'failed' && Boolean(ev.codexError);
+  const s6Done = s6.status === 'done';
+  const s6Running = s6.commandStatus === 'queued' || s6.commandStatus === 'running';
+  // 人工备用按钮：批复恢复场景常亮；其余场景要求 S6 未完成、无在途指令且 Runner 投递失败
+  const fallbackDisabled = clarificationMode
+    ? busy || s6Running
+    : busy || s6Done || s6Running || !runnerFailed;
+
   return (
     <section className="rounded-[18px] border-2 border-sky-200 bg-sky-50/40 p-4">
       <h3 className="text-sm font-bold text-sky-900">面板 B · Codex 结构化指令区</h3>
@@ -922,26 +1154,44 @@ export function CodexPanelB({
           </p>
         )}
         {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        {/* 进度心跳：Runner 执行期间显示已运行时间和最近事件数 */}
+        {s6Running && ev.codexProgress && (
+          <div className="mt-2 rounded bg-sky-50 p-2 text-xs text-sky-700">
+            <span className="font-semibold">Codex 执行中</span>
+            {ev.codexProgress.elapsedMs ? ` · 已运行 ${Math.round(ev.codexProgress.elapsedMs / 1000)}s` : ''}
+            {ev.codexProgress.progress?.events?.length ? ` · ${ev.codexProgress.progress.events.length} 个事件` : ''}
+            {ev.codexProgress.progress?.tracePath ? ` · trace: ${ev.codexProgress.progress.tracePath.split('\\').pop()}` : ''}
+          </div>
+        )}
         {canWrite ? (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button type="button" onClick={copy} disabled={busy || s6.status === 'done'} className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed">
-              {copied || s6.status === 'done' ? '已复制并登记 ✓' : '复制触发语（人工粘贴）'}
-            </button>
+            {/* Runner 投递放第一位 */}
             <button
               type="button"
               onClick={deliver}
-              disabled={busy || s6.status === 'done' || !runnerOnline || !codexProbe?.installed}
-              className="rounded-lg border border-sky-400 bg-sky-50 px-3 py-1.5 text-sm text-sky-800 disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!runnerOnline ? 'Runner 离线' : !codexProbe?.installed ? '未检测到 Codex CLI' : '由 Runner 自动投递触发语到 Codex'}
+              disabled={busy || s6Done || s6Running || !runnerOnline || codexProbe?.installed === false}
+              className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!runnerOnline ? 'Runner 离线' : codexProbe?.installed === false ? '未检测到 Codex CLI' : '由 Runner 自动投递触发语到 Codex'}
             >
-              {busy ? '投递中…' : s6.commandStatus === 'queued' || s6.commandStatus === 'running' ? '已入队，等待 Runner…' : '由 Runner 投递'}
+              {busy ? '投递中…' : s6Running ? '已入队，等待 Runner…' : s6Done ? '已完成 ✓' : '由 Runner 投递'}
+            </button>
+            {/* 复制触发语放右边，仅 Runner 投递失败时变亮 */}
+            <button
+              type="button"
+              onClick={copy}
+              disabled={fallbackDisabled}
+              className="rounded-lg border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm text-stone-500 disabled:opacity-40 disabled:cursor-not-allowed enabled:border-sky-400 enabled:bg-sky-50 enabled:text-sky-800"
+              title={runnerFailed ? 'Runner 投递失败，可复制触发语人工粘贴' : 'Runner 投递成功或进行中，无需人工粘贴'}
+            >
+              {copied ? '已复制并登记 ✓' : '复制触发语（人工粘贴）'}
             </button>
           </div>
         ) : (
           <p className="mt-2 text-xs text-stone-400">只读账号。</p>
         )}
-        {ev.codexError && (
-          <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">Runner 投递失败：{ev.codexError}</p>
+        {/* 仅在当前确实失败时显示错误（旧的失败信息在成功时已被清除） */}
+        {runnerFailed && ev.codexError && (
+          <p className="mt-2 rounded bg-red-50 p-2 text-xs text-red-700">Runner 投递失败：{ev.codexError}。可使用人工备用按钮，或修复后重新投递。</p>
         )}
         {ev.codexThreadId && (
           <p className="mt-2 text-[11px] text-stone-500">
@@ -951,7 +1201,54 @@ export function CodexPanelB({
             )}
           </p>
         )}
-        <ImpactNote>复制只把固定文本放入剪贴板并登记复制时间；不会向任何对话发送内容。</ImpactNote>
+        {clarificationMode && (
+          <div className="mt-3 rounded-lg border-2 border-amber-300 bg-amber-50 p-3">
+            <p className="text-xs font-bold text-amber-900">Codex 中途拦截，等待你批复</p>
+            <p className="mt-1 text-[11px] leading-5 text-amber-800">
+              Codex 在专属对话里提出澄清问题（见上方输出）。在框内写下批复，由 Runner 在<b>同一对话</b>（thread 不变）续话；
+              它产出含 00_START_HERE.md 的版本包后，S7 核验自动重跑。你也可以在自己的 Codex 客户端里直接回复，然后用下方人工按钮登记恢复。
+            </p>
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              rows={5}
+              className="mt-2 w-full resize-y rounded-md border border-amber-200 bg-white p-2 text-xs leading-5 text-stone-700"
+              placeholder="写下给 Codex 的批复……"
+            />
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={reply}
+                disabled={busy || !replyText.trim() || !runnerOnline}
+                className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-amber-700"
+                title={!runnerOnline ? 'Runner 离线' : '在同一 Codex 对话内续话批复'}
+              >
+                {busy ? '续话入队中…' : '批复并由 Runner 续话'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setReplyText(DEFAULT_REPLY)}
+                disabled={busy}
+                className="rounded-md border border-amber-300 px-2 py-1 text-xs text-amber-800 disabled:opacity-50"
+              >
+                恢复推荐批复
+              </button>
+            </div>
+            {ev.codexReplies && ev.codexReplies.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {ev.codexReplies.slice(-3).map((r, i) => (
+                  <p key={i} className="rounded bg-white/70 p-1.5 text-[11px] text-stone-500">
+                    <span className="font-semibold text-amber-800">
+                      已批复{r.at ? ` · ${new Date(r.at).toLocaleString('zh-CN', { hour12: false })}` : ''}
+                    </span>
+                    ：{r.message}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        <ImpactNote>Runner 投递为主路径，自动发触发语到 Codex；人工粘贴为备用，仅 Runner 投递失败时可用。</ImpactNote>
       </div>
 
       {canWrite && (
@@ -964,22 +1261,29 @@ export function CodexPanelB({
           />
           <button
             type="button"
-            disabled={busy || !conversationName.trim() || s6.status === 'done'}
+            disabled={fallbackDisabled || (!clarificationMode && !conversationName.trim())}
             onClick={async () => {
               setBusy(true);
               setError('');
               try {
-                await onAction('codex-submission', { action: 'started', conversationName });
+                // 批复恢复场景沿用 Runner 自动投递时的专属对话名，无需再手填
+                const name = conversationName.trim() || ev.conversationName || `${run.mentorDir}（Runner 自动创建）`;
+                await onAction('codex-submission', { action: 'started', conversationName: name });
               } catch (e) {
                 setError(e instanceof Error ? e.message : '登记失败');
               } finally {
                 setBusy(false);
               }
             }}
-            className="rounded-lg border border-sky-400 px-3 py-1.5 text-sm text-sky-800"
+            className="rounded-lg border border-stone-300 bg-stone-50 px-3 py-1.5 text-sm text-stone-500 disabled:opacity-40 disabled:cursor-not-allowed enabled:border-sky-400 enabled:bg-sky-50 enabled:text-sky-800"
           >
-            我确认已在专属对话提交，Codex 已开始
+            {clarificationMode ? '我已在专属对话批复，Codex 已继续（恢复主线）' : '我确认已在专属对话提交，Codex 已开始'}
           </button>
+          {clarificationMode && (
+            <p className="text-[11px] leading-5 text-amber-700">
+              点此仅恢复主线并重置 S7；等 Codex 产出含 00_START_HERE.md 的版本包后，再到 S7 卡片点「执行 Assembly 完成核验」。
+            </p>
+          )}
           <p className="text-xs text-stone-500">
             步骤状态：{labelOf(STEP_STATUS_LABELS, s6.status)} · {labelOf(COMMAND_STATUS_LABELS, s6.commandStatus)}
           </p>
@@ -1070,8 +1374,8 @@ export function TraePanelC({ run }: { run: RunDetail }) {
       </h3>
       <p className="mt-1 text-xs leading-5 text-stone-500">
         {unlocked
-          ? 'G4 第一次门禁已通过。S21 Trae 集成（六段自动串联：对账→备份→集成→八类测试→推 main→部署测试端）由 Runner 全自动执行；S22 生产发布需 G5 人工确认后自动串联。集成合同摘要、测试结果、Git SHA 与回滚点在 S21/S22 面板只读展示。'
-          : '第一次门禁（S20「确认交给Trae集成至main和测试端」）通过前本区锁定：没有任何自由指令输入口，不接受「帮我改 Prompt / 知识卡」类请求。门禁后此处只读展示 TRAE_HANDOFF.md 集成合同摘要、八类测试结果、修改文件清单、Git SHA 与回滚点。'}
+          ? '预检全绿后 G4 自动放行。S21 集成七段（对账→备份→集成→激活导师→八类测试→推 main→部署测试端）由 Runner 全自动执行；完成后停在测试端验收：人工点一次「验收通过并发布生产」即自动推 master 上生产；若本 Run 取消了 S21 断点，则测试全绿后 G5 自动放行、零人工发布。集成合同摘要、测试结果、Git SHA 与回滚点在 S21/S22 面板只读展示。'
+          : 'S18 九类预检全绿、S19 pending 归零（G4 自动放行）前本区锁定：没有任何自由指令输入口，不接受「帮我改 Prompt / 知识卡」类请求。放行后此处只读展示 TRAE_HANDOFF.md 集成合同摘要、八类测试结果、修改文件清单、Git SHA 与回滚点。'}
       </p>
     </section>
   );
@@ -1232,7 +1536,7 @@ export function Round1DocsQcPanel({
         由系统按结构、职责、密度、可读性四维各打百分比；任一维低于 80% 给出章节级原因。AI 只提供证据，放行或驳回由你决定。
       </p>
 
-      {!step && canWrite && (
+      {canWrite && !locate && !locateRunning && (
         <div className="mt-3">
           <button type="button" onClick={() => act('start-round1-docs-qc', {})} disabled={busy || !run.runner?.online} className="btn-primary text-sm">
             {busy ? '已入队…' : '开始定位阅览文件'}
@@ -1370,6 +1674,7 @@ export function Round1DocsQcPanel({
                     }
                     className="w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs"
                   />
+                  <QcNoteHint note={note} aiPass={compare.aiPass} />
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1433,7 +1738,10 @@ export function Round1SendApprovalPanel({
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [confirms, setConfirms] = useState<Record<string, boolean>>({});
+  // 2026-10-12 用户定：S9 全自动——到达即代勾四项并自动发送，人工零操作（人工把关点在 S8 裁决）
+  const [confirms, setConfirms] = useState<Record<string, boolean>>(
+    Object.fromEntries(G1_CONFIRM_ITEMS.map((i) => [i.key, true])),
+  );
   const [manualConfirms, setManualConfirms] = useState<Record<string, boolean>>({});
   const [manualNote, setManualNote] = useState('');
 
@@ -1470,6 +1778,26 @@ export function Round1SendApprovalPanel({
 
   const sendFailed = step?.failureReason && step.status === 'failed';
 
+  // 2026-10-12 用户定：S9 全自动——到达即代勾四项并自动发送，然后停（发后等导师回复，S10 人工/事件驱动）。
+  // autoFired 防重复触发；后端 dedup/幂等键兜底；仅失败时显示重试按钮。
+  const allConfirmed = G1_CONFIRM_ITEMS.every((i) => confirms[i.key]);
+  const autoFired = useRef(false);
+  useEffect(() => {
+    if (autoFired.current || !allConfirmed) return;
+    if (
+      run.status !== 'awaiting_send_approval_round1_docs' ||
+      running || !canWrite || !run.runner?.online ||
+      step?.status === 'done' || sendFailed
+    ) return;
+    autoFired.current = true;
+    setBusy(true);
+    setError('');
+    onAction('approve-send-round1-docs', { confirm: confirms })
+      .catch((e) => setError(e instanceof Error ? e.message : '批准失败'))
+      .finally(() => setBusy(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allConfirmed, running, canWrite, run.status, run.runner?.online, step?.status, sendFailed]);
+
   return (
     <section className="letter-paper rounded-[18px] p-4">
       <h3 className="text-sm font-bold text-stone-700">S9 · 批准发送第一轮阅览文件（G1）</h3>
@@ -1494,30 +1822,31 @@ export function Round1SendApprovalPanel({
 
       {run.status === 'awaiting_send_approval_round1_docs' && !running && canWrite && (
         <div className="mt-3 rounded-xl border border-stone-200 p-3">
-          <p className="text-xs font-semibold text-stone-600">证据核对勾（全部勾选后按钮才可用）</p>
+          <p className="text-xs font-semibold text-stone-600">G1 证据核对（到达 S9 已由系统自动确认并发送）</p>
           <div className="mt-2 space-y-1.5">
             {G1_CONFIRM_ITEMS.map((item) => (
-              <label key={item.key} className="flex items-center gap-2 text-xs text-stone-600">
-                <input
-                  type="checkbox"
-                  checked={Boolean(confirms[item.key])}
-                  onChange={(e) => setConfirms((c) => ({ ...c, [item.key]: e.target.checked }))}
-                />
+              <label key={item.key} className="flex items-center gap-2 text-xs text-stone-400">
+                <input type="checkbox" checked={Boolean(confirms[item.key])} disabled />
                 {item.label}
               </label>
             ))}
           </div>
           <div className="mt-2 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={approve}
-              disabled={busy || !G1_CONFIRM_ITEMS.every((i) => confirms[i.key]) || !run.runner?.online || step?.status === 'done'}
-              className="btn-primary text-sm"
-            >
-              {busy ? '已入队…' : '批准发送：第一轮阅览文件'}
-            </button>
-            {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线</span>}
-            {error && <span className="text-xs text-red-600">{error}</span>}
+            {busy && <span className="text-xs text-stone-500">已自动批准，正在发送…</span>}
+            {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线，无法自动发送</span>}
+            {error && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { autoFired.current = true; void approve(); }}
+                  disabled={busy}
+                  className="btn-primary text-sm"
+                >
+                  重试批准发送
+                </button>
+                <span className="text-xs text-red-600">{error}</span>
+              </>
+            )}
           </div>
           <ImpactNote>
             授权范围：仅本次向群「{run.feishuChatName || run.feishuChatId}」发送 2 份文件 + 1 条固定文案；带 dedup 键与逐条幂等键，禁止自动重发。
@@ -1834,11 +2163,10 @@ export function Round1ReplyPanel({
 }
 
 // =====================================================================
-// S11 Codex 吸收第一轮回复（P2b）——S6 同构沟通区：
-// 固定触发语人工粘贴（Runner 投递未验证前置灰），双证据收步。
+// S11 Codex 吸收第一轮回复（2026-10-12 方案A 自动化）：
+// S10 归档完成 → Runner 经 CLI 向 S6 原对话自动投递固定触发语 → 自动扫描 work 包；
+// 人工只保留最后一步：选包确认「吸收完成」（§14.5 不得自动解释为允许集成）。
 // =====================================================================
-
-const ROUND1_ABSORB_TRIGGER = '该导师的第一轮访谈审核清单回复已经到达，请查阅并更新其prompt和知识卡。';
 
 type AbsorbPackageView = {
   name: string;
@@ -1849,7 +2177,8 @@ type AbsorbPackageView = {
 };
 
 type Round1AbsorbEvidence = {
-  codexSubmit?: { by: string; at: string; codexThreadId: string | null };
+  // 兼容两代提交证据：人工登记（codexThreadId）与 Runner 自动投递（threadId + trigger）
+  codexSubmit?: { by: string; at: string; codexThreadId?: string | null; threadId?: string | null; trigger?: string };
   workPackages?: AbsorbPackageView[];
   absorbReady?: boolean;
   absorbRecommended?: string | null;
@@ -1869,8 +2198,6 @@ export function Round1AbsorbPanel({
   const step = run.steps.find((s) => s.code === 'S11');
   const ev = (step?.evidence ?? {}) as Round1AbsorbEvidence;
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
-  const [threadId, setThreadId] = useState('');
-  const [submitted, setSubmitted] = useState(false);
   const [pkg, setPkg] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -1905,51 +2232,48 @@ export function Round1AbsorbPanel({
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-medium text-stone-800">S11 · Codex 吸收第一轮回复</h3>
-      <p className="mt-1 text-xs text-stone-500">在 Codex 专属对话粘贴固定触发语；完成后选择其产出的新版本包收步。复用 S6 登记的同一对话。</p>
+      <p className="mt-1 text-xs text-stone-500">
+        S10 归档完成后，Runner 自动经 CLI 向 S6 原对话续话投递固定触发语，扫描产出后自动确认吸收完成——全程零人工操作。
+      </p>
 
       <blockquote className="mt-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
         {ROUND1_ABSORB_TRIGGER}
-        <button
-          type="button"
-          disabled={step?.status === 'done'}
-          onClick={() => void navigator.clipboard.writeText(ROUND1_ABSORB_TRIGGER)}
-          className="ml-2 rounded border border-stone-300 px-1.5 py-0.5 text-[10px] text-stone-600 hover:bg-white disabled:opacity-40"
-        >
-          复制
-        </button>
+        <span className="ml-2 rounded bg-teal-50 px-1.5 py-0.5 text-[10px] text-teal-700">自动投递 · 无需复制</span>
       </blockquote>
 
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S11' })} />}
 
       {!ev.codexSubmit && !done && (
         <div className="mt-3 space-y-2">
-          <label className="flex items-start gap-2 text-xs text-stone-700">
-            <input type="checkbox" checked={submitted} onChange={(e) => setSubmitted(e.target.checked)} className="mt-0.5" />
-            <span>我已把固定触发语粘贴进该导师的 Codex 专属对话并提交</span>
-          </label>
-          <input
-            value={threadId}
-            onChange={(e) => setThreadId(e.target.value)}
-            placeholder="Codex 对话标识（session/thread UUID，选填，为 S12/S14 复用铺路）"
-            className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 focus:outline-none"
-          />
-          <button
-            type="button"
-            disabled={!canWrite || !submitted || busy || step?.status === 'done'}
-            onClick={() => guard(() => onAction('confirm-round1-absorb', { submittedToConversation: true, codexThreadId: threadId || undefined }))}
-            className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
-          >
-            登记已提交
-          </button>
-          <p className="text-xs text-stone-400">「由 Runner 投递」在 Codex 非交互投递实测稳定前保持置灰（M5 待做）。</p>
+          {running ? (
+            <p className="text-xs text-stone-600">Runner 正在向 Codex 投递吸收触发语…（长任务，可能持续数十分钟）</p>
+          ) : step?.commandStatus === 'failed' ? (
+            <p className="text-xs text-red-600">自动投递失败（{step.failureReason ?? '原因未知'}）——可在上方指令行点「重试」。</p>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-stone-500">等待自动投递（S10 归档完成后触发）。</p>
+              {/* 兜底：S10 先于自动化完成的旧 run / 异常场景，允许手动补触发（幂等，与自动驾驶同一入口） */}
+              <button
+                type="button"
+                disabled={!canWrite || busy || !run.runner?.online}
+                onClick={() => guard(() => onAction('round1-absorb-deliver', {}))}
+                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
+              >
+                立即投递
+              </button>
+              {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线</span>}
+            </div>
+          )}
         </div>
       )}
 
       {ev.codexSubmit && !done && (
         <div className="mt-3 space-y-2">
           <p className="text-xs text-emerald-700">
-            已登记提交（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')})
-            {ev.codexSubmit.codexThreadId ? ` · 对话标识 ${ev.codexSubmit.codexThreadId}` : ' · 未登记对话标识'}
+            已自动投递（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')}）
+            {(ev.codexSubmit.threadId ?? ev.codexSubmit.codexThreadId)
+              ? ` · 对话标识 ${ev.codexSubmit.threadId ?? ev.codexSubmit.codexThreadId}`
+              : ' · 未登记对话标识'}
           </p>
           <p className="text-xs text-stone-600">Codex 更新完 prompt 和知识卡后，扫描 work 目录确认新版本包：</p>
           <button
@@ -2027,6 +2351,18 @@ export function Round1AbsorbPanel({
 // =====================================================================
 // P2c：S12-S16 第二轮全链路面板
 // =====================================================================
+
+/** 人工裁决字数门槛实时提示：放行依据 ≥10 字 / 驳回原因 ≥5 字（S8/S15 同款） */
+function QcNoteHint({ note, aiPass }: { note: string; aiPass: boolean }) {
+  const n = note.trim().length;
+  return (
+    <p className="mt-1 text-[11px] text-stone-400">
+      {aiPass
+        ? 'AI 四维全过线：直接点「通过」即可，备注可选。'
+        : `已输入 ${n} 字 · 放行依据需 ≥10 字${n >= 10 ? ' ✓' : ''} · 驳回原因需 ≥5 字${n >= 5 ? ' ✓' : ''}`}
+    </p>
+  );
+}
 
 function useGuard() {
   const [busy, setBusy] = useState(false);
@@ -2179,6 +2515,7 @@ type MaterialFileView = {
   createTime: number | null;
   msgType: string;
   conflictHint: boolean;
+  minuteToken?: string | null;
 };
 
 type MaterialGroupView = {
@@ -2214,6 +2551,8 @@ type Round2MaterialEvidence = {
   materialScan?: MaterialScanView;
   materialSelection?: { ids?: string[]; files?: string[]; manual?: boolean; selectedAt?: string };
   materialArchived?: Array<{ messageId: string | null; fileName: string; destName?: string; slot: string; bytes: number; sha256: string | null; at: string }>;
+  /** 妙记分享权限未开放留档（2091005）：bot 已私信分享者开权限，开通后人工点重试 */
+  permissionIssues?: Array<{ fileName: string; senderName: string | null; at: string }>;
 };
 
 export function Round2MaterialPanel({
@@ -2245,7 +2584,7 @@ export function Round2MaterialPanel({
   useEffect(() => {
     if (!scan) return;
     const sg = scan.groups.find((g) => g.suggested);
-    setPicked(new Set((sg ?? scan.groups[0])?.files.filter((f) => f.fileKey).map((f) => f.messageId) ?? []));
+    setPicked(new Set((sg ?? scan.groups[0])?.files.filter((f) => f.fileKey || f.minuteToken).map((f) => f.messageId) ?? []));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scan?.scannedAt]);
 
@@ -2258,12 +2597,18 @@ export function Round2MaterialPanel({
     });
   const toggleGroup = (g: MaterialGroupView) =>
     setPicked((prev) => {
-      const ids = g.files.filter((f) => f.fileKey).map((f) => f.messageId);
+      const ids = g.files.filter((f) => f.fileKey || f.minuteToken).map((f) => f.messageId);
       const allIn = ids.every((id) => prev.has(id));
       const next = new Set(prev);
       ids.forEach((id) => (allIn ? next.delete(id) : next.add(id)));
       return next;
     });
+  // 组头勾选态与 toggleGroup 同一口径（fileKey 或妙记都算可下载项）；
+  // 空组（无可下载项）恒为 false——否则 [].every()===true 会把组头永远显示成勾上、取消不掉
+  const groupChecked = (g: MaterialGroupView) => {
+    const ids = g.files.filter((f) => f.fileKey || f.minuteToken).map((f) => f.messageId);
+    return ids.length > 0 && ids.every((id) => picked.has(id));
+  };
 
   const pickedFiles = scan ? scan.groups.flatMap((g) => g.files).filter((f) => picked.has(f.messageId)) : [];
   const hasAudioPicked = pickedFiles.some((f) => f.kind === 'audio');
@@ -2278,6 +2623,20 @@ export function Round2MaterialPanel({
         音频与文稿分别归档到导师「第二轮 interview audio / word」目录。
       </p>
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S13' })} />}
+
+      {/* 妙记权限未开放：人话提示（哪个文件、谁的权限、bot 已私信），替代 403 原始报错 */}
+      {(ev.permissionIssues?.length ?? 0) > 0 && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-xs font-medium text-amber-800">妙记分享权限未开放</p>
+          <ul className="mt-1 space-y-0.5">
+            {(ev.permissionIssues as Array<{ fileName: string; senderName: string | null; at: string }>).map((p) => (
+              <li key={p.fileName + p.at} className="text-xs text-amber-700">
+                《{p.fileName}》——分享者{p.senderName ? `（${p.senderName}）` : ''}需把妙记权限开到「获得链接的人可编辑」，仅阅读不行。bot 已私信提醒对方，开通后点重试继续下载。
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-3">
         <button
@@ -2319,7 +2678,7 @@ export function Round2MaterialPanel({
           {scan.groups.map((g) => (
             <div key={g.id} className={`rounded-xl border p-2.5 ${g.suggested ? 'border-emerald-300 bg-emerald-50/40' : 'border-stone-200'}`}>
               <label className="flex cursor-pointer items-center gap-2 text-xs text-stone-700">
-                <input type="checkbox" checked={g.files.filter((f) => f.fileKey).every((f) => picked.has(f.messageId))} onChange={() => toggleGroup(g)} disabled={!canAct} />
+                <input type="checkbox" checked={groupChecked(g)} onChange={() => toggleGroup(g)} disabled={!canAct} />
                 <span className="font-medium">
                   事件组 {g.id} · {g.files.length} 个文件
                 </span>
@@ -2333,7 +2692,7 @@ export function Round2MaterialPanel({
                 {g.files.map((f) => (
                   <li key={f.messageId}>
                     <label className="flex cursor-pointer items-start gap-2 text-xs">
-                      <input type="checkbox" checked={picked.has(f.messageId)} onChange={() => toggle(f.messageId)} disabled={!canAct || !f.fileKey} className="mt-0.5" />
+                      <input type="checkbox" checked={picked.has(f.messageId)} onChange={() => toggle(f.messageId)} disabled={!canAct || (!f.fileKey && !f.minuteToken)} className="mt-0.5" />
                       <span className="min-w-0 flex-1">
                         <span className="break-all text-stone-700">{f.fileName}</span>
                         <span className="ml-1 text-stone-400">
@@ -2348,6 +2707,9 @@ export function Round2MaterialPanel({
                           <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[10px] text-violet-800">文稿</span>
                         ) : (
                           <span className="rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">其他</span>
+                        )}
+                        {f.minuteToken && (
+                          <span className="ml-1 rounded bg-stone-200 px-1.5 py-0.5 text-[10px] text-stone-600">妙记</span>
                         )}
                         {f.conflictHint && (
                           <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-800">文件名含第一轮/补传/重传</span>
@@ -2455,8 +2817,6 @@ export function Round2UpdatePanel({
   const s11Pkg = ((s11?.evidence ?? {}) as { absorbConfirm?: { workPackage?: string } }).absorbConfirm?.workPackage ?? null;
   const ev = (step?.evidence ?? {}) as Round2UpdateEvidence;
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
-  const [threadId, setThreadId] = useState('');
-  const [submitted, setSubmitted] = useState(false);
   const [pkg, setPkg] = useState('');
   const { busy, error, guard } = useGuard();
 
@@ -2478,50 +2838,49 @@ export function Round2UpdatePanel({
     <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-medium text-stone-800">S14 · Codex 第二轮候选更新</h3>
       <p className="mt-1 text-xs text-stone-500">
-        在 Codex 专属对话粘贴第二轮更新触发语；完成后扫描 work 目录选择新包收步。第一轮基准包：
-        <span className="font-medium text-stone-600">{s11Pkg ?? '（S11 未登记）'}</span>
+        S13 归档完成后，Runner 自动经 CLI 向 S6 原对话续话投递第二轮更新触发语，扫描产出后自动确认收步——全程零人工操作。
+        第一轮基准包：<span className="font-medium text-stone-600">{s11Pkg ?? '（S11 未登记）'}</span>
       </p>
 
-      <blockquote className="mt-2 whitespace-pre-line rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
+      <blockquote className="mt-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700">
         {ROUND2_UPDATE_TRIGGER}
-        <button
-          type="button"
-          disabled={step?.status === 'done'}
-          onClick={() => void navigator.clipboard.writeText(ROUND2_UPDATE_TRIGGER)}
-          className="ml-2 rounded border border-stone-300 px-1.5 py-0.5 text-[10px] text-stone-600 hover:bg-white disabled:opacity-40"
-        >
-          复制
-        </button>
+        <span className="ml-2 rounded bg-teal-50 px-1.5 py-0.5 text-[10px] text-teal-700">自动投递 · 无需复制</span>
       </blockquote>
 
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S14' })} />}
 
       {!ev.codexSubmit && !done && (
         <div className="mt-3 space-y-2">
-          <label className="flex items-start gap-2 text-xs text-stone-700">
-            <input type="checkbox" checked={submitted} onChange={(e) => setSubmitted(e.target.checked)} className="mt-0.5" />
-            <span>我已把第二轮更新触发语粘贴进该导师的 Codex 专属对话并提交</span>
-          </label>
-          <input
-            value={threadId}
-            onChange={(e) => setThreadId(e.target.value)}
-            placeholder="Codex 对话标识（选填）"
-            className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs"
-          />
-          <button
-            type="button"
-            disabled={!canWrite || !submitted || busy}
-            onClick={() => guard(() => onAction('confirm-round2-update', { submittedToConversation: true, codexThreadId: threadId || undefined }))}
-            className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
-          >
-            登记已提交
-          </button>
+          {running ? (
+            <p className="text-xs text-stone-600">Runner 正在向 Codex 投递第二轮更新触发语…（长任务，可能持续数十分钟）</p>
+          ) : step?.commandStatus === 'failed' ? (
+            <p className="text-xs text-red-600">自动投递失败（{step.failureReason ?? '原因未知'}）——可在上方指令行点「重试」。</p>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-stone-500">等待自动投递（S13 归档完成后触发）。</p>
+              {/* 兜底：S13 先于自动化完成的旧 run / 异常场景，允许手动补触发（幂等，与自动驾驶同一入口） */}
+              <button
+                type="button"
+                disabled={!canWrite || busy || !run.runner?.online}
+                onClick={() => guard(() => onAction('round2-update-deliver', {}))}
+                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
+              >
+                立即投递
+              </button>
+              {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线</span>}
+            </div>
+          )}
         </div>
       )}
 
       {ev.codexSubmit && !done && (
         <div className="mt-3 space-y-2">
-          <p className="text-xs text-emerald-700">已登记提交（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')}）</p>
+          <p className="text-xs text-emerald-700">
+            已自动投递（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')}）
+            {(ev.codexSubmit.threadId ?? ev.codexSubmit.codexThreadId)
+              ? ` · 对话标识 ${ev.codexSubmit.threadId ?? ev.codexSubmit.codexThreadId}`
+              : ' · 未登记对话标识'}
+          </p>
           <button
             type="button"
             disabled={!canWrite || running}
@@ -2617,10 +2976,13 @@ export function Round2DocsQcPanel({
   const ev = (step?.evidence ?? {}) as Round2QcEvidence & SendEvidence;
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
   const [note, setNote] = useState('');
-  const [confirms, setConfirms] = useState<Record<string, boolean>>({});
+  // 2026-10-13 用户定：G3 全自动——到达即代勾三项并自动发送（对齐 S9），人工把关点在 S15 低分裁决
+  const [confirms] = useState<Record<string, boolean>>(
+    Object.fromEntries(G3_CONFIRM_ITEMS.map((i) => [i.key, true])),
+  );
   const [manual, setManual] = useState<Record<string, boolean>>({});
   const [manualNote, setManualNote] = useState('');
-  const { busy, error, guard } = useGuard();
+  const { busy, error, setError, guard } = useGuard();
 
   const showPanel =
     [
@@ -2640,6 +3002,20 @@ export function Round2DocsQcPanel({
   const locateReady = !!locate && !locate.ambiguous && (locate.missing?.length ?? 0) === 0;
   const reviewDocs = run.artifacts.filter((a) => a.kind === 'round2_review_doc');
   const sent = (ev.sendLog?.length ?? 0) > 0 || Boolean(ev.manualSend);
+  const g3AllConfirmed = G3_CONFIRM_ITEMS.every((i) => confirms[i.key]);
+  const autoFired = useRef(false);
+  // G3 全自动：到达 awaiting_send_approval_round2_docs 即自动批准发送；autoFired 防重复，后端 dedup 兜底
+  useEffect(() => {
+    if (autoFired.current || !g3AllConfirmed) return;
+    if (
+      run.status !== 'awaiting_send_approval_round2_docs' ||
+      running || !canWrite || !run.runner?.online ||
+      step?.status === 'done' || sent
+    ) return;
+    autoFired.current = true;
+    guard(() => onAction('approve-send-round2-docs', { confirm: confirms })).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g3AllConfirmed, running, canWrite, run.status, run.runner?.online, step?.status, sent]);
 
   return (
     <section className="letter-paper rounded-[18px] p-4">
@@ -2730,6 +3106,7 @@ export function Round2DocsQcPanel({
                 placeholder={compare.aiPass ? '裁决备注（可选）' : '低于 80%：放行依据 ≥10 字；驳回原因 ≥5 字'}
                 className="mt-1 w-full rounded-lg border border-stone-300 px-2.5 py-1.5 text-xs"
               />
+              <QcNoteHint note={note} aiPass={compare.aiPass} />
               <div className="mt-2 flex items-center gap-2">
                 <button
                   type="button"
@@ -2761,23 +3138,32 @@ export function Round2DocsQcPanel({
             <ul className="mt-1">{reviewDocs.map((a) => <ArtifactRow key={a.id} a={a} />)}</ul>
             <blockquote className="mt-2 border-l-2 border-stone-300 pl-2 text-xs leading-5 text-stone-600">{G3_ROUND2_DOCS_TEXT}</blockquote>
           </div>
-          <div className="mt-2 space-y-1.5">
+          <p className="mt-2 text-xs font-semibold text-stone-600">G3 证据核对（到达即由系统自动确认并发送）</p>
+          <div className="mt-1 space-y-1.5">
             {G3_CONFIRM_ITEMS.map((item) => (
-              <label key={item.key} className="flex items-center gap-2 text-xs text-stone-600">
-                <input type="checkbox" checked={Boolean(confirms[item.key])} onChange={(e) => setConfirms((c) => ({ ...c, [item.key]: e.target.checked }))} />
+              <label key={item.key} className="flex items-center gap-2 text-xs text-stone-400">
+                <input type="checkbox" checked={Boolean(confirms[item.key])} disabled />
                 {item.label}
               </label>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={() => guard(() => onAction('approve-send-round2-docs', { confirm: confirms }))}
-            disabled={busy || !G3_CONFIRM_ITEMS.every((i) => confirms[i.key]) || !run.runner?.online}
-            className="btn-primary mt-2 text-sm"
-          >
-            {busy ? '已入队…' : '批准发送：第二轮审核清单'}
-          </button>
-          {!run.runner?.online && <span className="ml-2 text-xs text-red-500">Runner 离线</span>}
+          <div className="mt-2 flex items-center gap-2">
+            {busy && <span className="text-xs text-stone-500">已自动批准，正在发送…</span>}
+            {!run.runner?.online && <span className="text-xs text-red-500">Runner 离线，无法自动发送</span>}
+            {error && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { autoFired.current = true; guard(() => onAction('approve-send-round2-docs', { confirm: confirms })); }}
+                  disabled={busy}
+                  className="btn-primary text-sm"
+                >
+                  重试批准发送
+                </button>
+                <span className="text-xs text-red-600">{error}</span>
+              </>
+            )}
+          </div>
           <ImpactNote>授权范围：仅本次向群发送 1 份清单 + 1 条 G3 文案；带 dedup 键与逐条幂等键，禁止自动重发。</ImpactNote>
         </div>
       )}
@@ -2878,9 +3264,6 @@ export function Round2ReplyPanel({
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
   const [selected, setSelected] = useState('');
   const [manualPath, setManualPath] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [threadId, setThreadId] = useState('');
-  const [absorbDoneChecked, setAbsorbDoneChecked] = useState(false);
   const { busy, error, guard } = useGuard();
 
   const showPanel =
@@ -2995,68 +3378,39 @@ export function Round2ReplyPanel({
         </div>
       )}
 
-      {/* Codex 最终吸收 */}
+      {/* Codex 最终吸收（2026-10-13 用户定：全自动——归档后自动投递触发语，吸收完自动确认收步并进入 S17 发现） */}
       {(archived || ev.replySelectionRound2?.manual) && (
         <div className="mt-4 rounded-xl border border-stone-200 bg-stone-50/50 p-3">
-          <p className="text-xs font-semibold text-stone-700">Codex 最终吸收（不选包）</p>
-          <blockquote className="mt-2 whitespace-pre-line rounded-lg border border-stone-200 bg-white p-3 text-xs text-stone-700">
-            {ROUND2_ABSORB_TRIGGER}
-            <button
-              type="button"
-              disabled={step?.status === 'done'}
-              onClick={() => void navigator.clipboard.writeText(ROUND2_ABSORB_TRIGGER)}
-              className="ml-2 rounded border border-stone-300 px-1.5 py-0.5 text-[10px] text-stone-600 hover:bg-stone-50 disabled:opacity-40"
-            >
-              复制
-            </button>
-          </blockquote>
-
-          {!ev.codexSubmit && !ev.finalAbsorbConfirm && (
-            <div className="mt-2 space-y-2">
-              <label className="flex items-start gap-2 text-xs text-stone-700">
-                <input type="checkbox" checked={submitted} onChange={(e) => setSubmitted(e.target.checked)} className="mt-0.5" />
-                <span>我已把最终吸收触发语粘贴进该导师的 Codex 专属对话并提交</span>
-              </label>
-              <input
-                value={threadId}
-                onChange={(e) => setThreadId(e.target.value)}
-                placeholder="Codex 对话标识（选填）"
-                className="w-full rounded-lg border border-stone-300 px-2 py-1.5 text-xs"
-              />
-              <button
-                type="button"
-                disabled={!canAbsorb || !submitted || busy}
-                onClick={() => guard(() => onAction('confirm-round2-absorb', { submittedToConversation: true, codexThreadId: threadId || undefined }))}
-                className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
-              >
-                登记已提交
-              </button>
-            </div>
-          )}
-
-          {ev.codexSubmit && !ev.finalAbsorbConfirm && (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs text-emerald-700">已登记提交（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')}）。Codex 完成更新后：</p>
-              <label className="flex items-start gap-2 text-xs text-stone-700">
-                <input type="checkbox" checked={absorbDoneChecked} onChange={(e) => setAbsorbDoneChecked(e.target.checked)} className="mt-0.5" />
-                <span>我已核对 Codex 已按第二轮回复完成 prompt 与知识卡更新（仅确认吸收完成，不代表允许集成）</span>
-              </label>
-              <button
-                type="button"
-                disabled={!canAbsorb || !absorbDoneChecked || busy}
-                onClick={() => guard(() => onAction('confirm-round2-absorb', { absorbCompleted: true }))}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 disabled:opacity-40"
-              >
-                确认最终吸收完成
-              </button>
-            </div>
-          )}
-
-          {ev.finalAbsorbConfirm && (
-            <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
-              最终吸收已确认（{new Date(ev.finalAbsorbConfirm.at).toLocaleString('zh-CN')}）。第二轮全链路到此收束；是否允许集成留待后续门禁。
-            </p>
-          )}
+          <p className="text-xs font-semibold text-stone-700">Codex 最终吸收（自动投递 + 自动确认）</p>
+          <p className="mt-1 text-[11px] text-stone-500">
+            归档完成后系统经 CLI 向 S6 原对话续话投递固定触发语；吸收完成后自动扫描 work 目录、确认收步并进入 S17 包发现。
+          </p>
+          <div className="mt-2 space-y-1.5 text-xs">
+            {!ev.codexSubmit && !ev.finalAbsorbConfirm && (
+              <>
+                <p className="text-stone-500">等待自动投递触发语…（归档完成即触发；Runner 离线时由值守在其上线后补发）</p>
+                <button
+                  type="button"
+                  disabled={!canAbsorb || busy || running}
+                  onClick={() => guard(() => onAction('final-absorb-deliver', {}))}
+                  className="rounded-lg bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-700 disabled:opacity-40"
+                >
+                  立即投递
+                </button>
+              </>
+            )}
+            {ev.codexSubmit && !ev.finalAbsorbConfirm && (
+              <>
+                <p className="text-emerald-700">已投递（{new Date(ev.codexSubmit.at).toLocaleString('zh-CN')}），等待 Codex 完成最终吸收…</p>
+                <p className="text-stone-400">完成后系统自动扫描并确认收步；若 Codex 未产出新包会停在这里说明原因。</p>
+              </>
+            )}
+            {ev.finalAbsorbConfirm && (
+              <p className="rounded-lg bg-emerald-50 p-2 text-emerald-800">
+                最终吸收已确认（{new Date(ev.finalAbsorbConfirm.at).toLocaleString('zh-CN')}），已自动进入 S17 包发现；是否允许集成留待 G4 门禁。
+              </p>
+            )}
+          </div>
         </div>
       )}
 
@@ -3106,7 +3460,7 @@ type PendingEvidence = {
 };
 
 type G4Evidence = {
-  g4Approval?: { by: string; at: string; button: string; handoffPath: string | null; handoffVersion: string | null; hashBaseline?: string[] };
+  g4Approval?: { by: string; at: string; button: string; handoffPath: string | null; handoffVersion: string | null; hashBaseline?: string[]; auto?: boolean };
   g4Reject?: { by: string; at: string; reason: string };
 };
 
@@ -3366,7 +3720,7 @@ export function PendingDispositionPanel({
 
       {ev.allSettled && (
         <p className="mt-2 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
-          pending 卡已全部归零（external_pending=0 / internal_pending=0），状态进入 awaiting_staging_integration_approval，可继续 G4 门禁。
+          pending 卡已全部归零（external_pending=0 / internal_pending=0），G4 自动放行，S21 集成随即启动。
         </p>
       )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
@@ -3395,16 +3749,14 @@ export function G4GatePanel({
   const handoffEv = (s17?.evidence ?? {}) as HandoffEvidence;
   const preflightEv = (s18?.evidence ?? {}) as PreflightEvidence;
   const pendingTotal = (preflightEv.preflight?.pendingCount.external ?? 0) + (preflightEv.preflight?.pendingCount.internal ?? 0);
-  const [checks, setChecks] = useState({ preflightAllPassed: false, pendingAllZeroed: false, handoffVersionAndHashRecorded: false, readNoMasterProduction: false });
-  const [rejectReason, setRejectReason] = useState('');
-  const allChecked = checks.preflightAllPassed && checks.pendingAllZeroed && checks.handoffVersionAndHashRecorded && checks.readNoMasterProduction;
-  const canApprove = canWrite && run.status === 'awaiting_staging_integration_approval' && allChecked;
-  const canReject = canWrite && ['awaiting_staging_integration_approval', 'reconciling_snapshots'].includes(run.status);
+  // G4 已取消人工断点：只在车意外停在门禁态时提供人工兜底按钮
+  const canFallback = canWrite && run.status === 'awaiting_staging_integration_approval' && !ev.g4Approval;
   return (
-    <section className="rounded-xl border-2 border-amber-200 bg-amber-50/30 p-4 shadow-sm">
-      <h3 className="text-sm font-bold text-stone-800">S20 · G4 第一次人工确认：确认交给Trae集成至main和测试端</h3>
+    <section className="rounded-xl border border-emerald-200 bg-emerald-50/30 p-4 shadow-sm">
+      <h3 className="text-sm font-bold text-stone-800">S20 · G4 集成放行（自动）</h3>
       <p className="mt-1 text-xs text-stone-500">
-        本按钮只授权应用集成、推送 main、部署/更新测试端；不授权推送 master 或部署生产。通过后 S21 Trae 集成六段由 Runner 全自动串联执行。
+        S18 九类预检全绿且 S19 pending 全部归零后，系统自动放行集成并启动 S21 七段（对账→备份→集成→激活→八类测试→推 main→部署测试端）；
+        只授权推 main 与测试端，不触碰 master 与生产。
       </p>
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => onAction('retry-command', { stepCode: 'S20' })} />}
 
@@ -3422,66 +3774,26 @@ export function G4GatePanel({
         </div>
       </div>
 
-      {/* 证据核对勾 */}
-      <div className="mt-3 space-y-1.5 text-xs">
-        <div className="font-medium text-stone-700">证据核对勾（全部勾选后按钮才可点）</div>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={checks.preflightAllPassed} onChange={(e) => setChecks((p) => ({ ...p, preflightAllPassed: e.target.checked }))} disabled={!canWrite} />
-          <span>S18 九类预检已全部通过</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={checks.pendingAllZeroed} onChange={(e) => setChecks((p) => ({ ...p, pendingAllZeroed: e.target.checked }))} disabled={!canWrite} />
-          <span>S19 pending 卡已全部归零（external_pending=0 / internal_pending=0）</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={checks.handoffVersionAndHashRecorded} onChange={(e) => setChecks((p) => ({ ...p, handoffVersionAndHashRecorded: e.target.checked }))} disabled={!canWrite} />
-          <span>Final Handoff 版本与全量哈希已记录</span>
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={checks.readNoMasterProduction} onChange={(e) => setChecks((p) => ({ ...p, readNoMasterProduction: e.target.checked }))} disabled={!canWrite} />
-          <span>已读「本次操作不会触碰 master 或生产环境」声明</span>
-        </label>
-      </div>
+      {canFallback && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          disabled={!canApprove || busy}
-          onClick={() => guard(() => onAction('g4-approve', { evidenceChecks: checks }))}
-          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
-        >
-          确认交给Trae集成至main和测试端
-        </button>
-        <ImpactNote>只授权应用集成、推送 main、部署/更新测试端；不授权推送 master 或部署生产。</ImpactNote>
-      </div>
-
-      {/* 驳回入口 */}
-      {canReject && (
-        <div className="mt-3 border-t border-stone-100 pt-3">
-          <div className="text-xs text-stone-600">驳回 G4（回退到 final_handoff_preflight 重做预检，原因 ≥5 字）</div>
-          <div className="mt-1.5 flex gap-2">
-            <input
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="驳回原因"
-              className="min-w-0 flex-1 rounded-lg border border-stone-300 px-2 py-1.5 text-xs"
-              disabled={!canWrite}
-            />
-            <button
-              type="button"
-              disabled={!canWrite || rejectReason.trim().length < 5 || busy}
-              onClick={() => guard(() => onAction('g4-reject', { reason: rejectReason }))}
-              className="rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700 hover:bg-red-100 disabled:opacity-40"
-            >
-              驳回 G4
-            </button>
-          </div>
+          <span className="text-xs text-amber-700">车停在集成门禁态：系统通常在下次心跳（≤30 秒）自动放行；也可立即手动兜底。</span>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => guard(() => onAction('g4-approve', {}))}
+            className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+          >
+            立即放行集成（兜底）
+          </button>
         </div>
       )}
 
       {ev.g4Approval && (
         <p className="mt-3 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
-          G4 已通过（{new Date(ev.g4Approval.at).toLocaleString('zh-CN')}）· Final Handoff 版本 {ev.g4Approval.handoffVersion ?? '—'} · 状态进入 reconciling_snapshots，S21 集成已自动启动。
+          G4 已{ev.g4Approval.auto ? '自动放行' : `由 ${ev.g4Approval.by} 兜底放行`}（
+          {new Date(ev.g4Approval.at).toLocaleString('zh-CN')}）· Final Handoff 版本 {ev.g4Approval.handoffVersion ?? '—'}
+          {' '}· S21 集成已自动启动。
         </p>
       )}
       {ev.g4Reject && (
@@ -3506,7 +3818,7 @@ type S21Evidence = {
 };
 
 type S22Evidence = {
-  g5Approval?: { by: string; at: string; button: string; lockedMainSha: string | null };
+  g5Approval?: { by: string; at: string; button: string; lockedMainSha: string | null; auto?: boolean };
   g5Reject?: { by: string; at: string; reason: string };
   s22Progress?: Record<string, { ok: boolean; at: string; summary?: unknown }>;
   lockedMainSha?: string | null;
@@ -3616,10 +3928,9 @@ export function S22ProductionPanel({
     ['production_approval_granted', 'locking_accepted_main_sha', 'promoting_main_to_master', 'deploying_production', 'verifying_production', 'completed'].includes(run.status) ||
     Boolean(step && step.status !== 'pending');
 
-  const [checks, setChecks] = useState({ stagingAcceptancePassed: false, readProductionImpact: false, mainShaLocked: false, readRollbackPlan: false });
   const [rejectReason, setRejectReason] = useState('');
-  const allChecked = checks.stagingAcceptancePassed && checks.readProductionImpact && checks.mainShaLocked && checks.readRollbackPlan;
-  const canApprove = canWrite && run.status === 'awaiting_staging_acceptance' && allChecked;
+  // G5 已改为单按钮放行：测试端验收态下点一下即自动推 master / 部署生产（无需四项勾选）
+  const canApprove = canWrite && run.status === 'awaiting_staging_acceptance';
   const canReject = canWrite && ['awaiting_staging_acceptance', 'production_approval_granted', 'promoting_main_to_master', 'deploying_production', 'verifying_production', 'production_failed_rolled_back'].includes(run.status);
 
   if (!showGate && !showProgress && !ev.g5Approval && !ev.g5Reject) return <PendingCard code="S22" />;
@@ -3633,34 +3944,20 @@ export function S22ProductionPanel({
       <h3 className="text-sm font-bold text-stone-800">S22 · 测试端验收 + 验收通过并发布生产（main → master → aihr.top）（G5）</h3>
       <p className="mt-1 text-xs text-stone-500">{G5_PRODUCTION_APPROVAL_SCOPE}</p>
 
-      {/* G5 门禁区 */}
+      {/* G5 放行区：测试端人工验收通过后，单按钮发布生产 */}
       {showGate && (
         <>
           {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => {}} />}
-          <div className="mt-3 space-y-1.5 text-xs">
-            <div className="font-medium text-stone-700">证据核对勾（全部勾选后按钮才可点）</div>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={checks.stagingAcceptancePassed} onChange={(e) => setChecks((p) => ({ ...p, stagingAcceptancePassed: e.target.checked }))} disabled={!canWrite} />
-              <span>测试端验收通过</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={checks.readProductionImpact} onChange={(e) => setChecks((p) => ({ ...p, readProductionImpact: e.target.checked }))} disabled={!canWrite} />
-              <span>已读生产发布影响（推送 master + 部署 ECS）</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={checks.mainShaLocked} onChange={(e) => setChecks((p) => ({ ...p, mainShaLocked: e.target.checked }))} disabled={!canWrite} />
-              <span>main SHA 已锁定（S21 push_main 段记录）</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={checks.readRollbackPlan} onChange={(e) => setChecks((p) => ({ ...p, readRollbackPlan: e.target.checked }))} disabled={!canWrite} />
-              <span>已读回滚预案（PRODUCTION_FAILED_ROLLED_BACK 可回退）</span>
-            </label>
+          <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 text-xs leading-5 text-stone-600">
+            七段集成与八类回归已全绿，测试端已部署。请在测试端完成人工验收；确认无误后点击下方按钮，
+            系统自动锁定 main SHA、推送 main→master、部署生产 ECS 并验证 aihr.top。
+            {run.isPilot && <span className="mt-1 block font-medium text-amber-700">本 Run 为试点：点击后只做验收收尾，不会推送 master、不会部署生产。</span>}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <button
               type="button"
               disabled={!canApprove || busy}
-              onClick={() => guard(() => onAction('g5-approve', { evidenceChecks: checks }))}
+              onClick={() => guard(() => onAction('g5-approve', {}))}
               className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-40"
             >
               {G5_PRODUCTION_APPROVAL_BUTTON}
@@ -3735,7 +4032,9 @@ export function S22ProductionPanel({
 
       {ev.g5Approval && (
         <p className="mt-3 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
-          G5 已通过（{new Date(ev.g5Approval.at).toLocaleString('zh-CN')}）· 锁定 main SHA：{ev.g5Approval.lockedMainSha ?? '—'}
+          G5 已{ev.g5Approval.auto ? '自动放行' : '通过'}（{new Date(ev.g5Approval.at).toLocaleString('zh-CN')}
+          {ev.g5Approval.auto ? ' · S21 无断点' : ` · 操作人 ${ev.g5Approval.by}`}）· 锁定 main SHA：
+          {ev.g5Approval.lockedMainSha ?? '—'}
         </p>
       )}
       {ev.g5Reject && (

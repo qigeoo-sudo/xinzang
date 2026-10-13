@@ -240,6 +240,7 @@ test('回复候选四条筛选口径：七字全中才列出、音频/第二轮/
     msgType: 'file',
     createTime: 100,
     senderName: '王颖',
+    senderId: `ou_${messageId}`,
     senderType: 'user',
     deleted: false,
     fileName,
@@ -248,7 +249,7 @@ test('回复候选四条筛选口径：七字全中才列出、音频/第二轮/
   });
   const view = filterReplyCandidates([
     file('m1', 'Ying_Wang_第一轮审核清单_v0.1.md', { createTime: 120 }),
-    { messageId: 'm2', msgType: 'text', createTime: 110, senderName: '王颖', senderType: 'user', deleted: false },
+    { messageId: 'm2', msgType: 'text', createTime: 110, senderName: '王颖', senderId: 'ou_m2', senderType: 'user', deleted: false },
     file('m3', '第一轮审核清单录音.m4a'), // 含关键词但是音频 → audio
     file('m4', '第二轮计划_第一轮审核清单.md'), // 同时命中第二轮与关键词 → round2 优先
     file('m5', 'Ying_Wang_第一轮审核清单_v0.1.md', { createTime: 130, senderName: '陆秉文' }),
@@ -256,7 +257,7 @@ test('回复候选四条筛选口径：七字全中才列出、音频/第二轮/
     file('m7', '随手传的资料.docx'), // 不含七字关键词 → keywordMiss
     file('m8', '已删的第一轮审核清单.md', { deleted: true }),
     file('m9', '王颖_回复_第一轮审核清单.md', { createTime: 140 }),
-    { messageId: 'm10', msgType: 'image', createTime: 95, senderName: '王颖', senderType: 'user', deleted: false },
+    { messageId: 'm10', msgType: 'image', createTime: 95, senderName: '王颖', senderId: 'ou_m10', senderType: 'user', deleted: false },
   ]);
   assert.equal(view.textMessageCount, 1);
   assert.equal(view.deletedCount, 1);
@@ -275,9 +276,9 @@ test('回复候选四条筛选口径：七字全中才列出、音频/第二轮/
 
 test('七字必须完整连续命中：缺字/近义词不进候选', () => {
   const view = filterReplyCandidates([
-    { messageId: 'a', msgType: 'file', createTime: 1, senderName: '王颖', senderType: 'user', deleted: false, fileName: '第一轮审核表.md', fileKey: 'ka' },
-    { messageId: 'b', msgType: 'file', createTime: 2, senderName: '王颖', senderType: 'user', deleted: false, fileName: '第1轮审核清单.md', fileKey: 'kb' },
-    { messageId: 'c', msgType: 'file', createTime: 3, senderName: '王颖', senderType: 'user', deleted: false, fileName: '王颖第一轮审核清单回复.docx', fileKey: 'kc' },
+    { messageId: 'a', msgType: 'file', createTime: 1, senderName: '王颖', senderId: 'ou_a', senderType: 'user', deleted: false, fileName: '第一轮审核表.md', fileKey: 'ka' },
+    { messageId: 'b', msgType: 'file', createTime: 2, senderName: '王颖', senderId: 'ou_b', senderType: 'user', deleted: false, fileName: '第1轮审核清单.md', fileKey: 'kb' },
+    { messageId: 'c', msgType: 'file', createTime: 3, senderName: '王颖', senderId: 'ou_c', senderType: 'user', deleted: false, fileName: '王颖第一轮审核清单回复.docx', fileKey: 'kc' },
   ]);
   assert.deepEqual(view.candidates.map((c) => c.messageId), ['c']);
   assert.equal(view.skipped.keywordMiss, 2);
@@ -359,6 +360,7 @@ test('第二轮回复筛选：命中「第二轮审核清单」收，第一轮/�
     msgType: 'file',
     createTime: 200,
     senderName: '王颖',
+    senderId: `ou_${messageId}`,
     senderType: 'user',
     deleted: false,
     fileName,
@@ -373,7 +375,7 @@ test('第二轮回复筛选：命中「第二轮审核清单」收，第一轮/�
       f('r4', 'Ying_Wang_第二轮审核清单_v0.2.md', { senderName: '陆秉文' }), // 我方
       f('r5', 'Ying_Wang_第二轮审核清单_v0.3.md', { senderType: 'app' }), // 机器人
       f('r6', '无关资料.docx'), // 关键词缺失
-      { messageId: 'r7', msgType: 'text', createTime: 210, senderName: '王颖', senderType: 'user', deleted: false },
+      { messageId: 'r7', msgType: 'text', createTime: 210, senderName: '王颖', senderId: 'ou_r7', senderType: 'user', deleted: false },
       f('r8', '已撤回的第二轮审核清单.md', { deleted: true }),
     ],
     2,
@@ -405,6 +407,7 @@ function mat(
     msgType: 'file',
     createTime: ts,
     senderName: '王颖',
+    senderId: `ou_${messageId}`,
     senderType: 'user',
     deleted: false,
     fileName: `${messageId}.bin`,
@@ -521,7 +524,7 @@ test('S13 类型识别：audio 语音消息/音频扩展为音频，文档扩展
       mat('v4', SINCE + 4000, { fileName: '第二轮sheet.xlsx' }),
       mat('me', SINCE + 5000, { fileName: '第二轮我发的.m4a', senderName: '陆秉文' }),
       mat('cx', SINCE + 5500, { fileName: '第二轮陈初效的.m4a', senderName: '陈初效' }),
-      { messageId: 'txt', msgType: 'text', createTime: SINCE + 6000, senderName: '王颖', senderType: 'user', deleted: false },
+      { messageId: 'txt', msgType: 'text', createTime: SINCE + 6000, senderName: '王颖', senderId: 'ou_txt', senderType: 'user', deleted: false },
     ],
   );
   const all = view.groups.flatMap((g) => g.files);

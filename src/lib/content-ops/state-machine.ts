@@ -169,7 +169,8 @@ export const STEP_DEFS: StepDef[] = [
     code: 'S5', title: 'Claude 产物下载与 by sonnet 归档（R3 勾选门控）',
     actor: ACTOR.HUMAN, owner: ACTOR.RUNNER,
     nextRunState: RUN_STATE.CLAUDE_OUTPUT_ARCHIVED,
-    needsVpn: false, isFeishu: false, active: true,
+    // 位于 S4→S6 段：S4 完成后 VPN 不关，保持到离开 S6（S5 自身不联网，仅承接开关区间）
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S6', title: 'Codex 第一轮 Assembly（专属对话，固定触发语）',
@@ -223,18 +224,21 @@ export const STEP_DEFS: StepDef[] = [
     code: 'S14', title: 'Codex 第二轮候选更新（固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND2_UPDATE,
-    needsVpn: true, isFeishu: false, active: true,
+    // 2026-10-13 用户定：S14 起二轮段不再标注 VPN 需求（实测 Codex 投递与飞书收发当前网络可直连）
+    needsVpn: false, isFeishu: false, active: true,
   },
   {
     code: 'S15', title: '第二轮审核清单比对（v0.3）+ G3 批准 + 发送',
     actor: ACTOR.TRAE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.ROUND2_DOCS_SENT,
+    // 2026-10-13 用户定：本地比对 + 飞书发送，不标注 VPN 需求
     needsVpn: false, isFeishu: true, active: true,
   },
   {
     code: 'S16', title: '第二轮回复接收归档 + Codex 最终吸收',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_FINAL_ABSORB,
+    // 2026-10-13 用户定：S16 需要通知 Codex（CLI 投递），恢复 V 灯且要求绿色；S15 发飞书不标
     needsVpn: true, isFeishu: true, active: true,
   },
   {
@@ -256,8 +260,8 @@ export const STEP_DEFS: StepDef[] = [
     needsVpn: false, isFeishu: false, active: true,
   },
   {
-    code: 'S20', title: '第一次人工确认：确认交给Trae集成至main和测试端（G4）',
-    actor: ACTOR.HUMAN, owner: ACTOR.CONTROL_PLANE,
+    code: 'S20', title: '集成放行（G4，预检全绿自动放行至 main/测试端）',
+    actor: ACTOR.CONTROL_PLANE, owner: ACTOR.CONTROL_PLANE,
     nextRunState: RUN_STATE.INTEGRATING_APPLICATION,
     needsVpn: false, isFeishu: false, active: true,
   },
@@ -352,6 +356,9 @@ export const ROUND2_UPDATE_TRIGGER =
 
 /** S16 Codex 最终吸收触发语（AGENTS §14.4，逐字固定） */
 export const ROUND2_ABSORB_TRIGGER = '该导师的第二轮访谈审核清单回复已经到达，请查阅并更新其prompt和知识卡。';
+
+/** S11 Codex 吸收第一轮回复触发语（与 S16 同构，逐字固定；由 Runner 自动投递，复用 S6 对话） */
+export const ROUND1_ABSORB_TRIGGER = '该导师的第一轮访谈审核清单回复已经到达，请查阅并更新其prompt和知识卡。';
 
 /** S8 四维比对项（§8：与 ying-v0.1 同类参考比结构/职责/密度/可读性） */
 export const ROUND1_QC_ITEMS = [

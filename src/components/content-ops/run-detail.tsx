@@ -87,6 +87,29 @@ const EMPTY_AGENT_NOTE: Record<string, string> = {
 
 function EventLine({ e }: { e: RunEvent }) {
   const payload = e.payload as Record<string, unknown>;
+  // 3 分钟脉冲：VPN 红绿灯 + Codex 运行时长/动作数，紧凑单行
+  if (e.type === 'pulse') {
+    const vpn = payload.vpn as { reachable?: boolean; latencyMs?: number | null } | null;
+    const elapsedMs = Number(payload.elapsedMs ?? 0);
+    const mm = Math.floor(elapsedMs / 60000);
+    const ss = Math.floor((elapsedMs % 60000) / 1000);
+    const lamp = vpn
+      ? vpn.reachable
+        ? { ch: '🟢', title: `VPN 指示点可达${vpn.latencyMs ? `（${vpn.latencyMs}ms）` : ''}` }
+        : { ch: '🔴', title: 'VPN 指示点不可达，请检查 VPN' }
+      : { ch: '⚪', title: 'Runner 未携带探针（旧版本心跳），重启 Runner 后生效' };
+    const cmd = String(payload.commandType ?? 'codex').replace(/_/g, ' ');
+    return (
+      <li className="flex items-start gap-2 py-1.5 text-xs" title={lamp.title}>
+        <span className="shrink-0 text-stone-400">{new Date(e.createdAt).toLocaleTimeString('zh-CN')}</span>
+        <span className="shrink-0">{lamp.ch}</span>
+        <span className="min-w-0 break-all text-stone-600">
+          {cmd} 已运行 {mm}分{ss.toString().padStart(2, '0')}秒 · {Number(payload.eventCount ?? 0)} 个动作
+          {payload.lastEvent ? ` · 最近 ${String(payload.lastEvent)}` : ''}
+        </span>
+      </li>
+    );
+  }
   let detail = '';
   if (e.type === 'heartbeat') detail = '心跳探测';
   else if (e.type === 'result') detail = JSON.stringify(payload);
@@ -173,6 +196,28 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   /** 步骤码 → TIMELINE 索引；用于 StepGate 判定是否已到达 */
   const idxByCode = Object.fromEntries(TIMELINE.map((n, i) => [n.code, i])) as Record<string, number>;
   const gateLocked = (code: string) => currentIdx !== -1 && (idxByCode[code] ?? 999) > currentIdx;
+
+  // 整页刷新后的滚动断点：直接定位到"当前步"面板（蓝点所在步骤，即第一个未 done）。
+  // 规则全局统一，不记忆像素位置——蓝点在哪一步就滚到哪一步。
+  useEffect(() => {
+    const code = currentIdx !== -1 ? TIMELINE[currentIdx]?.code : null;
+    if (!code) return;
+    let raf = 0;
+    const scroll = () => {
+      document.getElementById(`panel-${code}`)?.scrollIntoView({ block: 'start' });
+    };
+    // 两帧 + 延时兜底，等数据/字体布局稳定；scroll-mt-28 已为 sticky 时间线预留偏移
+    raf = requestAnimationFrame(() => requestAnimationFrame(scroll));
+    const t1 = setTimeout(scroll, 300);
+    const t2 = setTimeout(scroll, 800);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+    // 仅整页 mount 时执行一次（轮询刷新不 remount，不会打断用户滚动）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initial.id]);
   // 原始端点探测结果：用于按节点自身需求判断 VPN 小灯颜色（而非复用当前步的全局 level）
   const vpnEndpoints = run.vpn?.raw?.endpoints ?? null;
 
@@ -220,15 +265,18 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       </section>,
     );
   }
-  // S1-S22 全部步骤始终渲染卡片；未到达的卡片由 StepGate 整体变灰、禁止交互
+  // S1-S22 全部步骤始终渲染卡片；未到达的卡片由 StepGate 整体变灰、禁止交互。
+  // 外层锚点 id=panel-<code> 供整页刷新后滚动定位到当前步；scroll-mt 给 sticky 时间线留位。
   const gate = (key: string, gateCode: string, node: React.ReactNode) => (
-    <StepGate key={key} locked={gateLocked(gateCode)}>{node}</StepGate>
+    <div key={key} id={`panel-${gateCode}`} className="scroll-mt-28">
+      <StepGate locked={gateLocked(gateCode)}>{node}</StepGate>
+    </div>
   );
   // S0 面板：飞书群搜索/机器人探测状态；失败时显示重试按钮
   const s0Step = stepByCode['S0'];
   if (s0Step && s0Step.commandStatus === 'failed') {
     panels.push(
-      <div key="S0" className="rounded-[18px] border border-red-200 bg-red-50/40 p-4">
+      <div key="S0" id="panel-S0" className="scroll-mt-28 rounded-[18px] border border-red-200 bg-red-50/40 p-4">
         <p className="text-sm font-semibold text-red-700">S0 · 飞书群绑定失败</p>
         <p className="mt-1 text-xs text-red-600">{s0Step.failureReason ?? '未知原因'}</p>
         {canWrite && (
@@ -244,7 +292,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
     );
   } else if (s0Step && (s0Step.commandStatus === 'queued' || s0Step.commandStatus === 'dispatched')) {
     panels.push(
-      <div key="S0" className="rounded-[18px] border border-stone-200 bg-stone-50/40 p-4">
+      <div key="S0" id="panel-S0" className="scroll-mt-28 rounded-[18px] border border-stone-200 bg-stone-50/40 p-4">
         <p className="text-sm text-stone-600">S0 · 飞书群搜索/机器人探测进行中…</p>
       </div>,
     );
@@ -275,7 +323,9 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   panels.push(<TraePanelC key="C" run={run} />);
 
   // 观察窗事件
-  const tabEvents = run.events.filter((e) => e.agent === tab);
+  // pulse（3 分钟心跳：VPN 灯 + Codex 运行时长）同时显示在 runner 和 codex 页签——
+  // 用户盯 codex 干活时也能看到心跳，不用切页签
+  const tabEvents = run.events.filter((e) => e.agent === tab || (e.type === 'pulse' && (tab === 'runner' || tab === 'codex')));
   const heartbeats = tabEvents.filter((e) => e.type === 'heartbeat');
   const nonHb = tabEvents.filter((e) => e.type !== 'heartbeat');
 
@@ -299,6 +349,17 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
       botChip = <span className="ml-1.5 rounded bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-500">机器人探测中…</span>;
     }
   }
+
+  // 人工断点配置存 run.taskContract.stops（引擎侧，免 DB 迁移）。
+  // 只有 S1/S21 可改；S4/S9/S12 强制停车。
+  const stops = ((run.taskContract ?? {}) as {
+    stops?: Partial<Record<'S1' | 'S4' | 'S9' | 'S12' | 'S21', boolean>>;
+  }).stops ?? {};
+  const stopS1 = stops.S1 !== false; // 缺省按断
+  const stopS21 = stops.S21 !== false;
+  const lastAutoEvent = run.events.find((e) => e.type === 'auto_pilot') as
+    | { payload: { hook?: string; ok?: boolean; detail?: string } }
+    | undefined;
 
   return (
     <div className="min-h-screen bg-bg cream-foil">
@@ -336,6 +397,70 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
           </div>
         )}
 
+        {/* 人工断点配置：S1/S21 可选；S4/S9/S12 强制。S5→S8 机器步骤始终自动 */}
+        <section className="letter-paper mb-4 rounded-[14px] px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+            <span className="text-sm font-semibold text-stone-700">人工断点</span>
+            {canWrite ? (
+              <button
+                type="button"
+                onClick={() => onAction('set-stops', { S1: !stopS1 })}
+                className={`rounded border px-2 py-0.5 text-[11px] ${
+                  stopS1
+                    ? 'border-violet-300 bg-violet-50 text-violet-700'
+                    : 'border-stone-300 text-stone-500 hover:bg-stone-50'
+                }`}
+                title="取消后：心跳每 90 秒自动扫描飞书群并全收，无需手动点扫描，跑到 S4 停；约 1 小时无素材转人工"
+              >
+                S1 开工前{stopS1 ? ' · 停车' : ' · 自动'}
+              </button>
+            ) : (
+              <span className="rounded bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700">
+                S1 开工前{stopS1 ? ' · 停车' : ' · 自动'}
+              </span>
+            )}
+            <span className="rounded bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500" title="摹写只能真人完成">
+              S4 摹写 · 强制停车
+            </span>
+            <span className="rounded bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500" title="发送后等导师回复">
+              S9 发送后 · 强制停车
+            </span>
+            <span className="rounded bg-stone-100 px-2 py-0.5 text-[11px] text-stone-500" title="发送后等第二轮材料">
+              S12 发送后 · 强制停车
+            </span>
+            {canWrite ? (
+              <button
+                type="button"
+                onClick={() => onAction('set-stops', { S21: !stopS21 })}
+                className={`rounded border px-2 py-0.5 text-[11px] ${
+                  stopS21
+                    ? 'border-violet-300 bg-violet-50 text-violet-700'
+                    : 'border-stone-300 text-stone-500 hover:bg-stone-50'
+                }`}
+                title="取消后：七段集成+八类测试全绿即自动发布生产（main→master→aihr.top）；勾选时停车等你验收，点单按钮即发"
+              >
+                S21 完工后{stopS21 ? ' · 停车' : ' · 自动'}
+              </button>
+            ) : (
+              <span className="rounded bg-violet-50 px-2 py-0.5 text-[11px] text-violet-700">
+                S21 完工后{stopS21 ? ' · 停车' : ' · 自动'}
+              </span>
+            )}
+            <span className="text-[11px] text-stone-400">
+              S5→S8（Codex/核验/AI 评分/发送）始终自动；AI 任一维 &lt;80 即停车
+            </span>
+          </div>
+          {lastAutoEvent && (
+            <p
+              className={`mt-1.5 text-xs ${
+                lastAutoEvent.payload.ok === false ? 'text-amber-700' : 'text-stone-500'
+              }`}
+            >
+              最近自动动作 · {lastAutoEvent.payload.hook}：{lastAutoEvent.payload.detail}
+            </p>
+          )}
+        </section>
+
         {/* 横向时间线（全宽 sticky 冻结，下拉时浮顶可见） */}
         <ol className="letter-paper sticky top-0 z-30 mb-4 rounded-[18px] p-3 shadow-sm">
           {/* 第一行：S0-S11 */}
@@ -343,6 +468,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
             {TIMELINE.slice(0, 12).map((node, i) => {
               const s = stepByCode[node.code];
               const status = s?.status ?? 'pending';
+              const isCurrent = i === currentIdx;
               const { color: lampColor, title: lampTitle } = vpnLampOf(i, status);
               const icon =
                 status === 'done' ? '✓' : status === 'failed' ? '✕' : status === 'running' ? '…' : status === 'waiting_human' ? '✋' : i;
@@ -355,7 +481,9 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
                       ? 'bg-amber-400 text-white'
                       : status === 'waiting_human'
                         ? 'bg-violet-500 text-white'
-                        : 'bg-stone-200 text-stone-500';
+                        : isCurrent
+                          ? 'bg-emerald-500 text-white ring-2 ring-emerald-300 ring-offset-1'
+                          : 'bg-stone-200 text-stone-500';
               return (
                 <span key={node.code} className="flex flex-1 items-center last:flex-none">
                   <div className="flex flex-col items-center gap-0.5">
@@ -396,6 +524,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
               const s = stepByCode[node.code];
               const status = s?.status ?? 'pending';
               const absIdx = i + 12;
+              const isCurrent = absIdx === currentIdx;
               const { color: lampColor, title: lampTitle } = vpnLampOf(absIdx, status);
               const icon =
                 status === 'done' ? '✓' : status === 'failed' ? '✕' : status === 'running' ? '…' : status === 'waiting_human' ? '✋' : absIdx;
@@ -408,7 +537,9 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
                       ? 'bg-amber-400 text-white'
                       : status === 'waiting_human'
                         ? 'bg-violet-500 text-white'
-                        : 'bg-stone-200 text-stone-500';
+                        : isCurrent
+                          ? 'bg-emerald-500 text-white ring-2 ring-emerald-300 ring-offset-1'
+                          : 'bg-stone-200 text-stone-500';
               return (
                 <span key={node.code} className="flex flex-1 items-center last:flex-none">
                   <div className="flex flex-col items-center gap-0.5">
@@ -537,7 +668,10 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
         <section className="letter-paper mt-4 rounded-[18px] p-4">
           <h2 className="mb-2 text-sm font-bold text-stone-700">审计摘要（最近 {run.events.length} 条）</h2>
           <ul className="divide-y divide-stone-100">
-            {run.events.slice(0, 12).map((e) => (
+            {run.events
+              .filter((e) => e.type !== 'pulse')
+              .slice(0, 12)
+              .map((e) => (
               <li key={e.id} className="flex flex-wrap items-center gap-2 py-1.5 text-xs">
                 <span className="shrink-0 text-stone-400">{new Date(e.createdAt).toLocaleString('zh-CN')}</span>
                 <span className="shrink-0 rounded bg-stone-100 px-1.5 py-0.5">{labelOf(AGENT_LABELS, e.agent)}</span>
