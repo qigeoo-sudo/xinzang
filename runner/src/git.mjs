@@ -13,6 +13,8 @@ const DEFAULT_REPO = 'C:\\Users\\bingw\\Documents\\trae_projects\\squeezer';
 const PROD_ECS_HOST = process.env.PROD_ECS_HOST || '14.103.104.122';
 const PROD_ECS_USER = process.env.PROD_ECS_USER || 'root';
 const PROD_DEPLOY_DIR = process.env.PROD_DEPLOY_DIR || '/opt/xinzang-release';
+// 发布脚本相对 PROD_DEPLOY_DIR；20-deploy-nodb.sh 自身会 git fetch/checkout master 再 docker build+换容器
+const PROD_DEPLOY_SCRIPT = process.env.PROD_DEPLOY_SCRIPT || 'deploy-scripts/20-deploy-nodb.sh';
 
 function repoPath(payload) {
   const p = typeof payload.repoPath === 'string' ? payload.repoPath : DEFAULT_REPO;
@@ -242,9 +244,11 @@ export async function deployProduction(payload) {
   const host = typeof payload.ecsHost === 'string' ? payload.ecsHost : PROD_ECS_HOST;
   const user = typeof payload.ecsUser === 'string' ? payload.ecsUser : PROD_ECS_USER;
   const deployDir = typeof payload.deployDir === 'string' ? payload.deployDir : PROD_DEPLOY_DIR;
-  // SSH 到 ECS：set -e 任一步失败即停；pull 用 --ff-only 避免意外 merge；
-  // 输出末尾截取，确保 deploy.sh 的真实报错可见（而非被 git pull 状态提示淹没）。
-  const remoteCmd = `set -e; cd ${deployDir} && git fetch origin && git checkout master && git pull --ff-only origin master && bash deploy.sh`;
+  const deployScript = typeof payload.deployScript === 'string' ? payload.deployScript : PROD_DEPLOY_SCRIPT;
+  const scriptPath = deployScript.startsWith('/') ? deployScript : `${deployDir}/${deployScript}`;
+  // SSH 到 ECS 执行发布脚本：脚本自带 set -e 与 fetch/checkout master，这里只负责触发；
+  // 输出末尾截取，确保发布脚本的真实报错可见（而非被其他状态提示淹没）。
+  const remoteCmd = `bash ${scriptPath}`;
   try {
     const { stdout, stderr } = await exec(`ssh ${user}@${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
     return { deployOk: true, scriptLog: (stdout + stderr).slice(-2000) };
