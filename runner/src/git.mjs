@@ -268,8 +268,8 @@ export async function gitPromoteMainToMaster(payload) {
 }
 
 /**
- * S22-3 部署生产：SSH 到 ECS 执行部署脚本
- * 生产服务器 /opt/xinzang-release 通过 gh-proxy clone，发版在 release 目录执行部署脚本
+ * S22-3 部署生产：本地 SSH 直推代码到 ECS 仓库 + 远程执行部署脚本
+ * 通道优先级：deploy-tmp 直推（主）> gh-proxy fetch（兜底，脚本内回退）
  */
 export async function deployProduction(payload) {
   const host = typeof payload.ecsHost === 'string' ? payload.ecsHost : PROD_ECS_HOST;
@@ -277,12 +277,21 @@ export async function deployProduction(payload) {
   const deployDir = typeof payload.deployDir === 'string' ? payload.deployDir : PROD_DEPLOY_DIR;
   const deployScript = typeof payload.deployScript === 'string' ? payload.deployScript : PROD_DEPLOY_SCRIPT;
   const scriptPath = deployScript.startsWith('/') ? deployScript : `${deployDir}/${deployScript}`;
-  // SSH 到 ECS 执行发布脚本：脚本自带 set -e 与 fetch/checkout master，这里只负责触发；
+  // v1.2 部署通道改造：本地 SSH 直推优先（gh-proxy 公共镜像已不可靠）。
+  // 1) 先把本地 HEAD 直推到 ECS 仓库的 deploy-tmp（脚本优先部署该 ref）
+  // 2) 再 SSH 执行发布脚本（deploy-tmp 存在则用之，不存在回退 gh-proxy fetch）
+  const cwd = repoPath(payload);
+  const remoteUrl = `ssh://${user}@${host}${deployDir}`;
+  try {
+    await git(`push ${remoteUrl} HEAD:refs/heads/deploy-tmp --force`, cwd, { timeout: 180_000 });
+  } catch (err) {
+    throw new Error(`生产部署失败（SSH 直推）：${String(err.stderr || err.message).slice(-1500)}`);
+  }
   // 输出末尾截取，确保发布脚本的真实报错可见（而非被其他状态提示淹没）。
   const remoteCmd = `bash ${scriptPath}`;
   try {
-    const { stdout, stderr } = await exec(`ssh ${user}@${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
-    return { deployOk: true, scriptLog: (stdout + stderr).slice(-2000) };
+    const { stdout, stderr } = await exec(`ssh ${user}@${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 600_000 });
+    return { deployOk: true, transport: 'ssh-push-first', scriptLog: (stdout + stderr).slice(-2000) };
   } catch (err) {
     const tail = String(err.stdout || err.stderr || err.message).slice(-2000);
     throw new Error(`生产部署失败：${tail}`);
