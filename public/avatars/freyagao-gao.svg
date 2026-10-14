@@ -1,4 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#5B7C5A"/>
-  <text x="100" y="100" dy="0.35em" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="92" fill="#FAF3E7">F</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Freya Gao：椭圆脸、微挑眉、干练及肩外翻波波头、从容微笑、砖红西装+白衬衫 -->
+  <rect width="200" height="200" fill="#F6EDDE"/>
+  <circle cx="100" cy="100" r="92" fill="#FBF5E9"/>
+
+  <!-- 后层发（及肩波波头，发尾微外翻） -->
+  <path d="M63 88 C59 46 82 34 100 34 C118 34 141 46 137 88 C139 104 140 118 137 128 C134 138 126 137 124 128 L123 94 Z" fill="#2A2320"/>
+  <path d="M63 88 C61 104 60 118 63 128 C66 138 74 137 76 128 L77 94 Z" fill="#2A2320"/>
+
+  <!-- 白衬衫 -->
+  <path d="M78 145 L100 155 L122 145 L116 137 L100 146 L84 137 Z" fill="#FFFFFF"/>
+  <!-- 砖红西装 -->
+  <path d="M29 200 C31 170 50 152 76 145 L100 155 L124 145 C150 152 169 170 171 200 Z" fill="#8C5450"/>
+  <path d="M76 145 L94 168 L85 175 L70 152 Z" fill="#75453F"/>
+  <path d="M124 145 L106 168 L115 175 L130 152 Z" fill="#75453F"/>
+
+  <!-- 脖子 -->
+  <path d="M91 110 h18 v29 c0 5 -18 5 -18 0 Z" fill="#F6DCC8"/>
+  <path d="M91 110 h18 v9 c-6 5 -12 5 -18 0 Z" fill="#ECC6AA"/>
+
+  <!-- 脸（椭圆，小巧耳钉） -->
+  <ellipse cx="100" cy="88" rx="28" ry="32.5" fill="#F6DCC8"/>
+  <circle cx="72.5" cy="97" r="1.6" fill="#D8C9B0"/>
+  <circle cx="127.5" cy="97" r="1.6" fill="#D8C9B0"/>
+
+  <!-- 前发：三七侧分，一侧别于耳后 -->
+  <path d="M68 92 C63 48 84 36 100 36 C116 36 137 48 132 92 C129 70 120 58 100 58 C88 58 79 64 74 74 C70 81 69 87 68 92 Z" fill="#2A2320"/>
+  <path d="M68 92 C65 104 65 116 68 124 C71 130 77 128 76 121 C74 110 73 100 74 92 Z" fill="#2A2320"/>
+  <path d="M132 92 C135 104 135 116 132 124 C129 130 123 128 124 121 C126 110 127 100 126 92 Z" fill="#2A2320"/>
+  <path d="M86 47 C95 41 109 41 117 46 C106 44 95 45 86 51 Z" fill="#46352C" opacity=".7"/>
+
+  <!-- 微挑眉（利落、有判断力） -->
+  <path d="M81 80 Q88 76.5 95 78.5" stroke="#3A2E26" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M105 78.5 Q112 76.5 119 80" stroke="#3A2E26" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+  <!-- 眼形略上扬 + 上睫线 -->
+  <ellipse cx="86.5" cy="88.5" rx="3.3" ry="3" fill="#33261E"/>
+  <ellipse cx="113.5" cy="88.5" rx="3.3" ry="3" fill="#33261E"/>
+  <circle cx="87.6" cy="87.4" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <circle cx="114.6" cy="87.4" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <path d="M82.5 86.5 Q86.5 84 90.5 85.6" stroke="#33261E" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+  <path d="M109.5 85.6 Q113.5 84 117.5 86.5" stroke="#33261E" stroke-width="1.1" fill="none" stroke-linecap="round"/>
+
+  <!-- 鼻（轻描） -->
+  <path d="M100 95 q1 2.8 -1.5 3.8" stroke="#D9A98C" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+
+  <!-- 从容微笑（嘴角略上扬） -->
+  <path d="M93 106.5 q7 4.5 14 0" stroke="#C96F5E" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- 腮红（很淡） -->
+  <ellipse cx="80" cy="99.5" rx="4.6" ry="2.6" fill="#F2B49A" opacity=".3"/>
+  <ellipse cx="120" cy="99.5" rx="4.6" ry="2.6" fill="#F2B49A" opacity=".3"/>
 </svg>

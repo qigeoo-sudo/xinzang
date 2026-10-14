@@ -482,6 +482,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     name: 'Freya Gao',
     chineseName: '高兰生',
     avatar: '/avatars/freyagao-gao.svg',
+    launchedAt: '2026-10-14',
     title: '产业投资经理',
     company: '医疗器械产业基金',
     companyType: '投资',
@@ -505,8 +506,6 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
       '第一份工作选审计还是企业财务？',
       '实习不多，怎么判断一个行业适不适合自己？',
     ],
-    hasFirstRoundCards: true,
-    comingSoon: true,
   },
   {
     id: 'phyllischi',

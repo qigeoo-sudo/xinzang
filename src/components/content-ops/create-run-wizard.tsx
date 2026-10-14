@@ -53,7 +53,7 @@ export function CreateRunWizard({
   const [chatName, setChatName] = useState('');
   const [chatId, setChatId] = useState('');
   const [chatConfirmed, setChatConfirmed] = useState(false);
-  const [isPilot, setIsPilot] = useState(true);
+  const [isPilot, setIsPilot] = useState(false);
   const [stops, setStops] = useState<Record<'S1' | 'S21', boolean>>({ S1: true, S21: true });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
