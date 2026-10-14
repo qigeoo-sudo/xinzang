@@ -17,7 +17,7 @@ import {
   ACTIVE_CODES,
   G1_ROUND1_DOCS_BODY,
   G2_OUTLINE_LINK,
-  G2_OUTLINE_MESSAGE,
+  G2_OUTLINE_BODY,
   G3_ROUND2_DOCS_BODY,
   G4_INTEGRATION_APPROVAL_BUTTON,
   G5_PRODUCTION_APPROVAL_BUTTON,
@@ -101,6 +101,8 @@ export const COMMAND = {
   DEPLOY_STAGING: 'deploy_staging',
   // S21 activate_pilot 段：pilot 导师上线（复制 prompt 资产 + 远程灌卡到测试库）
   ACTIVATE_MENTOR_STAGING: 'activate_mentor_staging',
+  // S21 prepare_mentor 段：导师上架（mentors.ts 解锁/插入 + 头像就位；缺失时等 Trae 手绘）
+  PREPARE_MENTOR: 'prepare_mentor',
   GIT_PROMOTE_MAIN_TO_MASTER: 'git_promote_main_to_master',
   DEPLOY_PRODUCTION: 'deploy_production',
 } as const;
@@ -379,6 +381,11 @@ export async function ingestHeartbeat(
     await autoStartRound2Update(runnerId);
   } catch { /* 值守异常不影响心跳主流程 */ }
 
+  // S15 心跳值守：S14 确认后自动发起第二轮审核清单定位比对（兜底链式触发时序竞态）
+  try {
+    await autoStartRound2DocsQc(runnerId);
+  } catch { /* 值守异常不影响心跳主流程 */ }
+
   // S16 取消人工断点：二轮回复归档后自动投递 Codex 最终吸收
   try {
     await autoStartFinalAbsorb(runnerId);
@@ -387,6 +394,11 @@ export async function ingestHeartbeat(
   // S17 取消人工断点：S16 确认后自动发起 Final Handoff 发现
   try {
     await autoStartFinalHandoff(runnerId);
+  } catch { /* 值守异常不影响心跳主流程 */ }
+
+  // S21 prepare_mentor 兜底：等 Trae 画头像超时后自动生成模板 SVG 续段
+  try {
+    await autoRecoverAwaitingAvatar(runnerId, now);
   } catch { /* 值守异常不影响心跳主流程 */ }
 
   // 进度心跳：命令执行期间，把 queued 原子晋升为 running 并写入进度摘要。
@@ -613,6 +625,28 @@ async function autoStartFinalAbsorb(runnerId: string) {
       await autoPilotLog(run.id, 'S16_WATCH', true, 'S16 心跳值守自动投递 Codex 最终吸收触发语');
     } catch {
       // 条件竞态（归档刚完成链式已入队）静默跳过，下一拍心跳重新判定
+    }
+  }
+}
+
+/**
+ * S15 心跳值守（2026-10-13 用户定）：S14 确认后应自动发起第二轮审核清单定位比对。
+ * 覆盖 confirmRound2Update 链式触发时 contentRoot 缺失（心跳时序竞态）的窗口。
+ * 幂等：S15 已有指令/已完成时不满足条件。
+ */
+async function autoStartRound2DocsQc(runnerId: string) {
+  const runs = await prisma.contentOpsRun.findMany({
+    where: { runnerId, status: RUN_STATE.ROUND2_DOCS_QC },
+    select: { id: true },
+  });
+  for (const run of runs) {
+    const s15 = await prisma.contentOpsStep.findFirst({ where: { runId: run.id, code: 'S15' } });
+    if (!s15 || s15.commandStatus !== 'none') continue;
+    try {
+      await startRound2DocsQc(AUTO_ACTOR, run.id);
+      await autoPilotLog(run.id, 'S15_WATCH', true, 'S15 心跳值守自动发起第二轮清单定位比对');
+    } catch {
+      // 条件竞态（contentRoot 仍未上报等）静默跳过，下一拍心跳重新判定
     }
   }
 }
@@ -1000,7 +1034,7 @@ export async function handleCommandResult(runnerId: string, body: {
         },
       });
       break;
-    // P4b：S21 集成七段 + S22 生产发布四段（同一 step 行轮转）
+    // P4b：S21 集成八段 + S22 生产发布四段（同一 step 行轮转）
     case COMMAND.GIT_FETCH_STATUS:
       if (step.code === 'S21') await handleS21PhaseResult(step, payload as { payload: Record<string, unknown> }, result);
       else if (step.code === 'S22') await handleS22PhaseResult(step, payload as { payload: Record<string, unknown> }, result);
@@ -1010,6 +1044,7 @@ export async function handleCommandResult(runnerId: string, body: {
       break;
     case COMMAND.GIT_BACKUP_CREATE:
     case COMMAND.GIT_INTEGRATE_HANDOFF:
+    case COMMAND.PREPARE_MENTOR:
     case COMMAND.ACTIVATE_MENTOR_STAGING:
     case COMMAND.RUN_REGRESSION_TESTS:
     case COMMAND.GIT_PUSH_MAIN:
@@ -1355,9 +1390,15 @@ async function handleHashFilesResult(
         await transitionRun(tx, fresh, RUN_STATE.ROUND2_REPLY_RECEIVED, 'S16 第二轮回复手工归档完成');
       }
     });
+    // 自动驾驶：S16 手工 HASH_FILES 归档完成 → 自动入队 Codex 最终吸收投递（与下载路径同构）
+    await startFinalAbsorbDeliver('auto-pilot', step.runId).catch(() => {});
     return;
   }
   await finishStepAndAdvance(step, def.nextRunState, result);
+  // 自动驾驶：S10 手工 HASH_FILES 归档完成 → 自动入队 S11 Codex 吸收投递
+  if (step.code === 'S10') {
+    await startRound1AbsorbDeliver('auto-pilot', step.runId).catch(() => {});
+  }
   // S1 通过 HASH_FILES 完成时也自动触发 S2 归并
   if (step.code === 'S1') {
     await autoMergeRound1(step.runId);
@@ -2456,10 +2497,12 @@ async function buildS15SendPayload(runId: string, chatId: string, index: number,
   };
 }
 
-/** S12 唯一条目：G2 固定文案（含官方大纲链接） */
-function buildS12SendPayload(runId: string, chatId: string, index: number, dedupBase: string) {
+/** S12 唯一条目：G2 固定文案（post 富文本 @mention 导师 + 官方大纲链接，与 G3 同构） */
+async function buildS12SendPayload(runId: string, chatId: string, index: number, dedupBase: string) {
   const idempotencyKey = `${runId}:S12:${sha256Text(dedupBase).slice(0, 8)}:${index}`.slice(0, 50);
-  return { chatId, kind: 'text', text: G2_OUTLINE_MESSAGE, sendIndex: 0, idempotencyKey };
+  const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
+  const mentorName = resolveMentorChineseName(run.mentorDir);
+  return { chatId, kind: 'text_mention', mentionMentorName: mentorName, bodyText: G2_OUTLINE_BODY, sendIndex: 0, idempotencyKey };
 }
 
 /** 三个发送步骤（S9/S12/S15）共用链式结果处理：逐条回执 → 全部完成后推进主线 */
@@ -4137,7 +4180,7 @@ export async function approveSendRound2Outline(
   if (dup) throw new EngineError(409, '第二轮大纲已发送过，禁止重复发送');
 
   const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S12' } });
-  const payload = buildS12SendPayload(runId, run.feishuChatId, 0, dedupBase);
+  const payload = await buildS12SendPayload(runId, run.feishuChatId, 0, dedupBase);
   const updated = await prisma.contentOpsStep.updateMany({
     where: { id: step.id, commandStatus: { in: ['none', 'failed'] } },
     data: {
@@ -4149,7 +4192,7 @@ export async function approveSendRound2Outline(
       failureReason: null,
       evidence: JSON.stringify({
         ...safeParse(step.evidence),
-        sendPlan: [{ kind: 'text', label: 'G2 第二轮大纲（固定文案+官方链接）' }],
+        sendPlan: [{ kind: 'text_mention', label: 'G2 第二轮大纲（@导师 + 官方链接）' }],
         dedupKeyBase: dedupBase,
         approvedBy: userId,
         approvedAt: new Date().toISOString(),
@@ -5298,7 +5341,7 @@ export async function approveSendRound2Docs(
         ...safeParse(step.evidence),
         sendPlan: [
           { kind: 'file', label: '第二轮审核清单（需回复）' },
-          { kind: 'text', label: 'G3 固定文案' },
+          { kind: 'text_mention', label: 'G3 固定文案（@导师）' },
         ],
         dedupKeyBase: dedupBase,
         approvedBy: userId,
@@ -6229,9 +6272,10 @@ export async function rejectG4(userId: string, runId: string, input: { reason: s
 }
 
 // ------------------------------------------------------------------
-// P4b：S21 Trae 集成（七段自动串联）+ S22 生产发布（G5 门禁 + 四段自动）
+// P4b：S21 Trae 集成（八段自动串联）+ S22 生产发布（G5 门禁 + 四段自动）
 // 设计依据：用户确认方案（2026-10-08）
-//   - S21 全自动：G4 通过 → reconcile → backup → integrate → activate_pilot → test → push_main → deploy_staging → AWAITING_STAGING_ACCEPTANCE
+//   - S21 全自动：G4 通过 → reconcile → backup → integrate → prepare_mentor → activate_pilot → test → push_main → deploy_staging → AWAITING_STAGING_ACCEPTANCE
+//     （prepare_mentor：导师上架——mentors.ts 解锁/插入 + 头像就位；头像缺失时 run 转 awaiting_avatar 等 Trae 手绘，超时 Runner 生成模板 SVG 兜底）
 //     （activate_pilot：pilot 导师激活——prompt 资产落位 + 知识卡灌测试库；无 plan 的导师自动跳过）
 //   - S22 G5 人工门禁 → lock_sha → promote → deploy_prod → verify → COMPLETED
 //   - v1 过渡：deploy_staging = git push origin main（CloudBase 自动部署）；deploy_production = SSH ECS 执行部署脚本
@@ -6242,11 +6286,17 @@ export async function rejectG4(userId: string, runId: string, input: { reason: s
  *  无配置的导师自动跳过该段。新增 pilot 时在此注册。 */
 const S21_ACTIVATE_PLAN: Record<string, { mentorId: string; cardsSource: string; promptSource: string | null }> = {};
 
-/** S21 七段指令类型映射 */
+/** S21 prepare_mentor 段：新导师性别人工登记（mentors.ts 尚无条目时引擎取不到 gender）。
+ *  key = mentorDir 推导的 mentorId（小写连写，如 'echohuang'）。登记后 prepare_mentor 直接可用；
+ *  未登记时 payload.gender=null，头像缺失走 awaiting_avatar 由 Trae 现场确认，模板兜底用中性样式。 */
+const S21_MENTOR_GENDER: Record<string, 'male' | 'female'> = {};
+
+/** S21 八段指令类型映射 */
 const S21_PHASE_COMMAND: Record<string, string> = {
   reconcile: COMMAND.GIT_FETCH_STATUS,
   backup: COMMAND.GIT_BACKUP_CREATE,
   integrate: COMMAND.GIT_INTEGRATE_HANDOFF,
+  prepare_mentor: COMMAND.PREPARE_MENTOR,
   activate_pilot: COMMAND.ACTIVATE_MENTOR_STAGING,
   test: COMMAND.RUN_REGRESSION_TESTS,
   push_main: COMMAND.GIT_PUSH_MAIN,
@@ -6257,7 +6307,8 @@ const S21_PHASE_COMMAND: Record<string, string> = {
 const S21_NEXT_PHASE: Record<string, string | null> = {
   reconcile: 'backup',
   backup: 'integrate',
-  integrate: 'activate_pilot',
+  integrate: 'prepare_mentor',
+  prepare_mentor: 'activate_pilot',
   activate_pilot: 'test',
   test: 'push_main',
   push_main: 'deploy_staging',
@@ -6268,8 +6319,9 @@ const S21_NEXT_PHASE: Record<string, string | null> = {
 const S21_PHASE_RUNSTATE: Record<string, string> = {
   reconcile: RUN_STATE.INTEGRATION_BACKUP_CREATED,
   backup: RUN_STATE.INTEGRATING_APPLICATION,
-  integrate: RUN_STATE.TESTING_STAGING,
-  activate_pilot: RUN_STATE.TESTING_STAGING, // 激活属于测试准备，runState 与 integrate 段共用
+  integrate: RUN_STATE.INTEGRATING_APPLICATION, // 集成完成后进入 prepare_mentor 段，仍属集成应用
+  prepare_mentor: RUN_STATE.TESTING_STAGING, // 头像缺失时例外：run 转 AWAITING_AVATAR（结果处理里特判）
+  activate_pilot: RUN_STATE.TESTING_STAGING, // 激活属于测试准备，runState 与 prepare_mentor 段共用
   test: RUN_STATE.PUSHING_MAIN,
   push_main: RUN_STATE.DEPLOYING_STAGING,
   deploy_staging: RUN_STATE.AWAITING_STAGING_ACCEPTANCE,
@@ -6301,7 +6353,7 @@ const S22_PHASE_RUNSTATE: Record<string, string> = {
 async function enqueueS21Phase(
   runId: string,
   phase: string,
-  context: { handoffPath: string | null; handoffVersion: string | null; hashBaseline: string[]; targetAppPaths?: string[]; stagedFiles?: string[] },
+  context: { handoffPath: string | null; handoffVersion: string | null; hashBaseline: string[]; targetAppPaths?: string[]; stagedFiles?: string[]; forceTemplateAvatar?: boolean },
 ) {
   const type = S21_PHASE_COMMAND[phase];
   if (!type) throw new EngineError(400, `S21 未知段：${phase}`);
@@ -6315,13 +6367,36 @@ async function enqueueS21Phase(
     const plan = S21_ACTIVATE_PLAN[normalizeMentorDirKey(run.mentorDir)] ?? null;
     activatePlan = plan ? { ...plan } : { skipped: true };
   }
+  // prepare_mentor 段注入导师元数据：mentorId 由 mentorDir 推导（小写连写，与 mentors.ts id 命名一致）；
+  // gender 优先人工登记（S21_MENTOR_GENDER），其次 mentors.ts 已有条目，再次 S21 证据里 Trae 恢复时补录的值
+  let mentorMeta: { mentorId: string; gender: string | null } | null = null;
+  if (phase === 'prepare_mentor') {
+    const [run, s21] = await Promise.all([
+      prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId }, select: { mentorDir: true } }),
+      prisma.contentOpsStep.findFirst({ where: { runId, code: 'S21' }, select: { evidence: true } }),
+    ]);
+    const mentorId = normalizeMentorDirKey(run.mentorDir).replace(/\s+/g, '');
+    const evGender = safeParse(s21?.evidence ?? null).avatarGender;
+    const gender = S21_MENTOR_GENDER[mentorId]
+      ?? mentors.find((m) => m.id === mentorId)?.gender
+      ?? (evGender === 'male' || evGender === 'female' ? evGender : null);
+    mentorMeta = { mentorId, gender };
+  }
   const updated = await prisma.contentOpsStep.updateMany({
     where: { runId, code: 'S21', commandStatus: { in: ['none', 'failed', 'done', 'dispatched'] } },
     data: {
       status: STEP_STATUS.RUNNING,
       startedAt: new Date(),
       commandStatus: 'queued',
-      commandPayload: JSON.stringify({ type, payload: { phase, ...(activatePlan ? { activatePlan } : {}), ...context } }),
+      commandPayload: JSON.stringify({
+        type,
+        payload: {
+          phase,
+          ...(activatePlan ? { activatePlan } : {}),
+          ...(mentorMeta ? { mentorMeta } : {}),
+          ...context,
+        },
+      }),
       idempotencyKey: `${runId}:S21:${phase}:${randomBytes(6).toString('hex')}`,
       failureReason: null,
     },
@@ -6354,7 +6429,7 @@ async function enqueueS22Phase(runId: string, phase: string, context: { lockedMa
 /** S21 段结果处理：记录阶段进度、推进 runState、续段或收尾 */
 async function handleS21PhaseResult(
   step: { id: string; runId: string; evidence: string | null; run: { id: string; status: string; taskContract: string | null; isPilot: boolean } },
-  payload: { payload: { phase?: string; handoffPath?: string | null; handoffVersion?: string | null; hashBaseline?: string[]; targetAppPaths?: string[] } },
+  payload: { payload: { phase?: string; handoffPath?: string | null; handoffVersion?: string | null; hashBaseline?: string[]; targetAppPaths?: string[]; mentorMeta?: { mentorId?: string; gender?: string | null } | null } },
   result: Record<string, unknown>,
 ) {
   const phase = payload.payload.phase ?? 'reconcile';
@@ -6371,13 +6446,34 @@ async function handleS21PhaseResult(
   if (phase === 'activate_pilot' && Array.isArray(result.promptCopied)) {
     ev.promptCopied = result.promptCopied as string[];
   }
+  if (phase === 'prepare_mentor' && Array.isArray(result.mentorFiles)) {
+    ev.mentorFiles = result.mentorFiles as string[];
+  }
 
-  const next = S21_NEXT_PHASE[phase] ?? null;
-  const targetState = S21_PHASE_RUNSTATE[phase];
+  // prepare_mentor 段：头像缺失（或新导师性别未确认）→ run 转 awaiting_avatar 暂停等 Trae，
+  // 不续段；恢复（重新入队 prepare_mentor 复检）后若仍缺失会重置计时再等
+  const needsAvatar = phase === 'prepare_mentor' && result.needsAvatar === true;
+  if (needsAvatar) {
+    const metaGender = payload.payload.mentorMeta?.gender;
+    if (metaGender === 'male' || metaGender === 'female') ev.avatarGender = metaGender;
+    if (typeof result.avatarPath === 'string') ev.avatarPath = result.avatarPath;
+    if (ev.avatarFallbackQueued === true && !ev.avatarGender) {
+      // 模板兜底也回退到 needsAvatar：只可能是新导师且 gender 未确认（插条目必须有 gender）。
+      // 停止自动重试（保留 queued 标记），置 avatarNeedsGender 等人工在面板补性别后恢复。
+      ev.avatarNeedsGender = true;
+    } else {
+      ev.avatarFallbackQueued = false;
+    }
+    ev.avatarRequestedAt = new Date().toISOString();
+  }
+
+  const next = needsAvatar ? null : (S21_NEXT_PHASE[phase] ?? null);
+  const targetState = needsAvatar ? RUN_STATE.AWAITING_AVATAR : S21_PHASE_RUNSTATE[phase];
 
   await prisma.$transaction(async (tx) => {
-    if (next === null) {
+    if (next === null && !needsAvatar) {
       // S21 最后一段（deploy_staging）完成：步骤 done，run 进入 AWAITING_STAGING_ACCEPTANCE
+      // （needsAvatar 时 next 也为 null，但 S21 未完：步骤保持 running，等头像恢复后续段）
     await tx.contentOpsStep.update({
         where: { id: step.id },
         data: {
@@ -6405,6 +6501,17 @@ async function handleS21PhaseResult(
     }
   });
 
+  // 头像等待：日志提示后直接返回（不续段、不自动放行 G5）
+  if (needsAvatar) {
+    await autoPilotLog(
+      step.runId,
+      'AVATAR_WAIT',
+      true,
+      `头像未就位（${String(result.avatarPath ?? '待定')}），Run 暂停在 awaiting_avatar；Trae 画完后点「重新检查头像」续段，15 分钟无进展自动生成模板头像兜底`,
+    );
+    return;
+  }
+
   // 续段（事务外入队，避免嵌套事务超时）
   if (next !== null) {
     await enqueueS21Phase(step.runId, next, {
@@ -6415,6 +6522,7 @@ async function handleS21PhaseResult(
       stagedFiles: [
         ...(Array.isArray(ev.integratedFiles) ? ev.integratedFiles : []),
         ...(Array.isArray(ev.promptCopied) ? ev.promptCopied : []),
+        ...(Array.isArray(ev.mentorFiles) ? ev.mentorFiles : []),
       ],
     });
   } else if (getAutoStops(step.run.taskContract).S21 === false) {
@@ -6495,6 +6603,7 @@ function summarizeS21Result(phase: string, result: Record<string, unknown>): unk
     case 'reconcile': return { matched: result.matched, mismatched: result.mismatched, beforeSha: result.beforeSha };
     case 'backup': return { backupDir: result.backupDir, beforeSha: result.beforeSha };
     case 'integrate': return { copiedCount: result.copiedCount ?? (Array.isArray(result.copiedFiles) ? result.copiedFiles.length : 0), targetPaths: result.targetPaths };
+    case 'prepare_mentor': return { mentorId: result.mentorId, action: result.action, avatarPath: result.avatarPath, needsAvatar: result.needsAvatar, mentorFiles: result.mentorFiles };
     case 'test': return { passed: result.passed, failed: result.failed, details: result.details };
     case 'activate_pilot': return { skipped: result.skipped, mentorId: result.mentorId, promptCopied: result.promptCopied, seeded: result.seeded, total: result.total };
     case 'push_main': return { mainSha: result.mainSha, pushed: result.pushed };
@@ -6510,6 +6619,99 @@ function summarizeS22Result(phase: string, result: Record<string, unknown>): unk
     case 'deploy_prod': return { deployOk: result.deployOk, scriptLog: result.scriptLog };
     case 'verify': return { productionOk: result.productionOk, httpStatus: result.httpStatus };
     default: return { keys: Object.keys(result) };
+  }
+}
+
+// ------------------------------------------------------------------
+// S21 prepare_mentor 头像等待：恢复入口 + 超时兜底值守
+// ------------------------------------------------------------------
+
+/** 等 Trae 手绘头像的超时阈值：超过后 Runner 自动生成参数化模板 SVG 兜底续段 */
+const AVATAR_FALLBACK_MS = 15 * 60_000;
+
+/** 从 S21 证据还原续段上下文（handleS21PhaseResult / 恢复入口共用） */
+function s21ResumeContext(ev: Record<string, unknown>) {
+  return {
+    handoffPath: (ev.handoffPath as string | null) ?? null,
+    handoffVersion: (ev.handoffVersion as string | null) ?? null,
+    hashBaseline: (Array.isArray(ev.hashBaseline) ? ev.hashBaseline : []) as string[],
+    targetAppPaths: (Array.isArray(ev.targetAppPaths) ? ev.targetAppPaths : []) as string[],
+    stagedFiles: [
+      ...(Array.isArray(ev.integratedFiles) ? ev.integratedFiles : []),
+      ...(Array.isArray(ev.promptCopied) ? ev.promptCopied : []),
+      ...(Array.isArray(ev.mentorFiles) ? ev.mentorFiles : []),
+    ] as string[],
+  };
+}
+
+/**
+ * S21 头像恢复入口：Trae 画完头像后重新入队 prepare_mentor 复检（Runner 复检通过即续链条）。
+ * opts.forceTemplate=true 时改走模板头像兜底（不等手绘）；opts.gender 补录新导师性别
+ * （mentors.ts 无条目且未人工登记时，插入条目必须知道 gender）。
+ * 仅 awaiting_avatar 态可调用。
+ */
+export async function resumeAfterAvatar(
+  userId: string,
+  runId: string,
+  opts: { forceTemplate?: boolean; gender?: 'male' | 'female' } = {},
+) {
+  const run = await prisma.contentOpsRun.findUnique({ where: { id: runId } });
+  if (!run) throw new EngineError(404, 'Run 不存在');
+  if (run.status !== RUN_STATE.AWAITING_AVATAR) {
+    throw new EngineError(409, `仅 awaiting_avatar 状态可恢复头像等待（当前 ${run.status}）`);
+  }
+  const s21 = await prisma.contentOpsStep.findFirst({ where: { runId, code: 'S21' } });
+  if (!s21) throw new EngineError(404, 'S21 步骤不存在');
+  const ev = safeParse(s21.evidence);
+  if (opts.gender === 'male' || opts.gender === 'female') ev.avatarGender = opts.gender;
+  await prisma.contentOpsStep.update({
+    where: { id: s21.id },
+    data: { evidence: JSON.stringify(ev) },
+  });
+  await enqueueS21Phase(runId, 'prepare_mentor', {
+    ...s21ResumeContext(ev),
+    forceTemplateAvatar: opts.forceTemplate === true ? true : undefined,
+  });
+  await audit(userId, 'content_ops.avatar_resume', runId, {
+    forceTemplate: opts.forceTemplate === true,
+    gender: opts.gender ?? null,
+  });
+  await autoPilotLog(
+    runId,
+    'AVATAR_RESUME',
+    true,
+    opts.forceTemplate ? '人工触发：改用模板头像并续段' : '头像已就位，重新检查 prepare_mentor 并续段',
+  );
+  return { ok: true };
+}
+
+/** 心跳值守：awaiting_avatar 的 Run 超时未恢复 → 重入队 prepare_mentor 并带模板头像兜底标记 */
+async function autoRecoverAwaitingAvatar(runnerId: string, now: Date) {
+  const runs = await prisma.contentOpsRun.findMany({
+    where: { runnerId, status: RUN_STATE.AWAITING_AVATAR },
+    select: { id: true },
+  });
+  for (const run of runs) {
+    const s21 = await prisma.contentOpsStep.findFirst({ where: { runId: run.id, code: 'S21' } });
+    if (!s21 || s21.status === STEP_STATUS.DONE) continue;
+    const ev = safeParse(s21.evidence);
+    const requestedAt = ev.avatarRequestedAt ? new Date(String(ev.avatarRequestedAt)).getTime() : NaN;
+    if (!Number.isFinite(requestedAt)) {
+      // 缺请求时间（历史遗留/异常路径）：补记当前时间，从现在起计时
+      ev.avatarRequestedAt = now.toISOString();
+      await prisma.contentOpsStep.update({ where: { id: s21.id }, data: { evidence: JSON.stringify(ev) } });
+      continue;
+    }
+    if (now.getTime() - requestedAt < AVATAR_FALLBACK_MS) continue;
+    if (ev.avatarFallbackQueued === true) continue; // 已兜底过仍缺（性别未确认）：不再自动重试
+    if (ev.avatarNeedsGender === true) continue;
+    ev.avatarFallbackQueued = true; // 先落标记再入队，防止下一拍心跳重复入队
+    await prisma.contentOpsStep.update({ where: { id: s21.id }, data: { evidence: JSON.stringify(ev) } });
+    await enqueueS21Phase(run.id, 'prepare_mentor', {
+      ...s21ResumeContext(ev),
+      forceTemplateAvatar: true,
+    });
+    await autoPilotLog(run.id, 'AVATAR_FALLBACK', true, '等 Trae 画头像超时（15 分钟），自动生成模板头像兜底并续段');
   }
 }
 

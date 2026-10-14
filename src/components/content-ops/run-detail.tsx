@@ -318,7 +318,7 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
   panels.push(gate('S18', 'S18', <PreflightNineChecksPanel run={run} onAction={onAction} canWrite={canWrite} />));
   panels.push(gate('S19', 'S19', <PendingDispositionPanel run={run} onAction={onAction} canWrite={canWrite} />));
   panels.push(gate('S20', 'S20', <G4GatePanel run={run} onAction={onAction} canWrite={canWrite} />));
-  panels.push(gate('S21', 'S21', <S21IntegrationPanel run={run} canWrite={canWrite} />));
+  panels.push(gate('S21', 'S21', <S21IntegrationPanel run={run} onAction={onAction} canWrite={canWrite} />));
   panels.push(gate('S22', 'S22', <S22ProductionPanel run={run} onAction={onAction} canWrite={canWrite} />));
   panels.push(<TraePanelC key="C" run={run} />);
 

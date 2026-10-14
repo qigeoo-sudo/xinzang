@@ -4,7 +4,7 @@
  * AGENTS.md：main=staging（CloudBase 自动部署），master=生产。
  */
 import { exec as execCb } from 'node:child_process';
-import { mkdir, cp, readdir, stat, access, copyFile } from 'node:fs/promises';
+import { mkdir, cp, readdir, readFile, writeFile, stat, access, copyFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import path from 'node:path';
 
@@ -266,4 +266,202 @@ export async function verifyProduction(payload) {
   } catch (err) {
     return { productionOk: false, httpStatus: 0, error: String(err.message).slice(0, 500) };
   }
+}
+
+// ------------------------------------------------------------------
+// S21-4a prepare_mentor 段：导师上架（mentors.ts 更新/插入 + 头像就位）
+// ------------------------------------------------------------------
+
+/** 成品头像的最小字节数：锁定占位字母图约 289 字节，>500 才算手绘成品 */
+const AVATAR_MIN_BYTES = 500;
+
+function toRepoRel(absPath, cwd) {
+  return path.relative(cwd, absPath).replace(/\\/g, '/');
+}
+
+/** 从公开身份 JSON 机械拼装公开简介（只搬运授权内容，不虚构编辑性文案） */
+function buildPublicProfileText(profile) {
+  const parts = [];
+  if (profile.displayName) parts.push(String(profile.displayName));
+  if (profile.publicProfessionalIdentity) parts.push(String(profile.publicProfessionalIdentity));
+  if (profile.currentRoleDescriptor) parts.push(String(profile.currentRoleDescriptor));
+  if (Array.isArray(profile.publicExperience) && profile.publicExperience.length > 0) {
+    parts.push(`公开职业经历（经授权）：${profile.publicExperience.join('、')}`);
+  }
+  return parts.join('。');
+}
+
+/** 参数化模板头像：姓名首字母 + 按性别取色（无 gender 用中性紫） */
+function templateAvatarSvg(displayName, gender) {
+  const initials = String(displayName || 'M')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'M';
+  const palettes = {
+    male: { a: '#3b82f6', b: '#1d4ed8' },
+    female: { a: '#f472b6', b: '#db2777' },
+    neutral: { a: '#8b5cf6', b: '#6d28d9' },
+  };
+  const p = palettes[gender] ?? palettes.neutral;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${p.a}"/>
+      <stop offset="1" stop-color="${p.b}"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="120" fill="url(#bg)"/>
+  <circle cx="120" cy="96" r="34" fill="rgba(255,255,255,0.25)"/>
+  <rect x="66" y="140" width="108" height="58" rx="29" fill="rgba(255,255,255,0.25)"/>
+  <text x="120" y="216" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#ffffff">${initials}</text>
+</svg>
+`;
+}
+
+/**
+ * S21-4a prepare_mentor：mentors.ts 更新/插入 + 头像检查。
+ * payload.mentorMeta = { mentorId, gender }（控制平面注入；gender 可为 null）。
+ * 流程：
+ *  1. 读 content/knowledge-governance/current/ 下 *_public_profile_*.json（集成产物，更新已有条目时非必需）
+ *  2. mentors.ts 已有条目 → 解锁（去 comingSoon/hasFirstRoundCards、写 launchedAt）
+ *     无条目 → 由公开身份 JSON 机械拼装最小条目插入（gender 未知时无法插，返回 needsAvatar 等 Trae/人工确认）
+ *  3. 检查头像（>500 字节）：缺失时 forceTemplateAvatar=true 生成模板 SVG 兜底，否则返回
+ *     { needsAvatar: true, avatarPath } 暂停链条（控制平面转 awaiting_avatar 等 Trae 手绘）
+ */
+export async function prepareMentor(payload) {
+  const meta = payload.mentorMeta ?? {};
+  const mentorId = String(meta.mentorId || '').trim();
+  if (!mentorId) throw new Error('prepare_mentor 缺少 mentorMeta.mentorId（控制平面注入）');
+  const gender = meta.gender === 'male' || meta.gender === 'female' ? meta.gender : null;
+  const forceTemplate = payload.forceTemplateAvatar === true;
+  const cwd = repoPath(payload);
+  const today = new Date().toISOString().slice(0, 10);
+  const mentorFiles = [];
+
+  // 1. 读公开身份 JSON（current/ 目录集成产物；best-effort，更新已有条目时不强求）
+  const currentDir = path.join(cwd, 'content', 'knowledge-governance', 'current');
+  let profile = null;
+  try {
+    const entries = await readdir(currentDir);
+    const profileFile = entries.find((n) => /_public_profile_.*\.json$/i.test(n));
+    if (profileFile) profile = JSON.parse(await readFile(path.join(currentDir, profileFile), 'utf8'));
+  } catch {
+    profile = null;
+  }
+
+  // 2. mentors.ts 更新/插入
+  const mentorsPath = path.join(cwd, 'src', 'lib', 'mentors.ts');
+  let mentorsText = await readFile(mentorsPath, 'utf8');
+  const entryRe = new RegExp(`\\n  \\{\\n    id: '${mentorId}',[\\s\\S]*?\\n  \\},`);
+  const entryMatch = mentorsText.match(entryRe);
+  let action;
+  let avatarFile;
+  let displayName = profile?.displayName ? String(profile.displayName) : mentorId;
+  if (entryMatch) {
+    // 已有条目：解锁（去 comingSoon/hasFirstRoundCards、写 launchedAt）
+    let block = entryMatch[0];
+    const nameMatch = block.match(/\n    name: '([^']+)'/);
+    if (nameMatch) displayName = nameMatch[1];
+    const avatarMatch = block.match(/\n    avatar: '([^']+)'/);
+    avatarFile = avatarMatch ? avatarMatch[1].replace('/avatars/', '') : `${mentorId}.svg`;
+    block = block.replace(/\n\s*(comingSoon|hasFirstRoundCards):[^,\n]*,/g, '');
+    if (/\n\s*launchedAt:/.test(block)) {
+      block = block.replace(/(\n\s*launchedAt:)'[^']*'/, `$1'${today}'`);
+    } else {
+      block = block.replace(/(\n\s*avatar: '[^']*',)/, `$1\n    launchedAt: '${today}',`);
+    }
+    mentorsText = mentorsText.replace(entryMatch[0], block);
+    action = 'updated';
+  } else {
+    // 新条目：机械拼装最小上线条目；gender 未知插不了（Mentor 接口必填），交回 awaiting_avatar
+    if (!gender) {
+      return {
+        mentorId,
+        action: 'none',
+        needsAvatar: true,
+        needsGender: true,
+        avatarPath: `public/avatars/${mentorId}.svg`,
+        displayName,
+        gender: null,
+      };
+    }
+    if (!profile) throw new Error('current/ 缺少 *_public_profile_*.json，无法拼装新导师条目');
+    displayName = String(profile.displayName || mentorId);
+    const title = String(profile.publicProfessionalIdentity || '行业导师');
+    const industry = String(profile.industry || '综合');
+    const publicProfileText = buildPublicProfileText(profile);
+    avatarFile = `${mentorId}.svg`;
+    const entry = [
+      '  {',
+      `    id: '${mentorId}',`,
+      `    name: '${displayName.replace(/'/g, "\\'")}',`,
+      `    avatar: '/avatars/${avatarFile}',`,
+      `    launchedAt: '${today}',`,
+      `    title: '${title.replace(/'/g, "\\'")}',`,
+      `    company: '—',`,
+      `    companyType: '—',`,
+      `    industry: '${industry.replace(/'/g, "\\'")}',`,
+      `    years: '—',`,
+      `    tagline: '${`${title} · 上架信息待补全`.replace(/'/g, "\\'")}',`,
+      `    tags: ['${industry.replace(/'/g, "\\'")}'],`,
+      '    price: 59,',
+      '    isFree: false,',
+      `    gender: '${gender}',`,
+      "    personalityPrompt: '',",
+      '    knowledgeEntries: [],',
+      '    usesDbKnowledge: true,',
+      `    publicProfile: '${publicProfileText.replace(/'/g, "\\'")}',`,
+      '    suggestedQuestions: [],',
+      '  },',
+    ].join('\n');
+    const insertAt = mentorsText.lastIndexOf('\n];');
+    if (insertAt < 0) throw new Error('mentors.ts 未找到导师数组结尾（\\n];）');
+    mentorsText = mentorsText.slice(0, insertAt) + '\n' + entry + mentorsText.slice(insertAt);
+    action = 'inserted';
+  }
+  await writeFile(mentorsPath, mentorsText, 'utf8');
+  mentorFiles.push(toRepoRel(mentorsPath, cwd));
+
+  // 3. 头像检查（>500 字节才算成品；缺失或占位图时按需兜底/等待）
+  const avatarPath = path.join(cwd, 'public', 'avatars', avatarFile);
+  let avatarBytes = 0;
+  try {
+    avatarBytes = (await stat(avatarPath)).size;
+  } catch {
+    avatarBytes = 0;
+  }
+  if (avatarBytes <= AVATAR_MIN_BYTES) {
+    if (forceTemplate) {
+      await mkdir(path.dirname(avatarPath), { recursive: true });
+      await writeFile(avatarPath, templateAvatarSvg(displayName, gender), 'utf8');
+      avatarBytes = (await stat(avatarPath)).size;
+      mentorFiles.push(toRepoRel(avatarPath, cwd));
+    } else {
+      return {
+        mentorId,
+        action,
+        needsAvatar: true,
+        avatarPath: toRepoRel(avatarPath, cwd),
+        displayName,
+        gender,
+        avatarBytes,
+        mentorFiles,
+      };
+    }
+  }
+
+  return {
+    mentorId,
+    action,
+    avatarFile,
+    avatarPath: toRepoRel(avatarPath, cwd),
+    avatarBytes,
+    avatarGenerated: forceTemplate && avatarBytes > 0,
+    displayName,
+    gender,
+    mentorFiles,
+  };
 }

@@ -59,6 +59,8 @@ export const RUN_STATE = {
   RECONCILING_SNAPSHOTS: 'reconciling_snapshots',
   INTEGRATION_BACKUP_CREATED: 'integration_backup_created',
   INTEGRATING_APPLICATION: 'integrating_application',
+  // S21 prepare_mentor 段：mentors.ts 已更新但头像缺失，等 Trae 手绘（超时 Runner 模板兜底）
+  AWAITING_AVATAR: 'awaiting_avatar',
   TESTING_STAGING: 'testing_staging',
   PUSHING_MAIN: 'pushing_main',
   DEPLOYING_STAGING: 'deploying_staging',
@@ -224,8 +226,8 @@ export const STEP_DEFS: StepDef[] = [
     code: 'S14', title: 'Codex 第二轮候选更新（固定触发语）',
     actor: ACTOR.CODEX, owner: ACTOR.CODEX,
     nextRunState: RUN_STATE.CODEX_ROUND2_UPDATE,
-    // 2026-10-13 用户定：S14 起二轮段不再标注 VPN 需求（实测 Codex 投递与飞书收发当前网络可直连）
-    needsVpn: false, isFeishu: false, active: true,
+    // 2026-10-13 用户改回：Codex 走 api.openai.com，投递需要 VPN，恢复 V 灯（与 S6/S11/S16 一致）
+    needsVpn: true, isFeishu: false, active: true,
   },
   {
     code: 'S15', title: '第二轮审核清单比对（v0.3）+ G3 批准 + 发送',
@@ -287,7 +289,7 @@ export const ACTIVE_CODES = STEP_DEFS.filter((s) => s.active).map((s) => s.code)
 
 /** G1 文案正文（去掉 @导师 前缀后的部分，@部分由 post 富文本 at 标签处理） */
 export const G1_ROUND1_DOCS_BODY =
-  '，这里有两份文件，其中语言人格风格分析文件是供浏览用，不需要回复，而上方引用的第一轮审核清单文件，需要阅读并回复，感谢。';
+  '，您好！这里有两份文件，其中语言人格风格分析文件是供浏览用，不需要回复，而第一轮审核清单文件，需要阅读并回复，感谢感谢！';
 
 /** 保留旧导出名兼容（已废弃，新代码用 G1_ROUND1_DOCS_BODY） */
 export const G1_ROUND1_DOCS_TEXT =
@@ -297,19 +299,22 @@ export const G1_ROUND1_DOCS_TEXT =
  * G2 第二轮访谈大纲（AGENTS §11）：必须发送共享官方大纲，禁止另写导师专用版。
  * 一条文本消息：固定文案 + 官方链接（飞书自动识别为云文档卡片）。
  */
-export const G2_OUTLINE_TEXT = '@导师，你好，这是第二轮访谈大纲，请查收，谢谢。';
+export const G2_OUTLINE_TEXT = '@导师，您好，这是第二轮访谈大纲，请查收，谢谢。';
 export const G2_OUTLINE_LINK = 'https://rcnjoh3ukdwe.feishu.cn/docx/YAj1dG4jeoOy3FxELepczukdnIh';
 export const G2_OUTLINE_MESSAGE = `${G2_OUTLINE_TEXT}\n${G2_OUTLINE_LINK}`;
 
+/** G2 文案正文（去掉 "@导师" 前缀后的部分；@部分由 post 富文本 at 标签处理，与 G1/G3 同构） */
+export const G2_OUTLINE_BODY = `，您好，这是第二轮访谈大纲，请查收，谢谢。\n${G2_OUTLINE_LINK}`;
+
 /** G3 第二轮审核清单（AGENTS §13.4）：文件之后发送的固定文案 */
-export const G3_ROUND2_DOCS_TEXT = '@导师，这是第二轮审核清单文件，需要阅读并回复，感谢。';
+export const G3_ROUND2_DOCS_TEXT = '@导师，您好！这是第二轮审核清单文件，需要阅读并回复，感谢。';
 
 /**
  * G3 文案正文（去掉 "@导师" 前缀后的部分）。
  * 发送结构为 post 富文本：[{at: 导师 open_id}, {text: G3_ROUND2_DOCS_BODY}]。
  * 导师真实 open_id 由 Runner 在群成员中按排除法定位（除导师外只有 陈初效/陆秉文/机器人）。
  */
-export const G3_ROUND2_DOCS_BODY = '，这是第二轮审核清单文件，需要阅读并回复，感谢。';
+export const G3_ROUND2_DOCS_BODY = '，您好！这是第二轮审核清单文件，需要阅读并回复，感谢。';
 
 /**
  * G4 第一次集成确认（AGENTS §18）：按钮文案 + 影响范围声明。
@@ -332,6 +337,7 @@ export const S21_PHASES = [
   { code: 'reconcile', label: '对账（Final Handoff vs 仓库哈希基线）', runState: RUN_STATE.RECONCILING_SNAPSHOTS },
   { code: 'backup', label: '备份（带时间戳目录 + before hash）', runState: RUN_STATE.INTEGRATION_BACKUP_CREATED },
   { code: 'integrate', label: '集成（复制包内容到 current/）', runState: RUN_STATE.INTEGRATING_APPLICATION },
+  { code: 'prepare_mentor', label: '导师上架（mentors.ts 解锁/插入 + 头像就位）', runState: RUN_STATE.TESTING_STAGING },
   { code: 'activate_pilot', label: '激活导师（prompt 落位 + 知识卡灌测试库）', runState: RUN_STATE.TESTING_STAGING },
   { code: 'test', label: '八类测试（AGENTS §16.5 回归）', runState: RUN_STATE.TESTING_STAGING },
   { code: 'push_main', label: '推 main（git commit + push origin main）', runState: RUN_STATE.PUSHING_MAIN },
@@ -439,6 +445,7 @@ const MAINLINE_ORDER: RunState[] = [
   RUN_STATE.RECONCILING_SNAPSHOTS,
   RUN_STATE.INTEGRATION_BACKUP_CREATED,
   RUN_STATE.INTEGRATING_APPLICATION,
+  RUN_STATE.AWAITING_AVATAR,
   RUN_STATE.TESTING_STAGING,
   RUN_STATE.PUSHING_MAIN,
   RUN_STATE.DEPLOYING_STAGING,

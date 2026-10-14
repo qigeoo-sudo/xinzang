@@ -3808,13 +3808,22 @@ export function G4GatePanel({
 }
 
 // ------------------------------------------------------------------
-// P4b：S21 Trae 集成面板（六段自动串联） + S22 生产发布面板（G5 门禁 + 四段自动）
+// P4b：S21 Trae 集成面板（八段自动串联） + S22 生产发布面板（G5 门禁 + 四段自动）
 // ------------------------------------------------------------------
 
 type S21Evidence = {
   s21Progress?: Record<string, { ok: boolean; at: string; summary?: unknown }>;
   handoffPath?: string | null;
   handoffVersion?: string | null;
+  // prepare_mentor 段：导师上架产物与头像等待状态
+  integratedFiles?: string[];
+  promptCopied?: string[];
+  mentorFiles?: string[];
+  avatarPath?: string;
+  avatarGender?: string;
+  avatarRequestedAt?: string;
+  avatarNeedsGender?: boolean;
+  avatarFallbackQueued?: boolean;
 };
 
 type S22Evidence = {
@@ -3828,6 +3837,7 @@ const S21_ACTIVE_STATES = [
   'reconciling_snapshots',
   'integration_backup_created',
   'integrating_application',
+  'awaiting_avatar',
   'testing_staging',
   'pushing_main',
   'deploying_staging',
@@ -3836,9 +3846,11 @@ const S21_ACTIVE_STATES = [
 
 export function S21IntegrationPanel({
   run,
+  onAction,
   canWrite,
 }: {
   run: RunDetail;
+  onAction: ActionFn;
   canWrite: boolean;
 }) {
   const step = run.steps.find((s) => s.code === 'S21');
@@ -3849,15 +3861,19 @@ export function S21IntegrationPanel({
   const progress = ev.s21Progress ?? {};
   const running = step?.commandStatus === 'queued' || step?.commandStatus === 'dispatched';
   const stepDone = step?.status === 'done';
+  const { busy, error, guard } = useGuard();
+  const awaitingAvatar = run.status === 'awaiting_avatar';
+  const needGenderPick = awaitingAvatar && ev.avatarGender !== 'male' && ev.avatarGender !== 'female';
+  const [avatarGender, setAvatarGender] = useState<'' | 'male' | 'female'>('');
 
   // 当前段：S21_PHASES 中第一个未完成的段
   const currentPhaseIdx = S21_PHASES.findIndex((p) => !progress[p.code]);
 
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-      <h3 className="text-sm font-bold text-stone-800">S21 · Trae 集成：对账→备份→集成→激活导师→八类测试→推 main→部署测试端</h3>
+      <h3 className="text-sm font-bold text-stone-800">S21 · Trae 集成：对账→备份→集成→导师上架→激活导师→八类测试→推 main→部署测试端</h3>
       <p className="mt-1 text-xs text-stone-500">
-        G4 通过后 Runner 全自动串联七段（无 pilot 激活配置的导师自动跳过激活段）；每段结果由控制平面记录，无需人工干预。
+        G4 通过后 Runner 全自动串联八段（头像缺失时暂停等 Trae 手绘，超时自动生成模板头像兜底；无 pilot 激活配置的导师自动跳过激活段）。
       </p>
       {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => {}} />}
 
@@ -3902,6 +3918,64 @@ export function S21IntegrationPanel({
         <p className="mt-3 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-800">
           S21 集成完成。测试端已部署，等待人工验收（G5）。
         </p>
+      )}
+      {awaitingAvatar && (
+        <div className="mt-3 rounded-lg border border-red-300 bg-red-50/60 p-3 text-xs text-red-800">
+          <p className="font-bold">头像未就位，Run 已暂停（awaiting_avatar）</p>
+          <p className="mt-1">
+            期望路径：{String(ev.avatarPath ?? 'public/avatars/<mentorId>.svg')}（需 &gt;500 字节的手绘成品 SVG）。
+            {ev.avatarNeedsGender === true && ' 新导师性别未确认，插入 mentors.ts 条目前需先选择。'}
+            画完后点「重新检查头像」续段；15 分钟无进展会自动生成模板头像兜底。
+          </p>
+          {needGenderPick && (
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-red-800">导师性别（第三人称代词用）</label>
+              <select
+                value={avatarGender}
+                onChange={(e) => setAvatarGender(e.target.value as '' | 'male' | 'female')}
+                className="rounded border border-red-300 bg-white px-2 py-1 text-xs"
+              >
+                <option value="">请选择</option>
+                <option value="female">女（她）</option>
+                <option value="male">男（他）</option>
+              </select>
+            </div>
+          )}
+          {canWrite && (
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                disabled={busy || (needGenderPick && !avatarGender)}
+                onClick={() =>
+                  guard(() =>
+                    onAction('avatar-resume', {
+                      ...(avatarGender ? { gender: avatarGender } : {}),
+                    }),
+                  )
+                }
+                className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50"
+              >
+                重新检查头像
+              </button>
+              <button
+                type="button"
+                disabled={busy || (needGenderPick && !avatarGender)}
+                onClick={() =>
+                  guard(() =>
+                    onAction('avatar-resume', {
+                      forceTemplate: true,
+                      ...(avatarGender ? { gender: avatarGender } : {}),
+                    }),
+                  )
+                }
+                className="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-bold text-red-700 disabled:opacity-50"
+              >
+                改用模板头像
+              </button>
+            </div>
+          )}
+          {error && <p className="mt-2 text-red-600">{error}</p>}
+        </div>
       )}
       {step?.failureReason && (
         <p className="mt-2 text-xs text-red-600">{step.failureReason}</p>

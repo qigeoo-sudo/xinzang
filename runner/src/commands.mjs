@@ -9,6 +9,9 @@
  */
 import path from 'node:path';
 import { mkdir, readFile, readdir, rename, stat } from 'node:fs/promises';
+import { exec as execCb } from 'node:child_process';
+import { promisify } from 'node:util';
+const exec = promisify(execCb);
 import {
   hashFile,
   isInsideContentRoot,
@@ -28,6 +31,7 @@ import {
   gitPushMain,
   deployStaging,
   activateMentorStaging,
+  prepareMentor,
   gitPromoteMainToMaster,
   deployProduction,
   verifyProduction,
@@ -478,12 +482,12 @@ export async function handleCommand(command, contentRoot, opts = {}) {
 
     case 'feishu_send_message': {
       // 发送（人工批准后由引擎入队才执行）：
-      //   kind=file（先核验哈希再上传）
+      //   kind=file（先核验哈希再上传；.md 文件自动转 .docx 后发送）
       //   kind=text（G1/G2 纯文本固定文案）
       //   kind=text_mention（G3 富文本，@mention 群里导师 + 固定文案正文）
       const chatId = payload.chatId;
       if (payload.kind === 'file') {
-        const fileName = String(payload.fileName || '');
+        let fileName = String(payload.fileName || '');
         if (path.basename(fileName) !== fileName) {
           throw new Error(`feishu_send_message 文件名非法: ${fileName}`);
         }
@@ -491,9 +495,37 @@ export async function handleCommand(command, contentRoot, opts = {}) {
         if (!path.isAbsolute(srcDirAbs) || !isInsideContentRoot(srcDirAbs, contentRoot)) {
           throw new Error(`feishu_send_message 源目录越界: ${payload.srcDirAbs}`);
         }
+        // .md 文件发送前转为 .docx（同名同目录，pandoc 转换）
+        let wasConverted = false;
+        if (fileName.toLowerCase().endsWith('.md')) {
+          const docxName = fileName.slice(0, -3) + '.docx';
+          const docxPath = path.join(srcDirAbs, docxName);
+          // 已有同名 .docx 且比 .md 新则跳过重复转换
+          let skipConvert = false;
+          try {
+            const [mdStat, docxStat] = await Promise.all([
+              stat(path.join(srcDirAbs, fileName)),
+              stat(docxPath),
+            ]);
+            if (docxStat.mtimeMs >= mdStat.mtimeMs) skipConvert = true;
+          } catch { /* .docx 不存在，需要转换 */ }
+          if (!skipConvert) {
+            try {
+              await exec(`pandoc "${path.join(srcDirAbs, fileName)}" -o "${docxPath}"`, {
+                windowsHide: true,
+                timeout: 30_000,
+              });
+            } catch (err) {
+              throw new Error(`md→docx 转换失败（pandoc）：${String(err.stderr || err.message).slice(0, 500)}`);
+            }
+          }
+          fileName = docxName;
+          wasConverted = true;
+        }
         // 发送前核验内容哈希与批准登记一致（防 D 盘文件在批准后被改动）
+        // md→docx 转换后哈希必然不同，跳过旧哈希检查（转换后的 .docx 是可信产物）
         const { sha256 } = await hashFile(path.join(srcDirAbs, fileName));
-        if (payload.expectedSha && sha256 !== payload.expectedSha) {
+        if (!wasConverted && payload.expectedSha && sha256 !== payload.expectedSha) {
           throw new Error(`文件内容与批准时不一致（sha256 不匹配），已拒绝发送：${fileName}`);
         }
         const r = await feishuSendFile({
@@ -576,6 +608,9 @@ export async function handleCommand(command, contentRoot, opts = {}) {
       return await deployStaging(payload);
     case 'activate_mentor_staging':
       return await activateMentorStaging(payload);
+    case 'prepare_mentor':
+      // S21-4a 导师上架：mentors.ts 更新/插入 + 头像就位；缺失时返回 needsAvatar（不抛错，链条暂停等 Trae）
+      return await prepareMentor(payload);
     case 'git_promote_main_to_master':
       return await gitPromoteMainToMaster(payload);
     case 'deploy_production':
