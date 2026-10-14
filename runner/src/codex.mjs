@@ -215,46 +215,82 @@ export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'd
   const codexExe = detected.path || 'codex';
   const useShell = codexExe === 'codex';
 
+  // 模型选择规则（2026-10-14 用户定）：
+  // - 新线程（无 threadId，S6 建对话）：固定 gpt-6.1-sol，失败不自动换模型
+  // - 续旧线程（S11/S14/S16 等吸收/续投递）：先 gpt-5.6-sol；仅当「快速失败且本轮未实际
+  //   开工」（turn 未完成、120s 内退出）时自动换 gpt-6.1-sol 重试一次，避免长任务失败后
+  //   整段重跑造成重复吸收
+  const NEW_THREAD_MODEL = 'gpt-6.1-sol';
+  const RESUME_FIRST_MODEL = 'gpt-5.6-sol';
+  const RESUME_FALLBACK_MODEL = 'gpt-6.1-sol';
+
   // trace 文件与 last-message 文件放在 baseDir 下的 _runner-traces 目录
   const traceDir = path.join(baseDir, '_runner-traces');
   await mkdir(traceDir, { recursive: true }).catch(() => {});
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const tracePath = path.join(traceDir, `codex-${stamp}.jsonl`);
-  const lastMessagePath = path.join(traceDir, `codex-${stamp}-last.txt`);
-
-  // 参数：-C baseDir + approve-for-me（隐含 workspace-write 沙箱）+ json + 输出最后消息 + stdin 输入
-  // 注意：--sandbox 与 --approve-for-me 互斥，后者已隐含 workspace-write
-  const args = [
-    'exec',
-    '-C', baseDir,
-    '--skip-git-repo-check',
-    '--approve-for-me',
-    '--json',
-    '--output-last-message', lastMessagePath,
-    '-',
-  ];
-  if (threadId) {
-    // resume 放在 - 之前
-    args.splice(args.indexOf('-'), 0, 'resume', threadId);
-  }
 
   const totalTimeout = TASK_TIMEOUTS[taskType] ?? TASK_TIMEOUTS.default;
   // 长组装任务放宽空闲超时：Codex 生成整份长文档时可 5-10 分钟不吐 JSONL 事件，
   // 300s 会把「合法的长思考」误杀（2026-10-12 S6 实测被杀）；短任务（smoke）保持灵敏
   const idleTimeout = taskType === 'assembly_round1' || taskType === 'assembly_round2' || taskType === 'absorb' ? 900_000 : IDLE_TIMEOUT_MS;
 
-  const result = await runCodexExec({
-    exe: codexExe,
-    args,
-    useShell,
-    stdinData: trigger,
-    tracePath,
-    lastMessagePath,
-    totalTimeoutMs: totalTimeout,
-    idleTimeoutMs: idleTimeout,
-    onProgress,
-  });
-  return result;
+  async function attempt(model) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const tracePath = path.join(traceDir, `codex-${stamp}.jsonl`);
+    const lastMessagePath = path.join(traceDir, `codex-${stamp}-last.txt`);
+    // 参数：-m 模型 + -C baseDir + approve-for-me（隐含 workspace-write 沙箱）+ json + 输出最后消息 + stdin 输入
+    // 注意：--sandbox 与 --approve-for-me 互斥，后者已隐含 workspace-write
+    const args = [
+      'exec',
+      '-m', model,
+      '-C', baseDir,
+      '--skip-git-repo-check',
+      '--approve-for-me',
+      '--json',
+      '--output-last-message', lastMessagePath,
+      '-',
+    ];
+    if (threadId) {
+      // resume 放在 - 之前
+      args.splice(args.indexOf('-'), 0, 'resume', threadId);
+    }
+    const started = Date.now();
+    const result = await runCodexExec({
+      exe: codexExe,
+      args,
+      useShell,
+      stdinData: trigger,
+      tracePath,
+      lastMessagePath,
+      totalTimeoutMs: totalTimeout,
+      idleTimeoutMs: idleTimeout,
+      onProgress,
+    });
+    return { result, durationMs: Date.now() - started };
+  }
+
+  const firstModel = threadId ? RESUME_FIRST_MODEL : NEW_THREAD_MODEL;
+  const first = await attempt(firstModel);
+  if (first.result.ok) {
+    return { ...first.result, model: firstModel };
+  }
+
+  // 续线程快速失败（本轮未实际开工）→ 换备用模型重试一次
+  const sawCompleted = (first.result.events ?? []).some((e) => (e.msg?.type ?? e.type) === 'turn.completed');
+  const retryable = Boolean(threadId) && !sawCompleted && first.durationMs < 120_000;
+  if (!retryable) {
+    return { ...first.result, model: firstModel };
+  }
+
+  const second = await attempt(RESUME_FALLBACK_MODEL);
+  if (second.result.ok) {
+    return { ...second.result, model: RESUME_FALLBACK_MODEL, fallbackFrom: firstModel };
+  }
+  return {
+    ...second.result,
+    model: RESUME_FALLBACK_MODEL,
+    fallbackFrom: firstModel,
+    reason: `两种模型均失败（先 ${firstModel} 后 ${RESUME_FALLBACK_MODEL}）｜${second.result.reason ?? ''}`,
+  };
 }
 
 /**

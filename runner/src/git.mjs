@@ -13,6 +13,8 @@ const DEFAULT_REPO = 'C:\\Users\\bingw\\Documents\\trae_projects\\squeezer';
 const PROD_ECS_HOST = process.env.PROD_ECS_HOST || '14.103.104.122';
 const PROD_ECS_USER = process.env.PROD_ECS_USER || 'root';
 const PROD_DEPLOY_DIR = process.env.PROD_DEPLOY_DIR || '/opt/xinzang-release';
+// 发布脚本相对 PROD_DEPLOY_DIR；20-deploy-nodb.sh 自身会 git fetch/checkout master 再 docker build+换容器
+const PROD_DEPLOY_SCRIPT = process.env.PROD_DEPLOY_SCRIPT || 'deploy-scripts/20-deploy-nodb.sh';
 
 function repoPath(payload) {
   const p = typeof payload.repoPath === 'string' ? payload.repoPath : DEFAULT_REPO;
@@ -139,7 +141,10 @@ export async function runRegressionTests(payload) {
  */
 export async function gitPushMain(payload) {
   const cwd = repoPath(payload);
-  const stagedFiles = Array.isArray(payload.stagedFiles) ? payload.stagedFiles.filter(Boolean) : [];
+  // v1.2 资产出库：content/knowledge-governance/ 已 gitignore，过滤出暂存清单，
+  // 避免对 ignored 路径执行 git add 触发非零退出
+  const stagedFiles = (Array.isArray(payload.stagedFiles) ? payload.stagedFiles.filter(Boolean) : [])
+    .filter((f) => !String(f).replace(/\\/g, '/').startsWith('content/knowledge-governance/'));
   if (stagedFiles.length > 0) {
     // 逐条 add，路径含特殊字符时也安全（用 -- 分隔符）
     await git(`add -- ${stagedFiles.map((f) => `"${String(f).replace(/"/g, '\\"')}"`).join(' ')}`, cwd);
@@ -154,7 +159,7 @@ export async function gitPushMain(payload) {
   // 工作区可能在开发分支：commit 落当前分支，推送到远程 main（快进）
   await git('push origin HEAD:main', cwd);
   const mainSha = (await git('rev-parse HEAD', cwd)).stdout;
-  return { mainSha, pushed: true, pushedTo: 'origin/main (HEAD:main)', stagedCount: stagedFiles.length };
+  return { mainSha, pushed: true, pushedTo: 'origin/main (HEAD:main)', stagedCount: stagedFiles.length, assetStagingFiltered: true };
 }
 
 /**
@@ -179,14 +184,34 @@ export async function activateMentorStaging(payload) {
   if (!mentorId || !plan.cardsSource) throw new Error('activate_mentor_staging 的 activatePlan 缺少 mentorId/cardsSource');
   const cwd = repoPath(payload);
 
-  // 1. prompt 资产落位
+  // 1. prompt 资产落位（本地治理原件）+ 入库 bundle 构建
+  // v1.2 资产出库：运行时从 DB 读 prompt（mentor_persona_prompts），文件仅治理/回退
   const copied = [];
+  let bundlePath = null;
   if (plan.promptSource) {
     const src = path.join(cwd, plan.promptSource);
     const dest = path.join(cwd, 'content', 'knowledge-governance', 'prompts', `${mentorId}_system_prompt.md`);
     await mkdir(path.dirname(dest), { recursive: true });
     await copyFile(src, dest);
     copied.push(path.relative(cwd, dest).replace(/\\/g, '/'));
+  }
+  {
+    // bundle：全局 policy + 该导师 prompt（存在才收）；写临时文件，scp 后远程灌库
+    const promptsDir = path.join(cwd, 'content', 'knowledge-governance', 'prompts');
+    const promptFile = path.join(promptsDir, `${mentorId}_system_prompt.md`);
+    const globalFile = path.join(cwd, 'content', 'knowledge-governance', 'GLOBAL_MENTOR_SYSTEM_POLICY.md');
+    const bundle = { prompts: {} };
+    try {
+      bundle.globalPolicy = await readFile(globalFile, 'utf-8');
+    } catch { /* 全局 policy 文件缺失时跳过（DB 已有记录则不受影响） */ }
+    try {
+      bundle.prompts[mentorId] = await readFile(promptFile, 'utf-8');
+    } catch { /* 该导师无 prompt 文件：沿用 DB 既有记录或运行时静态回退 */ }
+    if (bundle.globalPolicy || Object.keys(bundle.prompts).length > 0) {
+      const { tmpdir } = await import('node:os');
+      bundlePath = path.join(tmpdir(), `_prompt_bundle_${mentorId}_${Date.now()}.json`);
+      await writeFile(bundlePath, JSON.stringify(bundle), 'utf-8');
+    }
   }
 
   // 2. 读生产容器连接串 → 库名换成测试库
@@ -200,22 +225,30 @@ export async function activateMentorStaging(payload) {
   if (testDb === prodDb) throw new Error('生产连接串库名不含 xinzang-mysql，测试库地址生成失败');
   const testDbB64 = Buffer.from(testDb, 'utf-8').toString('base64');
 
-  // 3. 传卡文件 + seed 脚本到 ECS，远程灌卡
+  // 3. 传卡文件 + prompt bundle + seed 脚本到 ECS，远程灌卡并灌 prompt（v1.2 资产出库）
   const cardsAbs = path.join(cwd, plan.cardsSource);
   const seedAbs = path.join(cwd, 'prisma', 'seed-mentor-cards.ts');
+  const promptSeedAbs = path.join(cwd, 'prisma', 'seed-mentor-prompts.ts');
   const host = `${PROD_ECS_USER}@${PROD_ECS_HOST}`;
   await exec(`scp "${cardsAbs}" ${host}:/opt/xinzang/prisma/_activate_cards.jsonl`, { timeout: 120_000 });
   await exec(`scp "${seedAbs}" ${host}:/opt/xinzang/prisma/seed-mentor-cards.ts`, { timeout: 120_000 });
+  await exec(`scp "${promptSeedAbs}" ${host}:/opt/xinzang/prisma/seed-mentor-prompts.ts`, { timeout: 120_000 });
+  if (bundlePath) {
+    await exec(`scp "${bundlePath}" ${host}:/opt/xinzang/prisma/_prompt_bundle.json`, { timeout: 120_000 });
+  }
   // 连接串写入远程临时文件（base64 免引号），seed 完成后清理临时文件
   await exec(`ssh ${host} "echo ${testDbB64} | base64 -d > /tmp/_activate_dburl"`, { timeout: 60_000 });
-  const remoteCmd = `cd /opt/xinzang && DATABASE_URL=$(cat /tmp/_activate_dburl) npx tsx prisma/seed-mentor-cards.ts --file prisma/_activate_cards.jsonl --mentor ${mentorId}; rc=$?; rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl; exit $rc`;
+  const promptSeedCmd = bundlePath
+    ? ` && DATABASE_URL=$(cat /tmp/_activate_dburl) npx tsx prisma/seed-mentor-prompts.ts --file prisma/_prompt_bundle.json`
+    : '';
+  const remoteCmd = `cd /opt/xinzang && DATABASE_URL=$(cat /tmp/_activate_dburl) npx tsx prisma/seed-mentor-cards.ts --file prisma/_activate_cards.jsonl --mentor ${mentorId}${promptSeedCmd}; rc=$?; rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl prisma/_prompt_bundle.json; exit $rc`;
   let seedOut = '';
   try {
     const { stdout } = await exec(`ssh ${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
     seedOut = stdout;
   } catch (err) {
     // 失败时也清理远程临时文件，再抛出
-    await exec(`ssh ${host} "rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl"`, { timeout: 60_000 }).catch(() => {});
+    await exec(`ssh ${host} "rm -f /tmp/_activate_dburl prisma/_activate_cards.jsonl prisma/_prompt_bundle.json"`, { timeout: 60_000 }).catch(() => {});
     throw new Error(`远程灌卡失败：${String(err.stdout || err.stderr || err.message).slice(0, 2000)}`);
   }
   const m = seedOut.match(/完成：\S+\s+(\d+)\s+张已同步；库内知识卡总数\s+(\d+)/);
@@ -242,9 +275,11 @@ export async function deployProduction(payload) {
   const host = typeof payload.ecsHost === 'string' ? payload.ecsHost : PROD_ECS_HOST;
   const user = typeof payload.ecsUser === 'string' ? payload.ecsUser : PROD_ECS_USER;
   const deployDir = typeof payload.deployDir === 'string' ? payload.deployDir : PROD_DEPLOY_DIR;
-  // SSH 到 ECS：set -e 任一步失败即停；pull 用 --ff-only 避免意外 merge；
-  // 输出末尾截取，确保 deploy.sh 的真实报错可见（而非被 git pull 状态提示淹没）。
-  const remoteCmd = `set -e; cd ${deployDir} && git fetch origin && git checkout master && git pull --ff-only origin master && bash deploy.sh`;
+  const deployScript = typeof payload.deployScript === 'string' ? payload.deployScript : PROD_DEPLOY_SCRIPT;
+  const scriptPath = deployScript.startsWith('/') ? deployScript : `${deployDir}/${deployScript}`;
+  // SSH 到 ECS 执行发布脚本：脚本自带 set -e 与 fetch/checkout master，这里只负责触发；
+  // 输出末尾截取，确保发布脚本的真实报错可见（而非被其他状态提示淹没）。
+  const remoteCmd = `bash ${scriptPath}`;
   try {
     const { stdout, stderr } = await exec(`ssh ${user}@${host} "${remoteCmd}"`, { maxBuffer: 10 * 1024 * 1024, timeout: 300_000 });
     return { deployOk: true, scriptLog: (stdout + stderr).slice(-2000) };

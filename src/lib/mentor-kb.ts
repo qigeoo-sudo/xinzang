@@ -108,7 +108,7 @@ export async function buildMentorSystemPrompt(
   const cardsText = formatKnowledgeCards(cards);
 
   const systemPrompt = assembleSystemPrompt({
-    globalPolicy: getGlobalSystemPolicy(),
+    globalPolicy: await getGlobalSystemPolicy(),
     mentorName: mentor.name,
     mentorProfilePublic: mentor.publicProfile || mentor.tagline,
     genderPronoun: mentor.gender === 'male' ? '他' : '她',
@@ -120,7 +120,7 @@ export async function buildMentorSystemPrompt(
     evidencePolicy: ctx.evidencePolicy,
     allowedScope: ctx.allowedScope,
     retrievedCardsText: cardsText,
-    persona: getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
+    persona: await getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
   });
 
   return { systemPrompt, hitCardIds };

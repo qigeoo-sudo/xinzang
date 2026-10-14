@@ -143,6 +143,46 @@ const FILE_KEY_RE = /^(img|file)_[A-Za-z0-9_-]+$/;
 // 目标文件名白名单：单段路径（无目录分隔符/盘符/通配符/..），首字符不为点
 const UNSAFE_NAME_RE = /[\\/:*?"<>|]|\.\./;
 
+// —— 群发文件权限 ——
+// 规则（2026-10-14 用户定）：机器人发到群里的所有文件，权限必须开到可编辑。
+// 做法：发送成功后用消息 id 取回 file_key（bot 经 im 上传的文件即云盘文件 token），
+// PATCH drive/v2 public 权限设 tenant_editable（组织内可编辑，不开外链）。
+// 权限设置失败不回滚发送，仅在结果里带 permApplied/permReason 供证据展示。
+const IM_API_BASE = 'https://open.feishu.cn/open-apis/im/v1';
+const DRIVE_API_BASE = 'https://open.feishu.cn/open-apis/drive/v2';
+
+async function setChatFileEditable(messageId) {
+  const token = process.env.LARKSUITE_CLI_TENANT_ACCESS_TOKEN;
+  if (!token) return { permApplied: false, permReason: 'no_tenant_token' };
+  try {
+    const res = await fetch(`${IM_API_BASE}/messages/${messageId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json().catch(() => null);
+    const item = data?.data?.items?.[0];
+    if (!data || data.code !== 0 || !item) {
+      return { permApplied: false, permReason: data ? `msg_api_${data.code}` : 'msg_bad_json' };
+    }
+    let fileKey = null;
+    try { fileKey = JSON.parse(item.body?.content || '{}')?.file_key ?? null; } catch { /* content 非 JSON */ }
+    if (!fileKey || !FILE_KEY_RE.test(fileKey)) {
+      return { permApplied: false, permReason: 'no_file_key' };
+    }
+    const pres = await fetch(`${DRIVE_API_BASE}/permissions/${fileKey}/public?type=file`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ link_share_entity: 'tenant_editable' }),
+    });
+    const pdata = await pres.json().catch(() => null);
+    if (!pdata || pdata.code !== 0) {
+      return { permApplied: false, permReason: pdata ? `perm_api_${pdata.code}` : 'perm_bad_json', permRaw: JSON.stringify(pdata ?? {}).slice(0, 300) };
+    }
+    return { permApplied: true };
+  } catch (e) {
+    return { permApplied: false, permReason: 'fetch_error', permRaw: String(e?.message || e).slice(0, 200) };
+  }
+}
+
 /**
  * 群里"非导师"操作员 open_id（按用户与飞书后台确认的规则）：
  * 每个榨职机群成员固定为：导师 + 陈初效 + 陆秉文 + 机器人。
@@ -538,7 +578,11 @@ export async function feishuSendFile({ chatId, srcDirAbs, fileName, idempotencyK
   if (r.json && r.json.ok === false) {
     return { ok: false, reason: r.json.error?.message || 'send_failed', raw: r.raw };
   }
-  return { ok: true, messageId: r.json?.data?.message_id ?? null, dryRun, raw: r.raw.slice(0, 500) };
+  const send = { ok: true, messageId: r.json?.data?.message_id ?? null, dryRun, raw: r.raw.slice(0, 500) };
+  if (dryRun || !send.messageId) return send;
+  // 发出去的文件权限开到可编辑（失败不回滚发送，仅带告警字段）
+  const perm = await setChatFileEditable(send.messageId);
+  return { ...send, ...perm };
 }
 
 /**

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作台入口</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #e2e8f0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-bottom: 3rem;
+    }
+    .links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .card {
+      display: block;
+      width: 280px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      text-decoration: none;
+      color: #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card-desc {
+      font-size: 0.8125rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .url {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #64748b;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Créerse创自己Makeself己創り</h1>
+    <p class="subtitle">点击卡片直达目标</p>
+    <div class="links">
+      <a href="http://localhost:3000/content-ops" class="card">
+        <div class="card-icon">🦞</div>
+        <div class="card-title">导师龙虾流水线</div>
+        <div class="card-desc">导师访谈流水线看板<br>S0-S22 进度追踪</div>
+        <div class="url">localhost:3000/content-ops</div>
+      </a>
+      <a href="http://localhost:3000/admin-console" class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">平台管理后台</div>
+        <div class="card-desc">admin.aihr.top 本地对应页<br>平台数据与导师管理</div>
+        <div class="url">localhost:3000/admin-console</div>
+      </a>
+      <a href="http://localhost:3000/" class="card">
+        <div class="card-icon">🍹</div>
+        <div class="card-title">榨职机</div>
+        <div class="card-desc">榨职机本地首页<br>每天榨出新鲜的自己</div>
+        <div class="url">localhost:3000/</div>
+      </a>
+    </div>
+  </div>
+  <footer style="position:fixed;bottom:0;left:0;right:0;padding:0.75rem 1rem;text-align:center;color:#475569;font-size:0.75rem;letter-spacing:0.05em;">
+    Copyright © 2026 上海创自己科技服务有限公司 All rights reserved.
+  </footer>
+</body>
+</html>

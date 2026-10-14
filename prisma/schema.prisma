@@ -446,6 +446,17 @@ model MentorKnowledgeCard {
   @@index([domain])
 }
 
+/// 导师人格 Prompt 资产（v1.2 起运行时首选来源；本地文件仅作治理与回退）
+/// key 取值：'global_policy'（全体导师共同 System Policy）或导师 ID（如 freyagao）
+model MentorPersonaPrompt {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  content   String   @db.MediumText
+  version   String? // 资产版本（如 v0.3），便于审计
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 // ============================================================
 // 后台管理系统与数据采集模型（admin-mentor-system-v1）
 // ============================================================
