@@ -57,12 +57,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # public 静态资源（头像等）— standalone 不会自动包含
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# 导师治理资产（运行时只读：全局 policy + 六位导师 persona prompt md）
-# cards/*.jsonl 仅构建期 seed 使用，不进运行镜像（避免内部来源/置信度等元数据随镜像分发）
-COPY --from=builder --chown=nextjs:nodejs \
-  /app/content/knowledge-governance/GLOBAL_MENTOR_SYSTEM_POLICY.md \
-  /app/content/knowledge-governance/prompts \
-  ./content/knowledge-governance/
+# 导师治理资产自 v1.2 起不入镜像：人格 prompt / 全局 policy 改由数据库加载
+# （mentor_persona_prompts 表，部署前需完成 seed）；本地文件仅作治理与回退，不再随仓库分发
 
 # Prisma 引擎二进制文件 — standalone 构建可能未包含
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma

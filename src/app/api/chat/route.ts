@@ -921,9 +921,9 @@ export async function POST(request: NextRequest) {
       }
     } else {
       systemPrompt = [
-        getGlobalSystemPolicy(),
+        await getGlobalSystemPolicy(),
         PLATFORM_CONSTRAINTS_PROMPT,
-        getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
+        await getMentorPersonaPrompt(mentor.id, mentor.personalityPrompt),
         buildSystemPrompt(mentor, message),
       ].join('\n\n');
     }

@@ -55,3 +55,8 @@ next-env.d.ts
 
 # 龙虾工作台 Local Runner 本机状态（machineKey/runnerToken/幂等记录）
 /runner/.state/
+
+# 导师治理资产（知识产权保护：v1.2 起不入公开仓库，prompt 运行时改由数据库加载）
+# 本地原件保留于此目录，仅治理流程与 seed 使用
+/content/knowledge-governance/
+prisma/_prompt_bundle.json
