@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工作台入口</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #e2e8f0;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-bottom: 3rem;
+    }
+    .links {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .card {
+      display: block;
+      width: 280px;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      text-decoration: none;
+      color: #e2e8f0;
+      transition: all 0.2s ease;
+    }
+    .card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+    .card-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .card-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .card-desc {
+      font-size: 0.8125rem;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+    .url {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #64748b;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>工作台入口</h1>
+    <p class="subtitle">点击卡片直达目标页面</p>
+    <div class="links">
+      <a href="http://localhost:3000/content-ops" class="card">
+        <div class="card-icon">🦞</div>
+        <div class="card-title">内容运营龙虾工作台</div>
+        <div class="card-desc">导师访谈流水线看板<br>S0-S22 进度追踪</div>
+        <div class="url">localhost:3000/content-ops</div>
+      </a>
+      <a href="http://localhost:3000/dashboard" class="card">
+        <div class="card-icon">🍹</div>
+        <div class="card-title">用户端榨汁机首页</div>
+        <div class="card-desc">数据统计 / 成长仪表盘<br>导师互动与榨汁进度</div>
+        <div class="url">localhost:3000/dashboard</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html>

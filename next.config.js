@@ -28,9 +28,12 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // 生产环境全站防点击劫持；本地开发放开（Trae 简单浏览器用 iframe 嵌入，DENY 会白屏）
         source: '/(.*)',
         headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
+          ...(process.env.NODE_ENV === 'production'
+            ? [{ key: 'X-Frame-Options', value: 'DENY' }]
+            : []),
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           {
