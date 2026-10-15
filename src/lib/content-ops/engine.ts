@@ -869,6 +869,19 @@ export async function handleCommandResult(runnerId: string, body: {
         // S11/S14/S16 吸收·更新·最终吸收投递：失败走下方统一 ok:false 分支（run 不动，面板显示重试）；
         // 成功不标 DONE——写提交证据后链式入队 work 包扫描，最终仍需确认收步（S14 由 confirmRound2Update，S16 由 confirmRound2Absorb）。
         if (result.ok === false) break;
+        // 重试成功时恢复 run 状态：投递失败曾把 run 标 failed（S16 未被排除），
+        // 若重试成功不改回，后续自动确认/推进会被状态检查挡死（2026-10-16 Kevin S16 实测卡死）
+        if (step.run.status === 'failed') {
+          const restoreState = step.code === 'S11'
+            ? RUN_STATE.ROUND1_MATERIAL_RECEIVED
+            : step.code === 'S14'
+              ? RUN_STATE.ROUND2_MATERIAL_RECEIVED
+              : RUN_STATE.ROUND2_REPLY_RECEIVED;
+          await prisma.contentOpsRun.update({
+            where: { id: step.runId },
+            data: { status: restoreState, currentOwner: 'control_plane' },
+          });
+        }
         await prisma.contentOpsStep.update({
           where: { id: step.id },
           data: {
