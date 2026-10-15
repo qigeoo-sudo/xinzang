@@ -34,8 +34,7 @@ import {
   S21IntegrationPanel,
   S22ProductionPanel,
 } from './panels';
-import {
-  RUN_STATUS_LABELS,
+import { RUN_STATUS_LABELS,
   OWNER_LABELS,
   STEP_STATUS_LABELS,
   AGENT_LABELS,
@@ -43,6 +42,7 @@ import {
   labelOf,
   timeAgo,
 } from './display-labels';
+import { RunnerRestartButton } from './runner-restart-button';
 
 const TIMELINE: Array<{ code: string; short: string }> = [
   { code: 'S0', short: '建 Run' },
@@ -379,9 +379,12 @@ export function RunDetailView({ initial, canWrite }: { initial: RunDetail; canWr
                 </span>
               )}
             </h1>
-            <p className="mt-1 text-xs text-stone-500">
-              飞书群：{run.feishuChatName ?? '—'}{botChip} · Runner：
-              {run.runner ? `${run.runner.online ? '● 在线' : '○ 离线'}（${run.runner.name} · ${timeAgo(run.runner.lastSeenAt, now)}）` : '未绑定'}
+            <p className="mt-1 inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-stone-500">
+              <span>飞书群：{run.feishuChatName ?? '—'}{botChip} · Runner：{run.runner ? `${run.runner.online ? '● 在线' : '○ 离线'}（${run.runner.name} · ${timeAgo(run.runner.lastSeenAt, now)}）` : '未绑定'}</span>
+              {canWrite && <RunnerRestartButton />}
+              {run.runner && !run.runner.online && (now - new Date(run.runner.lastSeenAt!).getTime() > 60 * 60_000) && (
+                <span className="font-medium text-red-600">先点「重启 Runner」转绿后再继续流水线操作</span>
+              )}
             </p>
           </div>
           <div className="text-right text-sm">

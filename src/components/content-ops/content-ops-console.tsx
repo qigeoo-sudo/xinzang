@@ -9,6 +9,7 @@ import Link from 'next/link';
 import type { RunListItem, RunnerInfo } from './types';
 import { CreateRunWizard } from './create-run-wizard';
 import { MentorLightsBar } from './mentor-lights-bar';
+import { RunnerRestartButton } from './runner-restart-button';
 import { RUN_STATUS_LABELS, OWNER_LABELS, labelOf, timeAgo } from './display-labels';
 
 const POLL_MS = 15000;
@@ -123,6 +124,12 @@ export function ContentOpsConsole({
                 <span className="font-medium text-stone-500">○ 离线</span>
               )}
             </span>
+            {canWrite && <RunnerRestartButton onRestarted={refresh} />}
+            {!onlineRunner && heartbeatDead && (
+              <span className="text-[11px] font-medium text-red-600">
+                先点「重启 Runner」转绿后再继续流水线操作
+              </span>
+            )}
             {onlineRunner?.stale && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">
                 Runner 版本过旧，建议重启
