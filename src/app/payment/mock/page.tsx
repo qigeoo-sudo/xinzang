@@ -11,6 +11,8 @@ function MockPaymentContent() {
   const method = searchParams.get('method') || 'wechat';
   const amount = searchParams.get('amount') || '';
   const from = searchParams.get('from');
+  // 订阅页离开时的方案标签，支付成功后原样带回
+  const tab = searchParams.get('tab');
 
   const isWechat = method === 'wechat';
 
@@ -31,7 +33,7 @@ function MockPaymentContent() {
 
     const successUrl = `/payment/success?orderNo=${orderNo}${
       from ? `&from=${encodeURIComponent(from)}` : ''
-    }`;
+    }${tab ? `&tab=${encodeURIComponent(tab)}` : ''}`;
 
     if (window.opener) {
       try {
@@ -55,7 +57,7 @@ function MockPaymentContent() {
       window.location.href = successUrl;
     }, 1200);
     return () => clearTimeout(timer);
-  }, [success, orderNo, from]);
+  }, [success, orderNo, from, tab]);
 
   const handleMockPay = async () => {
     if (!orderNo) return;

@@ -23,7 +23,7 @@ import { getCachedMemberStatus, setCachedMemberStatus, invalidateMemberCache } f
 import { proxyFetch } from '@/lib/proxy-fetch';
 import { fetchWithRetry } from '@/lib/ai-retry';
 import { redactPII } from '@/lib/ai-privacy';
-import { billedMessageWhere } from '@/lib/chat-quota';
+import { billedMessageWhere, billedMessageWhereForMentor } from '@/lib/chat-quota';
 import {
   parseCrossConsent,
   extractConsentMarker,
@@ -651,8 +651,9 @@ export async function POST(request: NextRequest) {
     let mentorQuotaLimit: number | null = null;
     let mentorDailyUsedCount = 0;
     let mentorDailyQuotaLimit: number | null = null;
-    // 当前生效订阅档位（供 assistant 消息盖章：SUBSCRIPTION_MONTHLY/QUARTERLY/YEARLY）
+    // 当前生效订阅档位与范围（供 assistant 消息盖章：SUBSCRIPTION_MONTHLY/QUARTERLY/YEARLY、SUBSCRIPTION_SINGLE_*）
     let activeSubscriptionPlan: string | null = null;
+    let activeSubscriptionScope: string | null = null;
     if (isPremium) {
       const subscription = await prisma.subscription.findFirst({
         where: {
@@ -661,27 +662,54 @@ export async function POST(request: NextRequest) {
           endDate: { gt: new Date() },
         },
         orderBy: { endDate: 'desc' },
-        select: { plan: true, startDate: true },
+        select: { plan: true, startDate: true, scope: true, mentorId: true },
       });
 
       if (subscription) {
+        // 单导师卡只解锁绑定分身：聊到其他导师时走加购余额兜底，否则提示订阅
+        const singleLockedOut =
+          subscription.scope === 'SINGLE' && subscription.mentorId !== mentorId;
+
+        if (singleLockedOut) {
+          if (creditBalance > 0) {
+            consumeCredit = true;
+          } else {
+            return NextResponse.json(
+              {
+                error: `你的单导师会员未解锁 ${mentor.name}，可在该导师主页单独订阅，或购买全导师会员`,
+                needSubscription: true,
+                singleLocked: true,
+              },
+              { status: 403 }
+            );
+          }
+        } else {
         activeSubscriptionPlan = subscription.plan;
+        activeSubscriptionScope = subscription.scope;
         mentorQuotaLimit = getMentorQuota(subscription.plan);
         mentorDailyQuotaLimit = getMentorDailyQuota(subscription.plan);
+        // 单导师卡：配额只计绑定导师名下的会话轮次
+        const periodWhere =
+          subscription.scope === 'SINGLE' && subscription.mentorId
+            ? billedMessageWhereForMentor(session.user.id, subscription.mentorId, { gte: subscription.startDate })
+            : billedMessageWhere(session.user.id, { gte: subscription.startDate });
+        const dailyWhere =
+          subscription.scope === 'SINGLE' && subscription.mentorId
+            ? billedMessageWhereForMentor(session.user.id, subscription.mentorId, { gte: new Date(Date.now() - ONE_DAY_MS) })
+            : billedMessageWhere(session.user.id, { gte: new Date(Date.now() - ONE_DAY_MS) });
 
         if (mentorQuotaLimit !== null || mentorDailyQuotaLimit !== null) {
           // 周期内总用量（只计成功 AI 回复，冷回复不占轮次）
           if (mentorQuotaLimit !== null) {
             mentorUsedCount = await prisma.chatMessage.count({
-              where: billedMessageWhere(session.user.id, { gte: subscription.startDate }),
+              where: periodWhere,
             });
           }
 
           // 24 小时滚动窗口每日用量（防个人蒸馏）
           if (mentorDailyQuotaLimit !== null) {
-            const twentyFourHoursAgo = new Date(Date.now() - ONE_DAY_MS);
             mentorDailyUsedCount = await prisma.chatMessage.count({
-              where: billedMessageWhere(session.user.id, { gte: twentyFourHoursAgo }),
+              where: dailyWhere,
             });
           }
 
@@ -718,6 +746,7 @@ export async function POST(request: NextRequest) {
               { status: 429 }
             );
           }
+        }
         }
       }
     }
@@ -1126,12 +1155,14 @@ export async function POST(request: NextRequest) {
           })]
         : [];
 
-    // 本轮权益来源（盖在 assistant 消息上）：多榨卡 / 订阅（含档位）/ 免费试用
+    // 本轮权益来源（盖在 assistant 消息上）：多榨卡 / 订阅（含档位与范围）/ 免费试用
     const entitlementSource = consumeCredit
       ? 'CREDIT_PACK'
       : isPremium
         ? activeSubscriptionPlan
-          ? `SUBSCRIPTION_${activeSubscriptionPlan}`
+          ? activeSubscriptionScope === 'SINGLE'
+            ? `SUBSCRIPTION_SINGLE_${activeSubscriptionPlan}`
+            : `SUBSCRIPTION_${activeSubscriptionPlan}`
           : 'SUBSCRIPTION'
         : !mentor.isFree
           ? 'FREE_TRIAL'

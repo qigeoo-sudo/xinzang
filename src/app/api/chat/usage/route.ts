@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getMentorQuota, getMentorDailyQuota } from '@/lib/plans';
-import { billedMessageWhere } from '@/lib/chat-quota';
+import { billedMessageWhere, billedMessageWhereForMentor } from '@/lib/chat-quota';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -57,24 +57,33 @@ export async function GET() {
           endDate: { gt: new Date() },
         },
         orderBy: { endDate: 'desc' },
-        select: { plan: true, startDate: true },
+        select: { plan: true, startDate: true, scope: true, mentorId: true },
       });
 
       if (subscription) {
         mentorLimit = getMentorQuota(subscription.plan);
         mentorDailyLimit = getMentorDailyQuota(subscription.plan);
+        // 单导师卡：只计绑定导师名下的会话轮次
+        const periodWhere =
+          subscription.scope === 'SINGLE' && subscription.mentorId
+            ? billedMessageWhereForMentor(userId, subscription.mentorId, { gte: subscription.startDate })
+            : billedMessageWhere(userId, { gte: subscription.startDate });
+        const dailyWhere =
+          subscription.scope === 'SINGLE' && subscription.mentorId
+            ? billedMessageWhereForMentor(userId, subscription.mentorId, { gt: twentyFourHoursAgo })
+            : billedMessageWhere(userId, { gt: twentyFourHoursAgo });
 
         // 统计当前订阅周期内的有效计费轮次（成功的 AI 回复；冷回复不计）
         if (mentorLimit !== null) {
           mentorUsed = await prisma.chatMessage.count({
-            where: billedMessageWhere(userId, { gte: subscription.startDate }),
+            where: periodWhere,
           });
         }
 
         // 统计 24 小时滚动窗口内的有效计费轮次（每日防蒸馏上限）
         if (mentorDailyLimit !== null) {
           mentorDailyUsed = await prisma.chatMessage.count({
-            where: billedMessageWhere(userId, { gt: twentyFourHoursAgo }),
+            where: dailyWhere,
           });
         }
       }

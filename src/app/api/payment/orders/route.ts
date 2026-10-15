@@ -12,7 +12,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { rateLimit, getClientIP } from '@/lib/rate-limit';
-import { getPlanById, getCreditPackById, calcCreditPackPriceFen, CREDIT_PACK_MAX_QTY, YEARLY_RENEWAL_CAP_DAYS, CREDIT_PACK_MAX_BALANCE } from '@/lib/plans';
+import { getPlanById, getSinglePlanById, getCreditPackById, parseAnyPlanId, calcCreditPackPriceFen, CREDIT_PACK_MAX_QTY, YEARLY_RENEWAL_CAP_DAYS, CREDIT_PACK_MAX_BALANCE } from '@/lib/plans';
+import { getSubscriptionRoundsRemaining } from '@/lib/chat-quota';
+import { getMentorById } from '@/lib/mentors';
 import { generateOrderNo, createWxPayOrder } from '@/lib/wxpay';
 import { createAlipayOrder } from '@/lib/alipay';
 import { z } from 'zod';
@@ -22,11 +24,13 @@ type PaymentMethod = 'wechat' | 'alipay';
 
 /** 创建订单 Schema */
 const createOrderSchema = z.object({
-  planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'CREDIT_10']),
+  planId: z.enum(['MONTHLY', 'QUARTERLY', 'YEARLY', 'SINGLE_MONTHLY', 'SINGLE_QUARTERLY', 'SINGLE_YEARLY', 'CREDIT_10']),
   paymentMethod: z.enum(['wechat', 'alipay']).default('wechat'),
   isRenewal: z.boolean().default(false),
   // 多榨卡可一次购买多个（批量折扣）；会员套餐恒为 1
   quantity: z.number().int().min(1).max(CREDIT_PACK_MAX_QTY).default(1),
+  // 单导师付费：绑定的分身 ID（下单单导师套餐时必填）
+  mentorId: z.string().min(1).max(64).optional(),
 });
 
 /**
@@ -63,23 +67,39 @@ export async function POST(request: NextRequest) {
 
     const { planId, paymentMethod } = parsed.data;
 
-    // 3. 识别商品：多榨卡 或 会员订阅
+    // 3. 识别商品：多榨卡 / 单导师订阅 / 全导师订阅
     const creditPack = getCreditPackById(planId);
-    const plan = creditPack ? undefined : getPlanById(planId);
+    const subParsed = creditPack ? null : parseAnyPlanId(planId);
+    const plan = subParsed?.scope === 'ALL' ? getPlanById(planId) : undefined;
+    const singlePlan = subParsed?.scope === 'SINGLE' ? getSinglePlanById(planId) : undefined;
 
     // 数量只对多榨卡生效；会员套餐恒为 1，忽略客户端传值
     const quantity = creditPack ? parsed.data.quantity : 1;
 
-    if (!creditPack && !plan) {
+    if (!creditPack && !subParsed) {
       return NextResponse.json(
         { error: '无效的商品' },
         { status: 400 }
       );
     }
 
-    // 4. 会员订阅：校验升级/续费等级（多榨卡任何人可重复购买）
+    // 单导师订阅：必须携带有效分身 ID（B-1：未选导师不能下单）
+    let singleMentor: ReturnType<typeof getMentorById> = undefined;
+    if (subParsed?.scope === 'SINGLE') {
+      singleMentor = parsed.data.mentorId
+        ? getMentorById(parsed.data.mentorId)
+        : undefined;
+      if (!singleMentor || singleMentor.comingSoon) {
+        return NextResponse.json(
+          { error: '请先选中想要对话的导师，再来这里付费，谢谢你的支持。' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 4. 会员订阅：校验互斥切换与升级/续费等级（多榨卡任何人可重复购买）
     let existingSub: Awaited<ReturnType<typeof prisma.subscription.findFirst>> = null;
-    if (plan) {
+    if (subParsed) {
       existingSub = await prisma.subscription.findFirst({
         where: {
           userId: session.user.id,
@@ -89,34 +109,79 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingSub) {
+        // 当前卡剩余轮次（scope=SINGLE 只计绑定导师）；> 0 时触发互斥规则
+        const remaining = await getSubscriptionRoundsRemaining({
+          userId: session.user.id,
+          plan: existingSub.plan,
+          scope: existingSub.scope,
+          mentorId: existingSub.mentorId,
+          startDate: existingSub.startDate,
+        });
+        const hasRemaining = remaining > 0;
+
         const planRank: Record<string, number> = {
           MONTHLY: 1,
           QUARTERLY: 2,
           YEARLY: 3,
         };
         const currentRank = planRank[existingSub.plan] || 0;
-        const newRank = planRank[plan.id] || 0;
-        const isSamePlanRenewal = existingSub.plan === plan.id;
+        const newRank = planRank[subParsed.basePlan] || 0;
+        const isSamePlanRenewal = existingSub.plan === subParsed.basePlan;
 
-        // 同级仅允许年度续费；低级/同级重复订阅一律拒绝
-        if (newRank < currentRank || (newRank === currentRank && !isSamePlanRenewal)) {
-          return NextResponse.json(
-            { error: '你已有同级或更高级会员，无需重复订阅' },
-            { status: 400 }
-          );
-        }
-
-        // 年卡续费上限：来自年卡的剩余天数 > 1460 天（4 年）时不可再续；
-        // 正好 1460 天仍可续一年（续后 1825 天），之后需等消耗回落
-        if (isSamePlanRenewal && plan.id === 'YEARLY') {
-          const daysRemaining = Math.ceil(
-            (existingSub.endDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
-          );
-          if (daysRemaining > YEARLY_RENEWAL_CAP_DAYS) {
+        // 升级/续费等级校验（同方案同卡专用）：低级或同级非续费一律拒绝
+        const checkUpgradeRank = () => {
+          if (newRank < currentRank || (newRank === currentRank && !isSamePlanRenewal)) {
             return NextResponse.json(
-              { error: '年卡剩余时长已超过 4 年，暂无法续费，待剩余天数回落至 1460 天内可再续' },
+              { error: '你已有同级或更高级会员，无需重复订阅' },
               { status: 400 }
             );
+          }
+          // 年卡续费上限：来自年卡的剩余天数 > 1460 天（4 年）时不可再续
+          if (isSamePlanRenewal && subParsed.basePlan === 'YEARLY') {
+            const daysRemaining = Math.ceil(
+              (existingSub!.endDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)
+            );
+            if (daysRemaining > YEARLY_RENEWAL_CAP_DAYS) {
+              return NextResponse.json(
+                { error: '年卡剩余时长已超过 4 年，暂无法续费，待剩余天数回落至 1460 天内可再续' },
+                { status: 400 }
+              );
+            }
+          }
+          return null;
+        };
+
+        if (subParsed.scope === 'SINGLE') {
+          const isSameSingleCard =
+            existingSub.scope === 'SINGLE' &&
+            existingSub.mentorId === singleMentor!.id;
+          if (isSameSingleCard) {
+            // A-2/B-2：同一张单导师卡，走升级/续费累加
+            const rejected = checkUpgradeRank();
+            if (rejected) return rejected;
+          } else if (hasRemaining) {
+            // A-3/B-3 及跨导师选我：剩余轮次不为 0 一律须先用完
+            return NextResponse.json(
+              { error: `你目前还有 ${remaining} 对话轮次没用完，为保证你的权益，必须用完才能切换为单导师订阅，感谢你的支持。` },
+              { status: 400 }
+            );
+          }
+          // 剩余轮次为 0：视为新订阅，放行
+        } else {
+          // 全导师付费
+          if (existingSub.scope === 'SINGLE') {
+            // C-3：单导师卡有剩余轮次时须先用完
+            if (hasRemaining) {
+              return NextResponse.json(
+                { error: `你目前还有 ${remaining} 对话轮次没用完，为保证你的权益，必须用完才能切换为全导师订阅，感谢你的支持。` },
+                { status: 400 }
+              );
+            }
+            // 剩余轮次为 0：视为新订阅，放行
+          } else {
+            // C-2：同为全导师卡，走升级/续费累加
+            const rejected = checkUpgradeRank();
+            if (rejected) return rejected;
           }
         }
       }
@@ -141,14 +206,18 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. 价格 — 多榨卡按数量与批量折扣服务端重算（不信任客户端价格）
+    const subPriceFen = singlePlan ? singlePlan.priceFen : plan?.priceFen;
     const actualPriceFen = creditPack
       ? calcCreditPackPriceFen(creditPack, quantity)
-      : plan!.priceFen;
+      : subPriceFen!;
     const actualPrice = Number((actualPriceFen / 100).toFixed(2));
     const totalCredits = creditPack ? creditPack.credits * quantity : 0;
+    const subPlanName = singlePlan
+      ? `单导师·${singleMentor!.name} ${singlePlan.name}`
+      : plan?.name;
     const productName = creditPack
       ? `多榨卡 ${totalCredits}轮次${quantity > 1 ? `（${quantity}包）` : ''}`
-      : plan!.name;
+      : subPlanName!;
     const paymentType = creditPack ? 'CREDIT_PACK' : 'SUBSCRIPTION';
 
     // 6. 创建业务订单号
@@ -198,8 +267,11 @@ export async function POST(request: NextRequest) {
                 mockPayment: payResult.mock || false,
               }
             : {
-                planId: plan!.id,
-                planName: plan!.name,
+                planId: (singlePlan ?? plan)!.id,
+                planName: subPlanName,
+                ...(singlePlan && singleMentor
+                  ? { mentorId: singleMentor.id, mentorName: singleMentor.name }
+                  : {}),
                 mockPayment: payResult.mock || false,
               }
         ),

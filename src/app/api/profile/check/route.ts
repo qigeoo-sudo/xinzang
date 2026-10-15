@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
 只返回 JSON，不要有其他文字。`;
 
   try {
+    // 15 秒超时：DeepSeek 响应慢/挂起时自动放行（走下方 catch），不阻断注册与档案保存
     const resp = await proxyFetch(`${apiUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
         temperature: 0,
         max_tokens: 100,
       }),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!resp.ok) {

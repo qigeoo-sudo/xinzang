@@ -4,12 +4,12 @@ const copy = {
   zh: {
     name: 'AI Career Companion',
     slogan: '陪你一起\u00A0\u00A0见证成长',
-    copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+    copyright: '版权所有©上海创自己科技服务有限公司2026',
   },
   en: {
     name: 'AI Career Companion',
     slogan: 'Crescentem te aspicere, gaudium meum',
-    copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+    copyright: '版权所有©上海创自己科技服务有限公司2026',
   },
 };
 

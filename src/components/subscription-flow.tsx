@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import type { SubscriptionPlan, PlanId, CreditPack } from '@/lib/plans';
+import type { SubscriptionPlan, SingleMentorPlan, PlanId, CreditPack, SubscriptionScope } from '@/lib/plans';
 import {
   calcCreditPackPriceFen,
   formatPriceFen,
@@ -19,16 +19,30 @@ import { track } from '@/lib/analytics/tracker';
 /** 当前生效订阅（卡内显示到期时间/剩余天数） */
 export interface ActiveSubscriptionInfo {
   plan: PlanId;
+  scope: SubscriptionScope;
+  mentorId: string | null;
+  /** scope=SINGLE 时绑定分身的展示名 */
+  boundMentorName?: string;
   endDate: string; // ISO 日期字符串
   daysRemaining: number;
 }
 
 interface SubscriptionFlowProps {
   plans: SubscriptionPlan[];
+  singlePlans: SingleMentorPlan[];
   creditPacks: CreditPack[];
   currentPlanId?: PlanId;
+  /** 当前生效卡的方案范围（无生效卡为 null） */
+  currentScope?: SubscriptionScope | null;
   isPremium?: boolean;
   from?: string;
+  /** 来源分身（付费链接/选我按钮带入），下单单导师卡时绑定 */
+  sourceMentorId?: string;
+  sourceMentorName?: string;
+  /** 初始标签：单导师付费（默认）/ 全导师付费 */
+  initialTab?: SubscriptionScope;
+  /** 当前卡剩余轮次（0=用完/无卡；-1=无限） */
+  roundsRemaining?: number;
   activeSubscription?: ActiveSubscriptionInfo | null;
   freeTrialRemaining?: number;
   freeTrialLimit?: number;
@@ -64,26 +78,31 @@ function EmbossedName({
     const wrap = wrapRef.current;
     const text = textRef.current;
     const gauge = gaugeRef.current;
-    if (!wrap || !text || !gauge) return;
+    if (!wrap || !text) return;
 
     const fit = () => {
-      const max = gauge.getBoundingClientRect().width;
-      if (!max) return;
-      // 只在 18px 测一次真实宽度，再按比例一次算出目标字号（0.5px 向下取整保证不超）
-      text.style.fontSize = '18px';
-      const w18 = text.getBoundingClientRect().width;
-      let size = 18;
-      if (w18 > max) {
-        size = Math.max(8, Math.floor(((18 * max) / w18) * 2) / 2);
-      }
+      // 可用宽度 = 压印名所在网格列（右列）的实际渲染宽度
+      const available = wrap.getBoundingClientRect().width;
+      if (!available) return;
+      // 在参考字号 18px 下测量文字真实渲染宽度
+      const ref = 18;
+      text.style.fontSize = `${ref}px`;
+      const measured = text.getBoundingClientRect().width;
       text.style.fontSize = '';
+      if (!measured) return;
+      // 数学模型：字号与宽度成线性正比，按比例缩放后留 4% 安全余量
+      let size = (ref * available) / measured * 0.96;
+      // 两端钳制：不超过参考字号，不低于 7px
+      size = Math.min(ref, Math.max(7, size));
+      // 对齐到 0.5px，避免亚像素渲染抖动
+      size = Math.round(size * 2) / 2;
       setFontSize(size);
     };
 
     const raf = requestAnimationFrame(fit);
     const ro = new ResizeObserver(fit);
     ro.observe(wrap);
-    ro.observe(gauge);
+    if (gauge) ro.observe(gauge);
     let disposed = false;
     document.fonts?.ready
       .then(() => {
@@ -128,10 +147,16 @@ const planRank: Record<PlanId, number> = {
 
 export function SubscriptionFlow({
   plans,
+  singlePlans,
   creditPacks,
   currentPlanId,
+  currentScope = null,
   isPremium,
   from,
+  sourceMentorId,
+  sourceMentorName,
+  initialTab = 'SINGLE',
+  roundsRemaining = 0,
   activeSubscription = null,
   freeTrialRemaining = 0,
   freeTrialLimit = 3,
@@ -140,6 +165,21 @@ export function SubscriptionFlow({
 }: SubscriptionFlowProps) {
   const router = useRouter();
   const { update } = useSession();
+
+  // 方案标签：单导师付费 / 全导师付费
+  const [tab, setTab] = useState<SubscriptionScope>(initialTab);
+
+  // 切换标签：同步 URL（保留 from），刷新/分享后状态不丢
+  const switchTab = (next: SubscriptionScope) => {
+    if (next === tab) return;
+    setTab(next);
+    const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
+    router.replace(`/dashboard/subscription?tab=${next === 'ALL' ? 'all' : 'single'}${fromParam}`);
+  };
+
+  // 分支弹窗：block=须先用完才能切换；pickMentor=B-1 请先选导师
+  const [blockTarget, setBlockTarget] = useState<SubscriptionScope | null>(null);
+  const [showPickMentor, setShowPickMentor] = useState(false);
 
   // 生效卡：压印名的统一宽度标尺（年卡描述文字的 9px 渲染宽），三张卡共用
   const nameGaugeRef = useRef<HTMLDivElement>(null);
@@ -152,9 +192,108 @@ export function SubscriptionFlow({
   const [isMock, setIsMock] = useState(false);
   const [error, setError] = useState('');
 
+  // 生效卡卡套配色：随卡面联动（按 范围+卡种 共 6 套色板）。月光银/云雾青/秋霜紫三色各卡通用，其余按卡面色系搭配
+  // 单导师：月卡（杏金）暖金系 / 季卡（鼠尾草绿）绿色系偏红换偏蓝 / 年卡（黑卡）黑色系偏红换偏紫
+  // 全导师：月卡（靛蓝）蓝色系 / 季卡（紫晶）紫色系 / 年卡（深牛血）酒红系
+  const [sleeveColorIdx, setSleeveColorIdx] = useState(0);
+  const sleevePalettes: Record<string, { name: string; stops: string[]; frosted?: boolean }[]> = {
+    SINGLE_MONTHLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '燕麦白', stops: ['#f2ead8', '#e4d6bc', '#d0bd9c', '#b49e7c'] },
+      { name: '云雾青', stops: ['#e0e0ec', '#c2c2dc', '#9a9ac4', '#7676a8'] },
+      { name: '玫瑰金', stops: ['#f0d0c8', '#e0a898', '#c88878', '#a86858'] },
+      { name: '沙丘驼', stops: ['#e0c8a8', '#c8a878', '#a88858', '#886840'] },
+      { name: '秋霜紫', stops: ['#d8d8ec', '#b4b4dc', '#8888c4', '#5e5e9c'] },
+      { name: '焦糖棕', stops: ['#d4a06a', '#b8884a', '#98682a', '#785018'] },
+      { name: '赤陶红', stops: ['#c08a72', '#a06a52', '#7e4e3a', '#603828'] },
+      { name: '古铜金', stops: ['#b8864a', '#986830', '#785020', '#583810'] },
+      { name: '摩卡棕', stops: ['#8a6a4a', '#6a4e32', '#4e3822', '#342416'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+    SINGLE_QUARTERLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '嫩芽白', stops: ['#eef2e4', '#dde6cc', '#c6d4ae', '#a8ba8c'] },
+      { name: '云雾青', stops: ['#e0e0ec', '#c2c2dc', '#9a9ac4', '#7676a8'] },
+      { name: '冰川蓝', stops: ['#dce8ec', '#bccfd8', '#96b2c0', '#7292a4'] },
+      { name: '苔藓绿', stops: ['#b8c8a0', '#9cb082', '#7c9264', '#5e7448'] },
+      { name: '秋霜紫', stops: ['#d8d8ec', '#b4b4dc', '#8888c4', '#5e5e9c'] },
+      { name: '松针绿', stops: ['#8aa878', '#6c8c5a', '#4e6e40', '#365228'] },
+      { name: '远山蓝', stops: ['#7a94a8', '#5c768c', '#405a70', '#284056'] },
+      { name: '深苔绿', stops: ['#5a7a58', '#425e42', '#2e4630', '#1c3020'] },
+      { name: '夜幕蓝', stops: ['#3a4a58', '#2a3844', '#1c2832', '#101a22'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+    SINGLE_YEARLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '烟云灰', stops: ['#e2e2e6', '#cbcbd2', '#adaeb8', '#8e92a0'] },
+      { name: '云雾青', stops: ['#e0e0ec', '#c2c2dc', '#9a9ac4', '#7676a8'] },
+      { name: '丁香紫', stops: ['#ddd8e2', '#c2b8cc', '#a293ad', '#847392'] },
+      { name: '青瓦灰', stops: ['#c8c8cc', '#a8a8b0', '#888890', '#686872'] },
+      { name: '秋霜紫', stops: ['#d8d8ec', '#b4b4dc', '#8888c4', '#5e5e9c'] },
+      { name: '石板灰', stops: ['#8a8a8e', '#6a6a70', '#4e4e54', '#343438'] },
+      { name: '暗夜紫', stops: ['#5e6080', '#484a68', '#33344c', '#212234'] },
+      { name: '墨玉黑', stops: ['#4a4a50', '#34343a', '#222228', '#121216'] },
+      { name: '玄紫黑', stops: ['#2e2c34', '#222026', '#16151a', '#0b0a0e'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+    ALL_MONTHLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '山岚灰', stops: ['#dde2e8', '#c2cad6', '#a0acba', '#7e8c9e'] },
+      { name: '云雾青', stops: ['#e0e0ec', '#c2c2dc', '#9a9ac4', '#7676a8'] },
+      { name: '晴雨蓝', stops: ['#d0e0f0', '#aecbe6', '#86aed6', '#6290bc'] },
+      { name: '秋霜紫', stops: ['#d8d8ec', '#b4b4dc', '#8888c4', '#5e5e9c'] },
+      { name: '孔雀蓝', stops: ['#7aa8b8', '#5c8c9e', '#407084', '#285468'] },
+      { name: '深情蓝', stops: ['#5a72a0', '#445986', '#314268', '#212d4c'] },
+      { name: '宝石蓝', stops: ['#3a5a9a', '#2c4678', '#1e3258', '#142240'] },
+      { name: '深海蓝', stops: ['#2a3c5c', '#1e2c46', '#141e32', '#0c1220'] },
+      { name: '藏乌青', stops: ['#2b3547', '#1e2635', '#151c28', '#0d121b'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+    ALL_QUARTERLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '紫雾白', stops: ['#ece8f0', '#d8d0e2', '#bcb0cc', '#9c8eb0'] },
+      { name: '雨霁蓝', stops: ['#d8e4f0', '#b0c4dc', '#88a0c0', '#607898'] },
+      { name: '云雾青', stops: ['#e0e0ec', '#c2c2dc', '#9a9ac4', '#7676a8'] },
+      { name: '秋霜紫', stops: ['#d8d8ec', '#b4b4dc', '#8888c4', '#5e5e9c'] },
+      { name: '紫罗兰', stops: ['#d8c8e4', '#bda8d4', '#9c84c0', '#7c62a4'] },
+      { name: '紫水晶', stops: ['#a88cc8', '#8a6cae', '#6c4e90', '#503570'] },
+      { name: '葡萄紫', stops: ['#7a5a98', '#5e4478', '#452f5a', '#2e1e40'] },
+      { name: '薰衣黛', stops: ['#5c5080', '#463c64', '#322a4a', '#201a32'] },
+      { name: '深空紫', stops: ['#443452', '#32263e', '#221a2c', '#140f1c'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+    ALL_YEARLY: [
+      { name: '月光银', stops: ['#f5f5f7', '#d8dae0', '#b8bbc4', '#8c9099'] },
+      { name: '蔷薇白', stops: ['#f2e8e8', '#e4d2d4', '#d0b4b8', '#b49298'] },
+      { name: '绛燕紫', stops: ['#8a5a7a', '#6e4460', '#4e2e44', '#2e1a2c'] },
+      { name: '玫瑰红', stops: ['#e0b0b0', '#cc8e92', '#b06a70', '#904c54'] },
+      { name: '朱砂红', stops: ['#c87868', '#ac5a4e', '#8c423a', '#6c2e2a'] },
+      { name: '海棠紫', stops: ['#84506e', '#683856', '#48243c', '#2a1424'] },
+      { name: '冬枣红', stops: ['#8a4a44', '#6e3834', '#522824', '#381a18'] },
+      { name: '勃艮第', stops: ['#7a2e3e', '#5e2230', '#441824', '#2c0e18'] },
+      { name: '酡酒红', stops: ['#5c1e2c', '#44141f', '#2e0d15', '#1c070d'] },
+      { name: '胭脂墨', stops: ['#38101c', '#280b14', '#1a070e', '#0e0408'] },
+      { name: '琉璃光', stops: ['rgba(255,255,255,0.32)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.07)'], frosted: true },
+    ],
+  };
+  const sleevePaletteKey = `${activeSubscription?.scope ?? 'SINGLE'}_${activeSubscription?.plan ?? 'MONTHLY'}`;
+  const sleeveColors = sleevePalettes[sleevePaletteKey] ?? sleevePalettes.SINGLE_MONTHLY;
+  // 记住每张卡的选择：默认月光银，选过后刷新/重进自动用回所选颜色（localStorage 按卡分别记）
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(`sleeveColor:${sleevePaletteKey}`));
+    setSleeveColorIdx(Number.isInteger(saved) && saved >= 0 && saved < sleeveColors.length ? saved : 0);
+  }, [sleevePaletteKey]);
+  const pickSleeveColor = (i: number) => {
+    setSleeveColorIdx(i);
+    localStorage.setItem(`sleeveColor:${sleevePaletteKey}`, String(i));
+  };
+  const sleeveGradient = (stops: string[]) =>
+    `linear-gradient(135deg, ${stops[0]} 0%, ${stops[1]} 35%, ${stops[2]} 65%, ${stops[3]} 100%)`;
+  const currentSleeve = sleeveColors[sleeveColorIdx];
+
   // 弹窗状态
   const [showPayModal, setShowPayModal] = useState(false);
-  const [modalPlan, setModalPlan] = useState<{ planId: string; isRenewal: boolean; quantity?: number } | null>(null);
+  const [modalPlan, setModalPlan] = useState<{ planId: string; isRenewal: boolean; quantity?: number; mentorId?: string } | null>(null);
 
   // 多榨卡购买数量（可一次多买，享受批量折扣）
   const [packQty, setPackQty] = useState(1);
@@ -189,7 +328,8 @@ export function SubscriptionFlow({
             }
             setTimeout(() => {
               const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
-              router.push(`/payment/success?orderNo=${data.orderNo}${fromParam}`);
+              const tabParam = `&tab=${tab === 'ALL' ? 'all' : 'single'}`;
+              router.push(`/payment/success?orderNo=${data.orderNo}${fromParam}${tabParam}`);
               router.refresh();
             }, 1500);
             return;
@@ -209,22 +349,66 @@ export function SubscriptionFlow({
 
       poll();
     },
-    [router]
+    [router, from, tab, update]
   );
 
-  // 用户点击套餐的支付按钮 — 弹出支付方式选择弹窗（多榨卡带购买数量）
+  // 用户点击套餐的支付按钮 — 先过分支规则（互斥/选导师），再弹支付方式
   const handlePlanClick = (planId: string, isRenewal = false, quantity = 1) => {
     // 年卡续满冻结：点击不起任何作用（按钮本身也已 disabled，双保险）
-    if (isRenewal && planId === 'YEARLY' && yearlyRenewalFull) return;
+    if (isRenewal && planId.endsWith('YEARLY') && yearlyRenewalFull) return;
     // 多榨卡持有上限冻结：余额 + 本次轮次 > 2970 时拦截（双保险）
     const pack = creditPacks.find((p) => p.id === planId);
     if (pack && creditBalance + pack.credits * quantity > CREDIT_PACK_MAX_BALANCE) return;
+
+    const isSingleOrder = planId.startsWith('SINGLE_');
+    // -1 表示无限轮次；hasCard 表示当前持有有效订阅卡
+    const hasCard = !!activeSubscription;
+    const hasRemaining = hasCard && roundsRemaining !== 0;
+
+    // === 分支规则（与下单 API 服务端校验一致，服务端兜底） ===
+    if (isSingleOrder) {
+      if (hasCard && hasRemaining) {
+        if (currentScope === 'ALL') {
+          // A-3/B-3：全导师卡有剩余轮次，须用完才能切单导师
+          setBlockTarget('SINGLE');
+          return;
+        }
+        if (sourceMentorId && activeSubscription!.mentorId !== sourceMentorId) {
+          // 单导师卡有剩余轮次时点另一名导师的「选我」：弹窗阻止
+          setBlockTarget('SINGLE');
+          return;
+        }
+        // A-2/B-2：同一张单导师卡，走升级/续费，继续向下
+      } else if (!sourceMentorId) {
+        // B-1：新用户或轮次已用完，但未选定导师
+        setShowPickMentor(true);
+        return;
+      }
+    } else if (planId !== 'CREDIT_10' && creditPacks.every((p) => p.id !== planId)) {
+      // 全导师付费
+      if (currentScope === 'SINGLE' && hasRemaining) {
+        // C-3：单导师卡有剩余轮次，须用完才能切全导师
+        setBlockTarget('ALL');
+        return;
+      }
+    }
+
+    // 单导师订单绑定的分身：续费/升级沿用卡内分身；新订阅用来源分身
+    const orderMentorId = isSingleOrder
+      ? hasCard && hasRemaining && currentScope === 'SINGLE'
+        ? activeSubscription!.mentorId ?? undefined
+        : sourceMentorId
+      : undefined;
+
     // 套餐选择上报；续期同样记（行为分析可区分）
     const planForEvent = planId === 'CREDIT_PACK' ? 'CREDIT_PACK' : planId;
     const ctaIdMap: Record<string, string> = {
       MONTHLY: 'subscription_monthly_select',
       QUARTERLY: 'subscription_quarterly_select',
       YEARLY: 'subscription_yearly_select',
+      SINGLE_MONTHLY: 'subscription_single_monthly_select',
+      SINGLE_QUARTERLY: 'subscription_single_quarterly_select',
+      SINGLE_YEARLY: 'subscription_single_yearly_select',
       CREDIT_PACK: 'credit_pack_select',
     };
     track('subscribe.click', {
@@ -233,7 +417,7 @@ export function SubscriptionFlow({
         ctaId: ctaIdMap[planId] ?? 'subscription_unknown_select',
       },
     });
-    setModalPlan({ planId, isRenewal, quantity });
+    setModalPlan({ planId, isRenewal, quantity, mentorId: orderMentorId });
     setShowPayModal(true);
   };
 
@@ -255,6 +439,7 @@ export function SubscriptionFlow({
           paymentMethod: method,
           isRenewal: modalPlan.isRenewal,
           quantity: modalPlan.quantity ?? 1,
+          ...(modalPlan.mentorId ? { mentorId: modalPlan.mentorId } : {}),
         }),
       });
 
@@ -279,14 +464,14 @@ export function SubscriptionFlow({
         if (data.payUrl) {
           // 使用相对路径，避免 HTTPS 预览环境下 http:// 被浏览器拦截
           const mockUrl = data.payUrl.replace(/^https?:\/\/[^/]+/, '');
-          const fromParam = from ? `&from=${encodeURIComponent(from)}` : '';
-          // 在 query string 中追加 from 参数
-          const mockUrlWithFrom = mockUrl.includes('?')
-            ? `${mockUrl}${fromParam}`
-            : `${mockUrl}?from=${encodeURIComponent(from || '')}`;
+          // 透传 from（来源分身）与 tab（离开时的方案标签），支付成功后按原状态返回
+          const stateParams = `${from ? `&from=${encodeURIComponent(from)}` : ''}&tab=${tab === 'ALL' ? 'all' : 'single'}`;
+          const mockUrlWithState = mockUrl.includes('?')
+            ? `${mockUrl}${stateParams}`
+            : `${mockUrl}?from=${encodeURIComponent(from || '')}&tab=${tab === 'ALL' ? 'all' : 'single'}`;
           // 当前窗口跳转到模拟收银台（与真实支付一致，也避免新窗口不继承设备模拟）
           // 收银台支付完成后会自行跳回 /payment/success，当前页即将卸载，不再轮询
-          window.location.href = mockUrlWithFrom;
+          window.location.href = mockUrlWithState;
           return;
         }
       } else {
@@ -335,17 +520,18 @@ export function SubscriptionFlow({
     setError('');
   };
 
-  // 判断某个方案是否被禁用 (低于或等于当前等级，但年度会员可续费年度)
-  const isPlanDisabled = (planId: PlanId): boolean => {
-    if (!isPremium || !currentPlanId) return false;
+  // 判断某个方案是否被禁用（仅当生效卡与当前标签同方案时按等级约束；
+  // 跨方案点击由分支弹窗处理，不做灰置）
+  const isPlanDisabled = (basePlan: PlanId): boolean => {
+    if (!isPremium || !currentPlanId || currentScope !== tab) return false;
     // 年度会员可以续费年度
-    if (currentPlanId === 'YEARLY' && planId === 'YEARLY') return false;
-    return planRank[planId] <= planRank[currentPlanId];
+    if (currentPlanId === 'YEARLY' && basePlan === 'YEARLY') return false;
+    return planRank[basePlan] <= planRank[currentPlanId];
   };
 
-  // 判断某个方案是否是续费方案（年度会员续费年度）
-  const isRenewalPlan = (planId: PlanId): boolean => {
-    return !!isPremium && currentPlanId === 'YEARLY' && planId === 'YEARLY';
+  // 判断某个方案是否是续费方案（同方案年度会员续费年度）
+  const isRenewalPlan = (basePlan: PlanId): boolean => {
+    return !!isPremium && currentScope === tab && currentPlanId === 'YEARLY' && basePlan === 'YEARLY';
   };
 
   // 年卡已续满：来自年卡的剩余天数 > 1460 天（4 年），续费入口冻结
@@ -433,6 +619,133 @@ export function SubscriptionFlow({
   }
 
   // === 渲染: 方案选择 ===
+  // 当前标签下的卡片配色：单导师沿用金/鼠尾草绿/黑；全导师用新配色（card-all-*）
+  const cardClassFor = (scope: SubscriptionScope, basePlan: PlanId) =>
+    scope === 'SINGLE'
+      ? basePlan === 'MONTHLY'
+        ? 'card-gold'
+        : basePlan === 'QUARTERLY'
+          ? 'card-sage'
+          : 'card-black'
+      : basePlan === 'MONTHLY'
+        ? 'card-all-monthly'
+        : basePlan === 'QUARTERLY'
+          ? 'card-all-quarterly'
+          : 'card-all-yearly';
+
+  // 卡片中央水印字（极淡压印感，位置上移 6px；用 inline rgba 避免 Tailwind 不识别 foil 色导致透明度失效）
+  const Watermark = ({ scope, isBlack }: { scope: SubscriptionScope; isBlack: boolean }) => (
+    <span
+      aria-hidden
+      style={{
+        transform: 'translateY(-6px)',
+        color: isBlack ? 'rgba(245, 215, 133, 0.045)' : 'rgba(255, 255, 255, 0.045)',
+      }}
+      className="pointer-events-none absolute inset-0 flex items-center justify-center select-none font-serif text-[76px] font-bold leading-none"
+    >
+      {scope === 'SINGLE' ? '单' : '全'}
+    </span>
+  );
+
+  // 生效卡专属卡套（背景层）：圆角口袋 + 上下弧线装饰。圆角用 CSS clip-path，与翻盖外角统一
+  const ActiveCardSleeve = ({ stops, frosted }: { stops: string[]; frosted?: boolean }) => (
+    <>
+      {/* 卡套主体：高光色取该卡套最亮色 stops[0]，避免深色卡套上出现假白边；frosted（朦胧透）用半透明白 + 背景模糊做磨砂玻璃 */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: sleeveGradient(stops),
+          clipPath: 'inset(0 round 22px)',
+          boxShadow: frosted
+            ? 'inset 2px 2px 0 rgba(255,255,255,0.18), inset -2px -2px 4px rgba(0,0,0,0.10)'
+            : `inset 2px 2px 0 ${stops[0]}b3, inset -2px -2px 4px rgba(0,0,0,0.25)`,
+          ...(frosted ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } : {}),
+        }}
+      />
+      {/* 上下弧线装饰 SVG（不参与圆角裁切），描边色取卡套中间偏暗色 */}
+      <svg
+        aria-hidden
+        viewBox="0 0 340 232"
+        preserveAspectRatio="none"
+        className="pointer-events-none absolute inset-0 h-full w-full"
+      >
+        <path d="M 10 8 C 70 1, 130 15, 170 10 S 280 -1, 330 10" fill="none" stroke={stops[2]} strokeOpacity="0.5" strokeWidth="1" strokeLinecap="round" />
+        <path d="M 10 8 C 70 1, 130 15, 170 10 S 280 -1, 330 10 L 330 0 L 10 0 Z" fill={stops[2]} fillOpacity="0.12" />
+        <path d="M 10 224 C 70 217, 130 231, 170 226 S 280 215, 330 226" fill="none" stroke={stops[2]} strokeOpacity="0.5" strokeWidth="1" strokeLinecap="round" />
+        <path d="M 10 224 C 70 217, 130 231, 170 226 S 280 215, 330 226 L 330 232 L 10 232 Z" fill={stops[2]} fillOpacity="0.12" />
+      </svg>
+    </>
+  );
+
+  // 生效卡前景压角层（卡片上方）：左上/右上翻盖。外角用 clip-path A 22 22，与卡套 CSS 圆角完全一致
+  // 光影对齐：background-size 设为卡套尺寸，background-position 对齐卡套对应角，使翻盖渐变与卡套共用同一光源坐标
+  const ActiveCardClips = ({ stops, frosted }: { stops: string[]; frosted?: boolean }) => {
+    const grad = sleeveGradient(stops);
+    // 卡套约 335×222，翻盖 38×27，缩放后渐变范围与卡套一致
+    const bgSize = '880% 820%';
+    const frostBlur = frosted ? { backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' } : {};
+    // 透明翻盖投影调轻：磨砂玻璃只投淡淡的软影
+    const flapShadow = frosted
+      ? 'drop-shadow(1px 1px 0 rgba(0,0,0,0.22)) drop-shadow(3px 4px 3px rgba(0,0,0,0.16))'
+      : 'drop-shadow(1px 1px 0 rgba(0,0,0,0.4)) drop-shadow(3px 4px 3px rgba(0,0,0,0.3))';
+    return (
+    <>
+      {/* 左上翻盖：对齐卡套左上角渐变，内弧线收窄匹配新卡套边框 */}
+      <div
+        className="pointer-events-none absolute left-0 top-0 z-20"
+        style={{
+          width: 38,
+          height: 27,
+          background: grad,
+          backgroundSize: bgSize,
+          backgroundPosition: 'left top',
+          backgroundRepeat: 'no-repeat',
+          clipPath: 'path("M 22 0 L 38 0 Q 38 15 14 19 Q 2 21 0 27 L 0 22 A 22 22 0 0 1 22 0 Z")',
+          filter: flapShadow,
+          ...frostBlur,
+        }}
+      />
+      {/* 右上翻盖：镜像 */}
+      <div
+        className="pointer-events-none absolute right-0 top-0 z-20"
+        style={{
+          width: 38,
+          height: 27,
+          background: grad,
+          backgroundSize: bgSize,
+          backgroundPosition: 'right top',
+          backgroundRepeat: 'no-repeat',
+          clipPath: 'path("M 16 0 L 0 0 Q 0 15 24 19 Q 36 21 38 27 L 38 22 A 22 22 0 0 0 16 0 Z")',
+          filter: flapShadow,
+          ...frostBlur,
+        }}
+      />
+    </>
+    );
+  };
+
+  // 当前标签下展示的套餐列表（统一结构，单导师卡带 basePlan）
+  const displayPlans =
+    tab === 'SINGLE'
+      ? singlePlans.map((p) => ({
+          key: p.id,
+          basePlan: p.basePlan,
+          name: p.name,
+          price: p.price,
+          period: p.period,
+          description: p.description,
+          features: p.features,
+        }))
+      : plans.map((p) => ({
+          key: p.id,
+          basePlan: p.id,
+          name: p.name,
+          price: p.price,
+          period: p.period,
+          description: p.description,
+          features: p.features,
+        }));
+
   return (
     <>
       {error && (
@@ -441,22 +754,21 @@ export function SubscriptionFlow({
         </div>
       )}
 
-      {/* 当前生效中的会员卡 — 占顶部主位，卡内直接显示到期时间/剩余天数 */}
+      {/* 生效卡专属卡套：金色流畅曲线，仅露左右底细线 + 底部 1/3 淡金弧形带，几乎不遮挡卡面 */}
       {activeSubscription && (() => {
-        const activePlan = plans.find((p) => p.id === activeSubscription.plan);
+        const activePlan =
+          activeSubscription.scope === 'SINGLE'
+            ? singlePlans.find((p) => p.basePlan === activeSubscription.plan)
+            : plans.find((p) => p.id === activeSubscription.plan);
         if (!activePlan) return null;
-        const isBlack = activePlan.id === 'YEARLY';
-        const cardClass =
-          activePlan.id === 'MONTHLY' ? 'card-gold'
-          : activePlan.id === 'QUARTERLY' ? 'card-sage'
-          : 'card-black';
+        const isBlack = activeSubscription.plan === 'YEARLY';
+        const cardClass = cardClassFor(activeSubscription.scope, activeSubscription.plan);
         return (
-          <div className={`relative w-full max-w-[335px] mx-auto rounded-[20px] ${cardClass} aspect-[1.586/1] flex flex-col p-3.5 md:p-4 mb-7`}>
-            {/* 生效中：中央顶部绿色底座 */}
-            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 tag text-xs px-3 py-0.5 bg-success text-white whitespace-nowrap">
-              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-              生效中
-            </span>
+          <div className="relative mx-auto mb-10 w-full max-w-[335px] px-[7px] pt-[8px] pb-[8px]">
+            <ActiveCardSleeve stops={currentSleeve.stops} frosted={currentSleeve.frosted} />
+            <div className={`relative overflow-hidden rounded-[20px] ${cardClass} aspect-[1.586/1] flex flex-col p-3.5 md:p-4`}
+              style={{ boxShadow: '5px 7px 16px -4px rgba(0,0,0,0.30)', outline: 'none' }}>
+            <Watermark scope={activeSubscription.scope} isBlack={isBlack} />
 
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2">
               <p className={`font-mono text-[10px] font-medium uppercase tracking-masthead ${isBlack ? 'text-foil' : 'text-foil-light'}`}>
@@ -466,9 +778,12 @@ export function SubscriptionFlow({
                 <p className={`font-serif text-[18px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
                   {activePlan.name}
                 </p>
-                <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{activePlan.description}</p>
-                {/* 统一宽度标尺：年卡描述的 9px 单行渲染宽；invisible+h-0 只占宽不占高，
-                    三张卡的右列因此同宽，压印名一律与这把尺比较 */}
+                {activePlan.description && (
+                  <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>
+                    {activePlan.description}
+                  </p>
+                )}
+                {/* 统一宽度标尺：固定 9px 单行宽，三张卡右列同宽，压印名以此尺测宽缩放字号 */}
                 <div
                   ref={nameGaugeRef}
                   aria-hidden
@@ -500,20 +815,106 @@ export function SubscriptionFlow({
               {/* 压印名：与第一条权益顶部齐平；右列左右边界与右上卡名/描述块一致，超宽自动缩字号 */}
               <div className="mt-1.5">
                 {nickname && <EmbossedName name={nickname} isBlack={isBlack} gaugeRef={nameGaugeRef} />}
+                {/* 称呼下方一行：本卡可对话范围（下移 16px 避免与压印名重合） */}
+                <p className={`mt-5 text-right text-[10px] leading-tight ${isBlack ? 'text-foil/70' : 'text-white/70'}`}>
+                  {activeSubscription.scope === 'SINGLE' && activeSubscription.boundMentorName
+                    ? `可与导师 ${activeSubscription.boundMentorName} 分身对话`
+                    : '可与全体导师分身对话'}
+                </p>
               </div>
             </div>
 
             <div className={`mt-auto pt-1 text-right text-[10px] ${isBlack ? 'text-foil/75' : 'text-white/75'}`}>
               {new Date(activeSubscription.endDate).toLocaleDateString('zh-CN')} 到期 · 剩余 {activeSubscription.daysRemaining} 天
+              {roundsRemaining >= 0 && ` · 剩余 ${roundsRemaining} 轮次`}
             </div>
+            </div>
+            {/* 前景压角层（卡片上方，盖住卡角） */}
+            <ActiveCardClips stops={currentSleeve.stops} frosted={currentSleeve.frosted} />
           </div>
         );
       })()}
 
-      {/* 生效卡与其他方案之间：首页同款全小写英文标语（字号随屏宽自适应、单行） */}
+      {/* 卡套配色选择：六个色彩点，位于卡套下方、分割线上方 */}
       {activeSubscription && (
-        <p className="masthead-label mb-7 text-white/80">
-          &nbsp;
+        <div className="relative z-20 mx-auto mb-5 flex w-full max-w-[335px] flex-wrap items-center justify-center gap-3.5">
+          {sleeveColors.map((c, i) => (
+            <button
+              key={c.name}
+              onClick={() => pickSleeveColor(i)}
+              className={`group relative h-3.5 w-3.5 rounded-full transition-all duration-150 ${
+                sleeveColorIdx === i
+                  ? 'ring-2 ring-white/80 ring-offset-2 ring-offset-[#1E2E3F] scale-125'
+                  : 'opacity-80 hover:opacity-100 hover:scale-110'
+              }`}
+              style={{ background: sleeveGradient(c.stops) }}
+            >
+              {/* 悬停显示色名 */}
+              <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-black/80 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                {c.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 生效卡与下方方案卡之间：多榨卡同款分割线 + 按卡种/剩余轮次的升级提示 */}
+      {activeSubscription && (() => {
+        const scopeText = activeSubscription.scope === 'SINGLE' ? '单导师' : '全导师';
+        const otherText = activeSubscription.scope === 'SINGLE' ? '全导师' : '单导师';
+        const used = roundsRemaining === 0; // -1=无限，按 >0 处理
+        let hint: string;
+        if (activeSubscription.plan === 'MONTHLY') {
+          hint = used
+            ? `可进一步升级为${scopeText}季度/年度会员，或切换到${otherText}付费制`
+            : `可进一步升级为${scopeText}季度/年度会员`;
+        } else if (activeSubscription.plan === 'QUARTERLY') {
+          hint = used
+            ? `可进一步升级为${scopeText}年度会员，或切换到${otherText}付费制`
+            : `可进一步升级为${scopeText}年度会员`;
+        } else {
+          hint = used
+            ? activeSubscription.scope === 'SINGLE'
+              ? `可进一步续费到下一年，或切换到${otherText}付费制`
+              : `可进一步续费下一年，或切换到${otherText}付费制`
+            : '可进一步续费到下一年';
+        }
+        return (
+          <div className="flex items-center gap-3 mb-7 w-full max-w-[335px] mx-auto">
+            <span className="h-px flex-1 bg-white/15" />
+            <span className="shrink-0 rounded-full bg-[#1E2E3F]/65 px-3 py-0.5 text-xs text-white/75 backdrop-blur-[2px]">{hint}</span>
+            <span className="h-px flex-1 bg-white/15" />
+          </div>
+        );
+      })()}
+
+      {/* 方案标签：文件夹式分类标签（z-10 防金币遮挡；单=金、全=蓝，各自呼应卡面） */}
+      <div className="relative z-10 mx-auto mb-6 flex w-full max-w-[335px] items-end gap-1.5 px-1">
+        {(['SINGLE', 'ALL'] as const).map((s) => {
+          const active = tab === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => switchTab(s)}
+              className={`flex-1 text-sm font-medium transition-all ${
+                active
+                  ? s === 'SINGLE'
+                    ? 'rounded-t-xl bg-[#F5D785] px-4 pb-2.5 pt-3 text-[#5B4913] shadow-[0_-2px_10px_rgba(0,0,0,0.25)]'
+                    : 'rounded-t-xl bg-[#5B7DB8] px-4 pb-2.5 pt-3 text-white shadow-[0_-2px_10px_rgba(0,0,0,0.25)]'
+                  : 'rounded-t-lg bg-white/10 px-4 py-2 text-white/65 ring-1 ring-white/10 hover:bg-white/20 hover:text-white'
+              }`}
+            >
+              {s === 'SINGLE' ? '单导师付费' : '全导师付费'}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 单导师标签下：当前选中分身提示（无选中则引导去点「选我」） */}
+      {tab === 'SINGLE' && (sourceMentorName || !activeSubscription) && (
+        <p className="mb-5 -mt-3 text-center text-xs text-white/60">
+          {sourceMentorName ? `当前选中：${sourceMentorName} 分身` : '先在导师主页点「选我」，再回来付费'}
         </p>
       )}
 
@@ -525,26 +926,22 @@ export function SubscriptionFlow({
       )}
 
       <div className="space-y-5">
-        {plans
-          // 当前方案卡已置顶为"生效中"；年卡续费入口保留
-          .filter((plan) => plan.id !== currentPlanId || isRenewalPlan(plan.id))
+        {displayPlans
+          // 当前方案卡已置顶为"生效中"；同方案年卡续费入口保留
+          .filter((plan) => !(currentScope === tab && plan.basePlan === currentPlanId) || isRenewalPlan(plan.basePlan))
           .map((plan) => {
-        const disabled = isPlanDisabled(plan.id);
-        const renewal = isRenewalPlan(plan.id);
+        const disabled = isPlanDisabled(plan.basePlan);
+        const renewal = isRenewalPlan(plan.basePlan);
 
-        // 信用卡色系：月度=金 / 季度=鼠尾草绿 / 年度=黑
-        const cardClass =
-          plan.id === 'MONTHLY' ? 'card-gold'
-          : plan.id === 'QUARTERLY' ? 'card-sage'
-          : 'card-black';
-
-        const isBlack = plan.id === 'YEARLY';
+        const cardClass = cardClassFor(tab, plan.basePlan);
+        const isBlack = plan.basePlan === 'YEARLY';
 
         return (
           <div
-            key={plan.id}
+            key={plan.key}
             className={`relative w-full max-w-[335px] mx-auto rounded-[20px] ${cardClass} aspect-[1.586/1] flex flex-col p-3.5 md:p-4 ${disabled ? 'opacity-50 grayscale' : ''}`}
           >
+            <Watermark scope={tab} isBlack={isBlack} />
             {/* 角标区：年卡续费入口 — 正常=绿色"续费"；剩余 >1460 天=橙色"续满"冻结 */}
             {renewal && (
               <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 tag text-xs px-3 py-0.5 text-white whitespace-nowrap ${yearlyRenewalFull ? 'bg-brand-500' : 'bg-accent'}`}>
@@ -555,13 +952,15 @@ export function SubscriptionFlow({
             {/* 顶行：masthead + 方案名 */}
             <div className="flex items-start justify-between">
               <p className={`font-mono text-[10px] font-medium uppercase tracking-masthead ${isBlack ? 'text-foil' : 'text-foil-light'}`}>
-                {plan.id}
+                {plan.key}
               </p>
               <div className="text-right">
                 <p className={`font-serif text-[18px] font-bold ${isBlack ? 'text-foil' : 'text-foil-light'} leading-none`}>
                   {plan.name.replace('会员', '')}
                 </p>
-                <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{plan.description}</p>
+                {plan.description && (
+                  <p className={`text-[9px] mt-0.5 ${isBlack ? 'text-foil/60' : 'text-white/60'}`}>{plan.description}</p>
+                )}
               </div>
             </div>
 
@@ -601,10 +1000,12 @@ export function SubscriptionFlow({
                 </button>
               ) : (
                 <button
-                  onClick={() => handlePlanClick(plan.id, renewal)}
+                  onClick={() => handlePlanClick(plan.key, renewal)}
                   className={`rounded-md px-3 py-1.5 text-[11px] font-semibold uppercase tracking-masthead transition-all active:scale-95 ${
                     isBlack
-                      ? 'bg-foil text-black hover:bg-white'
+                      ? tab === 'SINGLE'
+                        ? 'bg-foil text-black hover:bg-white'
+                        : 'bg-[#2a0812] text-[#8a3040] hover:bg-[#FFFDF2]'
                       : 'bg-white/95 text-brand-700 hover:bg-white'
                   }`}
                 >
@@ -725,6 +1126,69 @@ export function SubscriptionFlow({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* 互斥弹窗：当前卡还有剩余轮次，须用完才能切换到目标方案 */}
+      {blockTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in"
+          onClick={() => setBlockTarget(null)}
+        >
+          <div
+            className="relative overflow-hidden bg-bg cream-foil rounded-2xl px-6 pt-7 pb-6 mx-4 max-w-[320px] w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GoldFlakes count={1} stars={1} />
+            <div className="relative z-10">
+              <p className="text-sm leading-relaxed text-ink">
+                亲爱的{nickname || '朋友'}：你目前还有 {roundsRemaining} 对话轮次没用完，为保证你的权益，必须用完才能切换为{blockTarget === 'SINGLE' ? '单导师' : '全导师'}订阅，感谢你的支持。
+              </p>
+              <button
+                type="button"
+                onClick={() => setBlockTarget(null)}
+                className="btn-primary mt-5 w-full text-sm"
+              >
+                知道了
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* B-1 弹窗：未选定导师，先去导师列表挑一位 */}
+      {showPickMentor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 animate-fade-in"
+          onClick={() => setShowPickMentor(false)}
+        >
+          <div
+            className="relative overflow-hidden bg-bg cream-foil rounded-2xl px-6 pt-7 pb-6 mx-4 max-w-[320px] w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GoldFlakes count={1} stars={1} />
+            <div className="relative z-10">
+              <p className="text-sm leading-relaxed text-ink">
+                亲爱的{nickname || '朋友'}，请先选中想要对话的导师，再来这里付费，谢谢你的支持。
+              </p>
+              <div className="mt-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowPickMentor(false)}
+                  className="flex-1 rounded-lg border border-ink/20 py-2 text-sm text-muted transition-colors hover:text-ink"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/mentors')}
+                  className="btn-primary flex-1 text-sm"
+                >
+                  好的
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

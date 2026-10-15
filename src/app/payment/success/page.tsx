@@ -5,11 +5,21 @@ import { Header } from '@/components/header';
 import { GoldFlakes, PaperCredits } from '@/components/page-shell';
 import { PaymentSuccessActions } from '@/components/payment-success-actions';
 import { PaymentSuccessTrack, type PaymentSuccessInfo } from '@/components/payment-success-track';
+import { getMentorById } from '@/lib/mentors';
+
+/** from 参数兼容裸分身 ID 与 /mentors/{id} 路径两种形式 */
+function resolveFromMentorId(from?: string): string | null {
+  if (!from) return null;
+  const match = from.match(/^\/mentors\/([A-Za-z0-9_-]+)/);
+  const candidate = match ? match[1] : from;
+  const mentor = getMentorById(candidate);
+  return mentor && !mentor.comingSoon ? mentor.id : null;
+}
 
 export default async function PaymentSuccessPage({
   searchParams,
 }: {
-  searchParams: { orderNo?: string; from?: string };
+  searchParams: { orderNo?: string; from?: string; tab?: string };
 }) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -41,6 +51,7 @@ export default async function PaymentSuccessPage({
     orderBy: { endDate: 'desc' },
     select: {
       plan: true,
+      scope: true,
       startDate: true,
       endDate: true,
     },
@@ -50,18 +61,25 @@ export default async function PaymentSuccessPage({
     MONTHLY: '月度会员',
     QUARTERLY: '季度会员',
     YEARLY: '年度会员',
+    SINGLE_MONTHLY: '单导师·月度会员',
+    SINGLE_QUARTERLY: '单导师·季度会员',
+    SINGLE_YEARLY: '单导师·年度会员',
     CREDIT_10: '多榨卡 10轮次',
   };
 
   const metadata = order?.metadata ? JSON.parse(order.metadata) : {};
   const isCreditPackOrder = order?.paymentType === 'CREDIT_PACK';
 
+  // 付费来源分身（付费链接/选我按钮带入）：决定完成后回聊天页还是留订阅页
+  const fromMentorId = resolveFromMentorId(searchParams.from);
+  const fromMentor = fromMentorId ? getMentorById(fromMentorId) : null;
+
   // 支付成功埋点：仅订单确认为 PAID 时上报（同一订单号客户端去重）
   let trackInfo: PaymentSuccessInfo | null = null;
   if (order && order.status === 'PAID') {
     const plan = isCreditPackOrder
       ? 'CREDIT_PACK'
-      : ['MONTHLY', 'QUARTERLY', 'YEARLY'].includes(metadata.planId)
+      : ['MONTHLY', 'QUARTERLY', 'YEARLY', 'SINGLE_MONTHLY', 'SINGLE_QUARTERLY', 'SINGLE_YEARLY'].includes(metadata.planId)
         ? metadata.planId
         : null;
     const method = order.paymentMethod === 'wechat' || order.paymentMethod === 'alipay'
@@ -166,7 +184,10 @@ export default async function PaymentSuccessPage({
                   </svg>
                 </div>
                 <h2 className="text-sm font-semibold text-accent">
-                  {planNames[subscription.plan]} 已激活
+                  {subscription.scope === 'SINGLE'
+                    ? planNames[`SINGLE_${subscription.plan}`] ?? planNames[subscription.plan]
+                    : planNames[subscription.plan]}{' '}
+                  已激活
                 </h2>
               </div>
               <div className="space-y-1.5">
@@ -186,8 +207,15 @@ export default async function PaymentSuccessPage({
             </div>
           )}
 
-          {/* 操作按钮 */}
-          <PaymentSuccessActions />
+          {/* 操作按钮：来自导师页回聊天断开位置，否则回订阅页离开时的标签看生效卡 */}
+          <PaymentSuccessActions
+            returnTo={
+              fromMentor
+                ? `/mentors/${fromMentor.id}`
+                : `/dashboard/subscription?tab=${searchParams.tab === 'all' ? 'all' : 'single'}`
+            }
+            returnLabel={fromMentor ? `返回和 ${fromMentor.name} 的对话` : '返回订阅页'}
+          />
         </div>
       </div>
 

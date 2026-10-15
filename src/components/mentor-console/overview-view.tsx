@@ -9,6 +9,16 @@ import { ViewState } from './stat-card';
 
 interface SummaryResponse {
   dateRange: { start: string | null; end: string };
+  /** 订阅收益摊算（按月对日计提，金额为已计提部分） */
+  revenue?: {
+    single: {
+      monthly: { users: number; amount: number };
+      quarterly: { users: number; amount: number };
+      yearly: { users: number; amount: number };
+      totalAmount: number;
+    };
+    all: { totalAmount: number };
+  };
   /** 导师本人账号活跃（截至本次登录，含本次）；真实后端就绪前由 demo JSON 提供 */
   accountActivity?: {
     loginCount: number;
@@ -293,6 +303,38 @@ export function OverviewView({ mentorName }: { mentorName?: string }) {
           </div>
         </div>
       </div>
+
+      {/* 订阅收益：单导师分卡种人数/金额 + 全导师按轮次摊算（均按月对日计提） */}
+      {data?.revenue && (
+        <div className="rounded-2xl border-t-2 border-t-emerald-300 bg-gradient-to-br from-emerald-50 to-teal-50 p-4 shadow-sm ring-1 ring-stone-900/[0.06]">
+          <p className="text-xs text-stone-500">订阅收益（按月计提）</p>
+
+          <div className="mt-3">
+            <p className="text-xs text-stone-400">单导师付费（选中我的人数 / 已计提金额）</p>
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <PurchaseCell value={data.revenue.single.monthly.users} label={`月卡 · ￥${data.revenue.single.monthly.amount.toFixed(2)}`} showPlatform={false} />
+              <PurchaseCell value={data.revenue.single.quarterly.users} label={`季卡 · ￥${data.revenue.single.quarterly.amount.toFixed(2)}`} showPlatform={false} />
+              <PurchaseCell value={data.revenue.single.yearly.users} label={`年卡 · ￥${data.revenue.single.yearly.amount.toFixed(2)}`} showPlatform={false} />
+              <div>
+                <p className="text-xl font-semibold text-stone-800">
+                  ￥{data.revenue.single.totalAmount.toFixed(2)}
+                </p>
+                <p className="mt-0.5 text-xs text-stone-400">单导师小计</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-stone-100 pt-3">
+            <p className="text-xs text-stone-400">全导师付费（按当月聊天轮次占比摊算）</p>
+            <div className="mt-2">
+              <p className="text-xl font-semibold text-stone-800">
+                ￥{data.revenue.all.totalAmount.toFixed(2)}
+              </p>
+              <p className="mt-0.5 text-xs text-stone-400">已计提摊算收益</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <p className="px-1 text-xs leading-5 text-stone-400">
         聚合数据每日凌晨更新；样本少于 5 人的画像分布不予展示。

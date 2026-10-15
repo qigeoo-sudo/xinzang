@@ -1,12 +1,11 @@
 /**
  * 订阅计划配置 — PRD 8.1 B2C 会员订阅
  *
- * 定价策略:
- * - 月度: ¥29.9/月
- * - 季度: ¥79.9/季
- * - 年度: ¥269.9/年
+ * 两套付费方案（2026-10 调整）:
+ * - 全导师付费（scope=ALL）: ¥38.8/月 · ¥98.8/季 · ¥328.8/年，解锁全部上线导师分身
+ * - 单导师付费（scope=SINGLE）: ¥28.8/月 · ¥78.8/季 · ¥268.8/年，解锁选中导师分身
  *
- * 导师分身对话次数（2026-09 调整，新老会员一律按新规）:
+ * 导师分身对话次数（两套方案同档一致）:
  * - 月度: 60轮次/订阅周期，每日最高 15 轮次
  * - 季度: 180轮次/订阅周期，每日最高 16 轮次
  * - 年度: 720轮次/订阅周期，每日最高 17 轮次
@@ -15,6 +14,10 @@
  */
 
 export type PlanId = 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+export type SinglePlanId = 'SINGLE_MONTHLY' | 'SINGLE_QUARTERLY' | 'SINGLE_YEARLY';
+export type AnyPlanId = PlanId | SinglePlanId;
+/** 订阅范围：ALL=全导师付费 | SINGLE=单导师付费 */
+export type SubscriptionScope = 'ALL' | 'SINGLE';
 
 export interface SubscriptionPlan {
   id: PlanId;
@@ -31,17 +34,23 @@ export interface SubscriptionPlan {
   historyRetentionDays: number; // 对话历史保存天数，-1 = 永久
 }
 
+/** 单导师付费套餐：结构与全导师一致，id 带 SINGLE_ 前缀，basePlan 指向同档全导师套餐 */
+export interface SingleMentorPlan extends Omit<SubscriptionPlan, 'id'> {
+  id: SinglePlanId;
+  basePlan: PlanId;
+}
+
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'MONTHLY',
     name: '月度会员',
-    price: 29.9,
-    priceFen: 2990,
+    price: 38.8,
+    priceFen: 3880,
     period: '/月',
     durationDays: 30,
     features: ['60轮次导师分身对话', '（最高）15轮次/天', '全部上线导师分身解锁'],
     popular: false,
-    description: '适合短期体验，解决眼前困难',
+    description: '',
     mentorQuota: 60,
     dailyQuota: 15,
     historyRetentionDays: 365,
@@ -49,13 +58,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'QUARTERLY',
     name: '季度会员',
-    price: 79.9,
-    priceFen: 7990,
+    price: 98.8,
+    priceFen: 9880,
     period: '/季',
     durationDays: 90,
     features: ['180次 AI 导师分身对话', '（最高）16轮次/天', '全部上线导师分身解锁', '优先体验新功能'],
     popular: true,
-    description: '性价比最高，配合中期打算',
+    description: '',
     mentorQuota: 180,
     dailyQuota: 16,
     historyRetentionDays: 365 * 3,
@@ -63,8 +72,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
   {
     id: 'YEARLY',
     name: '年度会员',
-    price: 269.9,
-    priceFen: 26990,
+    price: 328.8,
+    priceFen: 32880,
     period: '/年',
     durationDays: 365,
     features: [
@@ -75,7 +84,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       '优先参与线下各种活动',
     ],
     popular: false,
-    description: '享受最低价格，主打长期陪伴',
+    description: '',
     mentorQuota: 720,
     dailyQuota: 17,
     historyRetentionDays: -1,
@@ -84,6 +93,78 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 
 export function getPlanById(id: string): SubscriptionPlan | undefined {
   return SUBSCRIPTION_PLANS.find((p) => p.id === id);
+}
+
+/**
+ * 单导师付费套餐 — 解锁选中导师分身
+ * 轮次配额与全导师同档一致，仅解锁范围锁定一名导师
+ */
+export const SINGLE_MENTOR_PLANS: SingleMentorPlan[] = [
+  {
+    id: 'SINGLE_MONTHLY',
+    basePlan: 'MONTHLY',
+    name: '月度会员',
+    price: 28.8,
+    priceFen: 2880,
+    period: '/月',
+    durationDays: 30,
+    features: ['60轮次导师分身对话', '（最高）15轮次/天', '解锁选中导师分身'],
+    popular: false,
+    description: '',
+    mentorQuota: 60,
+    dailyQuota: 15,
+    historyRetentionDays: 365,
+  },
+  {
+    id: 'SINGLE_QUARTERLY',
+    basePlan: 'QUARTERLY',
+    name: '季度会员',
+    price: 78.8,
+    priceFen: 7880,
+    period: '/季',
+    durationDays: 90,
+    features: ['180次 AI 导师分身对话', '（最高）16轮次/天', '解锁选中导师分身', '优先体验新功能'],
+    popular: true,
+    description: '',
+    mentorQuota: 180,
+    dailyQuota: 16,
+    historyRetentionDays: 365 * 3,
+  },
+  {
+    id: 'SINGLE_YEARLY',
+    basePlan: 'YEARLY',
+    name: '年度会员',
+    price: 268.8,
+    priceFen: 26880,
+    period: '/年',
+    durationDays: 365,
+    features: [
+      '720次 AI 导师分身对话',
+      '（最高）17轮次/天',
+      '解锁选中导师分身',
+      '优先体验新功能',
+      '优先参与线下各种活动',
+    ],
+    popular: false,
+    description: '',
+    mentorQuota: 720,
+    dailyQuota: 17,
+    historyRetentionDays: -1,
+  },
+];
+
+export function getSinglePlanById(id: string): SingleMentorPlan | undefined {
+  return SINGLE_MENTOR_PLANS.find((p) => p.id === id);
+}
+
+/** 判断任意套餐 id 属于哪套方案，并给出同档基础套餐 */
+export function parseAnyPlanId(
+  id: string
+): { scope: SubscriptionScope; basePlan: PlanId } | null {
+  if (getPlanById(id)) return { scope: 'ALL', basePlan: id as PlanId };
+  const single = getSinglePlanById(id);
+  if (single) return { scope: 'SINGLE', basePlan: single.basePlan };
+  return null;
 }
 
 /**
@@ -158,11 +239,14 @@ export function formatPriceFen(fen: number): string {
   return (fen / 100).toFixed(1);
 }
 
-/** 各订阅套餐对应的自然月数（升级/续费按自然月对日叠加） */
-export const PLAN_DURATION_MONTHS: Record<PlanId, number> = {
+/** 各订阅套餐对应的自然月数（升级/续费按自然月对日叠加）；单导师与全导师同档一致 */
+export const PLAN_DURATION_MONTHS: Record<AnyPlanId, number> = {
   MONTHLY: 1,
   QUARTERLY: 3,
   YEARLY: 12,
+  SINGLE_MONTHLY: 1,
+  SINGLE_QUARTERLY: 3,
+  SINGLE_YEARLY: 12,
 };
 
 /**
@@ -186,17 +270,17 @@ export function addMonthsDate(base: Date, months: number): Date {
 }
 
 /**
- * 根据套餐 ID 获取导师分身对话总轮次上限
+ * 根据套餐 ID 获取导师分身对话总轮次上限（兼容单导师套餐 id）
  */
 export function getMentorQuota(planId: string): number | null {
-  const plan = getPlanById(planId);
+  const plan = getPlanById(planId) ?? getSinglePlanById(planId);
   return plan?.mentorQuota ?? null;
 }
 
 /**
- * 根据套餐 ID 获取导师分身每日最高轮次
+ * 根据套餐 ID 获取导师分身每日最高轮次（兼容单导师套餐 id）
  */
 export function getMentorDailyQuota(planId: string): number | null {
-  const plan = getPlanById(planId);
+  const plan = getPlanById(planId) ?? getSinglePlanById(planId);
   return plan?.dailyQuota ?? null;
 }

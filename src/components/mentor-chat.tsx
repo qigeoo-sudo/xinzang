@@ -516,22 +516,27 @@ export function MentorChat({ mentor }: MentorChatProps) {
           </div>
         )}
 
-        {/* 非会员与收费导师对话 — 显示加入会员按钮 */}
+        {/* 非会员与收费导师对话 — 显示选我 / 选所有两个按钮 */}
         {needSubscription && (
-          <div className="flex flex-col items-center gap-3 py-4">
-            <p className="text-sm text-slate-600 text-center">
-              成为会员后，即可与{mentor.name}及所有行业导师分身深度对话。
+          <div className="flex flex-col gap-3 py-4">
+            <p className="text-sm text-slate-600">
+              成为会员，即可与我、或所有导师分身继续对话
             </p>
-            <Link
-              href={subHref}
-              className="btn-primary"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z" />
-                <path d="M5 21h14" />
-              </svg>
-              加入会员
-            </Link>
+            <div className="mx-auto flex items-center gap-12">
+              <Link
+                href={`/dashboard/subscription?from=${encodeURIComponent(pathname)}&tab=single`}
+                className="btn-primary cover-gradient clay px-4 py-2 text-sm text-white hover:brightness-95"
+              >
+                选我
+              </Link>
+              <Link
+                href={`/dashboard/subscription?from=${encodeURIComponent(pathname)}&tab=all`}
+                className="btn-primary clay px-4 py-2 text-sm text-white hover:brightness-95"
+                style={{ backgroundImage: 'linear-gradient(168deg, #A7BF94 0%, #7A9E6E 50%, #55734B 100%)' }}
+              >
+                选所有
+              </Link>
+            </div>
           </div>
         )}
 

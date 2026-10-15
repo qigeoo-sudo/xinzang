@@ -117,12 +117,12 @@ export function StageCredits({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
     zh: {
       name: 'AI Career Companion',
       slogan: '陪你一起\u00A0\u00A0见证成长',
-      copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+      copyright: '版权所有©上海创自己科技服务有限公司2026',
     },
     en: {
       name: 'AI Career Companion',
       slogan: 'With you, as clarity grows.',
-      copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+      copyright: '版权所有©上海创自己科技服务有限公司2026',
     },
   }[lang];
   return (
@@ -150,12 +150,12 @@ export function PaperCredits({ lang = 'zh', compact = false }: { lang?: 'zh' | '
     zh: {
       name: 'AI Career Companion',
       slogan: '陪你一起\u00A0\u00A0见证成长',
-      copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+      copyright: '版权所有©上海创自己科技服务有限公司2026',
     },
     en: {
       name: 'AI Career Companion',
       slogan: 'With you, as clarity grows.',
-      copyright: 'Copyright © 2026 Squeezing Me Co., Ltd. All rights reserved.',
+      copyright: '版权所有©上海创自己科技服务有限公司2026',
     },
   }[lang];
   return (
@@ -193,10 +193,13 @@ export function GoldFlakes({
   count = 2,
   stars = 2,
   variant = 'light',
+  excludeZone,
 }: {
   count?: number;
   stars?: number;
   variant?: 'light' | 'dark';
+  /** 排除金币落点的垂直区间（占容器高度百分比，[top%, bottom%]），避免关键区域被金币干扰 */
+  excludeZone?: [number, number];
 }) {
   const [flakes, setFlakes] = useState<{
     coins: { top: number; left: number; rotate: number; size: number }[];
@@ -204,9 +207,20 @@ export function GoldFlakes({
   } | null>(null);
 
   useEffect(() => {
+    const [exTop, exBottom] = excludeZone ?? [0, 0];
+    const inZone = (t: number) => t >= exTop && t <= exBottom;
+    const pickTop = () => {
+      let t = Math.random() * 88 + 6;
+      let guard = 0;
+      while (excludeZone && inZone(t) && guard < 24) {
+        t = Math.random() * 88 + 6;
+        guard++;
+      }
+      return t;
+    };
     setFlakes({
       coins: Array.from({ length: count }, () => ({
-        top: Math.random() * 88 + 6,
+        top: pickTop(),
         left: Math.random() * 88 + 4,
         rotate: Math.random() * 60 - 30,
         size: Math.round(Math.random() * 10 + 22),
@@ -217,7 +231,7 @@ export function GoldFlakes({
         size: Math.round(Math.random() * 4 + 9),
       })),
     });
-  }, [count, stars]);
+  }, [count, stars, excludeZone]);
 
   if (!flakes) return null;
   // 浅底变体：给金币加 sepia + brightness + contrast，让金色在奶油底上更深更显眼

@@ -6,13 +6,22 @@ import { Header } from '@/components/header';
 import { StageCredits, GoldFlakes, PageHero } from '@/components/page-shell';
 import { SubscriptionFlow } from '@/components/subscription-flow';
 import { PaywallTracker } from '@/components/paywall-tracker';
-import { SUBSCRIPTION_PLANS, CREDIT_PACKS, type PlanId } from '@/lib/plans';
+import { SUBSCRIPTION_PLANS, SINGLE_MENTOR_PLANS, CREDIT_PACKS, type PlanId, type SubscriptionScope } from '@/lib/plans';
 import { getMentorById } from '@/lib/mentors';
+import { getSubscriptionRoundsRemaining } from '@/lib/chat-quota';
+
+/** from 参数归一化：接受裸分身 ID 或 /mentors/{id} 路径，返回有效分身 ID */
+function resolveSourceMentorId(from?: string): string | undefined {
+  if (!from) return undefined;
+  const bare = from.startsWith('/mentors/') ? from.slice('/mentors/'.length) : from;
+  const id = bare.split(/[?#]/)[0];
+  return getMentorById(id) ? id : undefined;
+}
 
 export default async function SubscriptionPage({
   searchParams,
 }: {
-  searchParams: { from?: string };
+  searchParams: { from?: string; tab?: string };
 }) {
   const session = await auth();
 
@@ -20,7 +29,7 @@ export default async function SubscriptionPage({
     redirect('/login?callbackUrl=/dashboard/subscription');
   }
 
-  // 获取当前订阅状态
+  // 获取当前订阅状态（含范围与绑定分身）
   const subscription = await prisma.subscription.findFirst({
     where: {
       userId: session.user.id,
@@ -30,6 +39,8 @@ export default async function SubscriptionPage({
     orderBy: { endDate: 'desc' },
     select: {
       plan: true,
+      scope: true,
+      mentorId: true,
       endDate: true,
       startDate: true,
     },
@@ -89,15 +100,41 @@ export default async function SubscriptionPage({
     (user?.mentorCredits ?? 0) - (user?.mentorCreditsConsumed ?? 0)
   );
 
-  // from 是有效分身 ID 时作为来源分身（入口来自该分身对话）
-  const sourceMentorId = searchParams.from && getMentorById(searchParams.from)
-    ? searchParams.from
-    : undefined;
+  // 当前卡剩余轮次（无订阅时为 0；切换互斥判断与前端展示共用）
+  const roundsRemaining = subscription
+    ? await getSubscriptionRoundsRemaining({
+        userId: session.user.id,
+        plan: subscription.plan,
+        scope: subscription.scope,
+        mentorId: subscription.mentorId,
+        startDate: subscription.startDate,
+      })
+    : 0;
+
+  // from 是有效分身 ID（或 /mentors/{id} 路径）时作为来源分身（入口来自该分身对话/选我）
+  const sourceMentorId = resolveSourceMentorId(searchParams.from);
+  const sourceMentor = sourceMentorId ? getMentorById(sourceMentorId) : undefined;
+
+  // 方案标签：优先 URL 显式参数（选我/选所有按钮带入），其次按当前生效卡范围，无卡默认单导师
+  const initialTab: SubscriptionScope =
+    searchParams.tab === 'all'
+      ? 'ALL'
+      : searchParams.tab === 'single'
+        ? 'SINGLE'
+        : subscription?.scope === 'ALL'
+          ? 'ALL'
+          : 'SINGLE';
+
+  // 当前生效卡绑定分身名（单导师生效卡展示用）
+  const boundMentorName =
+    subscription?.scope === 'SINGLE' && subscription.mentorId
+      ? getMentorById(subscription.mentorId)?.name
+      : undefined;
 
   return (
     <div className="relative min-h-screen flex flex-col home-backdrop overflow-hidden">
       <Header />
-      <GoldFlakes variant="dark" />
+      <GoldFlakes variant="dark" excludeZone={[18, 55]} />
       <PaywallTracker
         from={sourceMentorId ? 'mentor_chat' : searchParams.from}
         sourceMentorId={sourceMentorId}
@@ -108,7 +145,7 @@ export default async function SubscriptionPage({
         title="欢迎加入榨职社"
         subtitle={
           isPremium
-            ? `你当前是${planNames[subscription!.plan] || '会员'}`
+            ? `你当前是${subscription!.scope === 'ALL' ? '全' : '单'}导师${planNames[subscription!.plan] || '会员'}`
             : '解锁 AI 导师分身对话，获得完整职业指导体验。'
         }
         watermark="会"
@@ -124,14 +161,23 @@ export default async function SubscriptionPage({
         {/* 订阅方案 + 支付流程；当前生效卡在组件内置顶显示 */}
         <SubscriptionFlow
           plans={SUBSCRIPTION_PLANS}
+          singlePlans={SINGLE_MENTOR_PLANS}
           creditPacks={CREDIT_PACKS}
           currentPlanId={currentPlanId}
+          currentScope={(subscription?.scope as SubscriptionScope | undefined) ?? null}
           isPremium={isPremium}
           from={searchParams.from}
+          sourceMentorId={sourceMentorId}
+          sourceMentorName={sourceMentor?.name}
+          initialTab={initialTab}
+          roundsRemaining={roundsRemaining === Number.POSITIVE_INFINITY ? -1 : roundsRemaining}
           activeSubscription={
             subscription
               ? {
                   plan: subscription.plan as PlanId,
+                  scope: subscription.scope as SubscriptionScope,
+                  mentorId: subscription.mentorId,
+                  boundMentorName,
                   endDate: subscription.endDate.toISOString(),
                   daysRemaining,
                 }

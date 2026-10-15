@@ -6,7 +6,14 @@ import { track } from '@/lib/analytics/tracker';
 
 export interface PaymentSuccessInfo {
   orderNo: string;
-  plan: 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CREDIT_PACK';
+  plan:
+    | 'MONTHLY'
+    | 'QUARTERLY'
+    | 'YEARLY'
+    | 'SINGLE_MONTHLY'
+    | 'SINGLE_QUARTERLY'
+    | 'SINGLE_YEARLY'
+    | 'CREDIT_PACK';
   amountYuan: number;
   method: 'wechat' | 'alipay' | 'mock';
   quantity?: number;

@@ -9,10 +9,11 @@
 import { prisma } from '@/lib/prisma';
 import { invalidateMemberCache } from '@/lib/member-cache';
 import {
-  getPlanById,
   getCreditPackById,
+  parseAnyPlanId,
   PLAN_DURATION_MONTHS,
   addMonthsDate,
+  type AnyPlanId,
 } from '@/lib/plans';
 
 export type FulfillResult =
@@ -69,11 +70,17 @@ export async function fulfillPaidOrder(
       }
 
       // 会员订阅（默认分支，兼容历史订单）
-      const plan = getPlanById(metadata.planId || 'MONTHLY');
-      if (!plan) {
+      const parsed = parseAnyPlanId(metadata.planId || 'MONTHLY');
+      if (!parsed) {
         throw new Error('INVALID_PLAN');
       }
-      const months = PLAN_DURATION_MONTHS[plan.id] ?? 1;
+      const months = PLAN_DURATION_MONTHS[(metadata.planId as AnyPlanId) || 'MONTHLY'] ?? 1;
+      // 单导师付费：订单 metadata 必须携带绑定的分身 ID
+      const singleMentorId =
+        parsed.scope === 'SINGLE' ? (metadata.mentorId ?? null) : null;
+      if (parsed.scope === 'SINGLE' && !singleMentorId) {
+        throw new Error('MISSING_MENTOR');
+      }
 
       // 查当前有效订阅 — 有则在原到期日上接续，无则从现在起算
       const existingSub = await tx.subscription.findFirst({
@@ -90,7 +97,9 @@ export async function fulfillPaidOrder(
         await tx.subscription.update({
           where: { id: existingSub.id },
           data: {
-            plan: plan.id,
+            plan: parsed.basePlan,
+            scope: parsed.scope,
+            mentorId: singleMentorId,
             endDate: addMonthsDate(existingSub.endDate, months),
             paymentOrderId: order.id,
           },
@@ -100,7 +109,9 @@ export async function fulfillPaidOrder(
         await tx.subscription.create({
           data: {
             userId: order.userId,
-            plan: plan.id,
+            plan: parsed.basePlan,
+            scope: parsed.scope,
+            mentorId: singleMentorId,
             status: 'ACTIVE',
             startDate: now,
             endDate: addMonthsDate(now, months),
@@ -109,9 +120,11 @@ export async function fulfillPaidOrder(
         });
       }
 
+      // 付费后剩余免费聊天次数清零（直接置满已用次数）
+      const freeTrialLimit = parseInt(process.env.FREE_TRIAL_COUNT || '3', 10);
       await tx.user.update({
         where: { id: order.userId },
-        data: { isPremium: true },
+        data: { isPremium: true, freeTrialUsed: freeTrialLimit },
       });
     });
   } catch (error) {

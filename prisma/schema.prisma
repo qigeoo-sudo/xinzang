@@ -323,6 +323,10 @@ model Subscription {
   userId         String
   // 订阅计划
   plan           String    @default("MONTHLY") // MONTHLY | QUARTERLY | YEARLY
+  // 订阅范围: ALL=全导师 | SINGLE=单导师（此时 mentorId 必填）
+  scope          String    @default("ALL")
+  // 单导师订阅绑定的分身 ID（scope=SINGLE 时必填，对应 mentors.ts 中的 ID）
+  mentorId       String?
   status         String    @default("ACTIVE") // ACTIVE | EXPIRED | CANCELLED | PENDING
   // 时间范围
   startDate      DateTime  @default(now())
@@ -342,6 +346,7 @@ model Subscription {
 
   @@index([userId, status])
   @@index([endDate])
+  @@index([mentorId])
 }
 
 /// 聊天会话模型 — 存储用户与 AI 导师的对话会话 (PRD 6.2)

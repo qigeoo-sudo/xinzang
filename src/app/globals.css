@@ -169,6 +169,37 @@
     filter: drop-shadow(0 16px 36px rgba(0, 0, 0, 0.55));
   }
 
+  /* === 全导师付费卡面：与单导师（金/鼠尾草绿/黑）明显区分 ===
+     同一金属卡语言（同款斜向高光叠加），色相走冷色系：靛蓝 / 紫晶 / 宝石红 */
+
+  /* 全导师月卡 —— 靛蓝金属（全员通行的平台感） */
+  .card-all-monthly {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.24) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.10) 100%),
+      linear-gradient(160deg, #5B7DB8 0%, #47639A 45%, #33497A 70%, #5B7DB8 100%);
+  }
+
+  /* 全导师季卡 —— 紫晶金属（进阶感） */
+  .card-all-quarterly {
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.21) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.08) 100%),
+      linear-gradient(160deg, #8A68AC 0%, #6E4E90 45%, #503566 70%, #8A68AC 100%);
+  }
+
+  /* 全导师年卡 —— 深牛血色金属 + 金烫字（对应单导师黑卡的顶级位，私行卡质感）
+     比宝石红更深沉华贵，文字统一金色（与单导师黑卡一致） */
+  .card-all-yearly {
+    color: #F5D785;
+    background-image:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, transparent 35%, transparent 65%, rgba(255, 255, 255, 0.03) 100%),
+      linear-gradient(160deg, #52162A 0%, #360D1C 42%, #1E0610 68%, #52162A 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(245, 215, 133, 0.20),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.60),
+      inset 0 0 0 1px rgba(245, 215, 133, 0.25),
+      0 18px 40px -10px rgba(0, 0, 0, 0.65);
+  }
+
   /* 浅银灰卡（多榨卡）—— 铂金深灰 + 窄高光条，反光感明显 */
   .card-platinum {
     background-image:

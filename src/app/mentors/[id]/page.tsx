@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from '@/components/header';
 import { getMentorById, mentors } from '@/lib/mentors';
 import { MentorChat } from '@/components/mentor-chat';
@@ -53,7 +54,7 @@ export default async function MentorDetailPage({
           {/* 导师名片：头像 + 头衔 + 标签，落在一张信纸上 */}
           <PaperPanel className="mb-5">
             <div className="flex gap-4">
-              <div className="flex-shrink-0">
+              <div className="flex flex-shrink-0 flex-col items-center gap-2">
                 {mentor.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -68,6 +69,13 @@ export default async function MentorDetailPage({
                     </span>
                   </div>
                 )}
+                {/* 选我：记住当前分身，进入订阅页（默认单导师付费标签） */}
+                <Link
+                  href={`/dashboard/subscription?from=${mentor.id}&tab=single`}
+                  className="btn-primary cover-gradient clay w-14 px-2 py-1 text-center text-xs text-white hover:brightness-95"
+                >
+                  选我
+                </Link>
               </div>
               <div className="min-w-0 flex-1">
                 {yearsText && (

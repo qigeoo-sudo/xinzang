@@ -13,6 +13,7 @@ import {
   isSubscriptionSource,
   isCompletedSource,
 } from '@/lib/aggregation';
+import { computeMentorRevenue } from '@/lib/mentor-revenue';
 
 const DAY_MS = 24 * 3600_000;
 const ALLOWED_RANGES = [3, 7, 14, 30, 60, 90];
@@ -334,6 +335,9 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // 订阅收益摊算：单导师分卡种人数/金额 + 全导师按轮次占比摊算（按月对日计提）
+    const revenue = await computeMentorRevenue(mentorId);
+
     const rc = mentorAgg.rounds;
 
     // 数据区间：最早一条消息到今天
@@ -348,6 +352,7 @@ export async function GET(request: NextRequest) {
     return Response.json({
       range,
       dateRange,
+      revenue,
       cumulative: {
         helpedUsers: mentorAgg.helpedUsers,
         impressionUsers: distinctPeopleScoped(impressionEvents, mentorId),
