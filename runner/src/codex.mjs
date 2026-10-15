@@ -294,6 +294,21 @@ export async function deliverTrigger({ baseDir, trigger, threadId, taskType = 'd
 }
 
 /**
+ * 从 stderr 尾部提取真正的致命错误行。
+ * codex 把最终错误以 "Error: ..." 打在 stderr 末尾，而前面的 OTel span 日志单行就有
+ * 500-700 字符——2026-10-15 S16 双模型失败时盲取窗口前 500 字符，真实原因（rollout
+ * writer 拒绝访问）正好被截掉，排查多花了一小时。优先取 Error: 行，兜底 os error 关键字。
+ */
+function buildStderrReason(stderrTail) {
+  if (!stderrTail) return '';
+  const errIdx = stderrTail.lastIndexOf('Error:');
+  if (errIdx !== -1) return `：${stderrTail.slice(errIdx, errIdx + 400)}`;
+  const osErrIdx = stderrTail.lastIndexOf('os error');
+  if (osErrIdx !== -1) return `：${stderrTail.slice(Math.max(0, osErrIdx - 150), osErrIdx + 100)}`;
+  return `：${stderrTail.slice(0, 500)}`;
+}
+
+/**
  * 执行 codex exec 并实时解析 --json 输出（JSONL）。
  *
  * 关键修复：
@@ -456,7 +471,7 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
       if (code !== 0 && !(turnCompleted && output)) {
         resolve({
           ok: false,
-          reason: `codex exec 退出码 ${code}${stderrTail ? `：${stderrTail.slice(0, 500)}` : ''}`,
+          reason: `codex exec 退出码 ${code}${buildStderrReason(stderrTail)}`,
           threadId,
           tracePath,
           lastMessagePath,
