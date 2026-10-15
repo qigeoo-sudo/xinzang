@@ -86,6 +86,15 @@ export function ContentOpsConsole({
   }, [refresh]);
 
   const onlineRunner = runners.find((r) => r.online) ?? null;
+  // 心跳三档：≤90s 绿在线（服务端 online 判定）；>60 分钟无心跳 红「未上线」（2026-10-15 约定）；
+  // 其余（90s~60min）灰离线。取全部 Runner 记录里最新一次心跳计算。
+  const lastSeenRunner = runners
+    .filter((r) => r.lastSeenAt)
+    .sort((a, b) => (a.lastSeenAt! < b.lastSeenAt! ? 1 : -1))[0] ?? null;
+  const heartbeatGoneMs = lastSeenRunner?.lastSeenAt
+    ? now - new Date(lastSeenRunner.lastSeenAt).getTime()
+    : Infinity;
+  const heartbeatDead = heartbeatGoneMs > 60 * 60_000;
   const attention = (runs ?? []).filter((r) => ATTENTION_STATES.has(r.status));
 
   return (
@@ -105,6 +114,10 @@ export function ContentOpsConsole({
               {onlineRunner ? (
                 <span className="font-medium text-emerald-700">
                   ● 在线（{onlineRunner.name} · {timeAgo(onlineRunner.lastSeenAt, now)}）
+                </span>
+              ) : heartbeatDead ? (
+                <span className="font-semibold text-red-600">
+                  ● 未上线{lastSeenRunner ? `（${lastSeenRunner.name} · ${timeAgo(lastSeenRunner.lastSeenAt, now)}）` : ''}
                 </span>
               ) : (
                 <span className="font-medium text-stone-500">○ 离线</span>

@@ -238,9 +238,25 @@ async function minutesFetch(minuteToken, subPath) {
 }
 
 /**
- * 获取妙记文档信息（标题）。
- * GET /open-apis/minutes/v1/minutes/:minute_token → data.minute.title
+ * 云盘文件名解析（drive metas）：text 消息里分享的 /file/<token> 链接对应的名字。
+ * 无权限/失败时返回 null（调用方安全降级，关键词匹配自然不命中）。
+ * GET /open-apis/drive/v1/metas/:file_token
  */
+async function feishuDriveFileName(fileToken) {
+  const token = process.env.LARKSUITE_CLI_TENANT_ACCESS_TOKEN;
+  if (!token || !fileToken) return null;
+  try {
+    const res = await fetch(`https://open.feishu.cn/open-apis/drive/v1/metas/${encodeURIComponent(fileToken)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data?.file?.name ?? data?.data?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function feishuMinutesInfo({ minuteToken }) {
   const r = await minutesFetch(minuteToken, '');
   if (!r.ok) return r;
@@ -396,6 +412,31 @@ export async function feishuChatMessages({ chatId, limit = 500, order = 'asc', e
         minuteToken: token,
         fileName: `${title}.txt`,
         isMinutesVirtual: true,
+      });
+    }
+  }
+
+  // 云文档链接回复识别（2026-10-15 袁宁宁案例）：导师常以 text 消息分享 /file/<token> 链接，
+  // 飞书界面渲染成文件卡片，API 里是 text 类型——扫描只认 file 消息会漏。
+  // 解析链接对应的云盘文件名后注入虚拟 file 消息（viaLink 标记），关键词过滤走引擎既有口径；
+  // 文件名解析失败时安全降级（空名 → 关键词不命中，不误报）。
+  const seenLinkTokens = new Set();
+  for (const raw of rawMessages) {
+    const content = typeof raw.content === 'string' ? raw.content : '';
+    for (const linkMatch of content.matchAll(/https:\/\/[a-z0-9-]+\.feishu\.cn\/file\/([A-Za-z0-9]+)/gi)) {
+      const fileToken = linkMatch[1];
+      if (seenLinkTokens.has(fileToken)) continue;
+      seenLinkTokens.add(fileToken);
+      const senderType = raw?.sender?.sender_type;
+      if (senderType === 'app' || senderType === 'bot') continue;
+      if (raw?.sender?.id && EXCLUDED_OPERATOR_OPEN_IDS.has(raw.sender.id)) continue;
+      const base = normalizeMessage(raw);
+      messages.push({
+        ...base,
+        msgType: 'file',
+        fileKey: fileToken,
+        fileName: (await feishuDriveFileName(fileToken)) ?? '',
+        viaLink: true,
       });
     }
   }
