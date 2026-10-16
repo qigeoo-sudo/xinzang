@@ -605,7 +605,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     price: 59,
     isFree: false,
     gender: 'male',
-    // 档案来源 kevin-final-handoff-v0.5 公开档案；包内标记 publicRelease: false，生产发布前需确认本人授权
+    // 档案来源 kevin-final-handoff-v0.5 公开档案（2026-10-17 确认授权公开发布）
     knowledgeEntries: [],
     suggestedQuestions: [
       '临床背景怎么转医疗企业的医学岗？',
