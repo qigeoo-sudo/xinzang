@@ -330,8 +330,20 @@ function runCodexExec({ exe, args, useShell, stdinData, tracePath, lastMessagePa
       env: { ...process.env, CI: 'true' },
     });
 
+    // stdin/stdout/stderr 的 stream error 必须显式吞掉：Windows 下子进程启动即退时
+    // （如 2026-10-16 codex 桌面版宿主被杀，exec 拉起即退），向已关闭的 stdin 写入会
+    // 抛 EPIPE；stream 'error' 无人监听 → uncaughtException → Runner 整个进程崩溃。
+    // 统一由 child 的 'close'/'error' 回调裁决，stream 层错误只记录不炸进程。
+    child.stdin.on('error', () => {});
+    child.stdout.on('error', () => {});
+    child.stderr.on('error', () => {});
+
     // 立即写入 stdin 并发送 EOF —— 这是修复超时的核心
-    child.stdin.end(stdinData, 'utf8');
+    try {
+      child.stdin.end(stdinData, 'utf8');
+    } catch {
+      /* 写入时子进程已退出的极端竞态：等 close/error 回调裁决，不在此抛 */
+    }
 
     let stdoutBuffer = '';
     let stderrTail = '';

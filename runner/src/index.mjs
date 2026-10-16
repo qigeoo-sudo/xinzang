@@ -379,6 +379,17 @@ async function tick(cfg, processed, busy) {
 }
 
 async function main() {
+  // 全局兜底：任何逃逸的异步异常（如子进程 stream error）只记录不退出。
+  // 教训：2026-10-16 codex 子进程启动即退时 stdin EPIPE 无人监听，Runner 整个被杀，
+  // S16 指令停在 dispatched、心跳消失，排查成本极高。Runner 是常驻进程，单个任务
+  // 的异常绝不能拖垮心跳循环。
+  process.on('uncaughtException', (err) => {
+    log('ERROR', `未捕获异常（已忽略，Runner 继续运行）：${err instanceof Error ? err.stack || err.message : String(err)}`);
+  });
+  process.on('unhandledRejection', (err) => {
+    log('ERROR', `未处理的 Promise 拒绝（已忽略）：${err instanceof Error ? err.stack || err.message : String(err)}`);
+  });
+
   const args = parseArgs(process.argv);
   loadDotEnvLocal();
   // 方案A：启动前杀旧进程，写 PID 文件。必须在 loadConfig 之前执行，
