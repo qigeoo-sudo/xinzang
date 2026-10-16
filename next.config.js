@@ -28,6 +28,12 @@ const nextConfig = {
   async headers() {
     return [
       {
+        // 头像可被替换（导师上架/更新时换图）：禁止浏览器与中间层长期缓存，
+        // 换图立即生效；SW 侧 /avatars/ 已改为 Network First，此处兜底禁用 HTTP 缓存
+        source: '/avatars/:path*',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, must-revalidate' }],
+      },
+      {
         // 生产环境全站防点击劫持；本地开发放开（Trae 简单浏览器用 iframe 嵌入，DENY 会白屏）
         source: '/(.*)',
         headers: [
