@@ -5955,34 +5955,73 @@ async function handlePreflightChecksResult(
     } as KnowledgeCardSpec;
   });
 
-  // 解析 TRAE_HANDOFF.md（正则适配两类实际文档格式：列表式 "- Prompt：`path`" 与
-  // Codex 2026-10-13 实际产出的散文式 "唯一Prompt xxx.md；唯一知识快照 yyy.jsonl；候选目标：…"）
+  // 解析 TRAE_HANDOFF.md：优先读 Codex 产出的机器可读契约块
+  // （<!-- TRAE_CONTRACT_JSON_START --> … <!-- TRAE_CONTRACT_JSON_END -->，v0.5 起使用），
+  // 读不到再回退两种老格式的正则（列表式 "- Prompt：`path`" 与散文式 "唯一Prompt xxx"）。
   const thText = typeof result.traeHandoffText === 'string' ? result.traeHandoffText : '';
+  const traeContract = (() => {
+    const m = thText.match(/<!--\s*TRAE_CONTRACT_JSON_START\s*-->([\s\S]*?)<!--\s*TRAE_CONTRACT_JSON_END\s*-->/i);
+    if (!m) return null;
+    const raw = m[1].trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  })();
+  // 契约块里的路径集合可能是数组，也可能是「角色 → 路径」对象；统一摊平成字符串数组
+  const toStrList = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v.map((x) => String(x).trim()).filter(Boolean);
+    if (typeof v === 'string') return v.trim() ? [v.trim()] : [];
+    if (v && typeof v === 'object') {
+      return Object.values(v as Record<string, unknown>).map((x) => String(x).trim()).filter(Boolean);
+    }
+    return [];
+  };
+  const cTarget = toStrList(traeContract?.targetAppPaths);
+  const cTests = toStrList(traeContract?.testList);
+  const cWriteback = toStrList(traeContract?.writebackRequirements);
+  // 契约块优先，取不到同名字段时回退到正则
+  const cCandidatePromptPath = (typeof traeContract?.candidatePromptPath === 'string' ? traeContract.candidatePromptPath : null)
+    ?? (thText.match(/^\s*-\s*Prompt\s*[：:]\s*[`'"]?([^\n`'"\]]+)/mi)?.[1]
+      ?? thText.match(/唯一\s*(?:候选\s*)?Prompt\s+[`'"]?([^\s，,；;。`'"]+)/i)?.[1] ?? null);
+  const cCandidatePromptSha256 = (typeof traeContract?.candidatePromptSha256 === 'string' ? traeContract.candidatePromptSha256 : null)
+    ?? (thText.match(/Prompt.*sha-?256[：:\s]*([a-f0-9]+)/i)?.[1] ?? null);
+  const cKnowledgeSnapshotPath = (typeof traeContract?.knowledgeSnapshotPath === 'string' ? traeContract.knowledgeSnapshotPath : null)
+    ?? (thText.match(/^\s*-\s*知识(?:快照)?\s*[：:]\s*[`'"]?([^\n`'"\]]+)/mi)?.[1]
+      ?? thText.match(/唯一知识快照\s+[`'"]?([^\s，,；;。`'"]+)/i)?.[1] ?? null);
   const traeHandoff: HandoffPackageMeta['traeHandoff'] = thText
     ? {
-        // 列表式 "- Prompt：`path`"（排除 "Prompt System："）或散文式 "唯一Prompt path"
-        candidatePromptPath: (thText.match(/^\s*-\s*Prompt\s*[：:]\s*[`'"]?([^\n`'"\]]+)/mi)?.[1]
-          ?? thText.match(/唯一\s*(?:候选\s*)?Prompt\s+[`'"]?([^\s，,；;。`'"]+)/i)?.[1] ?? null),
-        candidatePromptSha256: (thText.match(/Prompt.*sha-?256[：:\s]*([a-f0-9]+)/i)?.[1] ?? null),
-        // 列表式 "- 知识：`path`" 或散文式 "唯一知识快照 path"
-        knowledgeSnapshotPath: (thText.match(/^\s*-\s*知识(?:快照)?\s*[：:]\s*[`'"]?([^\n`'"\]]+)/mi)?.[1]
-          ?? thText.match(/唯一知识快照\s+[`'"]?([^\s，,；;。`'"]+)/i)?.[1] ?? null),
-        // "集成到 path"、"候选目标：a 与 b"、"应用候选目标 a 与 b"（多模式全量提取）
-        targetAppPaths: [...thText.matchAll(/(?:集成到|候选目标[：:]?|应用候选目标[：:]?)\s*[`'"]?([^\n；;。]+)/g)]
-          .flatMap((m) => m[1].split(/\s*与\s*|[，,、\s]+/))
-          .map((s) => s.replace(/^[`'"]+|[`'"]+$/g, '').trim())
-          .filter(Boolean)
-          .slice(0, 20),
-        // "测试目标/清单/计划" 章节或 "必跑…动态回归"、"回归测试" 章节
-        testList: /测试(目标|清单|计划)|必跑[^\n]*回归|回归测试/i.test(thText) ? ['（见文档测试章节）'] : [],
-        // 匹配 "回滚" 相关描述（不要求 "回滚：" 格式）
-        rollbackPlan: thText.match(/回滚[^\n]{0,60}/i)?.[0] ?? null,
-        // "回传：xxx" 行或 "回传验收" 章节
-        writebackRequirements: thText.match(/回传[：:]\s*(.+)/i)?.[1]?.split(/[，,、\s]+/).filter(Boolean)
-          ?? (/回传验收/i.test(thText) ? ['（见回传验收章节）'] : []),
-        // 列表式 "单一候选" 或散文式 Prompt 与知识快照各唯一指认一次
-        hasSingleCandidate: /单一候选/i.test(thText)
-          || (/唯一\s*(?:候选\s*)?Prompt/i.test(thText) && /唯一\s*知识快照/i.test(thText)),
+        candidatePromptPath: cCandidatePromptPath,
+        candidatePromptSha256: cCandidatePromptSha256,
+        knowledgeSnapshotPath: cKnowledgeSnapshotPath,
+        // 契约块优先；否则 "集成到 path"、"候选目标：a 与 b"、"应用候选目标 a 与 b"（多模式全量提取）
+        targetAppPaths: cTarget.length > 0
+          ? cTarget.slice(0, 20)
+          : [...thText.matchAll(/(?:集成到|候选目标[：:]?|应用候选目标[：:]?)\s*[`'"]?([^\n；;。]+)/g)]
+              .flatMap((m) => m[1].split(/\s*与\s*|[，,、\s]+/))
+              .map((s) => s.replace(/^[`'"]+|[`'"]+$/g, '').trim())
+              .filter(Boolean)
+              .slice(0, 20),
+        // 契约块优先；否则按 "测试目标/清单/计划" 章节或 "必跑…动态回归"、"回归测试"
+        testList: cTests.length > 0
+          ? cTests.slice(0, 50)
+          : (/测试(目标|清单|计划)|必跑[^\n]*回归|回归测试/i.test(thText) ? ['（见文档测试章节）'] : []),
+        // 契约块优先；否则匹配 "回滚" 相关描述（不要求 "回滚：" 格式）
+        rollbackPlan: (typeof traeContract?.rollbackPlan === 'string' && traeContract.rollbackPlan.trim()
+          ? traeContract.rollbackPlan.trim()
+          : thText.match(/回滚[^\n]{0,60}/i)?.[0]) ?? null,
+        // 契约块优先；否则 "回传：xxx" 行或 "回传验收" 章节
+        writebackRequirements: cWriteback.length > 0
+          ? cWriteback.slice(0, 50)
+          : (thText.match(/回传[：:]\s*(.+)/i)?.[1]?.split(/[，,、\s]+/).filter(Boolean)
+              ?? (/回传验收/i.test(thText) ? ['（见回传验收章节）'] : [])),
+        // 契约块里 Prompt 与知识快照各指认一次即视为单一候选；否则沿用旧判定
+        hasSingleCandidate: traeContract
+          ? (!!cCandidatePromptPath && !!cKnowledgeSnapshotPath)
+          : (/单一候选/i.test(thText)
+              || (/唯一\s*(?:候选\s*)?Prompt/i.test(thText) && /唯一\s*知识快照/i.test(thText))),
       }
     : null;
 
@@ -6149,17 +6188,37 @@ export async function listPendingCards(userId: string, runId: string) {
   return { queued: true };
 }
 
-/** S19：提交单张 pending 卡的处置结果（Trae 无升级权，Codex 在专属对话处置后人工回填） */
-export async function submitPendingDisposition(
+export type PendingDisposition = 'external_approved_generalized' | 'external_approved_exact' | 'internal_approved_none' | 'exclude' | 'keep_pending';
+const PENDING_DISPOSITIONS: readonly PendingDisposition[] = [
+  'external_approved_generalized',
+  'external_approved_exact',
+  'internal_approved_none',
+  'exclude',
+  'keep_pending',
+];
+
+/**
+ * S19：批量提交 pending 卡处置结果（Trae 无升级权，Codex 在专属对话逐张处置后回填）。
+ * 一次性合并整批处置、只做一次收敛判定与门禁流转，避免逐张提交时中途转态导致 409。
+ */
+export async function submitPendingDispositionBatch(
   userId: string,
   runId: string,
-  input: { cardId: string; disposition: 'external_approved_generalized' | 'external_approved_exact' | 'internal_approved_none' | 'exclude' | 'keep_pending'; note?: string },
+  inputs: Array<{ cardId: string; disposition: PendingDisposition; note?: string }>,
 ) {
+  if (!Array.isArray(inputs) || inputs.length === 0 || inputs.length > 500) {
+    throw new EngineError(400, '处置条目数量非法（1-500）');
+  }
   const run = await prisma.contentOpsRun.findUniqueOrThrow({ where: { id: runId } });
   if (run.status !== RUN_STATE.READY_FOR_INTEGRATION) {
     throw new EngineError(409, `当前状态（${run.status}）不能提交 pending 处置`);
   }
-  if (!input.cardId || input.cardId.length === 0) throw new EngineError(400, '缺少 cardId');
+  for (const item of inputs) {
+    if (!item.cardId || String(item.cardId).length === 0) throw new EngineError(400, '缺少 cardId');
+    if (!PENDING_DISPOSITIONS.includes(item.disposition)) {
+      throw new EngineError(400, `非法处置结果：${String(item.disposition)}`);
+    }
+  }
   await ensureStepRows(runId, ['S19']);
   const step = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S19' } });
   const evidence = safeParse(step.evidence);
@@ -6167,14 +6226,17 @@ export async function submitPendingDisposition(
     ? ((evidence.pendingDispositions as Array<{ cardId: string; disposition: string; note?: string | null; at: string; by: string }>) ?? [])
     : [];
   // 幂等+单卡单状态约束：同 cardId 已处置则覆盖（防并发竞态「同卡既 approved 又 pending」）
-  const filtered = dispositions.filter((d) => d.cardId !== input.cardId);
-  filtered.push({
-    cardId: input.cardId,
-    disposition: input.disposition,
-    note: input.note?.slice(0, 500) ?? null,
-    at: new Date().toISOString(),
-    by: userId,
-  });
+  let filtered = [...dispositions];
+  for (const item of inputs) {
+    filtered = filtered.filter((d) => d.cardId !== item.cardId);
+    filtered.push({
+      cardId: item.cardId,
+      disposition: item.disposition,
+      note: item.note?.slice(0, 500) ?? null,
+      at: new Date().toISOString(),
+      by: userId,
+    });
+  }
   // 检查是否全部 pending 已收敛：从 S18 step 读 pendingCount，与已处置 dispositions 比对
   const s18 = await prisma.contentOpsStep.findFirstOrThrow({ where: { runId, code: 'S18' } });
   const preflight = (safeParse(s18.evidence).preflight as { pendingCount?: { external: number; internal: number } } | undefined);
@@ -6201,7 +6263,11 @@ export async function submitPendingDisposition(
       }
     }
   });
-  await audit(userId, 'content_ops.submit_pending_disposition', runId, { cardId: input.cardId, disposition: input.disposition, allSettled });
+  await audit(userId, 'content_ops.submit_pending_disposition', runId, {
+    cardIds: inputs.map((i) => i.cardId),
+    count: inputs.length,
+    allSettled,
+  });
 
   // G4 取消人工断点：pending 全部归零（事务内已转门禁态）→ 即时自动放行
   if (allSettled) {
@@ -6215,6 +6281,15 @@ export async function submitPendingDisposition(
   }
 
   return { ok: true, settledCount, keepPendingCount, totalPending, allSettled, dispositions: filtered };
+}
+
+/** S19：提交单张 pending 卡的处置结果（单卡提交即批量提交的特例） */
+export async function submitPendingDisposition(
+  userId: string,
+  runId: string,
+  input: { cardId: string; disposition: PendingDisposition; note?: string },
+) {
+  return submitPendingDispositionBatch(userId, runId, [input]);
 }
 
 /**

@@ -41,6 +41,7 @@ function ChevronDownInline() {
  * - iOS Safari：系统不提供安装弹窗（所有 PWA 都一样），点击弹图文指引：
  *   底部分享按钮 → 添加到主屏幕
  * - iOS 微信内置浏览器：无分享添加入口，先引导用 Safari 打开
+ * - 安卓 Edge / 国产自带浏览器：不触发 beforeinstallprompt，弹手动添加指引（浏览器菜单 → 添加到主屏幕）
  * - 已以 standalone 模式运行（已安装）：不渲染
  *
  * 可安装性前提（项目已具备）：manifest.json + 含 fetch handler 的 sw.js + HTTPS
@@ -51,7 +52,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-type InstallEnv = 'unknown' | 'prompt' | 'ios-browser' | 'ios-wechat';
+type InstallEnv = 'unknown' | 'prompt' | 'ios-browser' | 'ios-wechat' | 'android-other';
 
 const copy = {
   zh: {
@@ -66,6 +67,8 @@ const copy = {
     close: '知道了',
     desktopHint:
       '请在 Chrome 或 Edge 地址栏右侧点击「安装」图标，或通过浏览器菜单「安装此应用为窗口应用」完成安装。',
+    android:
+      '当前浏览器不支持一键安装。点浏览器菜单（右上角 ⋯ 或底部 ≡），找「添加到主屏幕 / 添加到手机 / 添加到桌面」；也可以改用 Chrome 浏览器打开本站再安装。',
     wechat:
       '微信内无法直接安装：请点右上角「···」，选择「在 Safari 中打开」，再按下面步骤操作。',
     steps: [
@@ -86,6 +89,8 @@ const copy = {
     close: 'Got it',
     desktopHint:
       'In Chrome or Edge, click the install icon in the address bar, or use the browser menu: "Install this app as a windowed app".',
+    android:
+      'One-tap install is not available in this browser. Open the browser menu (⋯ or ≡) and look for「Add to Home screen」, or open this site in Chrome and tap Install.',
     wechat:
       'Installation is not available inside WeChat. Tap「···」in the top-right corner, choose「Open in Safari」, then follow the steps below.',
     steps: [
@@ -127,6 +132,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const [awaitingReturn, setAwaitingReturn] = useState(false);
   // 是否移动端：影响按钮文案（桌面「安装到桌面」/ 手机「安装到手机」）
   const [isMobile, setIsMobile] = useState(false);
+  // 安卓设备：Edge 安卓版与多数国产自带浏览器不触发 beforeinstallprompt，需给手动添加指引
+  const [isAndroidOS, setIsAndroidOS] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -146,6 +153,12 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
 
     if (isIOS) {
       setInstallEnv(isWeChat ? 'ios-wechat' : 'ios-browser');
+    } else if (/Android/i.test(ua)) {
+      setIsAndroidOS(true);
+      // 已知不触发 beforeinstallprompt 的安卓浏览器（Edge 安卓版 EdgA、国产自带浏览器等）
+      if (/EdgA|MiuiBrowser|HuaweiBrowser|HeyTapBrowser|VivoBrowser|SamsungBrowser|QQBrowser|UCBrowser|baidubrowser|SogouMobileBrowser/i.test(ua)) {
+        setInstallEnv('android-other');
+      }
     }
 
     // 兜底：beforeinstallprompt 可能在组件挂载前已触发
@@ -226,6 +239,8 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
   const isWeChat = installEnv === 'ios-wechat';
   const isIOS = installEnv === 'ios-browser' || installEnv === 'ios-wechat';
   const isDesktop = !isMobile;
+  // 安卓且没拿到系统安装弹窗：展示手动添加指引（若之后 beforeinstallprompt 触发，优先走系统弹窗）
+  const isAndroidGuide = isAndroidOS && installEnv !== 'prompt';
 
   // 刚完成安装：展示成功提示（桌面端 Chrome 不会自动关标签页，需告知用户从桌面图标启动）
   if (justInstalled) {
@@ -348,6 +363,11 @@ export function PwaInstall({ lang = 'zh' }: { lang?: 'zh' | 'en' }) {
             {isWeChat && (
               <div className="mb-4 rounded-xl bg-accent/10 px-4 py-3 text-xs leading-5 text-accent">
                 {t.wechat}
+              </div>
+            )}
+            {isAndroidGuide && (
+              <div className="mb-4 rounded-xl bg-accent/10 px-4 py-3 text-xs leading-5 text-accent">
+                {t.android}
               </div>
             )}
 

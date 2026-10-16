@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useLayoutEffect, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { linkifyMentorNames } from '@/lib/mentor-links';
@@ -56,6 +56,16 @@ export function CollapsibleText({
     }
   }, [content]);
 
+  // 全屏查看时锁定背景滚动：手机浏览器底栏会随背景滚动反复出现/隐藏，遮挡弹窗底部关闭按钮
+  useEffect(() => {
+    if (!showFullView) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showFullView]);
+
   const renderContent = () => {
     if (isUser) {
       return enableMentorLinks ? linkifyMentorNames(content) : content;
@@ -99,6 +109,7 @@ export function CollapsibleText({
       {showFullView && (
         <div
           className="fixed inset-0 z-[100] bg-black/40 flex items-start justify-center overflow-y-auto"
+          style={{ height: '100dvh' }}
           onClick={() => setShowFullView(false)}
         >
           <div

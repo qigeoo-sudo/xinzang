@@ -3619,7 +3619,8 @@ export function PendingDispositionPanel({
   const [localChoice, setLocalChoice] = useState<Record<string, 'external_approved_generalized' | 'external_approved_exact' | 'internal_approved_none' | 'exclude' | 'keep_pending' | ''>>({});
   const [localNote, setLocalNote] = useState<Record<string, string>>({});
   const [copied, setCopied] = useState(false);
-  const triggerText = '该导师的 Final Handoff 预检发现 pending 知识卡，请依据导师审核回复和现行治理规则逐张处置：转 external_approved+generalized/exact、转 internal_approved+none、从最终候选快照排除并记录，或保持 pending 阻塞。';
+  const [bulkText, setBulkText] = useState('');
+  const triggerText = '该导师的 Final Handoff 预检发现 pending 知识卡，请依据导师审核回复和现行治理规则逐张处置：转 external_approved+generalized/exact、转 internal_approved+none、从最终候选快照排除并记录，或保持 pending 阻塞。请以 JSON 数组返回，每项含 cardId、disposition（external_approved_generalized / external_approved_exact / internal_approved_none / exclude / keep_pending）、note（处置依据，≥5 字）。';
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
       <h3 className="text-sm font-medium text-stone-800">S19 · pending 归零处置（Codex 逐张，Trae 无升级权）</h3>
@@ -3688,6 +3689,42 @@ export function PendingDispositionPanel({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {canSubmit && (
+        <div className="mt-3 rounded-lg border border-stone-200 bg-stone-50/60 p-2.5">
+          <div className="text-xs font-medium text-stone-700">批量导入（Codex 逐张处置结果）</div>
+          <p className="mt-1 text-[11px] text-stone-500">
+            粘贴 Codex 返回的 JSON 数组，每项含 cardId / disposition / note。disposition 取值：external_approved_generalized、external_approved_exact、internal_approved_none、exclude、keep_pending。
+          </p>
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={4}
+            placeholder='[{"cardId":"KEV-R1-001","disposition":"external_approved_generalized","note":"依据…"}]'
+            className="mt-2 w-full rounded-lg border border-stone-300 px-2 py-1 font-mono text-[11px]"
+          />
+          <button
+            type="button"
+            disabled={busy || bulkText.trim().length === 0}
+            onClick={() =>
+              guard(async () => {
+                let items: unknown;
+                try {
+                  items = JSON.parse(bulkText);
+                } catch {
+                  throw new Error('粘贴内容不是合法 JSON');
+                }
+                if (!Array.isArray(items) || items.length === 0) throw new Error('需要非空 JSON 数组');
+                await onAction('submit-pending-disposition-batch', { items });
+                setBulkText('');
+              })
+            }
+            className="mt-2 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-700 disabled:opacity-40"
+          >
+            批量导入
+          </button>
         </div>
       )}
 
@@ -3875,7 +3912,7 @@ export function S21IntegrationPanel({
       <p className="mt-1 text-xs text-stone-500">
         G4 通过后 Runner 全自动串联八段（头像缺失时暂停等 Trae 手绘，超时自动生成模板头像兜底；无 pilot 激活配置的导师自动跳过激活段）。
       </p>
-      {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => {}} />}
+      {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => { void onAction('retry-command', { stepCode: 'S21' }); }} />}
 
       <div className="mt-3 space-y-1.5">
         {S21_PHASES.map((phase, idx) => {
@@ -4021,7 +4058,7 @@ export function S22ProductionPanel({
       {/* G5 放行区：测试端人工验收通过后，单按钮发布生产 */}
       {showGate && (
         <>
-          {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => {}} />}
+          {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => { void onAction('retry-command', { stepCode: 'S22' }); }} />}
           <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 text-xs leading-5 text-stone-600">
             七段集成与八类回归已全绿，测试端已部署。请在测试端完成人工验收；确认无误后点击下方按钮，
             系统自动锁定 main SHA、推送 main→master、部署生产 ECS 并验证 aihr.top。
