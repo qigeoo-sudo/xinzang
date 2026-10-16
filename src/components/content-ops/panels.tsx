@@ -4055,10 +4055,14 @@ export function S22ProductionPanel({
       <h3 className="text-sm font-bold text-stone-800">S22 · 测试端验收 + 验收通过并发布生产（main → master → aihr.top）（G5）</h3>
       <p className="mt-1 text-xs text-stone-500">{G5_PRODUCTION_APPROVAL_SCOPE}</p>
 
+      {/* 指令行：G5 门禁态展示；指令失败时 run 落入 failed、showGate 关闭，
+          重试入口需独立于门禁渲染（2026-10-17 promote 推 master 被拒后无恢复入口的教训） */}
+      {step && (showGate || step.commandStatus === 'failed') && (
+        <StepCommandLine step={step} canWrite={canWrite} onRetry={() => { void onAction('retry-command', { stepCode: 'S22' }); }} />
+      )}
       {/* G5 放行区：测试端人工验收通过后，单按钮发布生产 */}
       {showGate && (
         <>
-          {step && <StepCommandLine step={step} canWrite={canWrite} onRetry={() => { void onAction('retry-command', { stepCode: 'S22' }); }} />}
           <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 text-xs leading-5 text-stone-600">
             七段集成与八类回归已全绿，测试端已部署。请在测试端完成人工验收；确认无误后点击下方按钮，
             系统自动锁定 main SHA、推送 main→master、部署生产 ECS 并验证 aihr.top。

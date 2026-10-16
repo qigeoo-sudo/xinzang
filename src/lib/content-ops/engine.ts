@@ -6479,6 +6479,14 @@ const S22_PHASE_RUNSTATE: Record<string, string> = {
   verify: RUN_STATE.COMPLETED,
 };
 
+/** S22 各段「执行中」对应的 Run 状态（retryCommand 失败恢复用）：与完成后态错位一格 */
+const S22_PHASE_ACTIVE_STATE: Record<string, string> = {
+  lock_sha: RUN_STATE.PROMOTING_MAIN_TO_MASTER,
+  promote: RUN_STATE.PROMOTING_MAIN_TO_MASTER,
+  deploy_prod: RUN_STATE.DEPLOYING_PRODUCTION,
+  verify: RUN_STATE.VERIFYING_PRODUCTION,
+};
+
 /** S21 段指令入队（G4 通过后首段 + 每段结果回调里续段） */
 async function enqueueS21Phase(
   runId: string,
@@ -6981,7 +6989,7 @@ export async function retryCommand(userId: string, runId: string, stepCode: stri
     throw new EngineError(409, `步骤 ${stepCode} 指令未失败（${step.commandStatus}），无需重试`);
   }
   if (!step.commandPayload) throw new EngineError(409, '该步骤没有可重试的指令');
-  const payload = JSON.parse(step.commandPayload) as { type: string };
+  const payload = JSON.parse(step.commandPayload) as { type: string; payload?: { phase?: string } };
   // 生成新 idempotencyKey：旧 key 在 Runner processed.json 里已记录，沿用会被
   // 幂等去重跳过。追加 :retry:<时间戳> 让 Runner 视为新指令重新执行。
   const baseKey = step.idempotencyKey.replace(/:retry:\d+$/, '');
@@ -7005,7 +7013,9 @@ export async function retryCommand(userId: string, runId: string, stepCode: stri
         : step.code === 'S17' ? RUN_STATE.FINAL_HANDOFF_DISCOVERED
         : step.code === 'S21' ? RUN_STATE.TESTING_STAGING
         : step.code === 'S0' ? RUN_STATE.WAITING_ROUND1_SUBMISSION
-        : run.status;
+        : step.code === 'S22'
+          ? (S22_PHASE_ACTIVE_STATE[payload.payload?.phase ?? 'promote'] ?? RUN_STATE.PROMOTING_MAIN_TO_MASTER)
+          : run.status;
       if (recovery !== run.status) {
         await transitionRun(tx, run, recovery, 'manual retry');
       }
