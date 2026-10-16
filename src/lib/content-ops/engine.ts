@@ -703,15 +703,57 @@ async function dispatchCommands(runnerId: string): Promise<unknown[]> {
     orderBy: { createdAt: 'asc' },
   });
   if (queued.length === 0) return [];
-  const ids = queued.map((s) => s.id);
+
+  // 先逐条解析 payload，再 CAS：损坏的 payload 只判该步骤失败，绝不能在 CAS 把整批
+  // 置 dispatched 后才因 JSON.parse 抛错让整个心跳 500——那样 Runner 永远收不到指令体，
+  // 步骤永久卡 dispatched（2026-10-16 事故：手工入队触发语换行未转义，心跳三连 500）。
+  const valid: Array<{ s: (typeof queued)[number]; cmdType: string; cmdPayload: unknown }> = [];
+  for (const s of queued) {
+    let parsed: { type?: unknown; payload?: unknown };
+    try {
+      parsed = JSON.parse(s.commandPayload ?? '{}') as { type?: unknown; payload?: unknown };
+    } catch (e) {
+      const reason = `指令 payload 不是合法 JSON，已拒绝下发：${String(e instanceof Error ? e.message : e).slice(0, 200)}`;
+      await prisma.contentOpsStep.update({
+        where: { id: s.id },
+        data: { commandStatus: 'failed', failureReason: reason },
+      });
+      await appendEvent({
+        runId: s.runId,
+        runnerId,
+        agent: 'control_plane',
+        type: 'dispatch_rejected',
+        payload: { step: s.code, reason },
+      });
+      continue;
+    }
+    if (typeof parsed.type !== 'string' || !parsed.type) {
+      const reason = '指令 payload 缺少 type 字段，已拒绝下发';
+      await prisma.contentOpsStep.update({
+        where: { id: s.id },
+        data: { commandStatus: 'failed', failureReason: reason },
+      });
+      await appendEvent({
+        runId: s.runId,
+        runnerId,
+        agent: 'control_plane',
+        type: 'dispatch_rejected',
+        payload: { step: s.code, reason },
+      });
+      continue;
+    }
+    valid.push({ s, cmdType: parsed.type, cmdPayload: parsed.payload ?? {} });
+  }
+  if (valid.length === 0) return [];
+
+  const ids = valid.map(({ s }) => s.id);
   // CAS 抢占，防止多 Runner / 多重心跳重复下发
   await prisma.contentOpsStep.updateMany({
     where: { id: { in: ids }, commandStatus: 'queued' },
     data: { commandStatus: 'dispatched', dispatchedAt: new Date() },
   });
   // 按指令 agent 分流写 dispatched 事件，让观察窗能看到"指令已下发，等待 Runner 执行"
-  for (const s of queued) {
-    const cmdType = (() => { try { return JSON.parse(s.commandPayload ?? '{}').type; } catch { return null; } })();
+  for (const { s, cmdType } of valid) {
     await appendEvent({
       runId: s.runId,
       runnerId,
@@ -720,11 +762,11 @@ async function dispatchCommands(runnerId: string): Promise<unknown[]> {
       payload: { step: s.code, type: cmdType },
     });
   }
-  return queued.map((s) => ({
+  return valid.map(({ s, cmdType, cmdPayload }) => ({
     stepId: s.id,
     idempotencyKey: s.idempotencyKey,
-    type: JSON.parse(s.commandPayload ?? '{}').type,
-    payload: JSON.parse(s.commandPayload ?? '{}').payload ?? {},
+    type: cmdType,
+    payload: cmdPayload,
   }));
 }
 
