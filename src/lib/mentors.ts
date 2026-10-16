@@ -594,6 +594,7 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     name: 'Kevin Yuan',
     chineseName: '袁宁宁',
     avatar: '/avatars/kevinyuan-yuan.svg',
+    launchedAt: '2026-10-16',
     title: '行业导师',
     company: '—',
     companyType: '—',
@@ -604,10 +605,8 @@ Lydia 的表达常有现场思考感。判断依据和判断发生变化的过�
     price: 59,
     isFree: false,
     gender: 'male',
-    hasFirstRoundCards: true,
     knowledgeEntries: [],
     suggestedQuestions: [],
-    comingSoon: true,
   },
 ];
 
