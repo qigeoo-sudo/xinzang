@@ -15,7 +15,21 @@ export function RunnerRestartButton({ onRestarted }: { onRestarted?: () => void 
     setBusy(true);
     setNote(null);
     try {
-      const res = await fetch('/api/content-ops/runners/restart', { method: 'POST' });
+      // 8 秒超时：dev server 未启动时 fetch 会长时间挂起（2026-10-16 电脑重启后
+      // 用户对着缓存页面点按钮，干等 60 秒才超时报错）。主动短超时给出可操作提示。
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 8000);
+      let res: Response;
+      try {
+        res = await fetch('/api/content-ops/runners/restart', { method: 'POST', signal: ctrl.signal });
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          throw new Error('本地服务无响应，请确认已在终端执行 npm run dev');
+        }
+        throw new Error('连不上本地服务，请确认已在终端执行 npm run dev');
+      } finally {
+        clearTimeout(timer);
+      }
       const data = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
       if (!res.ok || !data?.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
       setNote('已拉起新进程，等心跳转绿…');
