@@ -1,4 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
-  <rect width="200" height="200" fill="#4A5862"/>
-  <text x="100" y="100" dy="0.35em" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="92" fill="#FAF3E7">K</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Kevin Yuan（袁宁宁）：短碎发、平直浓眉、沉稳微笑、深青西装+白衬衫（医疗行业 · 非真人相似系统插画） -->
+  <rect width="200" height="200" fill="#F6EDDE"/>
+  <circle cx="100" cy="100" r="92" fill="#FBF5E9"/>
+
+  <!-- 后层发（短款圆帽形，包住耳上轮廓） -->
+  <path d="M64 94 C60 46 82 33 100 33 C118 33 140 46 136 94 L136 98 L64 98 Z" fill="#2A2320"/>
+
+  <!-- 白衬衫 -->
+  <path d="M78 145 L100 156 L122 145 L116 136 L100 146 L84 136 Z" fill="#FFFFFF"/>
+  <!-- 深青西装（沉稳、值得托付） -->
+  <path d="M29 200 C31 170 50 152 76 145 L100 156 L124 145 C150 152 169 170 171 200 Z" fill="#3E5F6E"/>
+  <path d="M76 145 L94 168 L85 175 L70 152 Z" fill="#334F5C"/>
+  <path d="M124 145 L106 168 L115 175 L130 152 Z" fill="#334F5C"/>
+
+  <!-- 脖子 -->
+  <path d="M91 110 h18 v29 c0 5 -18 5 -18 0 Z" fill="#F6DCC8"/>
+  <path d="M91 110 h18 v9 c-6 5 -12 5 -18 0 Z" fill="#ECC6AA"/>
+
+  <!-- 脸（下颌线稍收，利落感） -->
+  <ellipse cx="100" cy="88" rx="28.5" ry="32.5" fill="#F6DCC8"/>
+
+  <!-- 鬓角（短利落） -->
+  <path d="M68.5 90 C68.5 102 69.5 112 71.5 118 C74.5 114 73.5 102 72.5 90 Z" fill="#2A2320"/>
+  <path d="M131.5 90 C131.5 102 130.5 112 128.5 118 C125.5 114 126.5 102 127.5 90 Z" fill="#2A2320"/>
+
+  <!-- 前发：短碎刘海，中缝微分 -->
+  <path d="M67.5 92 C63 46 84 35 100 35 C116 35 137 46 132.5 92 C129 68 120 56 100 56 C85 56 77.5 62 73 72 C69.5 80 68.5 86 67.5 92 Z" fill="#2A2320"/>
+  <path d="M84 45 C94 40 108 40 117 45 C106 43 94 44 84 50 Z" fill="#46352C" opacity=".7"/>
+
+  <!-- 平直浓眉（稳重、有定力） -->
+  <path d="M80 79.5 Q88 77.5 96 79" stroke="#3A2E26" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M104 79 Q112 77.5 120 79.5" stroke="#3A2E26" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+  <!-- 眼（平视、沉稳） -->
+  <ellipse cx="86.5" cy="88.5" rx="3.3" ry="3" fill="#33261E"/>
+  <ellipse cx="113.5" cy="88.5" rx="3.3" ry="3" fill="#33261E"/>
+  <circle cx="87.6" cy="87.4" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <circle cx="114.6" cy="87.4" r=".9" fill="#FFFFFF" opacity=".85"/>
+  <path d="M82 86.2 Q86.5 84.4 91 85.8" stroke="#33261E" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M109 85.8 Q113.5 84.4 118 86.2" stroke="#33261E" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- 鼻（轻描） -->
+  <path d="M100 95 q1 3 -1.5 4" stroke="#D9A98C" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+
+  <!-- 沉稳微笑（克制、可靠） -->
+  <path d="M92.5 106 q7.5 4.5 15 0" stroke="#C96F5E" stroke-width="2" fill="none" stroke-linecap="round"/>
 </svg>
